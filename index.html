@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍔 FoodCases 🍔</title>
+    <title>🔗 Seamless Games 🔗</title>
     <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
-    <meta http-equiv="refresh" content="0; url=https://menist.free.nf/case-opener/">
     <style>
         :root {
-            --accent: #0f0;
+            --accent: #0f0; /* Matrix Green */
             --bg: #000;
+            --surface: #050505;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -22,12 +22,14 @@
             background: var(--bg);
             font-family: 'Nunito', sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            overflow: hidden;
+            padding-top: 3rem;
+            overflow-x: hidden;
             color: #fff;
         }
 
+        /* Matrix Canvas Background */
         #matrixCanvas {
             position: fixed;
             top: 0;
@@ -39,11 +41,12 @@
         }
 
         .title {
-            font-size: 6rem;
+            font-size: 4rem;
             font-weight: 900;
             color: var(--accent);
             text-align: center;
             letter-spacing: 0.05em;
+            margin-bottom: 2rem;
             text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
             animation: textPulse 2s infinite alternate;
         }
@@ -52,16 +55,82 @@
             from { text-shadow: 0 0 10px var(--accent); }
             to { text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0; }
         }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            width: 300px;
+        }
+
+        .game-button {
+            font-family: 'Courier New', Courier, monospace; /* Matrix feel */
+            font-size: 1.5rem;
+            font-weight: 700;
+            border: 2px solid var(--accent);
+            padding: 1rem 2rem;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            width: 100%;
+            border-radius: 10px;
+            text-decoration: none;
+            z-index: 1;
+            display: block;
+            background: rgba(0, 0, 0, 0.7);
+            color: var(--accent);
+            text-align: center;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+        }
+
+.button-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    position: relative;
+    z-index: 2;
+}
+
+.button-content span:not(:nth-child(2)) {
+    color: transparent;
+    text-shadow: 0 0 0 var(--accent);
+    font-size: 1.3rem;
+}
+        .game-button:hover {
+            transform: translateX(10px);
+            box-shadow: 0 0 20px var(--accent);
+            background: rgba(0, 50, 0, 0.8);
+        }
+
+        .game-button:active {
+            transform: translateX(5px);
+        }
+
+        /* Fixed the broken HTML structure in the original snippet */
     </style>
 </head>
 <body>
     <canvas id="matrixCanvas"></canvas>
-    <h1 class="title">Food Cases</h1>
+    
+    <h1 class="title">SEAMLESS GAMES</h1>
+    
+    <div class="button-container">
+        <a href="https://menist.free.nf/case-opener/" class="game-button">
+            <span class="button-content"> <span>🍔</span> <span>FoodCases</span> <span>🍔</span>
+        </a>
+        <a href="https://menist.free.nf/black-jack/" class="game-button">
+            <span class="button-content"> <span>🃏</span> <span>Blackjack</span> <span>🃏</span>
+        </a>
+        <a href="https://menist.free.nf/word-bomb/" class="game-button">
+            <span class="button-content"> <span>💣</span> <span>WordBomb</span> <span>💣</span>
+        </a>
+    </div>
 
     <script>
-        // Instant JavaScript redirect (backup to meta refresh)
-        window.location.replace("https://menist.free.nf/case-opener/");
-
         // Matrix Digital Rain Effect
         const canvas = document.getElementById('matrixCanvas');
         const ctx = canvas.getContext('2d');
@@ -76,8 +145,8 @@
 
         const fontSize = 16;
         const columns = canvas.width / fontSize;
-        const rainDrops = [];
 
+        const rainDrops = [];
         for (let x = 0; x < columns; x++) {
             rainDrops[x] = 1;
         }
@@ -85,7 +154,8 @@
         const draw = () => {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#0F0';
+
+            ctx.fillStyle = '#0F0'; // Green text
             ctx.font = fontSize + 'px monospace';
 
             for (let i = 0; i < rainDrops.length; i++) {
