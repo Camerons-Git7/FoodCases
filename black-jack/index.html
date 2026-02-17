@@ -1,0 +1,2135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🃏 Blackjack 🃏</title>
+    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js    "></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400    ;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+.quit-btn {
+    position: absolute;
+    top: 25px;
+    right: 25px;
+    z-index: 100;
+}
+
+        body {
+            overflow: hidden;
+            background: #0f2015;
+            font-family: 'Cinzel', serif;
+        }
+
+        /* INTRO STYLES */
+        .intro-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(ellipse at center, #1b5e20 0%, #0d3318 50%, #051a0a 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 1s ease-out, transform 1s ease-out;
+        }
+
+        .intro-container.exit {
+            opacity: 0;
+            transform: scale(1.1);
+            pointer-events: none;
+        }
+
+        .felt-texture {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(0,0,0,.03) 35px, rgba(0,0,0,.03) 70px),
+                repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(255,255,255,.02) 35px, rgba(255,255,255,.02) 70px);
+            pointer-events: none;
+        }
+
+        .floating-cards {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+#multiplayer-container .quit-btn {
+    position: absolute;
+    bottom: 20px;
+    left: 25px;
+    top: auto;        /* Override inherited top: 25px */
+    right: auto;      /* Override inherited right: 25px */
+    font-size: 14pt;
+    padding: 8px 20px;
+    border-radius: 5px;
+    border: 2px solid #444;
+    background: linear-gradient(to bottom, #f0f0f0, #c0c0c0);
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    font-family: 'Cinzel', serif;
+    z-index: 100;
+}
+
+#multiplayer-container .quit-btn:hover {
+    background: linear-gradient(to bottom, #ffffff, #d0d0d0);
+    transform: translateY(-2px);
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+        .floating-card {
+            position: absolute;
+            width: 79px;
+            height: 123px;
+            background-image: url('https://math.hws.edu/eck/cs271/js-work/cards.png    ');
+            background-size: 1027px 615px;
+            background-position: -158px -492px;
+            background-repeat: no-repeat;
+            background-color: transparent;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            animation: floatUp 18s infinite linear;
+            opacity: 0;
+            bottom: -150px;
+        }
+
+        .floating-card:nth-child(1) { left: 15%; animation-delay: 0s; animation-duration: 16s; }
+        .floating-card:nth-child(2) { left: 85%; animation-delay: 6s; animation-duration: 20s; }
+        .floating-card:nth-child(3) { left: 50%; animation-delay: 12s; animation-duration: 18s; }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            5% { opacity: 0.6; }
+            95% { opacity: 0.6; }
+            100% { transform: translateY(-120vh) rotate(360deg); opacity: 0; }
+        }
+
+        .title-container {
+            text-align: center;
+            z-index: 10;
+            animation: titleEntry 1.5s ease-out;
+        }
+
+        @keyframes titleEntry {
+            0% { transform: translateY(-50px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        .main-title {
+            font-size: 6rem;
+            font-weight: 900;
+            color: #ffd700;
+            text-shadow: 
+                0 0 20px rgba(255, 215, 0, 0.5),
+                0 4px 8px rgba(0,0,0,0.8),
+                -2px -2px 0 #b8860b,
+                2px -2px 0 #b8860b,
+                -2px 2px 0 #b8860b,
+                2px 2px 0 #b8860b;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .main-title::after {
+            content: '♠';
+            position: absolute;
+            right: -60px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: #000;
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .main-title::before {
+            content: '♠';
+            position: absolute;
+            left: -60px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+            color: #000;
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
+            animation: pulse 2s infinite 0.5s;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.2); }
+        }
+
+        .subtitle {
+        font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            color: #fff;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            margin-bottom: 3rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            animation: fadeIn 2s ease-out 0.5s both;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .divider {
+            width: 300px;
+            height: 2px;
+            margin: 2rem auto;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .divider-line {
+            position: absolute;
+            width: 150%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, #ffd700, transparent);
+            transform-origin: center;
+            transform: scaleX(0);
+            animation: expandLine 1.2s ease-out 0.8s forwards;
+        }
+
+        .divider-text {
+            position: relative;
+            background: #1b5e20;
+            padding: 0 20px;
+            color: #ffd700;
+            font-size: 1.2rem;
+            letter-spacing: 10px;
+            z-index: 0;
+            opacity: 0;
+            animation: popIn 0.5s ease-out 1.5s forwards;
+        }
+
+        @keyframes expandLine {
+            from { transform: scaleX(0); opacity: 0; }
+            to { transform: scaleX(1); opacity: 1; }
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: translateY(-10px) scale(0.8); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .button-container {
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+            animation: fadeIn 2s ease-out 1s both;
+        }
+
+        .start-btn {
+            padding: 20px 60px;
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffd700 100%);
+            border: 3px solid #b8860b;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 
+                0 6px 20px rgba(0,0,0,0.4),
+                0 0 30px rgba(255, 215, 0, 0.3),
+                inset 0 2px 5px rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .start-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .start-btn:hover::before {
+            left: 100%;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 
+                0 10px 30px rgba(0,0,0,0.5),
+                0 0 50px rgba(255, 215, 0, 0.5),
+                inset 0 2px 5px rgba(255,255,255,0.4);
+            background: linear-gradient(135deg, #ffed4e 0%, #ffd700 50%, #ffed4e 100%);
+        }
+
+        .start-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .multiplayer-btn {
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 50%, #4a5568 100%);
+            border-color: #1a202c;
+            color: #ffffff;
+            box-shadow: 
+                0 6px 20px rgba(0,0,0,0.4),
+                0 0 30px rgba(74, 85, 104, 0.3),
+                inset 0 2px 5px rgba(255,255,255,0.2);
+        }
+
+        .multiplayer-btn:hover {
+            background: linear-gradient(135deg, #718096 0%, #4a5568 50%, #718096 100%);
+            box-shadow: 
+                0 10px 30px rgba(0,0,0,0.5),
+                0 0 50px rgba(113, 128, 150, 0.5),
+                inset 0 2px 5px rgba(255,255,255,0.3);
+            color: #000000;
+        }
+
+        .chips-stack {
+            position: absolute;
+            bottom: 50px;
+            right: 100px;
+            animation: fadeIn 2s ease-out 1.2s both;
+        }
+
+        .chip {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            position: absolute;
+            border: 4px dashed #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        }
+
+.chip:nth-child(1) { background: #ffd700; bottom: 0; right: 0; }
+.chip:nth-child(2) { background: #00d400; bottom: 10px; right: 5px; transform: rotate(30deg); }
+.chip:nth-child(3) { background: #0000d4; bottom: 20px; right: -5px; transform: rotate(60deg); }
+.chip:nth-child(4) { background: #d40000; bottom: 30px; right: 5px; transform: rotate(90deg); }
+
+        .chips-stack::after {
+            content: '$';
+            position: fixed;
+            bottom: 45px;
+            right: 25px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: rgba(255,255,255,0.8);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .cards-spread {
+            position: absolute;
+            bottom: 50px;
+            left: 100px;
+            width: 200px;
+            height: 140px;
+            animation: fadeIn 2s ease-out 1.4s both;
+        }
+
+        .spread-card {
+            position: absolute;
+            width: 79px;
+            height: 123px;
+            background-image: url('https://math.hws.edu/eck/cs271/js-work/cards.png    ');
+            background-size: 1027px 615px;
+            background-repeat: no-repeat;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transform-origin: bottom center;
+        }
+
+        .spread-card:nth-child(1) { transform: rotate(-20deg) translateX(-20px); background-position: -711px -369px; }
+        .spread-card:nth-child(2) { transform: rotate(-10deg) translateX(-10px); left: 30px; background-position: -790px -369px; }
+        .spread-card:nth-child(3) { transform: rotate(0deg); left: 60px; background-position: -869px -369px; }
+        .spread-card:nth-child(4) { transform: rotate(10deg) translateX(10px); left: 90px; background-position: -948px -369px; }
+        .spread-card:nth-child(5) { transform: rotate(20deg) translateX(20px); left: 120px; background-position: 0px -369px; }
+
+        @media (max-width: 768px) {
+            .main-title { font-size: 3.5rem; }
+            .main-title::before, .main-title::after { display: none; }
+            .subtitle { font-size: 1rem; letter-spacing: 0.2em; }
+            .button-container { flex-direction: column; gap: 15px; }
+            .start-btn { padding: 15px 40px; font-size: 1.2rem; }
+            .chips-stack, .cards-spread { display: none; }
+        }
+
+        /* SINGLE PLAYER GAME STYLES (ORIGINAL) */
+        #game-container {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            font-family: 'Cinzel', serif;
+        }
+
+        #table {
+            width: 100vw;
+            height: 100vh;
+            background-color: #008000;
+            border: none;
+            margin: 0;
+            position: relative;
+            color: #66FF66;
+            font-size: 16pt;
+            font-weight: bold;
+            box-sizing: border-box;
+            border: 8px ridge #663300;
+        }
+
+        .cardPlace {
+            background-color: #666600;
+            width: 79px;
+            height: 123px;
+            position: absolute;
+            border: 1px solid #444400;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        #dealerLabel {
+            position: absolute;
+            top: 5%;
+            left: 5%;
+            color: #66FF66;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        #playerLabel {
+            position: absolute;
+            top: 35%;
+            left: 5%;
+            color: #66FF66;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        #playerValue {
+            position: absolute;
+            top: 64%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28pt;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px #000;
+            white-space: nowrap;
+            z-index: 20;
+        }
+
+        #dealerValue {
+            position: absolute;
+            top: 3%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14pt;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px #000;
+            white-space: nowrap;
+            z-index: 20;
+        }
+
+        #moneyLabel {
+            position: absolute;
+            bottom: 12%;
+            left: 5%;
+            color: #FFFF00;
+            font-size: 20pt;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        #betLabel {
+            position: absolute;
+            bottom: 12%;
+            right: 5%;
+            color: #66FF66;
+            font-size: 16pt;
+        }
+
+        #bet {
+            width: 80px;
+            background-color: white;
+            border: 2px inset #666666;
+            font-size: 14pt;
+            padding: 2px;
+        }
+
+        #buttonContainer {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+
+        button {
+            font-size: 14pt;
+            margin: 0 8px;
+            padding: 8px 20px;
+            border-radius: 5px;
+            border: 2px solid #444;
+            background: linear-gradient(to bottom, #f0f0f0, #c0c0c0);
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        button:hover:not(:disabled) {
+            background: linear-gradient(to bottom, #ffffff, #d0d0d0);
+            transform: translateY(-2px);
+            box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        button:disabled {
+            color: #666666;
+            background: #cccccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #message {
+            position: absolute;
+            bottom: 18%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #FFFFFF;
+            font-weight: bold;
+            font-size: 18pt;
+            text-shadow: 2px 2px 4px #000;
+            width: 80%;
+            min-height: 30px;
+        }
+
+        #bettingControls {
+            position: absolute;
+            bottom: 25%;
+            left: 87.25%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            z-index: 30;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 12px 20px;
+            border-radius: 20px;
+            max-width: 50%;
+        }
+
+        .bet-btn {
+            background-color: #FFFF00 !important;
+            color: #000000 !important;
+            border: 2px solid #CC9900 !important;
+            border-radius: 16px !important;
+            padding: 10px 18px !important;
+            font-size: 13pt !important;
+            font-weight: bold !important;
+            cursor: pointer;
+            box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.6) !important;
+            min-width: 60px;
+            transition: all 0.2s ease;
+            margin: 0 2px !important;
+        }
+
+        .bet-btn:hover {
+            background-color: #FFD700 !important;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.7) !important;
+        }
+
+        .bet-btn:active {
+            transform: translateY(-1px) scale(0.98);
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        #resetMoneyButton {
+            position: absolute;
+            top: 60%;
+            left: 12%;
+            transform: translateX(-50%);
+            margin: 0;
+        }
+
+        /* MULTIPLAYER LOBBY */
+        .lobby-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(5, 26, 10, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            color: #ffd700;
+        }
+
+        .lobby-box {
+            background: linear-gradient(135deg, #1b5e20 0%, #0d3318 100%);
+            border: 3px solid #ffd700;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 90%;
+            width: 500px;
+        }
+
+        .room-code-display {
+            font-size: 3rem;
+            letter-spacing: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Cinzel', serif;
+            border: 2px solid #ffd700;
+            color: #00ff00;
+        }
+
+        .code-input {
+            font-size: 2rem;
+            letter-spacing: 5px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #ffd700;
+            color: #ffd700;
+            padding: 15px;
+            width: 100%;
+            margin: 20px 0;
+            font-family: 'Cinzel', serif;
+            text-transform: uppercase;
+        }
+
+        .lobby-btn {
+            padding: 15px 40px;
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            border: 3px solid #b8860b;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+
+        /* MULTIPLAYER GAME - FIXED TO MATCH SINGLE PLAYER */
+        #multiplayer-container {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            font-family: 'Cinzel', serif;
+        }
+
+        #mp-table {
+            width: 100vw;
+            height: 100vh;
+            /* FIXED: Same background as single player */
+            background-color: #008000;
+            position: relative;
+            color: #66FF66;
+            font-size: 16pt;
+            font-weight: bold;
+            border: 8px ridge #663300;
+            box-sizing: border-box;
+        }
+
+        .mp-cardPlace {
+            background-color: #666600;
+            width: 79px;
+            height: 123px;
+            position: absolute;
+            border: 1px solid #444400;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        #mp-opponentLabel {
+            position: absolute;
+            top: 5%;
+            left: 5%;
+            color: #FF6B6B;
+            text-shadow: 2px 2px 4px #000;
+            font-size: 16pt; /* Match single player */
+        }
+
+        #mp-playerLabel {
+            position: absolute;
+            top: 35%;
+            left: 5%;
+            color: #4ECDC4;
+            text-shadow: 2px 2px 4px #000;
+            font-size: 16pt; /* Match single player */
+        }
+
+        #mp-playerValue {
+            position: absolute;
+            top: 64%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28pt;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px #000;
+            color: #FFD700;
+            white-space: nowrap;
+            z-index: 20;
+        }
+
+        #mp-opponentValue {
+            position: absolute;
+            top: 3%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14pt; /* Match single player dealer value */
+            font-weight: bold;
+            text-shadow: 3px 3px 6px #000;
+            color: #FF6B6B;
+            white-space: nowrap;
+            z-index: 20;
+        }
+
+        #mp-moneyLabel {
+            position: absolute;
+            bottom: 12%;
+            left: 5%;
+            color: #FFFF00;
+            font-size: 20pt;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        #mp-opponentMoneyLabel {
+            position: absolute;
+            top: 8%;
+            right: 5%;
+            color: #FF6B6B;
+            font-size: 18pt;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        #mp-betLabel {
+            position: absolute;
+            bottom: 12%;
+            right: 5%;
+            color: #66FF66;
+            font-size: 16pt;
+        }
+
+        #mp-bet {
+            width: 80px;
+            background-color: white;
+            border: 2px inset #666666;
+            font-size: 14pt;
+            padding: 2px;
+        }
+
+        /* FIXED: Button container matches single player exactly */
+        #mp-buttonContainer {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+
+        /* FIXED: Buttons use exact same styling as single player */
+        #mp-buttonContainer button {
+            font-size: 14pt;
+            margin: 0 8px;
+            padding: 8px 20px;
+            border-radius: 5px;
+            border: 2px solid #444;
+            background: linear-gradient(to bottom, #f0f0f0, #c0c0c0);
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            font-family: 'Cinzel', serif;
+        }
+
+        #mp-buttonContainer button:hover:not(:disabled) {
+            background: linear-gradient(to bottom, #ffffff, #d0d0d0);
+            transform: translateY(-2px);
+            box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        #mp-buttonContainer button:disabled {
+            color: #666666;
+            background: #cccccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #mp-message {
+            position: absolute;
+            bottom: 18%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #FFFFFF;
+            font-weight: bold;
+            font-size: 18pt;
+            text-shadow: 2px 2px 4px #000;
+            width: 80%;
+            min-height: 30px;
+        }
+
+        #turnIndicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20pt;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px #000;
+            background: rgba(0,0,0,0.8);
+            padding: 15px 30px;
+            border-radius: 15px;
+            border: 2px solid #FFD700;
+            display: none;
+            z-index: 50;
+            animation: fadeIn 0.3s;
+        }
+
+        #turnIndicator.fade-out {
+            animation: fadeOut 0.5s forwards;
+        }
+
+        @keyframes fadeOut { to { opacity: 0; } }
+
+        .online-indicator {
+            position: absolute;
+            top: 60px;
+            left: 57px;
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12pt;
+            z-index: 100;
+        }
+
+        /* Multiplayer Betting Controls - Same as single player */
+        #mp-bettingControls {
+            position: absolute;
+            bottom: 25%;
+            left: 87.25%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            z-index: 30;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 12px 20px;
+            border-radius: 20px;
+            max-width: 50%;
+        }
+        
+        #mp-resetMoneyButton {
+            position: absolute;
+            top: 60%;
+            left: 12%;
+            transform: translateX(-50%);
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- INTRO SCREEN -->
+    <div class="intro-container" id="intro">
+        <div class="felt-texture"></div>
+        
+        <div class="floating-cards">
+            <div class="floating-card"></div>
+            <div class="floating-card"></div>
+            <div class="floating-card"></div>
+        </div>
+
+        <div class="title-container">
+            <h1 class="main-title">BLACKJACK</h1>
+            
+            <div class="divider">
+                <div class="divider-line"></div>
+                <span class="divider-text"> </span>
+            </div>
+                
+            <p class="subtitle">Multiplayer Edition<p>
+            
+            <div class="button-container">
+                <button class="start-btn" onclick="startSinglePlayer()">Single Player</button>
+                <button class="start-btn multiplayer-btn" onclick="showLobby()">Multiplayer</button>
+            </div>
+        </div>
+
+        <div class="cards-spread">
+            <div class="spread-card"></div>
+            <div class="spread-card"></div>
+            <div class="spread-card"></div>
+            <div class="spread-card"></div>
+            <div class="spread-card"></div>
+        </div>
+
+        <div class="chips-stack">
+            <div class="chip"></div>
+            <div class="chip"></div>
+            <div class="chip"></div>
+            <div class="chip"></div>
+        </div>
+    </div>
+
+    <!-- MULTIPLAYER LOBBY -->
+    <div class="lobby-overlay" id="lobby">
+        <div class="lobby-box" id="lobbyMenu">
+            <h2 style="margin-bottom: 30px;">Multiplayer Lobby</h2>
+            <button class="lobby-btn" onclick="createRoom()">Create Room</button>
+            <button class="lobby-btn" onclick="showJoin()">Join Room</button>
+            <button class="lobby-btn" onclick="hideLobby()" style="background: #666;">Back</button>
+        </div>
+        
+        <div class="lobby-box" id="createMenu" style="display: none;">
+            <h3>Your Room Code</h3>
+            <div class="room-code-display" id="roomCode">------</div>
+            <p>Share this code with opponent</p>
+            <div id="hostStatus" style="margin: 20px 0; color: #aaa;">Creating...</div>
+            <button class="lobby-btn" onclick="cancelHost()">Cancel</button>
+        </div>
+
+        <div class="lobby-box" id="joinMenu" style="display: none;">
+            <h3>Enter Room Code</h3>
+            <input type="text" class="code-input" id="codeInput" maxlength="6" placeholder="ABCDEF">
+            <div id="joinStatus" style="color: #ff6666; min-height: 24px;"></div>
+            <button class="lobby-btn" onclick="joinRoom()">Connect</button>
+            <button class="lobby-btn" onclick="backToLobby()" style="background: #666;">Back</button>
+        </div>
+    </div>
+
+    <!-- SINGLE PLAYER GAME (ORIGINAL) -->
+<div id="game-container">
+    <div id="table">
+        <div id="dealerLabel">Dealer's cards:</div>
+        <div id="playerLabel">Your cards:</div>
+        <div id="dealerValue">Dealer's Hand: <span id="dealerValueDisplay">--</span></div>
+        <div id="playerValue">Your Hand: <span id="playerValueDisplay">00</span></div>
+        <div id="moneyLabel">You have: <span id="money">$100</span></div>
+        <div id="betLabel">Your bet: $<input type="text" id="bet" size="6" value="10" autocomplete="off"></div>
+
+        <div id="bettingControls">
+            <button class="bet-btn" onclick="setBetHalf()">1/2</button>
+            <button class="bet-btn" onclick="setBetAll()">All</button>
+            <button class="bet-btn" onclick="addToBet(100)">+100</button>
+            <button class="bet-btn" onclick="addToBet(50)">+50</button>
+            <button class="bet-btn" onclick="addToBet(1000)">+1000</button>
+            <button class="bet-btn" onclick="addToBet(500)">+500</button>
+        </div>
+
+        <button id="resetMoneyButton" onclick="resetMoney()">Reset Money</button>
+
+        <div id="buttonContainer">
+            <button id="hitButton" onclick="hit()">Hit</button>
+            <button id="standButton" onclick="stand()">Stand</button>
+            <button id="newGameButton" onclick="startGame()">New Game</button>
+        </div>
+
+        <button class="quit-btn" onclick="quitToMainMenu()">Quit to Main Menu</button>
+
+        <div id="message"></div>
+    </div>
+</div>
+
+    <!-- MULTIPLAYER GAME (FIXED) -->
+    <div id="multiplayer-container">
+        <div id="mp-table">
+            <div class="online-indicator" id="onlineStatus">Online Mode</div>
+            
+            <div id="mp-opponentLabel">Opponent's cards:</div>
+            <div id="mp-opponentValue">Opponent's Hand: <span id="mp-opp-val">--</span></div>
+            <div id="mp-opponentMoneyLabel">Opponent has: $100</div>
+            
+            <div id="mp-playerLabel">Your cards:</div>
+            <div id="mp-playerValue">Your Hand: <span id="mp-player-val">00</span></div>
+            <div id="mp-moneyLabel">You have: <span id="mp-my-money">$100</span></div>
+            
+            <div id="mp-betLabel">Your bet: $<input type="text" id="mp-bet" size="6" value="10" autocomplete="off"></div>
+            
+            <!-- Added betting controls for multiplayer -->
+            <div id="mp-bettingControls">
+                <button class="bet-btn" onclick="mpSetBetHalf()">1/2</button>
+                <button class="bet-btn" onclick="mpSetBetAll()">All</button>
+                <button class="bet-btn" onclick="mpAddToBet(100)">+100</button>
+                <button class="bet-btn" onclick="mpAddToBet(50)">+50</button>
+                <button class="bet-btn" onclick="mpAddToBet(1000)">+1000</button>
+                <button class="bet-btn" onclick="mpAddToBet(500)">+500</button>
+            </div>
+            
+            <button id="mp-resetMoneyButton" onclick="resetMPMoney()">Reset Money</button>
+            
+            <div id="turnIndicator">Waiting...</div>
+            <div id="mp-message">Waiting for host to start...</div>
+            
+            <div id="mp-buttonContainer">
+                <button id="mp-hitButton" onclick="mpHit()" disabled>Hit</button>
+                <button id="mp-standButton" onclick="mpStand()" disabled>Stand</button>
+                <button id="mp-newGameButton" onclick="mpStartGame()">New Game</button>
+            </div>
+            
+            <button class="quit-btn" onclick="quitToMainMenu()">Quit to Main Menu</button>
+        </div>
+    </div>
+
+    <script>
+        /* ================= MULTIPLAYER NETWORKING ================= */
+        let peer = null, conn = null;
+        let isHost = false, roomCode = '';
+        let isOnlineGame = false;
+        let playerNum = 0; // 1 = host, 2 = client
+
+        function showLobby() { document.getElementById('lobby').style.display = 'flex'; }
+        function hideLobby() { document.getElementById('lobby').style.display = 'none'; }
+        function backToLobby() {
+            document.getElementById('joinMenu').style.display = 'none';
+            document.getElementById('createMenu').style.display = 'none';
+            document.getElementById('lobbyMenu').style.display = 'block';
+        }
+        function showJoin() {
+            document.getElementById('lobbyMenu').style.display = 'none';
+            document.getElementById('joinMenu').style.display = 'block';
+            document.getElementById('codeInput').focus();
+        }
+
+        function generateCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        function createRoom() {
+            isHost = true;
+            playerNum = 1;
+            roomCode = generateCode();
+            
+            document.getElementById('lobbyMenu').style.display = 'none';
+            document.getElementById('createMenu').style.display = 'block';
+            document.getElementById('roomCode').textContent = roomCode;
+            document.getElementById('hostStatus').textContent = 'Initializing...';
+
+            peer = new Peer(roomCode, {
+                config: { iceServers: [{url: 'stun:stun.l.google.com:19302'}] }
+            });
+
+            peer.on('open', () => {
+                document.getElementById('hostStatus').innerHTML = 'Room ready!<br>Waiting for opponent...';
+            });
+
+            peer.on('connection', (connection) => {
+                if (conn) return;
+                conn = connection;
+                setupConnection();
+                document.getElementById('hostStatus').innerHTML = '<span style="color: #0f0;">Opponent connected!</span>';
+                setTimeout(startMultiplayerGame, 1000);
+            });
+
+            peer.on('error', (err) => {
+                document.getElementById('hostStatus').textContent = 'Error: ' + err.message;
+            });
+        }
+
+        function cancelHost() {
+            if (peer) peer.destroy();
+            peer = null; conn = null;
+            backToLobby();
+        }
+
+        function joinRoom() {
+            const code = document.getElementById('codeInput').value.toUpperCase().trim();
+            if (code.length !== 6) {
+                document.getElementById('joinStatus').textContent = 'Enter 6-character code';
+                return;
+            }
+
+            isHost = false;
+            playerNum = 2;
+            roomCode = code;
+            document.getElementById('joinStatus').textContent = 'Connecting...';
+
+            peer = new Peer({
+                config: { iceServers: [{url: 'stun:stun.l.google.com:19302'}] }
+            });
+
+            peer.on('open', () => {
+                conn = peer.connect(code, {reliable: true, serialization: 'json'});
+                
+                conn.on('open', () => {
+                    setupConnection();
+                    startMultiplayerGame();
+                });
+                
+                conn.on('error', () => {
+                    document.getElementById('joinStatus').textContent = 'Connection failed';
+                });
+            });
+
+            setTimeout(() => {
+                if (!conn || !conn.open) {
+                    document.getElementById('joinStatus').textContent = 'Could not connect';
+                    if (peer) peer.destroy();
+                }
+            }, 8000);
+        }
+
+        function setupConnection() {
+            conn.on('data', (data) => handleMPData(data));
+            conn.on('close', () => {
+                alert('Opponent disconnected!');
+                location.reload();
+            });
+        }
+
+        function send(data) { if (conn && conn.open) conn.send(data); }
+
+        /* ================= SINGLE PLAYER GAME (ORIGINAL) ================= */
+        function startSinglePlayer() {
+            const intro = document.getElementById('intro');
+            intro.classList.add('exit');
+            
+            setTimeout(() => {
+                intro.style.display = 'none';
+                document.getElementById('game-container').style.display = 'block';
+                initSinglePlayer();
+            }, 1000);
+        }
+
+        // Original Card and Deck classes
+        function Card(value, suit) {
+            this.suit = -1;
+            this.value = -1;
+            if (arguments.length >= 2)
+               this.set(arguments[0], arguments[1]);
+        }
+        Card.ACE = 1; Card.JACK = 11; Card.QUEEN = 12; Card.KING = 13;
+        Card.CLUB = 1; Card.DIAMOND = 2; Card.SPADE = 4; Card.HEART = 3;
+
+        Card.prototype.set = function (value, suit) {
+           if (arguments.length < 2) throw "The set function requires two arguments.";
+           var v = Math.round(Number(value));
+           var s = Math.round(Number(suit));
+           if ( !(v >= 1 && v <= 13) ) throw "The value of a card must be in the range 1 to 13.";
+           if ( !(s >= 1 && s <= 4) ) throw "The suit of a card must be 1, 2, 3, or 4.";
+           this.suit = s; this.value = v;
+        }
+
+        function Deck() {
+           this.deck = new Array(52);
+           this.count = 52;
+           var c = 0;
+           for (var i = 1; i <= 4; i++)
+              for (var j = 1; j <= 13; j++)
+                 this.deck[c++] = new Card(j,i);
+        }
+        
+        Deck.prototype.shuffle = function() {
+           for (var i = 51; i > 0; i--) {
+               var r = Math.floor((i+1)*Math.random());
+               var temp = this.deck[r];
+               this.deck[r] = this.deck[i];
+               this.deck[i] = temp;
+           }
+           this.count = 52;
+        }
+        
+        Deck.prototype.nextCard = function() {
+           if (this.count == 0) throw "Deck is out of cards";
+           return this.deck[--this.count];
+        }
+
+        function DisplayedCard(divid, card) {
+           this.card = card || new Card(Card.ACE, Card.SPADE);
+           this.faceDown = true;
+           this.div = document.getElementById(divid);
+           this.div.style.width = "79px";
+           this.div.style.height = "123px";
+           
+           var div1 = document.createElement("div");
+           this.cardContainer = div1;
+           div1.style.position = "relative";
+           div1.style.width = "79px";
+           div1.style.height = "123px";
+           div1.style.left = "0px";
+           div1.style.top = "0px";
+           this.div.appendChild(div1);
+           
+           var cardImg = document.createElement("img");
+           this.cardImg = cardImg;
+           cardImg.src = "https://math.hws.edu/eck/cs271/js-work/cards.png    ";
+           cardImg.style.position = "absolute";
+           cardImg.style.width = (79*13) + "px";
+           cardImg.style.height = (123*5) + "px";
+           this.setPositionAndClip();
+           div1.appendChild(cardImg);
+        }
+        
+        DisplayedCard.prototype.setPositionAndClip = function() {
+           var left, top;
+           if (this.faceDown) {
+              left = 2*79;
+              top = 4*123;
+           } else {
+              left = (this.card.value-1) * 79;
+              top = (this.card.suit-1) * 123;
+           }
+           this.cardImg.style.left = "-" + left + "px";
+           this.cardImg.style.top = "-" + top + "px";
+           this.cardImg.style.clip = "rect(" + top + "px " + (left+79) + "px " + (top+123) + "px " + left + "px)";
+        }
+        
+        DisplayedCard.prototype.setCard = function(card) {
+           this.card = card;
+           this.setPositionAndClip();
+        }
+        
+        DisplayedCard.prototype.setFaceDown = function() {
+           this.faceDown = true;
+           this.setPositionAndClip();
+        }
+        
+        DisplayedCard.prototype.setFaceUp = function() {
+           this.faceDown = false;
+           this.setPositionAndClip();
+        }
+        
+        DisplayedCard.prototype.animateReveal = function(callback) {
+           var self = this;
+           this.faceDown = false;
+           
+           var left = (this.card.value-1) * 79;
+           var top = (this.card.suit-1) * 123;
+           
+           this.cardImg.style.left = "-" + left + "px";
+           this.cardImg.style.top = "-" + top + "px";
+           
+           var currentHeight = 0;
+           var totalHeight = 123;
+           var duration = 300;
+           var steps = 12;
+           var stepTime = duration / steps;
+           
+           this.cardImg.style.clip = "rect(" + top + "px, " + (left+79) + "px, " + top + "px, " + left + "px)";
+           
+           var step = 0;
+           var interval = setInterval(function() {
+              step++;
+              currentHeight = (step / steps) * totalHeight;
+              var currentBottom = top + currentHeight;
+              
+              self.cardImg.style.clip = "rect(" + top + "px, " + (left+79) + "px, " + currentBottom + "px, " + left + "px)";
+              
+              if (step >= steps) {
+                 clearInterval(interval);
+                 self.setFaceUp();
+                 if (callback) callback();
+              }
+           }, stepTime);
+        }
+
+        var deck;
+        var dealerCards = [];
+        var playerCards = [];
+        var dealerCardDisplays = [];
+        var playerCardDisplays = [];
+        var savedMoney = localStorage.getItem('blackjack_money');
+        var money = (savedMoney && parseInt(savedMoney) > 0) ? parseInt(savedMoney) : 100;
+        var currentBet = 0;
+        var gameInProgress = false;
+
+        function calculateCardPositions() {
+            var tableWidth = window.innerWidth;
+            var cardWidth = 79;
+            var gap = 10;
+            var totalWidth = (5 * cardWidth) + (4 * gap);
+            return (tableWidth - totalWidth) / 2;
+        }
+
+        function initSinglePlayer() {
+            var startLeft = calculateCardPositions();
+            
+            for (var i = 0; i < 5; i++) {
+                var div = document.createElement("div");
+                div.id = "dealer" + i;
+                div.className = "cardPlace";
+                div.style.left = (startLeft + i * 90) + "px";
+                div.style.top = "10%";
+                document.getElementById("table").appendChild(div);
+                dealerCardDisplays.push(new DisplayedCard(div.id, new Card(1, 1)));
+                dealerCards.push(null);
+            }
+            
+            for (var i = 0; i < 5; i++) {
+                var div = document.createElement("div");
+                div.id = "player" + i;
+                div.className = "cardPlace";
+                div.style.left = (startLeft + i * 90) + "px";
+                div.style.top = "40%";
+                document.getElementById("table").appendChild(div);
+                playerCardDisplays.push(new DisplayedCard(div.id, new Card(1, 1)));
+                playerCards.push(null);
+            }
+            
+            document.getElementById("money").innerHTML = "$" + money.toLocaleString();
+            localStorage.setItem('blackjack_money', money);
+            document.getElementById("hitButton").disabled = true;
+            document.getElementById("standButton").disabled = true;
+            updatePlayerValue();
+            updateDealerValue();
+        }
+
+        function updatePlayerValue() {
+            var value = getHandValue(playerCards);
+            var display = document.getElementById("playerValueDisplay");
+            
+            if (!gameInProgress && value === 0) {
+                display.innerHTML = "--";
+                display.style.color = "#66FF66";
+            } else {
+                display.innerHTML = value;
+                if (value > 21) {
+                    display.style.color = "#FF4444";
+                    display.innerHTML += " (BUST!)";
+                } else if (value == 21) {
+                    display.style.color = "#00FFFF";
+                    display.innerHTML += " (!)";
+                } else {
+                    display.style.color = "#FFFF00";
+                }
+            }
+        }
+
+        function updateDealerValue() {
+            var display = document.getElementById("dealerValueDisplay");
+            
+            var hasFaceDown = false;
+            var faceUpCards = [];
+            for (var i = 0; i < dealerCardDisplays.length; i++) {
+                if (dealerCards[i] != null) {
+                    if (dealerCardDisplays[i].faceDown) {
+                        hasFaceDown = true;
+                    } else {
+                        faceUpCards.push(dealerCards[i]);
+                    }
+                }
+            }
+            
+            if (!gameInProgress && faceUpCards.length === 0) {
+                display.innerHTML = "--";
+                display.style.color = "#66FF66";
+            } else if (hasFaceDown) {
+                var value = getHandValue(faceUpCards);
+                display.innerHTML = value;
+                display.style.color = "#FFFF00";
+            } else {
+                var value = getHandValue(dealerCards);
+                display.innerHTML = value;
+                if (value > 21) {
+                    display.style.color = "#FF4444";
+                    display.innerHTML += " (BUST!)";
+                } else if (value == 21) {
+                    display.style.color = "#00FFFF";
+                    display.innerHTML += " (!)";
+                } else {
+                    display.style.color = "#FFFF00";
+                }
+            }
+        }
+
+        function setBetHalf() {
+            var half = Math.floor(money / 2);
+            if (half < 1) half = 1;
+            document.getElementById("bet").value = half;
+        }
+
+        function setBetAll() {
+            if (money < 1) return;
+            document.getElementById("bet").value = money;
+        }
+
+        function addToBet(amount) {
+            var current = parseInt(document.getElementById("bet").value) || 0;
+            var newAmount = current + amount;
+            if (newAmount > money) newAmount = money;
+            if (newAmount < 1) newAmount = 1;
+            document.getElementById("bet").value = newAmount;
+        }
+
+        function resetMoney() {
+            if (confirm("Are You Sure You'd Like to Reset Your Money?")) {
+                money = 100;
+                document.getElementById("money").innerHTML = "$" + money.toLocaleString(); // CHANGED: Added toLocaleString()
+                localStorage.setItem('blackjack_money', money);
+                document.getElementById("message").innerHTML = "<span style='color: #FFD700;'>Money Reset!</span>";
+                document.getElementById("newGameButton").disabled = false;
+            }
+        }
+
+        function startGame() {
+            if (gameInProgress) return;
+            
+            var betRaw = document.getElementById("bet").value;
+            var betInput = parseInt(betRaw);
+            
+            var multiplier = 0;
+            if (betRaw === "12345") {
+                multiplier = 1;
+            } else {
+                var easterMatch = betRaw.match(/^12345\((\d+)\)$/);
+                if (easterMatch && parseInt(easterMatch[1]) > 0) {
+                    multiplier = parseInt(easterMatch[1]);
+                }
+            }
+            
+            if (multiplier > 0) {
+                var reward = 5000 * multiplier;
+                money += reward;
+                document.getElementById("money").innerHTML = "$" + money.toLocaleString(); // CHANGED: Added toLocaleString()
+                var formattedReward = reward.toLocaleString();
+                document.getElementById("message").innerHTML = "<span style='color: #FFD700; font-size: 24pt;'>+$" + formattedReward + "!</span>";
+                betInput = Math.min(betInput, money);
+                document.getElementById("bet").value = betInput;
+                localStorage.setItem('blackjack_money', money);
+                return;
+            } else if (isNaN(betInput) || betInput < 1 || betInput > money) {
+                document.getElementById("message").innerHTML = "Insufficient Funds!<br>Try a Lower Bet";
+                return;
+            }
+            
+            currentBet = betInput;
+            gameInProgress = true;
+            
+            document.getElementById("message").innerHTML = "<span style='color: #FFF;'>Good luck!</span>";
+            document.getElementById("hitButton").disabled = false;
+            document.getElementById("standButton").disabled = false;
+            
+            for (var i = 0; i < 5; i++) {
+                dealerCards[i] = null;
+                playerCards[i] = null;
+                dealerCardDisplays[i].setFaceDown();
+                playerCardDisplays[i].setFaceDown();
+            }
+            
+            deck = new Deck();
+            deck.shuffle();
+            
+            dealCard(playerCards, playerCardDisplays, true, function() {
+                updatePlayerValue();
+                dealCard(dealerCards, dealerCardDisplays, true, function() {
+                    updateDealerValue();
+                    dealCard(playerCards, playerCardDisplays, true, function() {
+                        updatePlayerValue();
+                        dealCard(dealerCards, dealerCardDisplays, false, function() {
+                            dealerCardDisplays[1].setFaceDown();
+                            updateDealerValue();
+                            checkBlackjack();
+                        });
+                    });
+                });
+            });
+        }
+
+        function dealCard(handArray, displayArray, animate, callback) {
+            animate = animate || false;
+            var index = 0;
+            while (index < 5 && handArray[index] != null) index++;
+            if (index >= 5) {
+                if (callback) callback();
+                return;
+            }
+            
+            var card = deck.nextCard();
+            handArray[index] = card;
+            displayArray[index].setCard(card);
+            
+            if (animate) {
+                displayArray[index].animateReveal(callback);
+            } else {
+                displayArray[index].setFaceUp();
+                if (callback) callback();
+            }
+        }
+
+        function getHandValue(hand) {
+            var value = 0;
+            var aces = 0;
+            
+            for (var i = 0; i < hand.length; i++) {
+                if (hand[i] == null) continue;
+                
+                var cardValue = hand[i].value;
+                if (cardValue == 1) {
+                    aces++;
+                    value += 11;
+                } else if (cardValue > 10) {
+                    value += 10;
+                } else {
+                    value += cardValue;
+                }
+            }
+            
+            while (value > 21 && aces > 0) {
+                value -= 10;
+                aces--;
+            }
+            
+            return value;
+        }
+
+        function hit() {
+            if (!gameInProgress) return;
+
+            dealCard(playerCards, playerCardDisplays, true, function() {
+                updatePlayerValue();
+                var playerValue = getHandValue(playerCards);
+
+                if (playerValue > 21) {
+                    document.getElementById("message").innerHTML = "You bust! You lose $" + currentBet.toLocaleString() + "."; // CHANGED: Added toLocaleString()
+                    money -= currentBet;
+                    endGame(false);
+                } else if (playerValue == 21) {
+                    stand();
+                }
+            });
+        }
+
+        function stand() {
+            if (!gameInProgress) return;
+            
+            document.getElementById("hitButton").disabled = true;
+            document.getElementById("standButton").disabled = true;
+            
+            if (dealerCardDisplays[1].faceDown) {
+                dealerCardDisplays[1].animateReveal(function() {
+                    updateDealerValue();
+                    setTimeout(dealerTurn, 400);
+                });
+            } else {
+                dealerTurn();
+            }
+        }
+
+        function dealerTurn() {
+            if (getHandValue(dealerCards) < 17) {
+                dealCard(dealerCards, dealerCardDisplays, true, function() {
+                    updateDealerValue();
+                    setTimeout(dealerTurn, 500);
+                });
+            } else {
+                determineWinner();
+            }
+        }
+
+        function checkBlackjack() {
+            var playerValue = getHandValue(playerCards);
+            
+            if (playerValue == 21) {
+                var winnings = currentBet * 2;
+                document.getElementById("message").innerHTML = "<span style='color: #FFD700;'>BLACKJACK! Triple payout! You win $" + winnings.toLocaleString() + "!</span>"; // CHANGED: Added toLocaleString()
+                money += winnings;
+                updatePlayerValue();
+                updateDealerValue();
+                endGame(true);
+                localStorage.setItem('blackjack_money', money);
+            }
+        }
+
+        function determineWinner() {
+            var playerValue = getHandValue(playerCards);
+            var dealerValue = getHandValue(dealerCards);
+            
+            if (dealerValue > 21) {
+                if (playerValue == 21) {
+                    var winnings = currentBet * 2;
+                    document.getElementById("message").innerHTML = "<span style='color: #00FF00;'>Dealer busts with your 21! Triple payout: You win $" + winnings.toLocaleString() + "!</span>"; // CHANGED: Added toLocaleString()
+                    money += winnings;
+                } else {
+                    document.getElementById("message").innerHTML = "<span style='color: #00FF00;'>Dealer busts! You win $" + currentBet.toLocaleString() + "!</span>"; // CHANGED: Added toLocaleString()
+                    money += currentBet;
+                }
+            } else if (dealerValue > playerValue) {
+                document.getElementById("message").innerHTML = "<span style='color: #FF6666;'>Dealer wins! You lose $" + currentBet.toLocaleString() + ".</span>"; // CHANGED: Added toLocaleString()
+                money -= currentBet;
+            } else if (dealerValue < playerValue) {
+                if (playerValue == 21) {
+                    var winnings = currentBet * 2;
+                    document.getElementById("message").innerHTML = "<span style='color: #00FFFF;'>Perfect 21! Triple payout: You win $" + winnings.toLocaleString() + "!</span>"; // CHANGED: Added toLocaleString()
+                    money += winnings;
+                } else {
+                    document.getElementById("message").innerHTML = "<span style='color: #00FF00;'>You win $" + currentBet.toLocaleString() + "!</span>"; // CHANGED: Added toLocaleString()
+                    money += currentBet;
+                }
+            } else {
+                document.getElementById("message").innerHTML = "<span style='color: #FFFF00;'>Push. You get your bet back.</span>";
+            }
+            
+            endGame(false);
+            localStorage.setItem('blackjack_money', money);
+        }
+
+        function endGame(won) {
+            gameInProgress = false;
+            document.getElementById("hitButton").disabled = true;
+            document.getElementById("standButton").disabled = true;
+            
+            for (var i = 0; i < 5; i++) {
+                if (dealerCards[i] != null) {
+                    dealerCardDisplays[i].setFaceUp();
+                }
+            }
+            updateDealerValue();
+            
+            document.getElementById("money").innerHTML = "$" + money.toLocaleString(); // CHANGED: Added toLocaleString()
+            updatePlayerValue();
+            
+            if (money <= 0) {
+                document.getElementById("message").innerHTML += "<br><span style='color: #FF0000;'>Game Over! Reload page to play again.</span>";
+                document.getElementById("newGameButton").disabled = true;
+            }
+        }
+
+        /* ================= MULTIPLAYER GAME ================= */
+        let mpDeck;
+        let mpMyCards = [], mpOppCards = [];
+        let mpMyDisplays = [], mpOppDisplays = [];
+        let mpMyMoney = 100, mpOppMoney = 100;
+        let mpCurrentBet = 0;
+        let mpGameActive = false;
+        let mpMyTurn = false;
+
+        function startMultiplayerGame() {
+            isOnlineGame = true;
+            const intro = document.getElementById('intro');
+            intro.classList.add('exit');
+            
+            setTimeout(() => {
+                intro.style.display = 'none';
+                document.getElementById('lobby').style.display = 'none';
+                document.getElementById('multiplayer-container').style.display = 'block';
+                initMPTable();
+            }, 500);
+        }
+
+        function initMPTable() {
+            const startLeft = calculateCardPositions();
+            
+            // Create slots for my cards (bottom - like single player playerCards)
+            for (let i = 0; i < 5; i++) {
+                let div = document.createElement('div');
+                div.id = 'mp-my-' + i;
+                div.className = 'mp-cardPlace';
+                div.style.left = (startLeft + i * 90) + 'px';
+                div.style.top = '40%'; // Same as single player player cards
+                document.getElementById('mp-table').appendChild(div);
+                mpMyDisplays.push(new DisplayedCard(div.id, new Card(1,1)));
+                mpMyCards.push(null);
+            }
+            
+            // Create slots for opponent cards (top - like single player dealerCards)
+            for (let i = 0; i < 5; i++) {
+                let div = document.createElement('div');
+                div.id = 'mp-opp-' + i;
+                div.className = 'mp-cardPlace';
+                div.style.left = (startLeft + i * 90) + 'px';
+                div.style.top = '10%'; // Same as single player dealer cards
+                document.getElementById('mp-table').appendChild(div);
+                mpOppDisplays.push(new DisplayedCard(div.id, new Card(1,1)));
+                mpOppCards.push(null);
+            }
+            
+            const saved = localStorage.getItem('blackjack_money'); // CHANGED: Use shared key instead of 'mp_money'
+            if (saved) mpMyMoney = parseInt(saved);
+            
+            updateMPUI();
+            
+            if (!isHost) {
+                document.getElementById('mp-newGameButton').disabled = true;
+                document.getElementById('mp-message').textContent = 'Waiting for host...';
+            }
+        }
+
+        function updateMPUI() {
+        document.getElementById('mp-my-money').textContent = '$' + mpMyMoney.toLocaleString();
+        document.getElementById('mp-opponentMoneyLabel').textContent = 'Opponent has: $' + mpOppMoney.toLocaleString();
+        }
+
+        function showMPTurn(text) {
+            const el = document.getElementById('turnIndicator');
+            el.textContent = text;
+            el.style.display = 'block';
+            el.classList.remove('fade-out');
+            
+            setTimeout(() => {
+                el.classList.add('fade-out');
+                setTimeout(() => el.style.display = 'none', 500);
+            }, 1500);
+        }
+
+        function updateMPPlayerValue() {
+            const val = getHandValue(mpMyCards);
+            const display = document.getElementById('mp-player-val');
+            
+            if (!mpGameActive && val === 0) {
+                display.textContent = '--';
+                display.style.color = '#66FF66';
+            } else {
+                display.textContent = val;
+                if (val > 21) {
+                    display.style.color = '#FF4444';
+                    display.textContent += ' (BUST!)';
+                } else if (val === 21) {
+                    display.style.color = '#00FFFF';
+                    display.textContent += ' (!)';
+                } else {
+                    display.style.color = '#FFD700';
+                }
+            }
+        }
+
+        function updateMPOpponentValue() {
+            const display = document.getElementById('mp-opp-val');
+            const faceUpCards = [];
+            let hasHidden = false;
+            
+            for (let i = 0; i < mpOppDisplays.length; i++) {
+                if (mpOppCards[i] != null) {
+                    if (mpOppDisplays[i].faceDown && mpGameActive) {
+                        hasHidden = true;
+                    } else {
+                        faceUpCards.push(mpOppCards[i]);
+                    }
+                }
+            }
+            
+            if (!mpGameActive && faceUpCards.length === 0) {
+                display.textContent = '--';
+                display.style.color = '#66FF66';
+            } else if (hasHidden && mpGameActive) {
+                display.textContent = getHandValue(faceUpCards);
+                display.style.color = '#FFFF00';
+            } else {
+                const val = getHandValue(mpOppCards);
+                display.textContent = val;
+                if (val > 21) display.style.color = '#FF4444';
+                else if (val === 21) display.style.color = '#00FFFF';
+                else display.style.color = '#FFFF00';
+            }
+        }
+
+        // Multiplayer betting controls
+        function mpSetBetHalf() {
+            var half = Math.floor(mpMyMoney / 2);
+            if (half < 1) half = 1;
+            document.getElementById("mp-bet").value = half;
+        }
+
+        function mpSetBetAll() {
+            if (mpMyMoney < 1) return;
+            document.getElementById("mp-bet").value = mpMyMoney;
+        }
+
+        function mpAddToBet(amount) {
+            var current = parseInt(document.getElementById("mp-bet").value) || 0;
+            var newAmount = current + amount;
+            if (newAmount > mpMyMoney) newAmount = mpMyMoney;
+            if (newAmount < 1) newAmount = 1;
+            document.getElementById("mp-bet").value = newAmount;
+        }
+
+        function resetMPMoney() {
+            if (confirm("Are You Sure You'd Like to Reset Your Money?")) {
+                mpMyMoney = 100;
+                document.getElementById("mp-my-money").textContent = '$' + mpMyMoney.toLocaleString();
+                document.getElementById('mp-message').innerHTML = "<span style='color: #FFD700;'>Money Reset!</span>";
+                localStorage.setItem('blackjack_money', mpMyMoney); // CHANGED: Use shared key instead of 'mp_money'
+                document.getElementById("mp-newGameButton").disabled = !isHost;
+            }
+        }
+
+        function mpStartGame() {
+            if (mpGameActive || !isHost) return;
+            
+            const bet = parseInt(document.getElementById('mp-bet').value) || 10;
+            if (bet > mpMyMoney) {
+                document.getElementById('mp-message').textContent = 'Not enough money!';
+                return;
+            }
+            
+            mpCurrentBet = bet;
+            mpGameActive = true;
+            
+            // Clear table
+            for (let i = 0; i < 5; i++) {
+                mpMyCards[i] = null;
+                mpOppCards[i] = null;
+                mpMyDisplays[i].setFaceDown();
+                mpOppDisplays[i].setFaceDown();
+            }
+            
+            mpDeck = new Deck();
+            mpDeck.shuffle();
+            
+            // Deal 2 to each
+            const my1 = mpDeck.nextCard();
+            const my2 = mpDeck.nextCard();
+            const opp1 = mpDeck.nextCard();
+            const opp2 = mpDeck.nextCard();
+            
+            mpMyCards[0] = my1;
+            mpMyCards[1] = my2;
+            mpOppCards[0] = opp1;
+            mpOppCards[1] = opp2;
+            
+            // Show mine
+            mpMyDisplays[0].setCard(my1);
+            mpMyDisplays[1].setCard(my2);
+            mpMyDisplays[0].setFaceUp();
+            mpMyDisplays[1].setFaceUp();
+            
+            // Opp cards face down initially
+            mpOppDisplays[0].setCard(opp1);
+            mpOppDisplays[1].setCard(opp2);
+            mpOppDisplays[0].setFaceDown();
+            mpOppDisplays[1].setFaceDown();
+            
+            // Send to opponent
+            send({
+                type: 'init',
+                bet: bet,
+                yourCards: [{v: opp1.value, s: opp1.suit}, {v: opp2.value, s: opp2.suit}],
+                myCards: [{v: my1.value, s: my1.suit}, {v: my2.value, s: my2.suit}] // What they see of me
+            });
+            
+            // Host (Player 1) goes first
+            mpMyTurn = true;
+            document.getElementById('mp-hitButton').disabled = false;
+            document.getElementById('mp-standButton').disabled = false;
+            document.getElementById('mp-newGameButton').disabled = true;
+            
+            updateMPPlayerValue();
+            updateMPOpponentValue();
+            showMPTurn('Your Turn');
+            document.getElementById('mp-message').textContent = 'Your turn - Hit or Stand?';
+        }
+
+        function mpDealMyCard(callback) {
+            const idx = mpMyCards.findIndex(c => c === null);
+            if (idx === -1) {
+                if (callback) callback();
+                return;
+            }
+            const card = mpDeck.nextCard();
+            mpMyCards[idx] = card;
+            mpMyDisplays[idx].setCard(card);
+            mpMyDisplays[idx].animateReveal(callback);
+        }
+
+        function mpHit() {
+            if (!mpGameActive || !mpMyTurn) return;
+            
+            mpDealMyCard(() => {
+                updateMPPlayerValue();
+                const val = getHandValue(mpMyCards);
+                
+                // Find the index of the card we just drew
+                const cardIdx = mpMyCards.findIndex(c => c !== null) - 1;
+                const drawnCard = mpMyCards[cardIdx];
+                
+                // Notify opponent
+                send({
+                    type: 'hit',
+                    cardIdx: cardIdx,
+                    card: {v: drawnCard.value, s: drawnCard.suit},
+                    value: val
+                });
+                
+                if (val > 21) {
+                    document.getElementById('mp-message').textContent = 'You bust!';
+                    endMPTurn(true);
+                } else if (val === 21) {
+                    setTimeout(() => mpStand(), 500);
+                }
+            });
+        }
+
+        function mpStand() {
+            if (!mpGameActive || !mpMyTurn) return;
+            endMPTurn(false);
+        }
+
+        function endMPTurn(busted) {
+            mpMyTurn = false;
+            document.getElementById('mp-hitButton').disabled = true;
+            document.getElementById('mp-standButton').disabled = true;
+            
+            const val = getHandValue(mpMyCards);
+            
+            send({
+                type: 'stand',
+                busted: busted,
+                value: val
+            });
+            
+            if (busted) {
+                document.getElementById('mp-message').textContent = 'You busted! Waiting for opponent...';
+            } else {
+                if (isHost) {
+                    document.getElementById('mp-message').textContent = 'Waiting for opponent...';
+                } else {
+                    document.getElementById('mp-message').textContent = 'Waiting for host...';
+                }
+            }
+        }
+
+        function revealMPOpponentCards() {
+            for (let i = 0; i < 5; i++) {
+                if (mpOppCards[i] !== null) {
+                    mpOppDisplays[i].setFaceUp();
+                }
+            }
+            updateMPOpponentValue();
+        }
+
+        function endMPGame(winner) {
+            // winner: 0 = tie, 1 = host, 2 = client
+            revealMPOpponentCards();
+            
+            if (winner === 1) {
+                if (isHost) {
+                    document.getElementById('mp-message').textContent = 'You win $' + mpCurrentBet.toLocaleString() + '!'; // CHANGED: Added toLocaleString()
+                    mpMyMoney += mpCurrentBet;
+                    mpOppMoney -= mpCurrentBet;
+                } else {
+                    document.getElementById('mp-message').textContent = 'Opponent wins.';
+                    mpMyMoney -= mpCurrentBet;
+                    mpOppMoney += mpCurrentBet;
+                }
+            } else if (winner === 2) {
+                if (!isHost) {
+                    document.getElementById('mp-message').textContent = 'You win $' + mpCurrentBet.toLocaleString() + '!'; // CHANGED: Added toLocaleString()
+                    mpMyMoney += mpCurrentBet;
+                    mpOppMoney -= mpCurrentBet;
+                } else {
+                    document.getElementById('mp-message').textContent = 'Opponent wins.';
+                    mpMyMoney -= mpCurrentBet;
+                    mpOppMoney += mpCurrentBet;
+                }
+            } else {
+                document.getElementById('mp-message').textContent = 'Push!';
+            }
+            
+            localStorage.setItem('blackjack_money', mpMyMoney); // CHANGED: Use shared key instead of 'mp_money'
+            updateMPUI();
+            mpGameActive = false;
+            
+            document.getElementById('mp-newGameButton').disabled = !isHost;
+        }
+
+        function resolveMPGame() {
+            const myVal = getHandValue(mpMyCards);
+            const oppVal = getHandValue(mpOppCards);
+            let winner;
+            
+            if (myVal > 21 && oppVal > 21) {
+                winner = 0;
+            } else if (myVal > 21) {
+                winner = isHost ? 2 : 1;
+            } else if (oppVal > 21) {
+                winner = isHost ? 1 : 2;
+            } else if (myVal > oppVal) {
+                winner = isHost ? 1 : 2;
+            } else if (oppVal > myVal) {
+                winner = isHost ? 2 : 1;
+            } else {
+                winner = 0;
+            }
+            
+            // FIXED: Notify opponent of game result so they update money too
+            send({
+                type: 'gameover',
+                winner: winner
+            });
+            
+            endMPGame(winner);
+        }
+
+        function handleMPData(data) {
+            switch(data.type) {
+                case 'init':
+                    // Client receives initial deal - CRITICAL FIX: Initialize deck here
+                    mpDeck = new Deck();
+                    mpDeck.shuffle();
+                    
+                    mpCurrentBet = data.bet;
+                    document.getElementById('mp-bet').value = mpCurrentBet;
+                    
+                    // Clear table
+                    for (let i = 0; i < 5; i++) {
+                        mpMyCards[i] = null;
+                        mpOppCards[i] = null;
+                        mpMyDisplays[i].setFaceDown();
+                        mpOppDisplays[i].setFaceDown();
+                    }
+                    
+                    // My cards (what host sent as 'yourCards')
+                    mpMyCards[0] = new Card(data.yourCards[0].v, data.yourCards[0].s);
+                    mpMyCards[1] = new Card(data.yourCards[1].v, data.yourCards[1].s);
+                    mpMyDisplays[0].setCard(mpMyCards[0]);
+                    mpMyDisplays[1].setCard(mpMyCards[1]);
+                    mpMyDisplays[0].setFaceUp();
+                    mpMyDisplays[1].setFaceUp();
+                    
+                    // Opponent cards (face down)
+                    mpOppCards[0] = new Card(data.myCards[0].v, data.myCards[0].s);
+                    mpOppCards[1] = new Card(data.myCards[1].v, data.myCards[1].s);
+                    mpOppDisplays[0].setCard(mpOppCards[0]);
+                    mpOppDisplays[1].setCard(mpOppCards[1]);
+                    mpOppDisplays[0].setFaceDown();
+                    mpOppDisplays[1].setFaceDown();
+                    
+                    mpGameActive = true;
+                    mpMyTurn = false; // Host goes first
+                    
+                    document.getElementById('mp-hitButton').disabled = true;
+                    document.getElementById('mp-standButton').disabled = true;
+                    document.getElementById('mp-newGameButton').disabled = true;
+                    
+                    updateMPPlayerValue();
+                    updateMPOpponentValue();
+                    document.getElementById('mp-message').textContent = "Host's turn...";
+                    break;
+                    
+                case 'hit':
+                    // Opponent hit, reveal their new card at the index they specified
+                    const card = new Card(data.card.v, data.card.s);
+                    mpOppCards[data.cardIdx] = card;
+                    mpOppDisplays[data.cardIdx].setCard(card);
+                    mpOppDisplays[data.cardIdx].animateReveal();
+                    updateMPOpponentValue();
+                    
+                    if (data.value > 21) {
+                        document.getElementById('mp-message').textContent = 'Opponent busted! You win!';
+                    }
+                    break;
+                    
+                case 'stand':
+                    // FIXED: Corrected turn logic
+                    if (data.busted) {
+                        if (isHost) {
+                            // Client busted, resolve game (Host wins unless Host also busted)
+                            revealMPOpponentCards();
+                            resolveMPGame();
+                        } else {
+                            // Host busted, now it's my turn
+                            mpMyTurn = true;
+                            document.getElementById('mp-hitButton').disabled = false;
+                            document.getElementById('mp-standButton').disabled = false;
+                            showMPTurn('Your Turn');
+                            document.getElementById('mp-message').textContent = 'Opponent busted! Your turn - Hit or Stand?';
+                        }
+                    } else {
+                        if (isHost) {
+                            // Client stood and wasn't busted, now compare since both have played
+                            setTimeout(() => resolveMPGame(), 1000);
+                        } else {
+                            // Host stood and wasn't busted, now it's my turn
+                            mpMyTurn = true;
+                            document.getElementById('mp-hitButton').disabled = false;
+                            document.getElementById('mp-standButton').disabled = false;
+                            showMPTurn('Your Turn');
+                            document.getElementById('mp-message').textContent = 'Your turn - Hit or Stand?';
+                        }
+                    }
+                    break;
+                    
+                // FIXED: Added gameover case to handle both players updating money
+                case 'gameover':
+                    endMPGame(data.winner);
+                    break;
+            }
+        }
+
+        function quitToMainMenu() {
+            // Clean up peer connection
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
+            if (conn) {
+                conn.close();
+                conn = null;
+            }
+            isOnlineGame = false;
+            isHost = false;
+            mpGameActive = false;
+            
+            // Hide both game containers
+            document.getElementById('game-container').style.display = 'none';
+            document.getElementById('multiplayer-container').style.display = 'none';
+            
+            // Show intro screen
+            const intro = document.getElementById('intro');
+            intro.style.display = 'flex';
+            intro.classList.remove('exit');
+            
+            // Reload page to ensure clean state
+            location.reload();
+        }
+
+        window.addEventListener('resize', function() {
+            if (dealerCardDisplays.length > 0) {
+                var startLeft = calculateCardPositions();
+                for (var i = 0; i < 5; i++) {
+                    var dealerDiv = document.getElementById("dealer" + i);
+                    var playerDiv = document.getElementById("player" + i);
+                    if (dealerDiv) dealerDiv.style.left = (startLeft + i * 90) + "px";
+                    if (playerDiv) playerDiv.style.left = (startLeft + i * 90) + "px";
+                }
+            }
+            if (mpMyDisplays.length > 0) {
+                var startLeft = calculateCardPositions();
+                for (var i = 0; i < 5; i++) {
+                    var myDiv = document.getElementById("mp-my-" + i);
+                    var oppDiv = document.getElementById("mp-opp-" + i);
+                    if (myDiv) myDiv.style.left = (startLeft + i * 90) + "px";
+                    if (oppDiv) oppDiv.style.left = (startLeft + i * 90) + "px";
+                }
+            }
+        });
+    </script>
+</body>
+</html>
