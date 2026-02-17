@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🍔 FoodCases 🍔</title>
-    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico   ">
+    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico    ">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400     ;600;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400      ;600;700;900&display=swap');
         
         * {
             margin: 0;
@@ -936,62 +936,138 @@
             .admin-autoroll-row { flex-direction: column; }
         }
         
-        /* Minesweeper */
-        .mines-section {
+        /* Slots Section Styles */
+        .slots-section {
             display: none;
-            background: linear-gradient(135deg, #1a1a2e 0%, #1e3a5f 100%);
+            background: linear-gradient(135deg, #1a0a1a 0%, #2d1b4e 100%);
             border-radius: 20px;
             padding: 2rem;
-            border: 2px solid var(--epic);
+            border: 2px solid var(--mythic);
         }
         
-        .mines-section.active {
+        .slots-section.active {
             display: block;
         }
-
-        .mines-scaler {
-            transform: scale(0.70);
-            transform-origin: top center;
-            margin-bottom: -150px;
-            padding-top: 20px;
-            padding-bottom: 20px;
-        }
         
-        .mines-section {
-            display: none;
-            background: linear-gradient(135deg, #1a1a2e 0%, #1e3a5f 100%);
+        .slots-machine {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             border-radius: 20px;
             padding: 2rem;
-            border: 2px solid var(--epic);
-            overflow: visible;
-            min-height: 600px;
+            max-width: 800px;
+            margin: 0 auto;
+            border: 3px solid var(--mythic);
+            box-shadow: 0 0 40px rgba(235, 75, 75, 0.3);
         }
         
-        .mines-controls {
+        .slots-display {
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 2px solid #3a3a5e;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .slots-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--mythic), transparent);
+            animation: scanline 2s linear infinite;
+        }
+        
+        @keyframes scanline {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .slots-reels {
             display: flex;
             justify-content: center;
-            align-items: center;
             gap: 1rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
+            position: relative;
         }
         
-        .mines-input-group {
+        .slot-reel {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+            border-radius: 12px;
+            border: 3px solid #4a4a6e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        
+        .slot-reel.spinning {
+            animation: reelBlur 0.1s linear infinite;
+        }
+        
+        @keyframes reelBlur {
+            0% { filter: blur(0px); }
+            50% { filter: blur(2px); }
+            100% { filter: blur(0px); }
+        }
+        
+        .slot-reel.win {
+            animation: reelWin 0.5s ease;
+            border-color: var(--mythic);
+            box-shadow: 0 0 30px var(--mythic);
+        }
+        
+        @keyframes reelWin {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .slots-payline {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--mythic), transparent);
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .slots-payline.active {
+            opacity: 1;
+            animation: paylinePulse 1s ease infinite;
+        }
+        
+        @keyframes paylinePulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        .slots-controls {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.5rem;
+            gap: 1.5rem;
         }
         
-        .mines-input-group label {
-            font-size: 0.9rem;
-            color: #888;
-            font-weight: 600;
+        .slots-bet-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         
-        .mines-input {
+        .slots-bet-input {
             background: rgba(255,255,255,0.1);
-            border: 2px solid var(--epic);
+            border: 2px solid var(--mythic);
             color: #fff;
             padding: 0.75rem 1.5rem;
             border-radius: 8px;
@@ -1001,91 +1077,133 @@
             font-weight: 700;
         }
         
-        .mines-select {
+        .slots-bet-btn {
             background: rgba(255,255,255,0.1);
-            border: 2px solid var(--epic);
+            border: 2px solid var(--mythic);
             color: #fff;
-            padding: 0.75rem 1.5rem;
+            padding: 0.5rem 1rem;
             border-radius: 8px;
-            font-size: 1.1rem;
             cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
         }
         
-        .mines-select option {
-            background: #1a1a2e;
+        .slots-bet-btn:hover {
+            background: var(--mythic);
+            color: #fff;
         }
         
-        .mines-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-            max-width: 500px;
-            margin: 0 auto 2rem;
-        }
-        
-        .mines-tile {
-            aspect-ratio: 1;
-            background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
-            border: 2px solid #3a3a5e;
-            border-radius: 12px;
+        .slots-spin-btn {
+            background: linear-gradient(135deg, var(--mythic), #ff6b6b);
+            border: none;
+            color: #fff;
+            padding: 1.5rem 4rem;
+            font-size: 1.5rem;
+            font-weight: 900;
+            border-radius: 50px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            transition: all 0.2s;
-            position: relative;
-            overflow: hidden;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(235, 75, 75, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
         
-        .mines-tile:hover:not(.revealed):not(.game-over) {
+        .slots-spin-btn:hover:not(:disabled) {
             transform: scale(1.05);
-            border-color: var(--epic);
-            box-shadow: 0 0 15px rgba(136, 71, 255, 0.3);
+            box-shadow: 0 6px 30px rgba(235, 75, 75, 0.6);
         }
         
-        .mines-tile.revealed {
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            border-color: #22c55e;
-            cursor: default;
-            animation: revealTile 0.3s ease;
-        }
-        
-        .mines-tile.mine {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            border-color: #ef4444;
-            cursor: default;
-            animation: explodeTile 0.5s ease;
-        }
-        
-        .mines-tile.game-over {
+        .slots-spin-btn:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
-            opacity: 0.7;
         }
         
-        @keyframes revealTile {
-            0% { transform: scale(0.8); opacity: 0; }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); opacity: 1; }
+        .slots-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            width: 100%;
+            margin-top: 1rem;
         }
         
-        @keyframes explodeTile {
-            0% { transform: scale(1); }
-            25% { transform: scale(1.2); }
-            50% { transform: scale(0.9); }
-            100% { transform: scale(1); }
+        .slots-info-box {
+            background: rgba(255,255,255,0.05);
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
         }
         
-        .mines-info {
-            display: flex;
-            justify-content: center;
-            gap: 3rem;
+        .slots-info-label {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 0.25rem;
+        }
+        
+        .slots-info-value {
             font-size: 1.3rem;
             font-weight: 700;
+            color: var(--mythic);
         }
         
-        .mines-info span {
-            color: var(--epic);
+        .slots-paytable {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .slots-paytable-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-align: center;
+            color: var(--mythic);
+        }
+        
+        .slots-paytable-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+        
+        .slots-paytable-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+        
+        .slots-paytable-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            text-align: center;
+        }
+        
+        .slots-paytable-odds {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        
+        .slots-result {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+            min-height: 2rem;
+        }
+        
+        .slots-result.win {
+            color: var(--mythic);
+            animation: resultPulse 1s ease infinite;
+        }
+        
+        @keyframes resultPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
         
     </style>
@@ -1097,8 +1215,8 @@
             <button class="nav-btn" id="admin-btn" onclick="showSection('admin')" style="display: none;">Admin</button>
             <button class="nav-btn active" onclick="showSection('cases')">Cases</button>
             <button class="nav-btn" onclick="showSection('coinflip')">Coinflip</button>
+            <button class="nav-btn" onclick="showSection('slots')">Slots</button>
             <button class="nav-btn" onclick="showSection('inventory')">Inventory</button>
-            <button class="nav-btn" onclick="showSection('mines')">Mines</button>
             <button class="nav-btn" onclick="showSection('codes')">Codes</button>
         </nav>
         <div class="balance-display">
@@ -1198,37 +1316,82 @@
             </div>
         </div>
 
-        <!-- Minesweeper Section -->
-        <div id="mines-section" class="mines-section section">
-            <div class="mines-scaler">
-            <h2 class="section-title">💣 Mine Sweeper</h2>
-            <div class="mines-controls">
-                <div class="mines-input-group">
-                    <label>Bet Amount</label>
-                    <input type="text" class="mines-input" id="mines-bet" placeholder="5 Sx" value="100">
+        <!-- Slots Section -->
+        <div id="slots-section" class="slots-section section">
+            <h2 class="section-title">🎰 Lucky Slots</h2>
+            <div class="slots-machine">
+                <div class="slots-display">
+                    <div class="slots-reels">
+                        <div class="slot-reel" id="slot-0">❓</div>
+                        <div class="slot-reel" id="slot-1">❓</div>
+                        <div class="slot-reel" id="slot-2">❓</div>
+                        <div class="slots-payline" id="slots-payline"></div>
+                    </div>
                 </div>
-                <div class="mines-input-group">
-                    <label>Mines</label>
-                    <select class="mines-select" id="mines-count">
-                        <option value="1">1 Mine</option>
-                        <option value="3" selected>3 Mines</option>
-                        <option value="5">5 Mines</option>
-                        <option value="10">10 Mines</option>
-                        <option value="15">15 Mines</option>
-                        <option value="20">20 Mines</option>
-                    </select>
+                
+                <div class="slots-controls">
+                    <div class="slots-bet-row">
+                        <input type="text" class="slots-bet-input" id="slots-bet" placeholder="Bet Amount" value="100">
+                        <button class="slots-bet-btn" onclick="setSlotsBet(10)">$10</button>
+                        <button class="slots-bet-btn" onclick="setSlotsBet(100)">$100</button>
+                        <button class="slots-bet-btn" onclick="setSlotsBet(1000)">$1K</button>
+                        <button class="slots-bet-btn" onclick="setSlotsBet(10000)">$10K</button>
+                        <button class="slots-bet-btn" onclick="setSlotsBet(100000)">$100K</button>
+                    </div>
+                    
+                    <button class="slots-spin-btn" id="slots-spin-btn" onclick="spinSlots()">SPIN</button>
+                    
+                    <div class="slots-result" id="slots-result"></div>
+                    
+                    <div class="slots-info">
+                        <div class="slots-info-box">
+                            <div class="slots-info-label">Last Win</div>
+                            <div class="slots-info-value" id="slots-last-win">$0</div>
+                        </div>
+                        <div class="slots-info-box">
+                            <div class="slots-info-label">Total Spins</div>
+                            <div class="slots-info-value" id="slots-total-spins">0</div>
+                        </div>
+                        <div class="slots-info-box">
+                            <div class="slots-info-label">Biggest Win</div>
+                            <div class="slots-info-value" id="slots-biggest-win">$0</div>
+                        </div>
+                    </div>
                 </div>
-                <button class="open-btn" id="mines-start-btn" onclick="startMinesGame()">START GAME</button>
-                <button class="back-btn" id="mines-cashout-btn" onclick="cashoutMines()" style="display: none; background: linear-gradient(135deg, #22c55e, #16a34a); border: none;">CASHOUT $<span id="mines-cashout-value">0</span></button>
-            </div>
-            <div class="mines-grid" id="mines-grid"></div>
-            <div class="mines-info" id="mines-info">
-                <div>Multiplier: <span id="mines-multiplier">1.00x</span></div>
-                <div>Next: <span id="mines-next-multiplier">-</span></div>
-            </div>
-            <div style="text-align: center; margin-top: 1rem; color: #888;">
-                Click tiles to reveal gems. Avoid mines! Cash out anytime.
-            </div>
+                
+                <div class="slots-paytable">
+                    <div class="slots-paytable-title">📋 Paytable</div>
+                    <div class="slots-paytable-grid">
+                        <div class="slots-paytable-item">
+                            <span class="slots-paytable-icon">🍒🍒🍒</span>
+                            <span class="slots-paytable-odds">3x Cherry = 2x bet</span>
+                        </div>
+                        <div class="slots-paytable-item">
+                            <span class="slots-paytable-icon">🍋🍋🍋</span>
+                            <span class="slots-paytable-odds">3x Lemon = 3x bet</span>
+                        </div>
+                        <div class="slots-paytable-item">
+                            <span class="slots-paytable-icon">🍊🍊🍊</span>
+                            <span class="slots-paytable-odds">3x Orange = 5x bet</span>
+                        </div>
+                        <div class="slots-paytable-item">
+                            <span class="slots-paytable-icon">🍇🍇🍇</span>
+                            <span class="slots-paytable-odds">3x Grapes = 10x bet</span>
+                        </div>
+                        <div class="slots-paytable-item">
+                            <span class="slots-paytable-icon">💎💎💎</span>
+                            <span class="slots-paytable-odds">3x Diamond = 25x bet</span>
+                        </div>
+                        <div class="slots-paytable-item">
+                            <span class="slots-paytable-icon">7️⃣7️⃣7️⃣</span>
+                            <span class="slots-paytable-odds">3x Seven = 50x bet</span>
+                        </div>
+                        <div class="slots-paytable-item">
+                            <span class="slots-paytable-icon">🎰🎰🎰</span>
+                            <span class="slots-paytable-odds">3x Jackpot = 100x bet</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -1393,6 +1556,17 @@ window.addEventListener('beforeunload', () => {
             { name: "Admin Case", price:1000000000000, icon: "👨🏻‍💻", odds: "92% exotic, 7% ???, 1% 🌀", chances: { exotic: 92, unknown: 7, admin: 1 } }
         ];
 
+        // Slots symbols with weights (higher = more common)
+        const slotsSymbols = [
+            { icon: "🍒", name: "Cherry", weight: 30, multiplier: 2 },
+            { icon: "🍋", name: "Lemon", weight: 25, multiplier: 3 },
+            { icon: "🍊", name: "Orange", weight: 20, multiplier: 5 },
+            { icon: "🍇", name: "Grapes", weight: 15, multiplier: 10 },
+            { icon: "💎", name: "Diamond", weight: 7, multiplier: 25 },
+            { icon: "7️⃣", name: "Seven", weight: 2.5, multiplier: 50 },
+            { icon: "🎰", name: "Jackpot", weight: 0.5, multiplier: 100 }
+        ];
+
         // Game State
         let balance = 200;
         let inventory = [];
@@ -1407,6 +1581,13 @@ window.addEventListener('beforeunload', () => {
         let autoRollCount = 0;
         let autoRollTarget = 0;
         let isAutoRolling = false;
+
+        // Slots state
+        let slotsStats = {
+            totalSpins: 0,
+            lastWin: 0,
+            biggestWin: 0
+        };
 
         const ADMIN_CODE = "67ADMIN67";
         const OWNER_CODE = "CAMERON2011";
@@ -1448,6 +1629,7 @@ function formatNumber(num) {
             updateBalance();
             checkAdminStatus();
             populateAutoRollSelect();
+            loadSlotsStats();
         }
 
 function loadData() {
@@ -2059,9 +2241,9 @@ function parseFormattedNumber(str) {
             } else if (section === 'coinflip') {
                 document.getElementById('coinflip-section').classList.add('active');
                 document.getElementById('coinflip-section').style.display = 'block';
-            } else if (section === 'mines') {
-                document.getElementById('mines-section').classList.add('active');
-                document.getElementById('mines-section').style.display = 'block';
+            } else if (section === 'slots') {
+                document.getElementById('slots-section').classList.add('active');
+                document.getElementById('slots-section').style.display = 'block';
             } else if (section === 'inventory') {
                 document.getElementById('inventory-section').style.display = 'block';
                 updateInventory();
@@ -2106,180 +2288,164 @@ function updateBalance() {
             }
         });
 
-        // Minesweeper Game State
-        let minesGame = {
-            active: false,
-            bet: 0,
-            mines: [],
-            revealed: [],
-            currentMultiplier: 1,
-            gridSize: 25
-        };
+        // Slots Functions
+        function loadSlotsStats() {
+            const saved = localStorage.getItem('fc_slots_stats');
+            if (saved) {
+                slotsStats = JSON.parse(saved);
+                updateSlotsStats();
+            }
+        }
 
-        const minesMultipliers = {
-            1: [1.03, 1.06, 1.09, 1.13, 1.17, 1.21, 1.26, 1.31, 1.37, 1.43, 1.50, 1.58, 1.66, 1.75, 1.85, 1.96, 2.08, 2.22, 2.38, 2.56, 2.78, 3.03, 3.33, 3.70, 4.17],
-            3: [1.09, 1.19, 1.30, 1.43, 1.58, 1.75, 1.96, 2.20, 2.50, 2.86, 3.33, 3.92, 4.76, 5.88, 7.50, 10.00, 14.29, 22.22, 40.00, 100.00],
-            5: [1.17, 1.35, 1.56, 1.82, 2.14, 2.56, 3.08, 3.85, 4.76, 6.00, 7.50, 10.00, 13.33, 18.18, 25.00, 35.71, 50.00, 76.92, 125.00, 250.00],
-            10: [1.43, 1.96, 2.75, 4.00, 6.00, 9.09, 14.29, 23.08, 40.00, 66.67, 100.00, 200.00, 500.00],
-            15: [2.00, 3.33, 6.00, 11.11, 22.22, 50.00, 100.00, 250.00, 1000.00],
-            20: [4.00, 11.11, 50.00, 250.00, 10000.00]
-        };
+        function saveSlotsStats() {
+            localStorage.setItem('fc_slots_stats', JSON.stringify(slotsStats));
+        }
 
-        function startMinesGame() {
-            if (minesGame.active) return;
+        function updateSlotsStats() {
+            document.getElementById('slots-last-win').textContent = '$' + formatNumber(slotsStats.lastWin);
+            document.getElementById('slots-total-spins').textContent = formatNumber(slotsStats.totalSpins);
+            document.getElementById('slots-biggest-win').textContent = '$' + formatNumber(slotsStats.biggestWin);
+        }
+
+        function setSlotsBet(amount) {
+            document.getElementById('slots-bet').value = amount;
+        }
+
+        function getRandomSymbol() {
+            const totalWeight = slotsSymbols.reduce((sum, s) => sum + s.weight, 0);
+            let random = Math.random() * totalWeight;
             
-            const betInput = document.getElementById('mines-bet').value.trim();
+            for (const symbol of slotsSymbols) {
+                random -= symbol.weight;
+                if (random <= 0) return symbol;
+            }
+            return slotsSymbols[0];
+        }
+
+        function spinSlots() {
+            if (isSpinning) return;
+            
+            const betInput = document.getElementById('slots-bet').value.trim();
             const bet = parseFormattedNumber(betInput);
-            const mineCount = parseInt(document.getElementById('mines-count').value);
             
             if (isNaN(bet) || bet < 10 || bet > balance) {
-                alert("Invalid bet amount! Minimum is $10.");
+                alert("Invalid bet amount! Minimum is $10 and you must have enough balance.");
                 return;
             }
             
+            isSpinning = true;
             balance -= bet;
             updateBalance();
             saveData();
             
-            minesGame = {
-                active: true,
-                bet: bet,
-                mines: [],
-                revealed: [],
-                currentMultiplier: 1,
-                mineCount: mineCount,
-                gridSize: 25
-            };
+            document.getElementById('slots-spin-btn').disabled = true;
+            document.getElementById('slots-result').textContent = '';
+            document.getElementById('slots-result').className = 'slots-result';
+            document.getElementById('slots-payline').classList.remove('active');
             
-            // Place mines randomly
-            while (minesGame.mines.length < mineCount) {
-                const pos = Math.floor(Math.random() * 25);
-                if (!minesGame.mines.includes(pos)) {
-                    minesGame.mines.push(pos);
+            // Add spinning animation
+            for (let i = 0; i < 3; i++) {
+                document.getElementById(`slot-${i}`).classList.add('spinning');
+            }
+            
+            // Determine results
+            const results = [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()];
+            
+            // Animate reels stopping one by one
+            let stopDelay = 0;
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    const reel = document.getElementById(`slot-${i}`);
+                    reel.classList.remove('spinning');
+                    reel.textContent = results[i].icon;
+                }, 500 + (i * 300));
+            }
+            
+            // Check win after animation
+            setTimeout(() => {
+                checkSlotsWin(results, bet);
+            }, 1500);
+        }
+
+        function checkSlotsWin(results, bet) {
+            const resultDiv = document.getElementById('slots-result');
+            
+            // Check for three of a kind
+            if (results[0].icon === results[1].icon && results[1].icon === results[2].icon) {
+                // Three of a kind win
+                const winAmount = Math.floor(bet * results[0].multiplier);
+                balance += winAmount;
+                
+                slotsStats.lastWin = winAmount;
+                if (winAmount > slotsStats.biggestWin) slotsStats.biggestWin = winAmount;
+                slotsStats.totalSpins++;
+                saveSlotsStats();
+                updateSlotsStats();
+                
+                // Highlight winning reels
+                for (let i = 0; i < 3; i++) {
+                    document.getElementById(`slot-${i}`).classList.add('win');
                 }
-            }
-            
-            renderMinesGrid();
-            updateMinesInfo();
-            
-            document.getElementById('mines-start-btn').style.display = 'none';
-            document.getElementById('mines-cashout-btn').style.display = 'inline-block';
-            document.getElementById('mines-cashout-value').textContent = formatNumber(Math.floor(bet));
-            document.getElementById('mines-bet').disabled = true;
-            document.getElementById('mines-count').disabled = true;
-        }
-
-        function renderMinesGrid() {
-            const grid = document.getElementById('mines-grid');
-            grid.innerHTML = '';
-            
-            for (let i = 0; i < 25; i++) {
-                const tile = document.createElement('div');
-                tile.className = 'mines-tile';
-                tile.dataset.index = i;
-                tile.onclick = () => revealTile(i);
-                grid.appendChild(tile);
-            }
-        }
-
-        function revealTile(index) {
-            if (!minesGame.active || minesGame.revealed.includes(index)) return;
-            
-            const tile = document.querySelector(`.mines-tile[data-index="${index}"]`);
-            
-            if (minesGame.mines.includes(index)) {
-                // Hit a mine - game over
-                tile.classList.add('mine');
-                tile.innerHTML = '💣';
-                endMinesGame(false);
+                document.getElementById('slots-payline').classList.add('active');
+                
+                resultDiv.textContent = `🎉 JACKPOT! ${results[0].name} x3! Won $${formatNumber(winAmount)}!`;
+                resultDiv.className = 'slots-result win';
+                
+                updateBalance();
+                saveData();
+                
+                // Show win modal for big wins
+                if (winAmount >= bet * 10) {
+                    showWinModal({
+                        name: `${results[0].name} Jackpot!`,
+                        icon: results[0].icon,
+                        value: winAmount,
+                        rarity: winAmount >= bet * 50 ? 'mythic' : 'epic'
+                    });
+                }
             } else {
-                // Safe tile
-                tile.classList.add('revealed');
-                tile.innerHTML = '💎';
-                minesGame.revealed.push(index);
+                // Check for two of a kind (small consolation prize)
+                let twoMatch = null;
+                if (results[0].icon === results[1].icon) twoMatch = results[0];
+                else if (results[1].icon === results[2].icon) twoMatch = results[1];
+                else if (results[0].icon === results[2].icon) twoMatch = results[0];
                 
-                const multipliers = minesMultipliers[minesGame.mineCount];
-                const safeRevealed = minesGame.revealed.length;
-                
-                if (safeRevealed <= multipliers.length) {
-                    minesGame.currentMultiplier = multipliers[safeRevealed - 1];
+                if (twoMatch) {
+                    const winAmount = Math.floor(bet * 0.5); // 0.5x for two matches
+                    balance += winAmount;
+                    
+                    slotsStats.lastWin = winAmount;
+                    if (winAmount > slotsStats.biggestWin) slotsStats.biggestWin = winAmount;
+                    slotsStats.totalSpins++;
+                    saveSlotsStats();
+                    updateSlotsStats();
+                    
+                    resultDiv.textContent = `✨ Two ${twoMatch.name}s! Won $${formatNumber(winAmount)}`;
+                    resultDiv.style.color = '#5e98d9';
+                    
+                    updateBalance();
+                    saveData();
+                } else {
+                    slotsStats.lastWin = 0;
+                    slotsStats.totalSpins++;
+                    saveSlotsStats();
+                    updateSlotsStats();
+                    
+                    resultDiv.textContent = '💨 No match - Better luck next time!';
+                    resultDiv.style.color = '#888';
                 }
-                
-                updateMinesInfo();
-                
-                const cashoutValue = Math.floor(minesGame.bet * minesGame.currentMultiplier);
-                document.getElementById('mines-cashout-value').textContent = formatNumber(cashoutValue);
-                
-                // Check if all safe tiles revealed
-                if (minesGame.revealed.length === 25 - minesGame.mineCount) {
-                    cashoutMines();
+            }
+            
+            isSpinning = false;
+            document.getElementById('slots-spin-btn').disabled = false;
+            
+            // Remove win animations after delay
+            setTimeout(() => {
+                for (let i = 0; i < 3; i++) {
+                    document.getElementById(`slot-${i}`).classList.remove('win');
                 }
-            }
-        }
-
-        function updateMinesInfo() {
-            document.getElementById('mines-multiplier').textContent = minesGame.currentMultiplier.toFixed(2) + 'x';
-            
-            const multipliers = minesMultipliers[minesGame.mineCount];
-            const nextIndex = minesGame.revealed.length;
-            
-            if (nextIndex < multipliers.length) {
-                const nextMult = multipliers[nextIndex];
-                const nextValue = Math.floor(minesGame.bet * nextMult);
-                document.getElementById('mines-next-multiplier').textContent = nextMult.toFixed(2) + 'x ($' + formatNumber(nextValue) + ')';
-            } else {
-                document.getElementById('mines-next-multiplier').textContent = 'MAX';
-            }
-        }
-
-        function cashoutMines() {
-            if (!minesGame.active) return;
-            
-            const winAmount = Math.floor(minesGame.bet * minesGame.currentMultiplier);
-            balance += winAmount;
-            
-            if (minesGame.currentMultiplier > 1) {
-                showWinModal({ 
-                    name: "Mines Win!", 
-                    icon: "💎", 
-                    value: winAmount, 
-                    rarity: "epic" 
-                });
-            }
-            
-            updateBalance();
-            saveData();
-            endMinesGame(true);
-        }
-
-        function endMinesGame(won) {
-            minesGame.active = false;
-            
-            // Reveal all mines
-            minesGame.mines.forEach(mineIndex => {
-                const tile = document.querySelector(`.mines-tile[data-index="${mineIndex}"]`);
-                if (!tile.classList.contains('mine')) {
-                    tile.classList.add('mine', 'game-over');
-                    tile.innerHTML = '💣';
-                }
-            });
-            
-            // Disable all tiles
-            document.querySelectorAll('.mines-tile').forEach(t => t.classList.add('game-over'));
-            
-            document.getElementById('mines-start-btn').style.display = 'inline-block';
-            document.getElementById('mines-cashout-btn').style.display = 'none';
-            document.getElementById('mines-bet').disabled = false;
-            document.getElementById('mines-count').disabled = false;
-            
-            if (!won && minesGame.currentMultiplier === 1) {
-                showWinModal({ 
-                    name: "Mine Exploded!", 
-                    icon: "💣", 
-                    value: 0, 
-                    rarity: "common" 
-                });
-            }
+                document.getElementById('slots-payline').classList.remove('active');
+            }, 2000);
         }
         
 init();
