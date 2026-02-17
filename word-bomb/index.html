@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💣 Word Bomb 💣</title>
+    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; overflow: hidden; }
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .game-font { font-family: 'Fredoka One', cursive; }
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .pulse-red { animation: pulseRed 1s infinite; }
+        @keyframes pulseRed {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+        }
+        .float { animation: float 3s ease-in-out infinite; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .bomb-container { position: relative; width: 160px; height: 160px; margin: 0 auto; }
+        .fuse {
+            position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+            width: 4px; height: 30px; background: #ff6b6b; border-radius: 2px; transition: height 0.1s linear;
+        }
+        .spark {
+            position: absolute; top: -25px; left: 50%; transform: translateX(-50%);
+            width: 8px; height: 8px; background: radial-gradient(circle, #ffd93d 0%, #ff6b6b 100%);
+            border-radius: 50%; box-shadow: 0 0 10px #ffd93d, 0 0 20px #ff6b6b; animation: sparkle 0.5s infinite alternate;
+        }
+        @keyframes sparkle {
+            from { transform: translateX(-50%) scale(1); opacity: 1; }
+            to { transform: translateX(-50%) scale(1.5); opacity: 0.8; }
+        }
+        .explosion {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 0; height: 0; border-radius: 50%; background: radial-gradient(circle, #ff6b6b 0%, #ffd93d 50%, transparent 70%);
+            opacity: 0; pointer-events: none;
+        }
+        .explode-animation { animation: explode 0.6s ease-out forwards; }
+        @keyframes explode {
+            0% { width: 0; height: 0; opacity: 1; }
+            50% { width: 400px; height: 400px; opacity: 0.8; }
+            100% { width: 600px; height: 600px; opacity: 0; }
+        }
+        .letter-card { transition: all 0.3s ease; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .letter-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .player-avatar {
+            width: 50px; height: 50px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 20px; font-weight: bold; transition: all 0.3s ease;
+        }
+        .player-active { box-shadow: 0 0 0 4px #fbbf24, 0 0 20px rgba(251, 191, 36, 0.5); transform: scale(1.1); }
+        .player-dead { opacity: 0.4; filter: grayscale(100%); }
+        .word-history-item { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        .difficulty-easy { color: #10b981; }
+        .difficulty-medium { color: #f59e0b; }
+        .difficulty-hard { color: #ef4444; }
+        .loading-spinner {
+            border: 3px solid #f3f3f3; border-top: 3px solid #6366f1; border-radius: 50%;
+            width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .validation-status { position: absolute; right: 4rem; top: 50%; transform: translateY(-50%); }
+        .game-container { height: 100vh; max-height: 100vh; display: flex; flex-direction: column; }
+        .main-content { flex: 1; overflow: hidden; display: flex; }
+        .center-panel { display: flex; flex-direction: column; justify-content: center; }
+        .scroll-section { max-height: 100%; overflow-y: auto; }
+        #wordHistory { max-width: 100%; }
+        .room-code-input { letter-spacing: 0.5em; text-align: center; font-family: monospace; font-size: 2rem; }
+        .mode-btn { transition: all 0.3s ease; }
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; transform: scale(1.05);
+        }
+        .lobby-panel { display: none; }
+        .lobby-panel.active { display: block; }
+        .game-panel { display: none; height: 100%; }
+        .game-panel.active { display: flex; }
+        .home { display: none; height: 100%; align-items: center; justify-content: center; overflow-y: auto; }
+        .home-panel { display: none; height: 100%; align-items: center; justify-content: center; overflow-y: auto; }
+        .home-panel.active { display: flex; }
+        .bottom-bar { min-height: 60px; }
+        .home-content { width: 100%; max-width: 500px; padding: 1rem; }
+        .connection-status {
+            position: fixed; top: 20px; right: 20px; padding: 8px 16px; border-radius: 20px;
+            font-size: 12px; font-weight: bold; z-index: 100; transition: all 0.3s;
+        }
+        .status-connecting { background: #fbbf24; color: #92400e; }
+        .status-connected { background: #10b981; color: white; }
+        .status-error { background: #ef4444; color: white; }
+        .status-disconnected { background: #6b7280; color: white; }
+        
+        @media (max-height: 700px) {
+            .bomb-container { width: 120px; height: 120px; }
+            .home-content { padding: 0.5rem; }
+            .mode-btn { padding: 1rem; }
+            .mode-btn .text-4xl { font-size: 2rem; }
+        }
+        @media (max-height: 600px) {
+            .home-panel { align-items: flex-start; padding-top: 1rem; }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center">
+    <!-- Connection Status -->
+    <div id="connectionStatus" class="connection-status status-disconnected hidden">Disconnected</div>
+
+    <!-- Audio Context Starter -->
+    <div id="audioStarter" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl p-6 max-w-sm mx-4 text-center shadow-2xl">
+            <div class="text-5xl mb-3">🎵</div>
+            <h2 class="text-2xl font-bold mb-3 game-font text-gray-800">Ready to Play?</h2>
+            <p class="text-gray-600 mb-4 text-sm">Click below to start with audio enabled!</p>
+            <button onclick="startAudio()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-full transition-all transform hover:scale-110 shadow-lg">
+                Start Game ▶️
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Game Container -->
+    <div id="gameContainer" class="w-full max-w-6xl h-screen bg-white rounded-none lg:rounded-3xl shadow-2xl overflow-hidden opacity-0 transition-opacity duration-500 game-container">
+        
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 text-white shrink-0">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl game-font tracking-wide">💣 WORD BOMB</h1>
+                    <p class="text-indigo-200 text-xs mt-0" id="modeIndicator">Select a mode</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="toggleMute()" id="muteBtn" class="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">🔊</button>
+                    <button onclick="showRules()" class="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition">ℹ️</button>
+                    <button onclick="returnToHome()" id="homeBtn" class="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30 transition hidden">🏠</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- HOME PANEL -->
+        <div id="homePanel" class="home-panel active flex-1">
+            <div class="home-content">
+                <div class="text-center mb-6">
+                    <div class="text-5xl mb-3">💣</div>
+                    <h2 class="text-3xl font-bold game-font text-gray-800">Word Bomb</h2>
+                    <p class="text-gray-600 mt-2 text-sm">Choose your game mode</p>
+                </div>
+
+                <div class="space-y-3 mb-4">
+                    <button onclick="startSinglePlayer()" class="w-full mode-btn p-5 rounded-xl border-2 border-indigo-200 hover:border-indigo-500 bg-indigo-50 hover:bg-indigo-100 transition-all text-left flex items-center gap-4">
+                        <div class="text-4xl">🎮</div>
+                        <div>
+                            <div class="font-bold text-lg text-gray-800">Single Player</div>
+                            <div class="text-sm text-gray-600">Play against 3 bots</div>
+                        </div>
+                    </button>
+
+                    <button onclick="showMultiplayerOptions()" class="w-full mode-btn p-5 rounded-xl border-2 border-purple-200 hover:border-purple-500 bg-purple-50 hover:bg-purple-100 transition-all text-left flex items-center gap-4">
+                        <div class="text-4xl">🌐</div>
+                        <div>
+                            <div class="font-bold text-lg text-gray-800">Multiplayer</div>
+                            <div class="text-sm text-gray-600">Play with friends using peer-to-peer connection</div>
+                        </div>
+                    </button>
+                </div>
+
+                <div id="multiplayerOptions" class="space-y-3 hidden">
+                    <div class="border-t pt-3">
+                        <div class="flex gap-2 mb-3">
+                            <button onclick="showCreateRoom()" class="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg font-bold transition text-sm">Create Room</button>
+                            <button onclick="showJoinRoom()" class="flex-1 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold transition text-sm">Join Room</button>
+                        </div>
+
+                        <!-- Create Room Section -->
+                        <div id="createRoomSection" class="hidden">
+                            <div class="bg-green-50 p-4 rounded-xl text-center">
+                                <div class="text-sm text-green-700 mb-2 font-semibold">Your Room Code:</div>
+                                <div id="generatedRoomCode" class="text-4xl font-mono font-bold text-green-800 mb-3 tracking-widest bg-white py-2 rounded-lg shadow-inner">------</div>
+                                <div class="flex gap-2 justify-center mb-3">
+                                    <button onclick="copyRoomCode(event)" class="bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-gray-700 transition">Copy Code</button>
+                                </div>
+                                <div class="text-xs text-green-600 mb-2">Waiting for players to join...</div>
+                                <div id="playersInRoom" class="text-sm font-semibold text-green-700 bg-white inline-block px-3 py-1 rounded-full">Players: 1/2</div>
+                                <div id="peerIdDisplay" class="text-xs text-gray-500 mt-2 break-all"></div>
+                                <button onclick="startMultiplayerGame()" id="startMultiBtn" class="mt-3 w-full py-2.5 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>Start Game</button>
+                                <div class="text-xs text-gray-500 mt-1">2 player game</div>
+                                <button onclick="closeRoom()" class="mt-2 w-full py-2 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 transition text-sm">Close Room</button>
+                            </div>
+                        </div>
+
+                        <!-- Join Room Section -->
+                        <div id="joinRoomSection" class="hidden">
+                            <div class="bg-blue-50 p-4 rounded-xl">
+                                <div class="text-sm text-blue-700 mb-2 font-semibold text-center">Enter Room Code to Join:</div>
+                                <input 
+                                    type="text" 
+                                    id="roomCodeInput" 
+                                    class="w-full px-4 py-3 text-lg border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-500 bg-white shadow-inner text-center font-mono"
+                                    placeholder="Enter Room Code..."
+                                    maxlength="6"
+                                >
+                                <button onclick="joinRoom()" class="mt-3 w-full py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">Connect to Host</button>
+                                <button onclick="cancelJoin()" class="mt-2 w-full py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition text-sm">Cancel</button>
+                                <div id="joinStatus" class="mt-2 text-sm text-center min-h-[20px]"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME PANEL -->
+        <div id="gamePanel" class="game-panel flex-col lg:flex-row flex-1 overflow-hidden">
+            <!-- Left Panel: Players -->
+            <div class="lg:w-1/4 bg-gray-50 p-3 border-b lg:border-b-0 lg:border-r border-gray-200 shrink-0 overflow-y-auto">
+                <h3 class="text-base font-bold text-gray-700 mb-2 flex items-center gap-2">
+                    <span>👥</span> Players
+                </h3>
+                <div id="playersList" class="space-y-2"></div>
+                
+                <div class="mt-3 p-3 bg-indigo-50 rounded-xl">
+                    <h4 class="text-indigo-900 mb-1 text-sm font-bold">🎯 Challenge</h4>
+                    <div id="challengeDisplay" class="text-indigo-700 font-semibold text-xs">
+                        Type words containing the letters shown!
+                    </div>
+                    <div class="mt-1 text-xs text-indigo-600">
+                        Time decreases by 0.5s per word!
+                    </div>
+                </div>
+                
+                <div id="networkInfo" class="mt-3 p-2 bg-gray-100 rounded-lg text-xs text-gray-600 hidden">
+                    <div class="font-bold mb-1">Network Info:</div>
+                    <div id="networkStatus">Not connected</div>
+                </div>
+            </div>
+
+            <!-- Center Panel: Game Action -->
+            <div class="lg:w-3/4 p-4 flex flex-col items-center justify-center center-panel overflow-y-auto">
+                
+                <!-- Bomb Section -->
+                <div class="bomb-container mb-4 float">
+                    <div class="fuse" id="fuse"></div>
+                    <div class="spark" id="spark"></div>
+                    <svg viewBox="0 0 200 200" class="w-full h-full drop-shadow-2xl">
+                        <circle cx="100" cy="110" r="70" fill="#2d3748" stroke="#1a202c" stroke-width="3"/>
+                        <circle cx="100" cy="110" r="65" fill="url(#bombGradient)"/>
+                        <ellipse cx="75" cy="85" rx="20" ry="15" fill="rgba(255,255,255,0.3)" transform="rotate(-45 75 85)"/>
+                        <rect x="95" y="25" width="10" height="20" fill="#4a5568"/>
+                        <defs>
+                            <radialGradient id="bombGradient" cx="30%" cy="30%">
+                                <stop offset="0%" style="stop-color:#4a5568;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#1a202c;stop-opacity:1" />
+                            </radialGradient>
+                        </defs>
+                    </svg>
+                    <div class="explosion" id="explosion"></div>
+                </div>
+
+                <!-- Timer Display -->
+                <div class="text-center mb-4">
+                    <div class="text-5xl font-bold game-font bomb-text text-gray-800" id="timerDisplay">10.00</div>
+                    <div class="text-gray-500 text-xs mt-1">seconds remaining</div>
+                    <div id="baseTimeDisplay" class="text-xs text-gray-400 mt-1">Base time: 10.0s</div>
+                </div>
+
+                <!-- Required Letters Display -->
+                <div class="mb-4 w-full max-w-md">
+                    <div class="text-center mb-2 text-gray-600 font-semibold text-sm">Required Letters:</div>
+                    <div id="lettersContainer" class="flex justify-center gap-2 flex-wrap"></div>
+                    <div id="difficultyIndicator" class="text-center mt-2 text-xs font-bold difficulty-medium">
+                        Medium Difficulty
+                    </div>
+                </div>
+
+                <!-- Input Section -->
+                <div class="w-full max-w-md relative">
+                    <input 
+                        type="text" 
+                        id="wordInput" 
+                        class="w-full px-4 py-3 text-lg border-4 border-indigo-300 rounded-xl focus:outline-none focus:border-indigo-500 game-font text-center uppercase tracking-wider transition-all shadow-lg"
+                        placeholder="TYPE WORD HERE..."
+                        autocomplete="off"
+                        disabled
+                    >
+                    <div class="validation-status" id="validationStatus"></div>
+                    <div class="absolute right-4 top-1/2 transform -translate-y-1/2">
+                        <span id="inputStatus" class="text-2xl"></span>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex gap-2 mt-4">
+                    <button onclick="submitWord()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm" id="submitBtn" disabled>
+                        SUBMIT ✓
+                    </button>
+                </div>
+
+                <!-- Message Display -->
+                <div id="messageDisplay" class="mt-3 h-6 text-center font-bold text-base transition-all"></div>
+                
+                <!-- API Status -->
+                <div id="apiStatus" class="mt-1 text-xs text-gray-400"></div>
+            </div>
+        </div>
+
+        <!-- Bottom Panel: Word History & Stats -->
+        <div class="bg-gray-100 p-3 border-t border-gray-200 shrink-0 bottom-bar">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-2 h-full">
+                <div class="flex items-center gap-2">
+                    <div class="bg-white px-3 py-1 rounded-lg shadow">
+                        <span class="text-gray-500 text-xs">Round</span>
+                        <span id="roundDisplay" class="font-bold text-lg ml-1 text-indigo-600">1</span>
+                    </div>
+                    <div class="bg-white px-3 py-1 rounded-lg shadow">
+                        <span class="text-gray-500 text-xs">Words</span>
+                        <span id="wordsUsedDisplay" class="font-bold text-lg ml-1 text-purple-600">0</span>
+                    </div>
+                </div>
+                
+                <div class="flex-1 max-w-lg overflow-hidden">
+                    <div class="text-xs text-gray-500 mb-1">Recent Words:</div>
+                    <div id="wordHistory" class="flex gap-2 overflow-x-auto pb-1"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-2xl p-6 max-w-lg mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h2 class="text-3xl font-bold mb-4 game-font text-indigo-600">How to Play</h2>
+            <div class="space-y-3 text-gray-700 text-sm">
+                <div class="flex items-start gap-3">
+                    <span class="bg-indigo-100 p-2 rounded-lg text-lg">💣</span>
+                    <div>
+                        <h4 class="font-bold">The Bomb</h4>
+                        <p>A bomb is passed between players. Each player must type a valid English word before the timer runs out!</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="bg-green-100 p-2 rounded-lg text-lg">🔤</span>
+                    <div>
+                        <h4 class="font-bold">Required Letters</h4>
+                        <p>Your word MUST contain the displayed letter combination somewhere within it.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="bg-yellow-100 p-2 rounded-lg text-lg">⏱️</span>
+                    <div>
+                        <h4 class="font-bold">Speeding Up!</h4>
+                        <p>After every successful word, the timer decreases by 0.5 seconds! Time resets when someone loses a life.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="bg-red-100 p-2 rounded-lg text-lg">⚠️</span>
+                    <div>
+                        <h4 class="font-bold">Don't Repeat</h4>
+                        <p>You cannot use words that have already been used in the current round!</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="bg-purple-100 p-2 rounded-lg text-lg">🌐</span>
+                    <div>
+                        <h4 class="font-bold">Multiplayer</h4>
+                        <p>Create a room and share your Room Code with friends, or join their room using their Room Code!</p>
+                    </div>
+                </div>
+            </div>
+            <button onclick="hideRules()" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition">
+                Got it! Let's Play
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden items-center justify-center backdrop-blur-md">
+        <div class="bg-white rounded-3xl p-6 max-w-md mx-4 shadow-2xl text-center">
+            <div class="text-5xl mb-3" id="gameOverEmoji">🏆</div>
+            <h2 class="text-3xl font-bold mb-2 game-font" id="gameOverTitle">Game Over!</h2>
+            <p class="text-gray-600 mb-4 text-sm" id="gameOverMessage">Someone won the game!</p>
+            
+            <div class="bg-gray-100 rounded-xl p-3 mb-4">
+                <div class="text-sm text-gray-500 mb-2">Final Standings</div>
+                <div id="finalStandings" class="space-y-1 text-sm"></div>
+            </div>
+
+            <button onclick="restartGame()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 rounded-xl shadow-lg transform hover:scale-105 transition-all">
+                Play Again 🔄
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = {
+            mode: 'single',
+            players: [],
+            currentPlayerIndex: 0,
+            timeLeft: 10,
+            maxTime: 10,
+            baseTime: 10,
+            currentBaseTime: 10,
+            isPlaying: false,
+            round: 1,
+            usedWords: new Set(),
+            currentLetters: '',
+            difficulty: 'medium',
+            timerInterval: null,
+            bombFuse: 100,
+            muted: false,
+            roomCode: null,
+            isHost: false,
+            myPlayerId: 1,
+            consecutiveSuccesses: 0
+        };
+
+        // Blackjack-style multiplayer networking
+        let peer = null, conn = null;
+        let isHost = false, roomCode = '';
+        let isOnlineGame = false;
+        let playerNum = 0; // 1 = host, 2 = client
+
+        // Letter combinations
+        const letterCombos = {
+            easy: ['AT', 'AN', 'IN', 'ON', 'IT', 'IS', 'BE', 'TO', 'OF', 'AND', 'FOR', 'BUT', 'OR', 'UP', 'BY', 'ED', 'ER'],
+            medium: ['ING', 'TION', 'ABLE', 'MENT', 'NESS', 'EST', 'LY', 'RE', 'UN', 'TH', 'CH', 'SH', 'GH', 'CK', 'EE', 'IST', 'QU', 'ZI'],
+            hard: ['OUGH', 'IGHT', 'OULD', 'IOUS', 'EOUS', 'ATURE', 'ITION', 'ANCE', 'ENCE', 'SION', 'ALLY', 'ICAL', 'TIAL']
+        };
+
+        const DATAMUSE_API = 'https://api.datamuse.com/words';
+
+        // Audio setup
+        let synth, bombTickSynth, explosionSynth, winSynth;
+        let audioInitialized = false;
+
+        async function initAudio() {
+            if (audioInitialized) return;
+            await Tone.start();
+            if (Tone.context.state !== 'running') {
+                await Tone.context.resume();
+            }
+            
+            synth = new Tone.PolySynth(Tone.Synth).toDestination();
+            synth.volume.value = -10;
+            
+            bombTickSynth = new Tone.MembraneSynth({
+                pitchDecay: 0.05, octaves: 2, oscillator: { type: 'sine' },
+                envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            bombTickSynth.volume.value = -5;
+            
+            explosionSynth = new Tone.NoiseSynth({
+                noise: { type: 'brown' },
+                envelope: { attack: 0.005, decay: 0.5, sustain: 0 }
+            }).toDestination();
+            explosionSynth.volume.value = -2;
+            
+            winSynth = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.05, decay: 0.5, sustain: 0.1, release: 1 }
+            }).toDestination();
+            winSynth.volume.value = -8;
+            
+            audioInitialized = true;
+        }
+
+        function playTick() {
+            if (gameState.muted || !audioInitialized) return;
+            bombTickSynth.triggerAttackRelease("C2", "32n");
+        }
+
+        function playExplosion() {
+            if (gameState.muted || !audioInitialized) return;
+            explosionSynth.triggerAttackRelease("8n");
+            const boom = new Tone.MembraneSynth().toDestination();
+            boom.triggerAttackRelease("A1", "2n");
+        }
+
+        function playSuccess() {
+            if (gameState.muted || !audioInitialized) return;
+            synth.triggerAttackRelease(["C5", "E5", "G5"], "16n");
+        }
+
+        function playError() {
+            if (gameState.muted || !audioInitialized) return;
+            synth.triggerAttackRelease(["C3", "B2"], "16n");
+        }
+
+        function playWin() {
+            if (gameState.muted || !audioInitialized) return;
+            const now = Tone.now();
+            winSynth.triggerAttackRelease("C4", "8n", now);
+            winSynth.triggerAttackRelease("E4", "8n", now + 0.1);
+            winSynth.triggerAttackRelease("G4", "8n", now + 0.2);
+            winSynth.triggerAttackRelease("C5", "4n", now + 0.3);
+        }
+
+        function startAudio() {
+            initAudio().then(() => {
+                document.getElementById('audioStarter').style.display = 'none';
+                document.getElementById('gameContainer').style.opacity = '1';
+            });
+        }
+
+        function toggleMute() {
+            gameState.muted = !gameState.muted;
+            document.getElementById('muteBtn').textContent = gameState.muted ? '🔇' : '🔊';
+        }
+
+        function showRules() {
+            document.getElementById('rulesModal').classList.remove('hidden');
+            document.getElementById('rulesModal').classList.add('flex');
+        }
+
+        function hideRules() {
+            document.getElementById('rulesModal').classList.add('hidden');
+            document.getElementById('rulesModal').classList.remove('flex');
+        }
+
+        function updateConnectionStatus(status, message) {
+            const statusEl = document.getElementById('connectionStatus');
+            const networkInfo = document.getElementById('networkInfo');
+            const networkStatus = document.getElementById('networkStatus');
+            
+            if (!statusEl) return;
+            
+            statusEl.classList.remove('hidden', 'status-connecting', 'status-connected', 'status-error', 'status-disconnected');
+                    
+            switch(status) {
+                case 'connecting':
+                    statusEl.classList.add('status-connecting');
+                    statusEl.textContent = message || 'Connecting...';
+                    break;
+                case 'connected':
+                    statusEl.classList.add('status-connected');
+                    statusEl.textContent = message || 'Connected';
+                    if (networkInfo) networkInfo.classList.remove('hidden');
+                    break;
+                case 'error':
+                    statusEl.classList.add('status-error');
+                    statusEl.textContent = message || 'Error';
+                    break;
+                case 'disconnected':
+                    statusEl.classList.add('status-disconnected');
+                    statusEl.textContent = message || 'Disconnected';
+                    break;
+            }
+            
+            if (networkInfo && !networkInfo.classList.contains('hidden')) {
+                networkStatus.textContent = message || status;
+            }
+        }
+
+        // MULTIPLAYER FUNCTIONS
+        function showMultiplayerOptions() {
+            document.getElementById('multiplayerOptions').classList.remove('hidden');
+        }
+
+        function showCreateRoom() {
+            document.getElementById('createRoomSection').classList.remove('hidden');
+            document.getElementById('joinRoomSection').classList.add('hidden');
+            createRoom();
+        }
+
+        function showJoinRoom() {
+            document.getElementById('joinRoomSection').classList.remove('hidden');
+            document.getElementById('createRoomSection').classList.add('hidden');
+            document.getElementById('roomCodeInput').focus();
+        }
+
+        function generateRoomCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+function createRoom() {
+    isHost = true;
+    playerNum = 1;
+    roomCode = generateRoomCode();
+    
+    document.getElementById('generatedRoomCode').textContent = roomCode;
+    document.getElementById('peerIdDisplay').innerHTML = 'Creating room...';
+    updateConnectionStatus('connecting', 'Initializing host...');
+
+    // Use auto-generated peer ID, not custom room code
+    peer = new Peer({
+        config: { iceServers: [{url: 'stun:stun.l.google.com:19302'}] }
+    });
+
+    peer.on('open', (id) => {
+        // Store the mapping: display code -> actual peer ID
+        // In a real app, you'd send this to a signaling server
+        // For now, we share the actual peer ID directly
+        document.getElementById('peerIdDisplay').innerHTML = `
+            <div class="bg-green-50 p-4 rounded-xl border-2 border-green-300 text-center">
+                <div class="text-lg font-bold text-green-800 mb-2">✅ Room Ready</div>
+                <div class="text-sm text-green-700 mb-2">Share this code with opponent:</div>
+                <div class="text-4xl font-mono font-bold text-green-800 mb-3 tracking-widest bg-white py-2 rounded-lg shadow-inner">${roomCode}</div>
+                <div class="text-xs text-gray-600 mb-2">Peer ID: <span class="font-mono text-xs break-all">${id}</span></div>
+                <button onclick="copyRoomCode(event)" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold mb-3">Copy Code</button>
+                <div id="playersInRoom" class="text-sm font-semibold text-green-700 bg-white inline-block px-4 py-2 rounded-full mb-3">Players: 1/2</div>
+                <button onclick="startMultiplayerGame()" id="startMultiBtn" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>Start Game</button>
+                <div class="text-xs text-gray-500 mt-1">2 player game</div>
+                <button onclick="closeRoom()" class="mt-2 w-full py-2 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 transition text-sm">Close Room</button>
+            </div>
+        `;
+        updateConnectionStatus('connected', 'Room ready - Waiting for players');
+        
+        // Store the actual peer ID for connection
+        window.actualPeerId = id;
+    });
+
+    peer.on('connection', (connection) => {
+        if (conn) return;
+        conn = connection;
+        setupConnection();
+        
+        document.getElementById('playersInRoom').textContent = 'Players: 2/2';
+        document.getElementById('startMultiBtn').disabled = false;
+        
+        conn.send({
+            type: 'playerInfo',
+            playerId: 2,
+            message: 'Connected to host!'
+        });
+    });
+
+    peer.on('error', (err) => {
+        document.getElementById('peerIdDisplay').innerHTML = `<div class="text-red-500">Error: ${err.message}</div>`;
+        updateConnectionStatus('error', err.message);
+        console.error('PeerJS Error:', err);
+    });
+    
+    peer.on('disconnected', () => {
+        updateConnectionStatus('error', 'Disconnected from signaling server');
+    });
+}
+
+        function setupConnection() {
+            conn.on('data', (data) => handleMPData(data));
+            conn.on('close', () => {
+                alert('Opponent disconnected!');
+                location.reload();
+            });
+        }
+
+        function send(data) { 
+            if (conn && conn.open) conn.send(data); 
+        }
+
+        function handleMPData(data) {
+            console.log('Received:', data);
+            
+            switch(data.type) {
+                case 'playerInfo':
+                    gameState.myPlayerId = data.playerId;
+                    break;
+                    
+                case 'gameStart':
+                    gameState.isHost = false;
+                    gameState.players = data.players;
+                    gameState.myPlayerId = data.yourPlayerId;
+                    gameState.mode = 'multi';
+                    gameState.roomCode = roomCode;
+                    isOnlineGame = true;
+                    
+                    document.getElementById('modeIndicator').textContent = `Multiplayer - Room: ${roomCode}`;
+                    document.getElementById('homeBtn').classList.remove('hidden');
+                    document.getElementById('homePanel').classList.remove('active');
+                    document.getElementById('gamePanel').classList.add('active');
+                    
+                    startGame();
+                    break;
+                    
+                case 'turnUpdate':
+                    gameState.currentPlayerIndex = data.currentPlayerIndex;
+                    gameState.timeLeft = data.timeLeft;
+                    gameState.maxTime = data.maxTime;
+                    gameState.currentLetters = data.currentLetters;
+                    gameState.currentBaseTime = data.currentBaseTime;
+                    
+                    clearInterval(gameState.timerInterval);
+                    if (gameState.isPlaying) {
+                        gameState.timerInterval = setInterval(gameLoop, 100);
+                    }
+                    
+                    updatePlayersDisplay();
+                    updateTimerDisplay();
+                    updateLettersDisplay();
+                    updateInputState();
+                    break;
+                    
+                case 'wordSubmitted':
+                    if (isHost) {
+                        handleRemoteWordSubmission(data.playerId, data.word);
+                    }
+                    break;
+                    
+                case 'wordValidation':
+                    document.getElementById('validationStatus').innerHTML = '';
+                    document.getElementById('submitBtn').disabled = false;
+                    
+                    if (data.valid) {
+                        gameState.usedWords.add(data.word.toUpperCase());
+                        gameState.currentBaseTime = data.newBaseTime;
+                        updateBaseTimeDisplay();
+                        addToHistory(data.word.toUpperCase(), data.offline || false);
+                        document.getElementById('wordInput').value = '';
+                    } else {
+                        playError();
+                        showMessage(data.reason || 'Invalid word!', 'error');
+                        const input = document.getElementById('wordInput');
+                        input.classList.add('shake');
+                        setTimeout(() => input.classList.remove('shake'), 500);
+                    }
+                    break;
+                    
+                case 'bombExploded':
+                    playExplosion();
+                    gameState.consecutiveSuccesses = 0;
+                    gameState.currentBaseTime = data.newBaseTime;
+                    updateBaseTimeDisplay();
+                    break;
+                    
+                case 'playerHealthUpdate':
+                    const player = gameState.players.find(p => p.id === data.playerId);
+                    if (player) {
+                        player.health = data.health;
+                        updatePlayersDisplay();
+                    }
+                    break;
+                    
+                case 'playerEliminated':
+                    const eliminated = gameState.players.find(p => p.id === data.playerId);
+                    if (eliminated) {
+                        eliminated.health = 0;
+                        updatePlayersDisplay();
+                        showMessage(`${eliminated.name} eliminated!`, 'error');
+                    }
+                    break;
+                    
+                case 'gameOver':
+                    clearInterval(gameState.timerInterval);
+                    if (data.finalPlayers) {
+                        gameState.players = data.finalPlayers;
+                    }
+                    const winner = gameState.players.find(p => p.id === data.winnerId);
+                    endGame(winner);
+                    break;
+            }
+        }
+
+        function copyRoomCode(event) {
+            const code = document.getElementById('generatedRoomCode').textContent;
+            if (code && code !== '------') {
+                navigator.clipboard.writeText(code).then(() => {
+                    const btn = event.target;
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => btn.textContent = originalText, 1500);
+                });
+            }
+        }
+
+function joinRoom() {
+    const code = document.getElementById('roomCodeInput').value.toUpperCase().trim();
+    const statusDiv = document.getElementById('joinStatus');
+    
+    if (code.length !== 6) {
+        statusDiv.textContent = 'Enter 6-character code';
+        statusDiv.className = 'mt-2 text-sm text-center text-red-500 font-semibold';
+        return;
+    }
+
+    isHost = false;
+    playerNum = 2;
+    roomCode = code;
+    statusDiv.textContent = 'Connecting...';
+    statusDiv.className = 'mt-2 text-sm text-center text-blue-500';
+    updateConnectionStatus('connecting', 'Connecting to host...');
+
+    peer = new Peer({
+        config: { iceServers: [{url: 'stun:stun.l.google.com:19302'}] }
+    });
+
+    peer.on('open', (myId) => {
+        // For this demo, we need the actual peer ID to connect
+        // In production, you'd look up the peer ID from your room code via a signaling server
+        // Here we'll prompt for the peer ID or use a workaround
+        
+        // Simple workaround: Ask user to enter the host's Peer ID 
+        // (shown in host's "Peer ID" field when room is created)
+        const hostPeerId = prompt("Enter the Host's Peer ID (shown below their room code):");
+        
+        if (!hostPeerId) {
+            statusDiv.textContent = 'Connection cancelled';
+            statusDiv.className = 'mt-2 text-sm text-center text-gray-500';
+            return;
+        }
+        
+        conn = peer.connect(hostPeerId, {reliable: true, serialization: 'json'});
+        
+        conn.on('open', () => {
+            setupConnection();
+            statusDiv.textContent = 'Connected! Waiting for host...';
+            statusDiv.className = 'mt-2 text-sm text-center text-green-600 font-bold';
+            updateConnectionStatus('connected', 'Connected to room');
+            
+            document.getElementById('joinRoomSection').innerHTML = `
+                <div class="bg-green-50 p-4 rounded-xl text-center">
+                    <div class="text-lg font-bold text-green-800 mb-2">✅ Connected!</div>
+                    <div class="text-sm text-green-700">Waiting for host to start the game...</div>
+                    <button onclick="cancelJoin()" class="mt-3 w-full py-2 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 transition text-sm">Disconnect</button>
+                </div>
+            `;
+        });
+        
+        conn.on('error', (err) => {
+            statusDiv.textContent = 'Connection failed: ' + err.message;
+            statusDiv.className = 'mt-2 text-sm text-center text-red-500 font-semibold';
+            updateConnectionStatus('error', 'Connection failed');
+        });
+    });
+
+    peer.on('error', (err) => {
+        statusDiv.textContent = 'Error: ' + err.message;
+        statusDiv.className = 'mt-2 text-sm text-center text-red-500 font-semibold';
+    });
+
+    setTimeout(() => {
+        if (!conn || !conn.open) {
+            statusDiv.textContent = 'Could not connect - check code';
+            statusDiv.className = 'mt-2 text-sm text-center text-red-500 font-semibold';
+            updateConnectionStatus('error', 'Connection timeout');
+            if (peer) peer.destroy();
+        }
+    }, 15000); // Increased timeout for user input
+}
+
+        function handleRemoteWordSubmission(playerId, word) {
+            if (!gameState.isPlaying) return;
+            
+            validateWordWithAPI(word).then(validation => {
+                const isValid = validation.valid && word.toUpperCase().includes(gameState.currentLetters);
+                const newBaseTime = Math.max(3, gameState.currentBaseTime - 0.5);
+                
+                send({
+                    type: 'wordValidation',
+                    playerId: playerId,
+                    word: word,
+                    valid: isValid,
+                    offline: validation.offline || false,
+                    newBaseTime: newBaseTime,
+                    reason: isValid ? 'success' : (validation.valid ? `Missing letters ${gameState.currentLetters}` : 'Invalid word')
+                });
+                
+                if (isValid) {
+                    gameState.usedWords.add(word.toUpperCase());
+                    gameState.currentBaseTime = newBaseTime;
+                    updateBaseTimeDisplay();
+                    addToHistory(word.toUpperCase(), validation.offline || false);
+                    
+                    clearInterval(gameState.timerInterval);
+                    gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+                    setTimeout(nextTurn, 1500);
+                }
+            });
+        }
+
+        function closeRoom() {
+            if (peer) {
+                peer.destroy();
+            }
+            peer = null;
+            conn = null;
+            isHost = false;
+            roomCode = '';
+            
+            document.getElementById('createRoomSection').classList.add('hidden');
+            document.getElementById('generatedRoomCode').textContent = '------';
+            document.getElementById('peerIdDisplay').innerHTML = '';
+            updateConnectionStatus('disconnected');
+        }
+
+        function cancelJoin() {
+            if (peer) {
+                peer.destroy();
+            }
+            peer = null;
+            conn = null;
+            isHost = false;
+            roomCode = '';
+            
+            document.getElementById('joinRoomSection').innerHTML = `
+                <div class="bg-blue-50 p-4 rounded-xl">
+                    <div class="text-sm text-blue-700 mb-2 font-semibold text-center">Enter Room Code to Join:</div>
+                    <input 
+                        type="text" 
+                        id="roomCodeInput" 
+                        class="w-full px-4 py-3 text-lg border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-500 bg-white shadow-inner text-center font-mono"
+                        placeholder="Enter Room Code..."
+                        maxlength="6"
+                    >
+                    <button onclick="joinRoom()" class="mt-3 w-full py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">Connect to Host</button>
+                    <button onclick="cancelJoin()" class="mt-2 w-full py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition text-sm">Cancel</button>
+                    <div id="joinStatus" class="mt-2 text-sm text-center min-h-[20px]"></div>
+                </div>
+            `;
+            document.getElementById('joinRoomSection').classList.add('hidden');
+            updateConnectionStatus('disconnected');
+        }
+
+        function returnToHome() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.timerInterval);
+            
+            if (peer) {
+                peer.destroy();
+            }
+            peer = null;
+            conn = null;
+            isHost = false;
+            roomCode = '';
+            isOnlineGame = false;
+            playerNum = 0;
+            
+            document.getElementById('homePanel').classList.add('active');
+            document.getElementById('gamePanel').classList.remove('active');
+            document.getElementById('homeBtn').classList.add('hidden');
+            document.getElementById('modeIndicator').textContent = 'Select a mode';
+            document.getElementById('connectionStatus').classList.add('hidden');
+            document.getElementById('multiplayerOptions').classList.add('hidden');
+            document.getElementById('createRoomSection').classList.add('hidden');
+            document.getElementById('joinRoomSection').classList.add('hidden');
+        }
+
+        function startSinglePlayer() {
+            gameState.mode = 'single';
+            gameState.isHost = true;
+            gameState.myPlayerId = 1;
+            
+            gameState.players = [
+                { id: 1, name: 'You', health: 3, isBot: false, avatar: '😎', color: 'bg-blue-500', isLocal: true },
+                { id: 2, name: 'Bot 1', health: 3, isBot: true, avatar: '🤖', color: 'bg-red-500', isLocal: false },
+                { id: 3, name: 'Bot 2', health: 3, isBot: true, avatar: '👾', color: 'bg-green-500', isLocal: false },
+                { id: 4, name: 'Bot 3', health: 3, isBot: true, avatar: '🎃', color: 'bg-purple-500', isLocal: false }
+            ];
+            
+            document.getElementById('modeIndicator').textContent = 'Single Player Mode';
+            document.getElementById('homeBtn').classList.remove('hidden');
+            startGame();
+        }
+
+        function startMultiplayerGame() {
+            if (!isHost) return;
+            
+            if (!conn || !conn.open) {
+                showMessage('Need at least 2 players to start!', 'error');
+                return;
+            }
+            
+            gameState.mode = 'multi';
+            gameState.isHost = true;
+            gameState.myPlayerId = 1;
+            gameState.roomCode = roomCode;
+            isOnlineGame = true;
+            
+            gameState.players = [
+                { id: 1, name: 'You (Host)', health: 3, isBot: false, avatar: '👑', color: 'bg-yellow-500', isLocal: true },
+                { id: 2, name: 'Player 2', health: 3, isBot: false, avatar: '🎮', color: 'bg-blue-500', isLocal: false }
+            ];
+            
+            conn.send({
+                type: 'gameStart',
+                players: gameState.players,
+                yourPlayerId: 2
+            });
+            
+            document.getElementById('modeIndicator').textContent = `Multiplayer - Room: ${roomCode}`;
+            document.getElementById('homeBtn').classList.remove('hidden');
+            document.getElementById('homePanel').classList.remove('active');
+            document.getElementById('gamePanel').classList.add('active');
+            
+            startGame();
+        }
+
+        async function validateWordWithAPI(word) {
+            try {
+                const response = await fetch(`${DATAMUSE_API}?sp=${word.toLowerCase()}&md=d&max=1`);
+                
+                if (!response.ok) throw new Error('API request failed');
+                
+                const data = await response.json();
+                
+                if (data.length > 0 && data[0].word.toLowerCase() === word.toLowerCase()) {
+                    return { valid: true, wordData: data[0], source: 'datamuse' };
+                }
+                
+                return { valid: false, reason: 'Word not found in dictionary', source: 'datamuse' };
+                
+            } catch (error) {
+                console.error('API Error:', error);
+                return { valid: true, offline: true, reason: 'API unavailable - accepting word in offline mode', source: 'fallback' };
+            }
+        }
+
+        async function getWordsWithLetters(letters) {
+            try {
+                const response = await fetch(`${DATAMUSE_API}?sp=*${letters.toLowerCase()}*&md=f&max=50`);
+                
+                if (!response.ok) throw new Error('API request failed');
+                
+                const data = await response.json();
+                
+                return data
+                    .filter(w => {
+                        const word = w.word.toUpperCase();
+                        return word.length >= 3 && 
+                               word.includes(letters.toUpperCase()) &&
+                               !gameState.usedWords.has(word) &&
+                               !word.includes(' ') &&
+                               !word.includes('-');
+                    })
+                    .map(w => w.word.toUpperCase())
+                    .slice(0, 20);
+                    
+            } catch (error) {
+                console.error('Bot word generation error:', error);
+                return [];
+            }
+        }
+
+        function startGame() {
+            document.getElementById('homePanel').classList.remove('active');
+            document.getElementById('gamePanel').classList.add('active');
+            
+            gameState.isPlaying = true;
+            gameState.round = 1;
+            gameState.usedWords.clear();
+            
+            if (!gameState.players || gameState.players.length === 0) {
+                console.error('No players in game state!');
+                return;
+            }
+            
+            gameState.players.forEach(p => {
+                if (p) p.health = 3;
+            });
+            
+            gameState.currentPlayerIndex = 0;
+            gameState.consecutiveSuccesses = 0;
+            
+            const difficulties = ['easy', 'medium', 'hard'];
+            gameState.difficulty = difficulties[Math.floor(Math.random() * difficulties.length)];
+
+            const baseDifficultyTime = gameState.difficulty === 'easy' ? 15 : gameState.difficulty === 'medium' ? 12 : 10;
+            gameState.baseTime = baseDifficultyTime;
+            gameState.currentBaseTime = baseDifficultyTime;
+            
+            updatePlayersDisplay();
+            updateBaseTimeDisplay();
+            nextTurn();
+        }
+
+        function nextTurn() {
+            if (!gameState.isPlaying) return;
+            
+            if (!gameState.players || gameState.players.length === 0) {
+                console.error('No players available in nextTurn');
+                return;
+            }
+            
+            if (gameState.mode === 'multi' && !gameState.isHost) {
+                updatePlayersDisplay();
+                updateTimerDisplay();
+                updateLettersDisplay();
+                updateInputState();
+                return;
+            }
+            
+            const alivePlayers = gameState.players.filter(p => p && p.health > 0);
+            
+            if (alivePlayers.length === 1) {
+                endGame(alivePlayers[0]);
+                return;
+            }
+            
+            if (alivePlayers.length === 0) {
+                endGame(null);
+                return;
+            }
+            
+            let attempts = 0;
+            while (attempts < gameState.players.length) {
+                const player = gameState.players[gameState.currentPlayerIndex];
+                if (player && player.health > 0) break;
+                gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+                attempts++;
+            }
+            
+            const player = gameState.players[gameState.currentPlayerIndex];
+            
+            if (!player) {
+                console.error('Current player is undefined');
+                return;
+            }
+            
+            generateLetters();
+            
+            gameState.maxTime = gameState.currentBaseTime;
+            gameState.timeLeft = gameState.maxTime;
+            
+            updateTimerDisplay();
+            updateLettersDisplay();
+            updatePlayersDisplay();
+            updateInputState();
+            
+            if (gameState.mode === 'single' || gameState.isHost) {
+                clearInterval(gameState.timerInterval);
+                gameState.timerInterval = setInterval(gameLoop, 100);
+                
+                if (player.isBot) {
+                    setTimeout(() => botPlay(), 2000);
+                }
+            }
+            
+            if (gameState.mode === 'multi' && gameState.isHost) {
+                send({
+                    type: 'turnUpdate',
+                    currentPlayerIndex: gameState.currentPlayerIndex,
+                    timeLeft: gameState.timeLeft,
+                    maxTime: gameState.maxTime,
+                    currentLetters: gameState.currentLetters,
+                    currentBaseTime: gameState.currentBaseTime
+                });
+            }
+            
+            showMessage(`${player.name}'s turn!`, 'info');
+        }
+
+        function updateInputState() {
+            const input = document.getElementById('wordInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const player = gameState.players[gameState.currentPlayerIndex];
+            
+            if (!player) return;
+            
+            const isMyTurn = (gameState.mode === 'single' && !player.isBot) || 
+                            (gameState.mode === 'multi' && player.id === gameState.myPlayerId);
+            
+            if (!isMyTurn) {
+                input.disabled = true;
+                submitBtn.disabled = true;
+                input.placeholder = `${player.name}'s turn...`;
+                input.value = '';
+                input.blur();
+                document.getElementById('validationStatus').innerHTML = '';
+            } else {
+                input.disabled = false;
+                submitBtn.disabled = false;
+                input.placeholder = 'TYPE WORD HERE...';
+                input.value = '';
+                setTimeout(() => {
+                    if (gameState.isPlaying && !input.disabled) {
+                        input.focus();
+                    }
+                }, 50);
+                document.getElementById('validationStatus').innerHTML = '';
+            }
+        }
+
+        function generateLetters() {
+            const difficulties = ['easy', 'medium', 'hard'];
+            const randomDiff = difficulties[Math.floor(Math.random() * difficulties.length)];
+            gameState.difficulty = randomDiff;
+
+            const pool = letterCombos[randomDiff];
+            gameState.currentLetters = pool[Math.floor(Math.random() * pool.length)];
+        }
+
+        function gameLoop() {
+            if (!gameState.isPlaying) return;
+            
+            gameState.timeLeft -= 0.1;
+            updateTimerDisplay();
+            updateFuse();
+            
+            if (Math.floor(gameState.timeLeft * 10) % 10 === 0 && gameState.timeLeft > 0) {
+                playTick();
+            }
+            
+            const bomb = document.querySelector('.bomb-container');
+            if (gameState.timeLeft <= 3) bomb.classList.add('pulse-red');
+            else bomb.classList.remove('pulse-red');
+            
+            if (gameState.timeLeft <= 0) bombExploded();
+        }
+
+        function updateFuse() {
+            const percentage = (gameState.timeLeft / gameState.maxTime) * 100;
+            const fuse = document.getElementById('fuse');
+            const spark = document.getElementById('spark');
+            
+            fuse.style.height = `${30 * (percentage / 100)}px`;
+            spark.style.top = `${-25 + (30 * (1 - percentage / 100))}px`;
+            
+            if (percentage > 60) fuse.style.background = '#10b981';
+            else if (percentage > 30) fuse.style.background = '#f59e0b';
+            else fuse.style.background = '#ef4444';
+        }
+
+        function bombExploded() {
+            clearInterval(gameState.timerInterval);
+            playExplosion();
+            
+            const player = gameState.players[gameState.currentPlayerIndex];
+            if (player) {
+                player.health--;
+            }
+            
+            gameState.consecutiveSuccesses = 0;
+            
+            const difficulties = ['easy', 'medium', 'hard'];
+            gameState.difficulty = difficulties[Math.floor(Math.random() * difficulties.length)];
+            
+            const baseDifficultyTime = gameState.difficulty === 'easy' ? 15 : gameState.difficulty === 'medium' ? 12 : 10;
+            gameState.currentBaseTime = baseDifficultyTime;
+            updateBaseTimeDisplay();
+            
+            const explosion = document.getElementById('explosion');
+            explosion.classList.add('explode-animation');
+            document.getElementById('gameContainer').classList.add('shake');
+            
+            const playerName = player ? player.name : 'Someone';
+            showMessage(`BOOM! Timer reset! ${playerName} lost a heart!`, 'error');
+            
+            if (gameState.mode === 'multi' && gameState.isHost) {
+                send({
+                    type: 'bombExploded',
+                    playerId: player ? player.id : null,
+                    newBaseTime: gameState.currentBaseTime
+                });
+            }
+            
+            if (gameState.mode === 'multi' && gameState.isHost && player) {
+                send({
+                    type: 'playerHealthUpdate',
+                    playerId: player.id,
+                    health: player.health
+                });
+            }
+            
+            setTimeout(() => {
+                explosion.classList.remove('explode-animation');
+                document.getElementById('gameContainer').classList.remove('shake');
+                
+                if (player && player.health <= 0) {
+                    showMessage(`${player.name} eliminated!`, 'error');
+                    if (gameState.mode === 'multi' && gameState.isHost) {
+                        send({
+                            type: 'playerEliminated',
+                            playerId: player.id
+                        });
+                    }
+                }
+                
+                gameState.round++;
+                document.getElementById('roundDisplay').textContent = gameState.round;
+                gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+                nextTurn();
+            }, 1000);
+        }
+
+        async function submitWord() {
+            const input = document.getElementById('wordInput');
+            const word = input.value.trim().toUpperCase();
+            
+            if (!word) return;
+            
+            if (word.length < 3) {
+                showMessage('Word must be at least 3 letters!', 'error');
+                playError();
+                input.classList.add('shake');
+                input.value = '';
+                setTimeout(() => input.classList.remove('shake'), 500);
+                return;
+            }
+            
+            if (!word.includes(gameState.currentLetters)) {
+                showMessage(`Word must contain "${gameState.currentLetters}"!`, 'error');
+                playError();
+                input.classList.add('shake');
+                input.value = '';
+                setTimeout(() => input.classList.remove('shake'), 500);
+                return;
+            }
+            
+            if (gameState.usedWords.has(word)) {
+                showMessage('Word already used!', 'error');
+                playError();
+                input.classList.add('shake');
+                input.value = '';
+                setTimeout(() => input.classList.remove('shake'), 500);
+                return;
+            }
+            
+            document.getElementById('validationStatus').innerHTML = '<div class="loading-spinner"></div>';
+            document.getElementById('submitBtn').disabled = true;
+            
+            if (gameState.mode === 'multi' && !isHost) {
+                send({
+                    type: 'wordSubmitted',
+                    playerId: gameState.myPlayerId,
+                    word: word
+                });
+                setTimeout(() => {
+                    document.getElementById('validationStatus').innerHTML = '';
+                    document.getElementById('submitBtn').disabled = false;
+                    input.value = '';
+                }, 1000);
+                return;
+            }
+            
+            const validation = await validateWordWithAPI(word);
+            
+            document.getElementById('validationStatus').innerHTML = '';
+            document.getElementById('submitBtn').disabled = false;
+            
+            if (!validation.valid) {
+                showMessage(`"${word}" is not a valid English word!`, 'error');
+                playError();
+                input.classList.add('shake');
+                input.value = '';
+                setTimeout(() => input.classList.remove('shake'), 500);
+                return;
+            }
+            
+            playSuccess();
+            gameState.usedWords.add(word);
+            addToHistory(word, validation.source === 'fallback');
+            
+            gameState.consecutiveSuccesses++;
+            gameState.currentBaseTime = Math.max(3, gameState.currentBaseTime - 0.5);
+            updateBaseTimeDisplay();
+            
+            clearInterval(gameState.timerInterval);
+            
+            if (validation.offline) showMessage(`Great word! Time decreased to ${gameState.currentBaseTime.toFixed(1)}s!`, 'warning');
+            else showMessage(`Great word! Time decreased to ${gameState.currentBaseTime.toFixed(1)}s!`, 'success');
+            
+            input.value = '';
+            
+            gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
+            setTimeout(nextTurn, 1500);
+        }
+
+        function updateBaseTimeDisplay() {
+            document.getElementById('baseTimeDisplay').textContent = `Next player: ${gameState.currentBaseTime.toFixed(1)}s`;
+        }
+
+        async function botPlay() {
+            if (!gameState.isPlaying) return;
+            
+            if (gameState.mode === 'multi' && !gameState.isHost) return;
+            
+            document.getElementById('validationStatus').innerHTML = '<div class="loading-spinner"></div>';
+            
+            const possibleWords = await getWordsWithLetters(gameState.currentLetters);
+            
+            document.getElementById('validationStatus').innerHTML = '';
+            
+            const player = gameState.players[gameState.currentPlayerIndex];
+            if (!player || !player.isBot) return;
+            
+            const accuracy = player.health > 1 ? 0.85 : 0.6;
+            
+            if (possibleWords.length > 0 && Math.random() < accuracy) {
+                const word = possibleWords[Math.floor(Math.random() * Math.min(possibleWords.length, 5))];
+                const input = document.getElementById('wordInput');
+                
+                let currentIndex = 0;
+                const typeInterval = setInterval(() => {
+                    if (!gameState.isPlaying) {
+                        clearInterval(typeInterval);
+                        return;
+                    }
+                    if (currentIndex <= word.length) {
+                        input.value = word.substring(0, currentIndex);
+                        currentIndex++;
+                    } else {
+                        clearInterval(typeInterval);
+                        setTimeout(() => submitWord(), 300);
+                    }
+                }, 100 + Math.random() * 50);
+            } else {
+                const input = document.getElementById('wordInput');
+                input.value = 'thinking...';
+                setTimeout(() => {
+                    if (gameState.isPlaying) {
+                        input.value = '';
+                    }
+                }, 1000);
+            }
+        }
+
+        function endGame(winner) {
+            gameState.isPlaying = false;
+            clearInterval(gameState.timerInterval);
+            
+            if (gameState.mode === 'multi' && isHost) {
+                send({
+                    type: 'gameOver',
+                    winnerId: winner ? winner.id : null,
+                    finalPlayers: gameState.players
+                });
+            }
+            
+            playWin();
+            
+            document.getElementById('gameOverModal').classList.remove('hidden');
+            document.getElementById('gameOverModal').classList.add('flex');
+            
+            const isMe = winner && winner.id === gameState.myPlayerId;
+            document.getElementById('gameOverTitle').textContent = isMe ? 'You Win!' : 'Game Over!';
+            document.getElementById('gameOverEmoji').textContent = isMe ? '🏆' : '🎮';
+            
+            if (winner && winner.name) {
+                document.getElementById('gameOverMessage').textContent = isMe ? 
+                    'Congratulations! You are the Word Bomb champion!' : 
+                    `${winner.name} won the game!`;
+            } else {
+                document.getElementById('gameOverMessage').textContent = 'Game ended in a draw!';
+            }
+            
+            let standingsHTML = '';
+            if (gameState.players && gameState.players.length > 0) {
+                const validPlayers = gameState.players.filter(p => p && typeof p === 'object');
+                const sortedPlayers = validPlayers.sort((a, b) => (b.health || 0) - (a.health || 0));
+                
+                standingsHTML = sortedPlayers.map((p, i) => {
+                    const avatar = p.avatar || '👤';
+                    const name = p.name || `Player ${p.id || i + 1}`;
+                    const health = Math.max(0, Math.min(3, p.health || 0));
+                    const isCurrentPlayer = p.id === gameState.myPlayerId;
+                    const isWinner = winner && p.id === winner.id;
+                    
+                    return `
+                        <div class="flex items-center justify-between p-2 ${isWinner ? 'bg-yellow-100 rounded-lg' : ''}">
+                            <div class="flex items-center gap-2">
+                                <span>${isWinner ? '👑' : `${i + 1}.`}</span>
+                                <span class="text-xl">${avatar}</span>
+                                <span class="font-bold ${isCurrentPlayer ? 'text-indigo-600' : 'text-gray-700'}">${name}</span>
+                                ${isCurrentPlayer ? '<span class="text-xs bg-indigo-100 text-indigo-800 px-1 rounded">You</span>' : ''}
+                            </div>
+                            <div class="flex items-center gap-1">
+                                ${'❤️'.repeat(health)}${'🖤'.repeat(3 - health)}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                standingsHTML = '<div class="text-gray-500 text-center">No players</div>';
+            }
+            
+            document.getElementById('finalStandings').innerHTML = standingsHTML;
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('gameOverModal').classList.remove('flex');
+            
+            gameState.usedWords.clear();
+            gameState.round = 1;
+            gameState.difficulty = 'medium';
+            gameState.currentBaseTime = 10;
+            gameState.consecutiveSuccesses = 0;
+            
+            if (gameState.mode === 'single') {
+                startSinglePlayer();
+            } else {
+                if (gameState.isHost) {
+                    gameState.players.forEach(p => {
+                        if (p) p.health = 3;
+                    });
+                    startMultiplayerGame();
+                } else {
+                    showMessage('Waiting for host to restart...', 'info');
+                    document.getElementById('homePanel').classList.add('active');
+                    document.getElementById('gamePanel').classList.remove('active');
+                }
+            }
+        }
+
+        function updatePlayersDisplay() {
+            const container = document.getElementById('playersList');
+            if (!gameState.players) return;
+            
+            container.innerHTML = gameState.players.map((player, index) => {
+                if (!player) return '';
+                const isCurrentPlayer = index === gameState.currentPlayerIndex;
+                const isMe = player.id === gameState.myPlayerId;
+                const isDead = player.health <= 0;
+                
+                return `
+                    <div class="flex items-center gap-2 p-2 bg-white rounded-xl shadow-sm ${isCurrentPlayer ? 'ring-2 ring-indigo-500' : ''} ${isDead ? 'opacity-50' : ''}">
+                        <div class="player-avatar ${player.color || 'bg-gray-500'} text-white ${isCurrentPlayer ? 'player-active' : ''} ${isDead ? 'player-dead' : ''}">
+                            ${player.avatar || '👤'}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-sm ${isMe ? 'text-indigo-600' : 'text-gray-700'} truncate">${player.name || 'Unknown'}</span>
+                                ${isMe ? '<span class="text-xs bg-indigo-100 text-indigo-800 px-1 rounded">You</span>' : ''}
+                            </div>
+                            <div class="flex gap-1 mt-1">
+                                ${Array(3).fill(0).map((_, i) => `
+                                    <div class="w-4 h-1.5 rounded-full ${i < (player.health || 0) ? 'bg-red-500' : 'bg-gray-200'}"></div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateTimerDisplay() {
+            const timer = document.getElementById('timerDisplay');
+            const timeLeft = Math.max(0, gameState.timeLeft);
+            timer.textContent = timeLeft.toFixed(2);
+            
+            timer.classList.remove('text-gray-800', 'text-yellow-500', 'text-red-500');
+            
+            if (timeLeft > 5) timer.classList.add('text-gray-800');
+            else if (timeLeft > 2) timer.classList.add('text-yellow-500');
+            else timer.classList.add('text-red-500');
+        }
+
+        function updateLettersDisplay() {
+            const container = document.getElementById('lettersContainer');
+            const letters = (gameState.currentLetters || '').split('');
+            
+            container.innerHTML = letters.map(letter => `
+                <div class="letter-card w-12 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-xl font-bold game-font shadow-lg">
+                    ${letter}
+                </div>
+            `).join('');
+            
+            const diffElement = document.getElementById('difficultyIndicator');
+            const diffText = gameState.difficulty ? gameState.difficulty.charAt(0).toUpperCase() + gameState.difficulty.slice(1) : 'Medium';
+            diffElement.textContent = `${diffText} Difficulty`;
+            diffElement.className = `text-center mt-2 text-xs font-bold difficulty-${gameState.difficulty || 'medium'}`;
+        }
+
+        function addToHistory(word, isOffline) {
+            const history = document.getElementById('wordHistory');
+            const item = document.createElement('div');
+            item.className = 'word-history-item flex-shrink-0 px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-semibold flex items-center gap-1';
+            item.innerHTML = `${word} ${isOffline ? '<span class="text-xs">⚠️</span>' : ''}`;
+            history.insertBefore(item, history.firstChild);
+            
+            while (history.children.length > 10) {
+                history.removeChild(history.lastChild);
+            }
+            
+            document.getElementById('wordsUsedDisplay').textContent = gameState.usedWords.size;
+        }
+
+        function showMessage(text, type) {
+            const display = document.getElementById('messageDisplay');
+            display.textContent = text;
+            
+            display.classList.remove('text-red-500', 'text-green-500', 'text-yellow-500', 'text-indigo-600');
+            
+            if (type === 'error') display.classList.add('text-red-500');
+            else if (type === 'success') display.classList.add('text-green-500');
+            else if (type === 'warning') display.classList.add('text-yellow-500');
+            else display.classList.add('text-indigo-600');
+            
+            setTimeout(() => {
+                if (display.textContent === text) {
+                    display.textContent = '';
+                }
+            }, 3000);
+        }
+
+        document.getElementById('wordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitWord();
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (peer) {
+                peer.destroy();
+            }
+        });
+
+        updatePlayersDisplay();
+    </script>
+</body>
+</html>
