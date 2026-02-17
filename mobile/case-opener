@@ -1,0 +1,2388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, minimal-ui">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FoodCases">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <meta name="screen-orientation" content="portrait">
+    <meta name="x5-orientation" content="portrait">
+    <meta name="x5-fullscreen" content="true">
+    <meta name="x5-page-mode" content="app">
+    <meta name="msapplication-tap-highlight" content="no">
+    <title>🍔 FoodCases</title>
+    <!-- iOS Icons -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍔</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect fill='%23ff6b35' width='180' height='180' rx='40'/%3E%3Ctext x='90' y='130' font-size='100' text-anchor='middle'%3E🍔%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" sizes="152x152" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 152 152'%3E%3Crect fill='%23ff6b35' width='152' height='152' rx='34'/%3E%3Ctext x='76' y='110' font-size='85' text-anchor='middle'%3E🍔%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" sizes="167x167" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 167 167'%3E%3Crect fill='%23ff6b35' width='167' height='167' rx='37'/%3E%3Ctext x='83.5' y='120' font-size='93' text-anchor='middle'%3E🍔%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" sizes="180x180" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect fill='%23ff6b35' width='180' height='180' rx='40'/%3E%3Ctext x='90' y='130' font-size='100' text-anchor='middle'%3E🍔%3C/text%3E%3C/svg%3E">
+    <!-- Startup/Splash Images -->
+    <link rel="apple-touch-startup-image" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1170 2532'%3E%3Crect fill='%230a0a0f' width='1170' height='2532'/%3E%3Ctext x='585' y='1266' font-size='200' text-anchor='middle'%3E🍔%3C/text%3E%3Ctext x='585' y='1500' font-size='60' text-anchor='middle' fill='%23ff6b35' font-family='Arial'%3EFoodCases%3C/text%3E%3C/svg%3E" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        :root {
+            --common: #b0c3d9;
+            --uncommon: #5e98d9;
+            --rare: #4b69ff;
+            --epic: #8847ff;
+            --legendary: #d32ce6;
+            --mythic: #eb4b4b;
+            --divine: #ff6b35;
+            --godly: #00d4ff;
+            --insane: #ff0000;
+            --exotic: #ffd700;
+            --unknown: #ffffff;
+            --admin: #00ff00;
+            --owner: #ff00ff;
+            --bg-dark: #0a0a0f;
+            --bg-card: #151520;
+            --accent: #ff6b35;
+        }
+        
+        html {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background: var(--bg-dark);
+            -webkit-text-size-adjust: 100%;
+        }
+        
+        body {
+            height: 100vh;
+            height: -webkit-fill-available;
+            width: 100%;
+            overflow: hidden;
+            background: var(--bg-dark);
+            color: #fff;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overscroll-behavior: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            /* Prevent rotation on iOS */
+            -webkit-orientation: portrait;
+        }
+        
+        /* Force portrait orientation */
+        @media screen and (orientation: landscape) and (max-device-width: 932px) {
+            body {
+                transform: rotate(-90deg);
+                transform-origin: left top;
+                width: 100vh;
+                height: 100vw;
+                overflow-x: hidden;
+                position: absolute;
+                top: 100%;
+                left: 0;
+            }
+        }
+        
+        /* App Container - Full screen including notch and home indicator */
+        .app {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            background: var(--bg-dark);
+            /* Use all available space including safe areas */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+        
+        /* Header - extends to top of screen */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 12px 16px;
+            padding-top: max(12px, env(safe-area-inset-top));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent);
+            flex-shrink: 0;
+            z-index: 10;
+            width: 100%;
+            /* Ensure it extends under status bar */
+            margin-top: calc(env(safe-area-inset-top) * -1);
+            padding-top: calc(12px + env(safe-area-inset-top));
+        }
+        
+        .logo {
+            font-size: 1.3rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--accent), #ff9f43);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .balance-display {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            border: 2px solid var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        /* Main Content Area - fills all available space */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            padding: 16px;
+            padding-bottom: calc(100px + env(safe-area-inset-bottom));
+            position: relative;
+            width: 100%;
+            /* Ensure content doesn't go under home indicator */
+            margin-bottom: env(safe-area-inset-bottom);
+        }
+        
+        /* Bottom Navigation - fixed to bottom including home indicator area */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+            border-top: 2px solid var(--accent);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            z-index: 100;
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            width: 100%;
+            /* Extend to very bottom */
+            margin-bottom: calc(env(safe-area-inset-bottom) * -1);
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        }
+        
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: #888;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            flex: 1;
+            max-width: 80px;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .nav-btn.active {
+            color: var(--accent);
+        }
+        
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .nav-icon {
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+        
+        /* Section Title */
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+            text-align: center;
+            background: linear-gradient(90deg, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+        
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            width: 100%;
+        }
+        
+        .stats-bar::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .stat-box {
+            background: var(--bg-card);
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid rgba(255,255,255,0.1);
+            min-width: 100px;
+            flex-shrink: 0;
+        }
+        
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 4px;
+        }
+        
+        /* Cases Grid */
+        .cases-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            padding-bottom: 20px;
+            width: 100%;
+        }
+        
+        .case-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            position: relative;
+            touch-action: manipulation;
+            width: 100%;
+        }
+        
+        .case-card:active {
+            transform: scale(0.98);
+            border-color: var(--accent);
+        }
+        
+        .case-image {
+            height: 140px;
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+            width: 100%;
+        }
+        
+        .case-info {
+            padding: 16px;
+        }
+        
+        .case-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .case-price {
+            color: var(--accent);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        
+        .case-price.free {
+            color: #22c55e;
+        }
+        
+        .case-odds {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 8px;
+            line-height: 1.3;
+        }
+        
+        /* Opening Section */
+        .opening-section {
+            display: none;
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 2px solid rgba(255, 107, 53, 0.3);
+            width: 100%;
+        }
+        
+        .opening-section.active {
+            display: block;
+        }
+        
+        .roulette-container {
+            position: relative;
+            height: 160px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 16px 0;
+            border: 3px solid var(--accent);
+            width: 100%;
+        }
+        
+        .roulette-window {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--accent);
+            transform: translateX(-50%);
+            z-index: 10;
+            box-shadow: 0 0 20px var(--accent);
+        }
+        
+        .roulette-items {
+            display: flex;
+            height: 100%;
+            align-items: center;
+            position: absolute;
+            left: 50%;
+            will-change: transform;
+        }
+        
+        .roulette-item {
+            min-width: 120px;
+            height: 120px;
+            margin: 0 8px;
+            background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            border: 3px solid;
+            position: relative;
+            flex-shrink: 0;
+        }
+        
+        .roulette-item::after {
+            content: attr(data-rarity);
+            position: absolute;
+            bottom: 5px;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .opening-buttons {
+            display: flex;
+            gap: 12px;
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .open-btn, .back-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            touch-action: manipulation;
+        }
+        
+        .open-btn {
+            background: linear-gradient(135deg, var(--accent), #ff9f43);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+        }
+        
+        .open-btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+        
+        .open-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .back-btn {
+            background: transparent;
+            border: 2px solid #666;
+            color: #fff;
+        }
+        
+        .back-btn:active {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        /* Inventory */
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding-bottom: 20px;
+            width: 100%;
+        }
+        
+        .inventory-item {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            border: 2px solid;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+        
+        .inventory-item:active {
+            transform: scale(0.95);
+        }
+        
+        .inventory-item .item-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        
+        .inventory-item .item-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            line-height: 1.2;
+        }
+        
+        .inventory-item .item-value {
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+        
+        .sell-btn {
+            background: #22c55e;
+            border: none;
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 8px;
+            width: 100%;
+            font-weight: 600;
+            font-size: 0.9rem;
+            touch-action: manipulation;
+        }
+        
+        .sell-btn:active {
+            background: #16a34a;
+            transform: scale(0.95);
+        }
+        
+        /* Coinflip */
+        .coinflip-section {
+            display: none;
+            background: linear-gradient(135deg, #1a1a2e 0%, #1e3a5f 100%);
+            border-radius: 20px;
+            padding: 20px;
+            border: 2px solid var(--rare);
+            width: 100%;
+        }
+        
+        .coinflip-section.active {
+            display: block;
+        }
+        
+        .coin {
+            width: 150px;
+            height: 150px;
+            margin: 20px auto;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 3s ease-out;
+        }
+        
+        .coin-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 900;
+            border: 6px solid;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        
+        .coin-heads {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #333;
+            border-color: #b8860b;
+        }
+        
+        .coin-tails {
+            background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+            color: #333;
+            border-color: #808080;
+            transform: rotateY(180deg);
+        }
+        
+        .coinflip-controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .bet-amount {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid var(--rare);
+            color: #fff;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 16px;
+            -webkit-appearance: none;
+        }
+        
+        .side-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .side-btn {
+            flex: 1;
+            padding: 16px;
+            border: 3px solid;
+            background: transparent;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+        
+        .side-btn.heads {
+            border-color: #ffd700;
+            color: #ffd700;
+        }
+        
+        .side-btn.heads.selected {
+            background: #ffd700;
+            color: #333;
+        }
+        
+        .side-btn.tails {
+            border-color: #c0c0c0;
+            color: #c0c0c0;
+        }
+        
+        .side-btn.tails.selected {
+            background: #c0c0c0;
+            color: #333;
+        }
+        
+        .side-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* Codes Section */
+        .codes-section {
+            display: none;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
+            padding: 24px 20px;
+            border: 2px solid var(--accent);
+            text-align: center;
+            width: 100%;
+        }
+        
+        .codes-section.active {
+            display: block;
+        }
+        
+        .code-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        
+        .code-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--accent);
+            color: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            width: 100%;
+            text-align: center;
+            font-weight: 700;
+            text-transform: uppercase;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .code-input:focus {
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+        }
+        
+        .enter-btn {
+            background: linear-gradient(135deg, var(--accent), #ff9f43);
+            border: none;
+            color: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            touch-action: manipulation;
+        }
+        
+        .enter-btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+        
+        .enter-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .code-message {
+            margin-top: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            min-height: 1.5rem;
+        }
+        
+        .code-message.success {
+            color: #22c55e;
+        }
+        
+        .code-message.error {
+            color: #ef4444;
+        }
+        
+        /* Admin Section */
+        .admin-section {
+            display: none;
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 100%);
+            border-radius: 20px;
+            padding: 24px 20px;
+            border: 2px solid var(--legendary);
+            text-align: center;
+            width: 100%;
+        }
+        
+        .admin-section.active {
+            display: block;
+        }
+        
+        .admin-title {
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+            color: var(--legendary);
+            font-weight: 900;
+        }
+        
+        .owner-title {
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+            color: var(--owner);
+            font-weight: 900;
+            text-shadow: 0 0 10px var(--owner);
+        }
+        
+        .admin-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .admin-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--legendary);
+            color: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            width: 100%;
+            text-align: center;
+            font-weight: 700;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .owner-input {
+            border-color: var(--owner);
+        }
+        
+        .admin-autoroll {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 16px;
+            border: 2px solid var(--legendary);
+            margin-top: 8px;
+        }
+        
+        .owner-autoroll {
+            border-color: var(--owner);
+        }
+        
+        .admin-autoroll-title {
+            font-size: 1.1rem;
+            color: var(--legendary);
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+        
+        .owner-autoroll-title {
+            color: var(--owner);
+        }
+        
+        .admin-autoroll-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .admin-autoroll-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .admin-autoroll-input, .admin-autoroll-select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--legendary);
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            flex: 1;
+            min-width: 100px;
+            text-align: center;
+            font-weight: 600;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .owner-autoroll-input, .owner-autoroll-select {
+            border-color: var(--owner);
+        }
+        
+        .admin-autoroll-select {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        
+        .admin-autoroll-btn, .admin-autoroll-stop, .reset-money-btn, .revoke-admin-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        
+        .admin-autoroll-btn {
+            background: linear-gradient(135deg, var(--legendary), #d32ce6);
+            color: #fff;
+        }
+        
+        .owner-autoroll-btn {
+            background: linear-gradient(135deg, var(--legendary), #d32ce6);
+            color: #fff;
+        }
+        
+        .admin-autoroll-stop {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #fff;
+            display: none;
+        }
+        
+        .reset-money-btn {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #fff;
+        }
+        
+        .revoke-admin-btn {
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+            color: #fff;
+            margin-top: 16px;
+        }
+        
+        .revoke-admin-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .autoroll-status {
+            font-size: 0.9rem;
+            color: #888;
+            margin-top: 8px;
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            padding: 20px;
+            /* Account for safe areas */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+            border-radius: 24px;
+            padding: 40px 24px;
+            text-align: center;
+            width: 100%;
+            max-width: 340px;
+            border: 3px solid;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+        
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+        
+        .modal-icon {
+            font-size: 5rem;
+            margin-bottom: 16px;
+            animation: bounce 1s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .modal-title {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        
+        .modal-item {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .modal-value {
+            font-size: 1.2rem;
+            color: var(--accent);
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: var(--accent);
+            border: none;
+            color: #fff;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            touch-action: manipulation;
+        }
+        
+        .modal-close:active {
+            transform: scale(0.98);
+        }
+        
+        /* Rarity Colors */
+        .rarity-common { border-color: var(--common); color: var(--common); }
+        .rarity-uncommon { border-color: var(--uncommon); color: var(--uncommon); }
+        .rarity-rare { border-color: var(--rare); color: var(--rare); }
+        .rarity-epic { border-color: var(--epic); color: var(--epic); }
+        .rarity-legendary { border-color: var(--legendary); color: var(--legendary); }
+        .rarity-mythic { border-color: var(--mythic); color: var(--mythic); }
+        .rarity-divine { border-color: var(--divine); color: var(--divine); }
+        .rarity-godly { border-color: var(--godly); color: var(--godly); }
+        .rarity-insane { border-color: var(--insane); color: var(--insane); }
+        .rarity-exotic { border-color: var(--exotic); color: var(--exotic); }
+        .rarity-unknown { border-color: var(--unknown); color: var(--unknown); }
+        .rarity-admin { border-color: var(--admin); color: var(--admin); }
+        .rarity-owner { border-color: var(--owner); color: var(--owner); }
+        
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        /* Confetti */
+        .confetti {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            pointer-events: none;
+            animation: confetti-fall 3s linear forwards;
+            z-index: 9999;
+        }
+        
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        
+        /* Utility */
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Section containers */
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        /* Responsive text */
+        p {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #888;
+        }
+
+        /* Revoke Admin Modal */
+        .revoke-modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 100%);
+            border: 2px solid var(--owner);
+        }
+
+        .revoke-modal .modal-title {
+            color: var(--owner);
+        }
+
+        .revoke-password-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--owner);
+            color: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            width: 100%;
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 16px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .revoke-confirm-btn {
+            background: linear-gradient(135deg, var(--owner), #ff00aa);
+            border: none;
+            color: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            touch-action: manipulation;
+        }
+
+        .revoke-confirm-btn:active {
+            transform: scale(0.98);
+        }
+
+        .revoke-cancel-btn {
+            background: transparent;
+            border: 2px solid #666;
+            color: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 8px;
+            touch-action: manipulation;
+        }
+
+        .revoke-cancel-btn:active {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* iPhone-specific optimizations */
+        @supports (-webkit-touch-callout: none) {
+            /* CSS specific to iOS devices */
+            .app {
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Prevent callout menu */
+            * {
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+            }
+            
+            /* Allow text selection on inputs */
+            input, textarea {
+                -webkit-user-select: auto;
+                user-select: auto;
+            }
+        }
+
+        /* Prevent zoom on focus for iOS */
+        @media screen and (max-width: 768px) {
+            input, select, textarea {
+                font-size: 16px !important;
+            }
+        }
+
+        /* Standalone mode specific styles */
+        @media all and (display-mode: standalone) {
+            .header {
+                padding-top: calc(20px + env(safe-area-inset-top));
+            }
+            
+            .main-content {
+                padding-top: 20px;
+            }
+        }
+
+        /* iPhone notch area handling */
+        .safe-area-top {
+            height: env(safe-area-inset-top);
+            width: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9;
+        }
+</style>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="logo">🍔 FoodCases</div>
+            <div class="balance-display">
+                <span>💰</span>
+                <span id="balance">200</span>
+            </div>
+        </header>
+
+        <main class="main-content" id="main-content">
+            
+            <!-- Cases Section -->
+            <div id="cases-section" class="section active">
+                <h2 class="section-title">Choose a Case</h2>
+                <div class="stats-bar">
+                    <div class="stat-box">
+                        <div class="stat-value" id="total-opened">0</div>
+                        <div class="stat-label">Opened</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="best-item">-</div>
+                        <div class="stat-label">Best Item</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="inventory-count">0</div>
+                        <div class="stat-label">Items</div>
+                    </div>
+                </div>
+                <div class="cases-grid" id="cases-grid"></div>
+                
+                <div class="opening-section" id="opening-section">
+                    <h3 style="text-align: center; margin-bottom: 16px; font-size: 1.2rem;" id="opening-case-name">Opening...</h3>
+                    <div class="roulette-container">
+                        <div class="roulette-window"></div>
+                        <div class="roulette-items" id="roulette-items"></div>
+                    </div>
+                    <div class="opening-buttons">
+                        <button class="open-btn" id="spin-btn" onclick="startSpin()">
+                            SPIN ($<span id="spin-price">0</span>)
+                        </button>
+                        <button class="back-btn" onclick="exitCase()">BACK TO CASES</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Section -->
+            <div id="admin-section" class="admin-section section">
+                <h2 class="admin-title" id="admin-title">⚡ Admin Panel</h2>
+                <div class="admin-controls">
+                    <div style="font-size: 1rem; color: #888; margin-bottom: 8px;">Set Money Amount</div>
+                    <input type="text" class="admin-input" id="admin-money-input" placeholder="Amount (e.g., 5 Sx)">
+                    <button class="open-btn" onclick="setMoney()">SET MONEY</button>
+                    <button class="reset-money-btn" onclick="resetMoney()">RESET TO $200</button>
+                    
+                    <div class="admin-autoroll">
+                        <div class="admin-autoroll-title">🎰 Auto Roll</div>
+                        <div class="admin-autoroll-controls">
+                            <select class="admin-autoroll-select" id="autoroll-case-select">
+                                <option value="">Select Case</option>
+                            </select>
+                            <div class="admin-autoroll-row">
+                                <input type="number" class="admin-autoroll-input" id="autoroll-count" placeholder="Times" min="1" value="10">
+                                <input type="number" class="admin-autoroll-input" id="autoroll-delay" placeholder="Delay ms" min="0" value="0">
+                            </div>
+                            <button class="admin-autoroll-btn" id="autoroll-start" onclick="startAutoRoll()">START AUTO ROLL</button>
+                            <button class="admin-autoroll-stop" id="autoroll-stop" onclick="stopAutoRoll()">STOP</button>
+                            <div class="autoroll-status" id="autoroll-status">Ready</div>
+                        </div>
+                    </div>
+
+                    <!-- Revoke Admin Button (Owner Only) -->
+                    <button class="revoke-admin-btn hidden" id="revoke-admin-btn" onclick="showRevokeModal()">
+                        🔒 REVOKE ALL ADMIN
+                    </button>
+                </div>
+            </div>
+
+            <!-- Coinflip Section -->
+            <div id="coinflip-section" class="coinflip-section section">
+                <h2 class="section-title">🪙 Coinflip</h2>
+                <div class="coin" id="coin">
+                    <div class="coin-face coin-heads">HEADS</div>
+                    <div class="coin-face coin-tails">TAILS</div>
+                </div>
+                <div class="coinflip-controls">
+                    <input type="text" class="bet-amount" id="cf-bet" placeholder="Bet Amount (e.g., 50)" value="50">
+                    <div class="side-selector">
+                        <button class="side-btn heads" onclick="selectSide('heads')">HEADS</button>
+                        <button class="side-btn tails" onclick="selectSide('tails')">TAILS</button>
+                    </div>
+                    <button class="open-btn" onclick="flipCoin()">FLIP COIN</button>
+                </div>
+                <p style="text-align: center; margin-top: 16px;">50/50 chance - Double your money!</p>
+            </div>
+
+            <!-- Inventory Section -->
+            <div id="inventory-section" class="section">
+                <h2 class="section-title">Your Inventory</h2>
+                <div id="inventory-container">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <div>Your inventory is empty</div>
+                        <p>Open some cases to get items!</p>
+                    </div>
+                </div>
+                <div class="inventory-grid" id="inventory-grid" style="display: none;"></div>
+            </div>
+
+            <!-- Codes Section -->
+            <div id="codes-section" class="codes-section section">
+                <h2 class="section-title">🎟️ Redeem Codes</h2>
+                <p>Enter a code to unlock special rewards!</p>
+                <div class="code-input-container">
+                    <input type="text" 
+                           class="code-input" 
+                           id="code-input" 
+                           placeholder="ENTER CODE" 
+                           autocomplete="off" 
+                           autocapitalize="characters"
+                           oninput="this.value = this.value.toUpperCase()">
+                    <button class="enter-btn" id="code-enter-btn" onclick="submitCode()">REDEEM</button>
+                </div>
+                <div class="code-message" id="code-message"></div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" onclick="showSection('cases', this)">
+                <span class="nav-icon">📦</span>
+                <span>Cases</span>
+            </button>
+            <button class="nav-btn" id="admin-nav-btn" onclick="showSection('admin', this)" style="display: none;">
+                <span class="nav-icon">⚡</span>
+                <span id="admin-nav-label">Admin</span>
+            </button>
+            <button class="nav-btn" onclick="showSection('coinflip', this)">
+                <span class="nav-icon">🪙</span>
+                <span>Coinflip</span>
+            </button>
+            <button class="nav-btn" onclick="showSection('inventory', this)">
+                <span class="nav-icon">🎒</span>
+                <span>Items</span>
+            </button>
+            <button class="nav-btn" onclick="showSection('codes', this)">
+                <span class="nav-icon">🎟️</span>
+                <span>Codes</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Win Modal -->
+    <div class="modal-overlay" id="win-modal">
+        <div class="modal-content" id="modal-content">
+            <div class="modal-icon" id="modal-icon">🎉</div>
+            <h2 class="modal-title" id="modal-title">You Won!</h2>
+            <div class="modal-item" id="modal-item">Item Name</div>
+            <div class="modal-value" id="modal-value">$100</div>
+            <button class="modal-close" onclick="closeModal()">COLLECT</button>
+        </div>
+    </div>
+
+    <!-- Revoke Admin Modal -->
+    <div class="modal-overlay" id="revoke-modal">
+        <div class="modal-content revoke-modal">
+            <div class="modal-icon">🔒</div>
+            <h2 class="modal-title">Revoke All Admin</h2>
+            <p style="color: #888; margin-bottom: 16px;">Enter owner password to confirm</p>
+            <input type="password" class="revoke-password-input" id="revoke-password" placeholder="Enter password">
+            <button class="revoke-confirm-btn" onclick="confirmRevokeAdmin()">CONFIRM REVOKE</button>
+            <button class="revoke-cancel-btn" onclick="closeRevokeModal()">CANCEL</button>
+        </div>
+    </div>
+
+    <script>
+        // iPhone Web App Orientation Lock and Standalone Detection
+        (function() {
+            'use strict';
+            
+            // Force portrait orientation
+            function lockOrientation() {
+                // Try Screen Orientation API
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('portrait').catch(function() {
+                        // Fallback: scroll to prevent rotation visual
+                    });
+                }
+                
+                // iOS-specific: prevent body scroll when rotated
+                if (window.orientation !== undefined) {
+                    window.addEventListener('orientationchange', function() {
+                        if (Math.abs(window.orientation) === 90) {
+                            // Landscape - force scroll to hide address bar or show message
+                            document.body.style.transform = 'rotate(-90deg)';
+                            document.body.style.transformOrigin = 'left top';
+                            document.body.style.width = '100vh';
+                            document.body.style.height = '100vw';
+                            document.body.style.position = 'absolute';
+                            document.body.style.top = '100%';
+                            document.body.style.left = '0';
+                        } else {
+                            // Portrait - reset
+                            document.body.style.transform = '';
+                            document.body.style.transformOrigin = '';
+                            document.body.style.width = '';
+                            document.body.style.height = '';
+                            document.body.style.position = '';
+                            document.body.style.top = '';
+                            document.body.style.left = '';
+                        }
+                    });
+                }
+            }
+            
+            // Detect if running as standalone app
+            function isStandalone() {
+                return window.navigator.standalone === true || 
+                       window.matchMedia('(display-mode: standalone)').matches ||
+                       document.referrer.includes('ios-app://');
+            }
+            
+            // iOS standalone app fixes
+            function iosStandaloneFixes() {
+                if (isStandalone()) {
+                    document.body.classList.add('standalone-mode');
+                    
+                    // Prevent default touch behaviors
+                    document.addEventListener('touchmove', function(e) {
+                        if (e.target.closest('.main-content')) return;
+                        e.preventDefault();
+                    }, { passive: false });
+                    
+                    // Fix for iOS bottom bar
+                    setTimeout(function() {
+                        window.scrollTo(0, 0);
+                    }, 100);
+                }
+            }
+            
+            // Prevent zoom on double tap
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function(e) {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+            
+            // Prevent zoom on pinch
+            document.addEventListener('touchstart', function(e) {
+                if (e.touches.length > 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            // Initialize
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    lockOrientation();
+                    iosStandaloneFixes();
+                });
+            } else {
+                lockOrientation();
+                iosStandaloneFixes();
+            }
+            
+            // Re-apply on visibility change (iOS pauses JS when app switching)
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    lockOrientation();
+                }
+            });
+        })();
+        
+        // Game Data
+        const foods = {
+            common: [
+                { name: "Stale Bread", icon: "🍞", value: 10 },
+                { name: "Raw Potato", icon: "🥔", value: 15 },
+                { name: "Plain Rice", icon: "🍚", value: 12 },
+                { name: "Tap Water", icon: "💧", value: 5 },
+                { name: "Lettuce Leaf", icon: "🥬", value: 8 }
+            ],
+            uncommon: [
+                { name: "Fresh Apple", icon: "🍎", value: 50 },
+                { name: "Banana", icon: "🍌", value: 45 },
+                { name: "Carrot", icon: "🥕", value: 40 },
+                { name: "Cheese Slice", icon: "🧀", value: 60 },
+                { name: "Cookie", icon: "🍪", value: 55 }
+            ],
+            rare: [
+                { name: "Burger", icon: "🍔", value: 200 },
+                { name: "Pizza Slice", icon: "🍕", value: 180 },
+                { name: "Taco", icon: "🌮", value: 220 },
+                { name: "Sushi Roll", icon: "🍣", value: 250 },
+                { name: "Fried Chicken", icon: "🍗", value: 190 }
+            ],
+            epic: [
+                { name: "Steak", icon: "🥩", value: 800 },
+                { name: "Lobster", icon: "🦞", value: 1000 },
+                { name: "Crab", icon: "🦀", value: 900 },
+                { name: "Oyster", icon: "🦪", value: 850 },
+                { name: "Caviar", icon: "🐟", value: 1200 }
+            ],
+            legendary: [
+                { name: "Golden Burger", icon: "👑🍔", value: 5000 },
+                { name: "Diamond Pizza", icon: "🍕", value: 4500 },
+                { name: "Magic Taco", icon: "🌮✨", value: 5500 },
+                { name: "Dragon Steak", icon: "🐉🥩", value: 6000 },
+                { name: "Royal Feast", icon: "🏰🍽️", value: 8000 }
+            ],
+            mythic: [
+                { name: "Cosmic Sushi", icon: "🌌🍣", value: 25000 },
+                { name: "Galaxy Burger", icon: "🌠🍔", value: 30000 },
+                { name: "Infinity Taco", icon: "∞🌮", value: 35000 },
+                { name: "Eternity Steak", icon: "⏳🥩", value: 40000 },
+                { name: "Heavenly Ramen", icon: "👼🍜", value: 50000 }
+            ],
+            divine: [
+                { name: "Universe Pizza", icon: "🌌🍕", value: 100000 },
+                { name: "Reality Burger", icon: "🌐🍔", value: 150000 },
+                { name: "Existence Taco", icon: "🔮🌮", value: 200000 },
+                { name: "Zappy Steak", icon: "⚡🥩", value: 300000 },
+                { name: "Infinity Wings", icon: "🍗", value: 500000 }
+            ],
+            godly: [
+                { name: "Godly Totem", icon: "🗿", value: 1000000 },
+                { name: "Fossil", icon: "🦴", value: 5000000 }
+            ],
+            insane: [
+                { name: "Tesseract", icon: "💠", value: 100000000 },
+                { name: "Super Gem", icon: "💎", value: 1000000000 }
+            ],
+            exotic: [
+                { name: "Venom", icon: "☣", value: 5000000000 }
+            ],
+            unknown: [
+                { name: "Heavenly Gauntlet", icon: "🥊", value: 10000000000 }
+            ],
+            admin: [
+                { name: "Admin Black Hole", icon: "🕳️", value: 50000000000000 }
+            ]
+        };
+
+        const cases = [
+            { name: "Starter Case", price: 0, icon: "📦", odds: "70% Common, 25% Uncommon, 5% Rare", chances: { common: 70, uncommon: 25, rare: 5 } },
+            { name: "Fast Food", price: 100, icon: "🍟", odds: "60% Common, 30% Uncommon, 10% Rare", chances: { common: 60, uncommon: 30, rare: 10 } },
+            { name: "Lunch Box", price: 250, icon: "🥡", odds: "60% C, 30% U, 8% R, 2% E", chances: { common: 60, uncommon: 30, rare: 8, epic: 2 } },
+            { name: "Dinner Crate", price: 500, icon: "🍱", odds: "50% U, 35% R, 12% E, 3% L", chances: { uncommon: 50, rare: 35, epic: 12, legendary: 3 } },
+            { name: "Mystery Meal", price: 750, icon: "❓", odds: "20% each to L, 4% M, 1% D", chances: { common: 20, uncommon: 20, rare: 20, epic: 20, legendary: 15, mythic: 4, divine: 1 } },
+            { name: "Gourmet Box", price: 1000, icon: "🎁", odds: "50% R, 35% E, 12% L, 3% M", chances: { rare: 50, epic: 35, legendary: 12, mythic: 3 } },
+            { name: "Seafood Special", price: 1500, icon: "🦐", odds: "45% R, 30% E, 20% L, 5% M", chances: { rare: 45, epic: 30, legendary: 20, mythic: 5 } },
+            { name: "Dessert Box", price: 2000, icon: "🍰", odds: "45% E, 35% L, 15% M, 5% D", chances: { epic: 45, legendary: 35, mythic: 15, divine: 5 } },
+            { name: "Chef's Special", price: 2500, icon: "👨‍🍳", odds: "50% E, 35% L, 12% M, 3% D", chances: { epic: 50, legendary: 35, mythic: 12, divine: 3 } },
+            { name: "Golden Feast", price: 10000, icon: "🏆", odds: "58.9% L, 30% M, 10% D, 1% G, 0.1% I", chances: { legendary: 58.9, mythic: 30, divine: 10, godly: 1, insane: 0.1 } },
+            { name: "Super Case", price:100000000, icon: "💎", odds: "50% D, 34.9% G, 10% I, 5% Ex, 0.1% ?", chances: { divine: 50, godly: 34.9, insane: 10, exotic: 5, unknown: 0.1 } },
+            { name: "Admin Case", price:1000000000000, icon: "👨🏻‍💻", odds: "92% Ex, 7% ?, 1% 🌀", chances: { exotic: 92, unknown: 7, admin: 1 } }
+        ];
+
+        // Game State
+        let balance = 200;
+        let inventory = [];
+        let currentCase = null;
+        let isSpinning = false;
+        let totalOpened = 0;
+        let bestItemValue = 0;
+        let selectedCoinSide = null;
+        let isAdmin = false;
+        let isOwner = false;
+        let lastCaseIndex = null;
+        let autoRollInterval = null;
+        let autoRollCount = 0;
+        let autoRollTarget = 0;
+        let isAutoRolling = false;
+
+        const OWNER_PASSWORD = "73465629";
+        const ADMIN_CODE = "21ADMIN21";
+        const OWNER_CODE = "73465629";
+
+        function formatNumber(num) {
+            if (num < 1000) return num.toString();
+            const suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'UDc', 'Ddc', 'Tdc', 'Qadc', 'Qidc', 'Sxdc', 'Spdc', 'Odc', 'Ndc', 'Vg', 'Uvg', 'Dvg', 'Tvg', 'Qavg', 'Qivg', 'Sxvg', 'Spvg', 'Ovg', 'Nvg', 'Tg', 'Utg', 'Dtg', 'Ttg', 'Qatg', 'Qitg', 'Sxtg', 'Sptg', 'Otg', 'Ntg', 'Qag', 'Uqag', 'Dqag', 'Tqag', 'Qaqag', 'Qiqag', 'Sxqag', 'Spqag', 'Oqag', 'Nqag', 'Qig', 'Uqig', 'Dqig', 'Tqig', 'Qaqig', 'Qiqig', 'Sxqig', 'Spqig', 'Oqig', 'Nqig', 'Sxg', 'Usxg', 'Dsxg', 'Tsxg', 'Qasxg', 'Qisxg', 'Sxsxg', 'Spsxg', 'Osxg', 'Nsxg', 'Spg', 'Uspg', 'Dspg', 'Tspg', 'Qaspg', 'Qispg', 'Sxspg', 'Spspg', 'Ospg', 'Nspg', 'Og', 'Uog', 'Dog', 'Tog', 'Qaog', 'Qiog', 'Sxog', 'Spog', 'Oog', 'Nog', 'Ng', 'Ung', 'Dng', 'Tng', 'Qang', 'Qing', 'Sxng', 'Spng', 'Ong', 'Nng', 'Cg', 'Ucg'];
+            const tier = Math.floor(Math.log10(num) / 3);
+            if (tier >= suffixes.length) return num.toExponential(2);
+            const suffix = suffixes[tier];
+            const scale = Math.pow(10, tier * 3);
+            const scaled = num / scale;
+            return scaled.toFixed(2).replace(/\.00$/, '') + suffix;
+        }
+
+        function init() {
+            try {
+                loadData();
+                renderCases();
+                updateStats();
+                updateBalance();
+                checkAdminStatus();
+                populateAutoRollSelect();
+                updateAdminPanel();
+            } catch (e) {
+                console.error('Initialization error:', e);
+            }
+        }
+
+        function loadData() {
+            try {
+                const savedBalance = localStorage.getItem('fc_balance');
+                const savedInventory = localStorage.getItem('fc_inventory');
+                const savedOpened = localStorage.getItem('fc_opened');
+                const savedBest = localStorage.getItem('fc_best');
+                const savedAdmin = localStorage.getItem('fc_admin');
+                const savedOwner = localStorage.getItem('fc_owner');
+                
+                if (savedBalance !== null) {
+                    const parsed = parseFloat(savedBalance);
+                    if (!isNaN(parsed)) balance = parsed;
+                }
+                
+                if (savedInventory !== null) {
+                    try {
+                        const parsed = JSON.parse(savedInventory);
+                        if (Array.isArray(parsed)) inventory = parsed;
+                    } catch (e) {
+                        inventory = [];
+                    }
+                }
+                
+                if (savedOpened !== null) {
+                    const parsed = parseInt(savedOpened);
+                    if (!isNaN(parsed)) totalOpened = parsed;
+                }
+                
+                if (savedBest !== null) {
+                    const parsed = parseInt(savedBest);
+                    if (!isNaN(parsed)) bestItemValue = parsed;
+                }
+                
+                if (savedAdmin !== null) isAdmin = savedAdmin === 'true';
+                if (savedOwner !== null) isOwner = savedOwner === 'true';
+                
+                // Owner always has admin
+                if (isOwner) isAdmin = true;
+            } catch (e) {
+                console.error('LoadData error:', e);
+            }
+        }
+
+        function checkAdminStatus() {
+            const btn = document.getElementById('admin-nav-btn');
+            const label = document.getElementById('admin-nav-label');
+            if (btn && label) {
+                if (isOwner) {
+                    btn.style.display = 'flex';
+                    label.textContent = 'Owner';
+                } else if (isAdmin) {
+                    btn.style.display = 'flex';
+                    label.textContent = 'Admin';
+                } else {
+                    btn.style.display = 'none';
+                }
+            }
+        }
+
+        function updateAdminPanel() {
+            const title = document.getElementById('admin-title');
+            const revokeBtn = document.getElementById('revoke-admin-btn');
+            const moneyInput = document.getElementById('admin-money-input');
+            const autoRollDiv = document.querySelector('.admin-autoroll');
+            const autoRollTitle = document.querySelector('.admin-autoroll-title');
+            const autoRollSelect = document.getElementById('autoroll-case-select');
+            const autoRollInputs = document.querySelectorAll('.admin-autoroll-input');
+            const autoRollBtn = document.getElementById('autoroll-start');
+
+            if (isOwner) {
+                if (title) {
+                    title.textContent = '👑 Owner Panel';
+                    title.className = 'owner-title';
+                }
+                if (revokeBtn) revokeBtn.classList.remove('hidden');
+                if (moneyInput) moneyInput.classList.add('owner-input');
+                if (autoRollDiv) autoRollDiv.classList.add('owner-autoroll');
+                if (autoRollTitle) autoRollTitle.classList.add('owner-autoroll-title');
+                if (autoRollSelect) autoRollSelect.classList.add('owner-autoroll-select');
+                autoRollInputs.forEach(input => input.classList.add('owner-autoroll-input'));
+                if (autoRollBtn) {
+                    autoRollBtn.classList.remove('admin-autoroll-btn');
+                    autoRollBtn.classList.add('owner-autoroll-btn');
+                }
+            } else {
+                if (title) {
+                    title.textContent = '⚡ Admin Panel';
+                    title.className = 'admin-title';
+                }
+                if (revokeBtn) revokeBtn.classList.add('hidden');
+                if (moneyInput) moneyInput.classList.remove('owner-input');
+                if (autoRollDiv) autoRollDiv.classList.remove('owner-autoroll');
+                if (autoRollTitle) autoRollTitle.classList.remove('owner-autoroll-title');
+                if (autoRollSelect) autoRollSelect.classList.remove('owner-autoroll-select');
+                autoRollInputs.forEach(input => input.classList.remove('owner-autoroll-input'));
+                if (autoRollBtn) {
+                    autoRollBtn.classList.add('admin-autoroll-btn');
+                    autoRollBtn.classList.remove('owner-autoroll-btn');
+                }
+            }
+        }
+
+        function populateAutoRollSelect() {
+            const select = document.getElementById('autoroll-case-select');
+            if (!select) return;
+            
+            // Clear existing options except first
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+            
+            cases.forEach((c, i) => {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${c.name} ($${formatNumber(c.price)})`;
+                select.appendChild(option);
+            });
+        }
+
+        function renderCases() {
+            try {
+                const grid = document.getElementById('cases-grid');
+                if (!grid) {
+                    console.error('Cases grid not found!');
+                    return;
+                }
+                
+                let html = '';
+                for (let i = 0; i < cases.length; i++) {
+                    const c = cases[i];
+                    const priceDisplay = c.price === 0 ? 'FREE' : '$' + formatNumber(c.price);
+                    const freeClass = c.price === 0 ? 'free' : '';
+                    
+                    html += `
+                        <div class="case-card" onclick="selectCase(${i})">
+                            <div class="case-image">${c.icon}</div>
+                            <div class="case-info">
+                                <div class="case-name">${c.name}</div>
+                                <div class="case-price ${freeClass}">${priceDisplay}</div>
+                                <div class="case-odds">${c.odds}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                grid.innerHTML = html;
+            } catch (e) {
+                console.error('RenderCases error:', e);
+            }
+        }
+
+        function selectCase(index) {
+            if (isSpinning) return;
+            currentCase = index;
+            lastCaseIndex = index;
+            const c = cases[index];
+            
+            const nameEl = document.getElementById('opening-case-name');
+            const priceEl = document.getElementById('spin-price');
+            const openingEl = document.getElementById('opening-section');
+            const gridEl = document.getElementById('cases-grid');
+            
+            if (nameEl) nameEl.textContent = `Opening ${c.name}...`;
+            if (priceEl) priceEl.textContent = c.price === 0 ? 'FREE' : formatNumber(c.price);
+            if (openingEl) openingEl.classList.add('active');
+            if (gridEl) gridEl.style.display = 'none';
+            
+            generateRouletteItems(index);
+        }
+
+        function exitCase() {
+            if (isSpinning) return;
+            const openingEl = document.getElementById('opening-section');
+            const gridEl = document.getElementById('cases-grid');
+            
+            if (openingEl) openingEl.classList.remove('active');
+            if (gridEl) gridEl.style.display = 'grid';
+            currentCase = null;
+        }
+
+        function generateRouletteItems(caseIndex) {
+            try {
+                const container = document.getElementById('roulette-items');
+                if (!container) return;
+                
+                container.innerHTML = '';
+                container.style.transition = 'none';
+                container.style.transform = 'translateX(0)';
+                
+                const totalItems = 80;
+                
+                for (let i = 0; i < totalItems; i++) {
+                    const item = generateItem(caseIndex);
+                    const div = document.createElement('div');
+                    div.className = `roulette-item rarity-${item.rarity}`;
+                    div.innerHTML = `<div style="font-size: 2rem;">${item.icon}</div><div style="font-size: 0.7rem; font-weight: 600;">${item.name}</div>`;
+                    div.setAttribute('data-rarity', item.rarity);
+                    container.appendChild(div);
+                }
+            } catch (e) {
+                console.error('GenerateRoulette error:', e);
+            }
+        }
+
+        function generateItem(caseIndex) {
+            try {
+                const chances = cases[caseIndex].chances;
+                const rand = Math.random() * 100;
+                let cumulative = 0;
+                let selectedRarity = 'common';
+                const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic', 'divine', 'godly', 'insane', 'exotic', 'unknown', 'admin'];
+                
+                for (const rarity of rarityOrder) {
+                    if (chances[rarity]) {
+                        cumulative += chances[rarity];
+                        if (rand <= cumulative) {
+                            selectedRarity = rarity;
+                            break;
+                        }
+                    }
+                }
+                
+                const rarityItems = foods[selectedRarity];
+                const item = rarityItems[Math.floor(Math.random() * rarityItems.length)];
+                return { ...item, rarity: selectedRarity };
+            } catch (e) {
+                console.error('GenerateItem error:', e);
+                return { name: "Error", icon: "❌", value: 0, rarity: "common" };
+            }
+        }
+
+        function startSpin(skipAnimation = false, callback = null) {
+            if (isSpinning || currentCase === null) return;
+            
+            try {
+                const c = cases[currentCase];
+                const price = c.price;
+                
+                if (balance < price) {
+                    if (!isAutoRolling) alert("Not enough balance!");
+                    if (callback) callback(false);
+                    return;
+                }
+                
+                balance -= price;
+                updateBalance();
+                saveData();
+                
+                isSpinning = true;
+                const spinBtn = document.getElementById('spin-btn');
+                if (spinBtn) spinBtn.disabled = true;
+                
+                const container = document.getElementById('roulette-items');
+                if (!container) return;
+                
+                const itemWidth = 136; // 120px + 16px margin (8px each side)
+                
+                // Regenerate items for fresh spin
+                generateRouletteItems(currentCase);
+                
+                // Determine winning item (position 70 out of 80)
+                const winningIndex = 70;
+                const winningItem = generateItem(currentCase);
+                
+                // Replace the winning index item
+                const winningDiv = container.children[winningIndex];
+                if (winningDiv) {
+                    winningDiv.className = `roulette-item rarity-${winningItem.rarity}`;
+                    winningDiv.innerHTML = `<div style="font-size: 2rem;">${winningItem.icon}</div><div style="font-size: 0.7rem; font-weight: 600;">${winningItem.name}</div>`;
+                    winningDiv.setAttribute('data-rarity', winningItem.rarity);
+                }
+                
+                // Calculate offset to center the winning item
+                const preciseOffset = (winningIndex * itemWidth) + (itemWidth / 2);
+                
+                if (skipAnimation) {
+                    container.style.transition = 'none';
+                    container.style.transform = `translateX(-${preciseOffset}px)`;
+                    processWin(winningItem);
+                    
+                    setTimeout(() => {
+                        isSpinning = false;
+                        if (spinBtn) spinBtn.disabled = false;
+                        if (callback) callback(true, winningItem);
+                    }, 100);
+                } else {
+                    // Force reflow
+                    container.offsetHeight;
+                    container.style.transition = 'transform 4s cubic-bezier(0.23, 1, 0.32, 1)';
+                    container.style.transform = `translateX(-${preciseOffset}px)`;
+                    
+                    setTimeout(() => {
+                        processWin(winningItem);
+                        isSpinning = false;
+                        if (spinBtn) spinBtn.disabled = false;
+                        if (callback) callback(true, winningItem);
+                    }, 4000);
+                }
+            } catch (e) {
+                console.error('StartSpin error:', e);
+                isSpinning = false;
+            }
+        }
+
+        function processWin(item) {
+            try {
+                showWinModal(item);
+                addToInventory(item);
+                totalOpened++;
+                if (item.value > bestItemValue) bestItemValue = item.value;
+                updateStats();
+                saveData();
+            } catch (e) {
+                console.error('ProcessWin error:', e);
+            }
+        }
+
+        function showWinModal(item) {
+            try {
+                const modal = document.getElementById('win-modal');
+                const content = document.getElementById('modal-content');
+                if (!modal || !content) return;
+                
+                const rarityColors = {
+                    common: '#b0c3d9', uncommon: '#5e98d9', rare: '#4b69ff', epic: '#8847ff',
+                    legendary: '#d32ce6', mythic: '#eb4b4b', divine: '#ff6b35', godly: '#00d4ff',
+                    insane: '#ff0000', exotic: '#ffd700', unknown: '#ffffff', admin: '#00ff00'
+                };
+                
+                content.style.borderColor = rarityColors[item.rarity];
+                content.className = `modal-content rarity-${item.rarity}`;
+                
+                const iconEl = document.getElementById('modal-icon');
+                const itemEl = document.getElementById('modal-item');
+                const valueEl = document.getElementById('modal-value');
+                
+                if (iconEl) iconEl.textContent = item.icon;
+                if (itemEl) {
+                    itemEl.textContent = item.name;
+                    itemEl.style.color = rarityColors[item.rarity];
+                }
+                if (valueEl) valueEl.textContent = `$${formatNumber(item.value)} (${item.rarity.toUpperCase()})`;
+                
+                modal.classList.add('active');
+                
+                if (['legendary', 'mythic', 'divine', 'godly', 'insane', 'exotic', 'unknown', 'admin'].includes(item.rarity)) {
+                    createConfetti();
+                }
+            } catch (e) {
+                console.error('ShowWinModal error:', e);
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('win-modal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        function addToInventory(item) {
+            try {
+                inventory.push({ ...item, id: Date.now(), acquired: new Date().toISOString() });
+                saveData();
+            } catch (e) {
+                console.error('AddToInventory error:', e);
+            }
+        }
+
+        function updateInventory() {
+            try {
+                const container = document.getElementById('inventory-container');
+                const grid = document.getElementById('inventory-grid');
+                
+                if (!container || !grid) return;
+                
+                if (inventory.length === 0) {
+                    container.style.display = 'block';
+                    grid.style.display = 'none';
+                } else {
+                    container.style.display = 'none';
+                    grid.style.display = 'grid';
+                    const sorted = [...inventory].sort((a, b) => b.value - a.value);
+                    grid.innerHTML = sorted.map((item) => `
+                        <div class="inventory-item rarity-${item.rarity}">
+                            <div class="item-icon">${item.icon}</div>
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-value">$${formatNumber(item.value)}</div>
+                            <button class="sell-btn" onclick="sellItem(${item.id})">SELL</button>
+                        </div>
+                    `).join('');
+                }
+                
+                const countEl = document.getElementById('inventory-count');
+                if (countEl) countEl.textContent = inventory.length;
+            } catch (e) {
+                console.error('UpdateInventory error:', e);
+            }
+        }
+
+        function sellItem(itemId) {
+            try {
+                const index = inventory.findIndex(item => item.id === itemId);
+                if (index === -1) return;
+                
+                const item = inventory[index];
+                balance += item.value;
+                inventory.splice(index, 1);
+                updateBalance();
+                updateInventory();
+                updateStats();
+                saveData();
+            } catch (e) {
+                console.error('SellItem error:', e);
+            }
+        }
+
+        function selectSide(side) {
+            if (isSpinning) return;
+            selectedCoinSide = side;
+            
+            document.querySelectorAll('.side-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            const selectedBtn = document.querySelector(`.side-btn.${side}`);
+            if (selectedBtn) selectedBtn.classList.add('selected');
+        }
+
+        function flipCoin() {
+            if (isSpinning) return;
+            if (!selectedCoinSide) {
+                alert("Select a side first!");
+                return;
+            }
+            
+            try {
+                const betInput = document.getElementById('cf-bet');
+                if (!betInput) return;
+                
+                const bet = parseFormattedNumber(betInput.value.trim());
+                
+                if (isNaN(bet) || bet < 10 || bet > balance) {
+                    alert("Invalid bet! Min $10, max your balance.");
+                    return;
+                }
+                
+                const lockedSide = selectedCoinSide;
+                
+                document.querySelectorAll('.side-btn').forEach(btn => {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                });
+                
+                isSpinning = true;
+                const flipBtn = document.querySelector('.coinflip-section .open-btn');
+                if (flipBtn) flipBtn.disabled = true;
+                
+                balance -= bet;
+                updateBalance();
+                saveData();
+                
+                const coin = document.getElementById('coin');
+                if (!coin) return;
+                
+                const isHeads = Math.random() < 0.5;
+                const rotations = 5 + Math.floor(Math.random() * 3);
+                const finalRotation = isHeads ? 0 : 180;
+                const totalRotation = (rotations * 360) + finalRotation;
+                
+                coin.style.transform = `rotateY(${totalRotation}deg)`;
+                
+                setTimeout(() => {
+                    const won = (isHeads && lockedSide === 'heads') || (!isHeads && lockedSide === 'tails');
+                    if (won) {
+                        balance += bet * 2;
+                        showWinModal({ name: "Coinflip Win!", icon: isHeads ? "👑" : "🦅", value: bet * 2, rarity: "rare" });
+                    } else {
+                        showWinModal({ name: "Coinflip Loss", icon: "💨", value: 0, rarity: "common" });
+                    }
+                    updateBalance();
+                    saveData();
+                    
+                    isSpinning = false;
+                    if (flipBtn) flipBtn.disabled = false;
+                    document.querySelectorAll('.side-btn').forEach(btn => {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    });
+                }, 3000);
+            } catch (e) {
+                console.error('FlipCoin error:', e);
+                isSpinning = false;
+            }
+        }
+
+        function submitCode() {
+            try {
+                const input = document.getElementById('code-input');
+                const message = document.getElementById('code-message');
+                
+                if (!input || !message) return;
+                
+                const code = input.value.trim().toUpperCase();
+                
+                if (!code) {
+                    message.textContent = "Enter a code!";
+                    message.className = "code-message error";
+                    return;
+                }
+                
+                if (code === OWNER_CODE) {
+                    if (isOwner) {
+                        message.textContent = "Already owner!";
+                        message.className = "code-message success";
+                    } else {
+                        isOwner = true;
+                        isAdmin = true; // Owner gets admin too
+                        saveData();
+                        checkAdminStatus();
+                        updateAdminPanel();
+                        message.textContent = "Owner access granted!";
+                        message.className = "code-message success";
+                        input.value = '';
+                    }
+                } else if (code === ADMIN_CODE) {
+                    if (isOwner) {
+                        message.textContent = "You are already owner!";
+                        message.className = "code-message success";
+                    } else if (isAdmin) {
+                        message.textContent = "Already admin!";
+                        message.className = "code-message success";
+                    } else {
+                        isAdmin = true;
+                        saveData();
+                        checkAdminStatus();
+                        message.textContent = "Admin access granted!";
+                        message.className = "code-message success";
+                        input.value = '';
+                    }
+                } else {
+                    message.textContent = "Invalid code!";
+                    message.className = "code-message error";
+                }
+            } catch (e) {
+                console.error('SubmitCode error:', e);
+            }
+        }
+
+        function parseFormattedNumber(str) {
+            try {
+                if (!str || typeof str !== 'string') return NaN;
+                str = str.replace(/\s/g, '').toUpperCase();
+                if (!isNaN(parseFloat(str)) && !/[A-Z]/.test(str)) return parseFloat(str);
+                
+                const suffixes = ['', 'K', 'M', 'B', 'T', 'QA', 'QI', 'SX', 'SP', 'OC', 'NO', 'DC', 'UDC', 'DDC', 'TDC', 'QADC', 'QIDC', 'SXDC', 'SPDC', 'ODC', 'NDC', 'VG', 'UVG', 'DVG', 'TVG', 'QAVG', 'QIVG', 'SXVG', 'SPVG', 'OVG', 'NVG', 'TG', 'UTG', 'DTG', 'TTG', 'QATG', 'QITG', 'SXTG', 'SPTG', 'OTG', 'NTG', 'QAG', 'UQAG', 'DQAG', 'TQAG', 'QAQAG', 'QIQAG', 'SXQAG', 'SPQAG', 'OQAG', 'NQAG', 'QIG', 'UQIG', 'DQIG', 'TQIG', 'QAQIG', 'QIQIG', 'SXQIG', 'SPQIG', 'OQIG', 'NQIG', 'SXG', 'USXG', 'DSXG', 'TSXG', 'QASXG', 'QISXG', 'SXSXG', 'SPSXG', 'OSXG', 'NSXG', 'SPG', 'USPG', 'DSPG', 'TSPG', 'QASPG', 'QISPG', 'SXSPG', 'SPSPG', 'OSPG', 'NSPG', 'OG', 'UOG', 'DOG', 'TOG', 'QAOG', 'QIOG', 'SXOG', 'SPOG', 'OOG', 'NOG', 'NG', 'UNG', 'DNG', 'TNG', 'QANG', 'QING', 'SXNG', 'SPNG', 'ONG', 'NNG', 'CG'];
+                const match = str.match(/^([\d.]+)([A-Z]*)$/);
+                if (!match) return NaN;
+                
+                const numPart = parseFloat(match[1]);
+                let suffixPart = match[2];
+                if (isNaN(numPart)) return NaN;
+                if (!suffixPart) return numPart;
+                
+                const tier = suffixes.indexOf(suffixPart);
+                if (tier === -1) return NaN;
+                return numPart * Math.pow(10, tier * 3);
+            } catch (e) {
+                return NaN;
+            }
+        }
+
+        function setMoney() {
+            try {
+                const input = document.getElementById('admin-money-input');
+                if (!input) return;
+                
+                const rawValue = input.value.trim();
+                if (!rawValue) {
+                    alert("Enter an amount!");
+                    return;
+                }
+                
+                let amount = parseFormattedNumber(rawValue);
+                if (isNaN(amount) || amount < 0) {
+                    alert("Invalid amount! Examples: 1000000, 5 Sx, 2.5M");
+                    return;
+                }
+                
+                balance = Math.floor(amount);
+                updateBalance();
+                saveData();
+                alert(`Money set to $${formatNumber(balance)}!`);
+                input.value = '';
+            } catch (e) {
+                console.error('SetMoney error:', e);
+            }
+        }
+
+        function resetMoney() {
+            balance = 200;
+            updateBalance();
+            saveData();
+            alert("Money reset to $200!");
+        }
+
+        function startAutoRoll() {
+            if (isAutoRolling) return;
+            
+            try {
+                const caseSelect = document.getElementById('autoroll-case-select');
+                const countInput = document.getElementById('autoroll-count');
+                const delayInput = document.getElementById('autoroll-delay');
+                
+                if (!caseSelect || !countInput || !delayInput) return;
+                
+                const caseIndex = caseSelect.value;
+                const count = parseInt(countInput.value);
+                const delay = parseInt(delayInput.value);
+                
+                if (caseIndex === "") {
+                    alert("Select a case!");
+                    return;
+                }
+                if (isNaN(count) || count < 1) {
+                    alert("Enter valid roll count!");
+                    return;
+                }
+                if (isNaN(delay) || delay < 0) {
+                    alert("Delay must be 0+!");
+                    return;
+                }
+                
+                if (currentCase !== parseInt(caseIndex)) {
+                    selectCase(parseInt(caseIndex));
+                    setTimeout(() => doAutoRoll(count, delay), 500);
+                } else {
+                    doAutoRoll(count, delay);
+                }
+            } catch (e) {
+                console.error('StartAutoRoll error:', e);
+            }
+        }
+
+        function doAutoRoll(count, delay) {
+            try {
+                isAutoRolling = true;
+                autoRollTarget = count;
+                autoRollCount = 0;
+                
+                const startBtn = document.getElementById('autoroll-start');
+                const stopBtn = document.getElementById('autoroll-stop');
+                const statusEl = document.getElementById('autoroll-status');
+                
+                if (startBtn) startBtn.style.display = 'none';
+                if (stopBtn) stopBtn.style.display = 'block';
+                if (statusEl) statusEl.textContent = `0/${count}`;
+                
+                closeModal();
+                
+                function rollNext() {
+                    if (!isAutoRolling || autoRollCount >= autoRollTarget) {
+                        stopAutoRoll();
+                        return;
+                    }
+                    
+                    const c = cases[currentCase];
+                    if (balance < c.price) {
+                        alert("Not enough balance!");
+                        stopAutoRoll();
+                        return;
+                    }
+                    
+                    startSpin(true, (success, item) => {
+                        if (success) {
+                            autoRollCount++;
+                            if (statusEl) statusEl.textContent = `${autoRollCount}/${autoRollTarget}`;
+                            if (autoRollCount < autoRollTarget) {
+                                setTimeout(() => {
+                                    closeModal();
+                                    autoRollInterval = setTimeout(rollNext, delay);
+                                }, 50);
+                            } else {
+                                stopAutoRoll();
+                            }
+                        } else {
+                            stopAutoRoll();
+                        }
+                    });
+                }
+                
+                rollNext();
+            } catch (e) {
+                console.error('DoAutoRoll error:', e);
+                stopAutoRoll();
+            }
+        }
+
+        function stopAutoRoll() {
+            isAutoRolling = false;
+            if (autoRollInterval) {
+                clearTimeout(autoRollInterval);
+                autoRollInterval = null;
+            }
+            
+            const startBtn = document.getElementById('autoroll-start');
+            const stopBtn = document.getElementById('autoroll-stop');
+            const statusEl = document.getElementById('autoroll-status');
+            
+            if (startBtn) startBtn.style.display = 'block';
+            if (stopBtn) stopBtn.style.display = 'none';
+            if (statusEl) statusEl.textContent = `Done: ${autoRollCount}/${autoRollTarget}`;
+        }
+
+        function showRevokeModal() {
+            if (!isOwner) return;
+            const modal = document.getElementById('revoke-modal');
+            const passwordInput = document.getElementById('revoke-password');
+            if (modal) modal.classList.add('active');
+            if (passwordInput) passwordInput.value = '';
+        }
+
+        function closeRevokeModal() {
+            const modal = document.getElementById('revoke-modal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        function confirmRevokeAdmin() {
+            try {
+                const passwordInput = document.getElementById('revoke-password');
+                if (!passwordInput) return;
+                
+                const password = passwordInput.value.trim();
+                
+                if (password !== OWNER_PASSWORD) {
+                    alert("Incorrect password!");
+                    return;
+                }
+                
+                // Revoke all admin status (except owner)
+                localStorage.removeItem('fc_admin');
+                // Keep owner status
+                
+                alert("All admin access revoked! Only owners retain access.");
+                closeRevokeModal();
+            } catch (e) {
+                console.error('ConfirmRevokeAdmin error:', e);
+            }
+        }
+
+        function showSection(section, btnElement) {
+            if (isSpinning && !isAutoRolling) return;
+            
+            try {
+                document.querySelectorAll('.section').forEach(s => {
+                    s.classList.remove('active');
+                    s.style.display = 'none';
+                });
+                
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                
+                const sectionMap = {
+                    'cases': 'cases-section',
+                    'admin': 'admin-section',
+                    'coinflip': 'coinflip-section',
+                    'inventory': 'inventory-section',
+                    'codes': 'codes-section'
+                };
+                
+                if (sectionMap[section]) {
+                    const el = document.getElementById(sectionMap[section]);
+                    if (el) {
+                        el.style.display = 'block';
+                        el.classList.add('active');
+                        if (section === 'inventory') updateInventory();
+                    }
+                }
+                
+                if (btnElement) {
+                    btnElement.classList.add('active');
+                }
+            } catch (e) {
+                console.error('ShowSection error:', e);
+            }
+        }
+
+        function updateBalance() {
+            const balanceEl = document.getElementById('balance');
+            if (balanceEl) balanceEl.textContent = formatNumber(balance);
+        }
+
+        function updateStats() {
+            const openedEl = document.getElementById('total-opened');
+            const bestEl = document.getElementById('best-item');
+            const countEl = document.getElementById('inventory-count');
+            
+            if (openedEl) openedEl.textContent = formatNumber(totalOpened);
+            if (bestEl) bestEl.textContent = bestItemValue > 0 ? `$${formatNumber(bestItemValue)}` : '-';
+            if (countEl) countEl.textContent = inventory.length;
+        }
+
+        function createConfetti() {
+            try {
+                for (let i = 0; i < 30; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.backgroundColor = ['#ff6b35', '#ffd700', '#ff0000', '#00ff00', '#0000ff'][Math.floor(Math.random() * 5)];
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    document.body.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 4000);
+                }
+            } catch (e) {
+                console.error('CreateConfetti error:', e);
+            }
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('fc_balance', balance);
+                localStorage.setItem('fc_inventory', JSON.stringify(inventory));
+                localStorage.setItem('fc_opened', totalOpened);
+                localStorage.setItem('fc_best', bestItemValue);
+                localStorage.setItem('fc_admin', isAdmin);
+                localStorage.setItem('fc_owner', isOwner);
+            } catch (e) {
+                console.error('SaveData error:', e);
+            }
+        }
+
+        // Initialize when DOM is ready
+        init();
+        
+        // iOS-specific: Handle status bar tap to scroll to top
+        document.addEventListener('statusbartap', function() {
+            document.querySelector('.main-content').scrollTop = 0;
+        });
+        
+        // Prevent context menu on long press (iOS)
+        document.oncontextmenu = function(e) {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                return false;
+            }
+        };
+        
+        // Handle iOS keyboard showing/hiding
+        window.addEventListener('resize', function() {
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+                setTimeout(function() {
+                    document.activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            }
+        });
+    </script>
+</body>
+</html>
