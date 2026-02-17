@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Runner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #0f172a; /* Slate 900 */
+            color: #e2e8f0;
+            overflow: hidden; /* Prevent scrolling on main page */
+        }
+
+        /* Custom Scrollbar for Textarea */
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+
+        /* Squircle Effect */
+        .squircle {
+            border-radius: 24px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .squircle:focus-within {
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3); /* Indigo glow */
+            border-color: #6366f1;
+        }
+
+        /* Button Animation */
+        .btn-enter {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
+        }
+        .btn-enter:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(79, 70, 229, 0.5);
+        }
+        .btn-enter:active {
+            transform: translateY(0);
+        }
+
+        /* Fade out animation */
+        .fade-out {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center relative">
+
+    <!-- Input Container -->
+    <div id="input-container" class="w-full max-w-3xl p-6 flex flex-col gap-6 z-10 transition-opacity duration-500">
+        
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
+                HTML Runner
+            </h1>
+            <p class="text-slate-400 text-sm">Paste your HTML code below and hit Enter.</p>
+        </div>
+
+        <!-- Input Wrapper -->
+        <div class="squircle bg-slate-800 border border-slate-700 p-1 flex flex-col shadow-2xl">
+            <textarea 
+                id="code-input" 
+                class="w-full h-64 bg-transparent text-slate-200 p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed"
+                placeholder="<!DOCTYPE html>
+<html>
+<body>
+  <h1>Hello World</h1>
+</body>
+</html>"
+                spellcheck="false"
+            ></textarea>
+            
+            <!-- Action Bar inside the squircle -->
+            <div class="px-4 pb-4 flex justify-end">
+                <button 
+                    id="run-btn"
+                    class="btn-enter text-white font-bold py-2 px-8 rounded-xl shadow-lg flex items-center gap-2"
+                >
+                    <span>Run Code</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <div class="text-center text-xs text-slate-600">
+            Tip: Refresh the page to reset.
+        </div>
+    </div>
+
+    <!-- Preview Container (Initially Hidden) -->
+    <div id="preview-container" class="absolute inset-0 w-full h-full bg-white hidden z-0">
+        <!-- Content will be injected here -->
+    </div>
+
+    <script>
+        const inputContainer = document.getElementById('input-container');
+        const codeInput = document.getElementById('code-input');
+        const runBtn = document.getElementById('run-btn');
+        const previewContainer = document.getElementById('preview-container');
+
+        function runCode() {
+            const code = codeInput.value;
+
+            if (!code.trim()) {
+                // Shake animation for empty input
+                inputContainer.classList.add('animate-pulse');
+                setTimeout(() => inputContainer.classList.remove('animate-pulse'), 500);
+                return;
+            }
+
+            // 1. Fade out the input UI
+            inputContainer.classList.add('fade-out');
+
+            // 2. Wait for fade out, then inject code
+            setTimeout(() => {
+                inputContainer.style.display = 'none';
+                previewContainer.style.display = 'block';
+                
+                // Inject the HTML
+                // We use document.write to completely replace the current document context 
+                // within the preview container logic, or simpler: replace the body content.
+                // However, to allow scripts to run properly in a "fresh" environment, 
+                // writing to the document is best, but since we want to keep the "Refresh to reset" logic,
+                // we will replace the body's innerHTML and re-execute scripts.
+                
+                document.open();
+                document.write(code);
+                document.close();
+
+            }, 500);
+        }
+
+        // Event Listeners
+        runBtn.addEventListener('click', runCode);
+
+        // Allow Ctrl+Enter or Cmd+Enter to run
+        codeInput.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                runCode();
+            }
+        });
+
+        // Auto-focus textarea on load
+        window.addEventListener('DOMContentLoaded', () => {
+            codeInput.focus();
+        });
+    </script>
+</body>
+</html>
