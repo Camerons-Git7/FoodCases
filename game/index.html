@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Textured Raycaster</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+        }
+        
+        #screen {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: auto;
+            cursor: none;
+        }
+        
+        #ui {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            text-shadow: 2px 2px 0 #000;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            opacity: 0.8;
+            pointer-events: none;
+            text-shadow: 2px 2px 0 #000;
+            z-index: 10;
+        }
+        
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background: #f00;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="screen"></canvas>
+        <div id="crosshair"></div>
+        <div id="ui">POS: <span id="pos">0,0</span> | YAW: <span id="yaw">0</span>° | PITCH: <span id="pitch">0</span>°</div>
+        <div id="controls">WASD=Move | MOUSE=Look | CLICK=Lock | ESC=Release</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('screen');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        const resX = 640;
+        const resY = 480;
+        
+        const bufCanvas = document.createElement('canvas');
+        bufCanvas.width = resX;
+        bufCanvas.height = resY;
+        const bufCtx = bufCanvas.getContext('2d', { alpha: false });
+        const imgData = bufCtx.createImageData(resX, resY);
+        const pixels = imgData.data;
+        
+        const map = [
+            [1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1]
+        ];
+        const mapW = 8;
+        const mapH = 8;
+        const block = 64;
+        
+        let px = 256;
+        let py = 256;
+        let yaw = 0;
+        let pitch = 0;
+        
+        const fov = 90 * Math.PI / 180;
+        // Reduced max pitch to prevent extreme cases that cause lag
+        const maxPitch = 85 * Math.PI / 180; // 85 degrees instead of 89.9
+        const moveSpeed = 5;
+        
+        const keys = {};
+        let mouseDx = 0;
+        let mouseDy = 0;
+        let mouseLocked = false;
+        
+        const texSize = 64;
+        
+        function generateWoodTexture() {
+            const c = document.createElement('canvas');
+            c.width = texSize;
+            c.height = texSize;
+            const x = c.getContext('2d');
+            
+            x.fillStyle = '#8B4513';
+            x.fillRect(0, 0, texSize, texSize);
+            
+            for (let i = 0; i < 30; i++) {
+                x.strokeStyle = `rgba(60, 40, 20, ${0.2 + Math.random() * 0.3})`;
+                x.lineWidth = 1 + Math.random();
+                x.beginPath();
+                const startX = Math.random() * texSize;
+                x.moveTo(startX, 0);
+                let currX = startX;
+                for (let y = 0; y < texSize; y += 4) {
+                    currX += (Math.random() - 0.5) * 3;
+                    x.lineTo(currX, y);
+                }
+                x.stroke();
+            }
+            
+            x.strokeStyle = '#3e2723';
+            x.lineWidth = 2;
+            x.beginPath();
+            x.moveTo(0, 0);
+            x.lineTo(texSize, 0);
+            x.moveTo(0, texSize/2);
+            x.lineTo(texSize, texSize/2);
+            x.stroke();
+            
+            return x.getImageData(0, 0, texSize, texSize).data;
+        }
+        
+        function generateWallTexture() {
+            const c = document.createElement('canvas');
+            c.width = texSize;
+            c.height = texSize;
+            const x = c.getContext('2d');
+            
+            x.fillStyle = '#909090';
+            x.fillRect(0, 0, texSize, texSize);
+            
+            for (let i = 0; i < 800; i++) {
+                const px = Math.random() * texSize;
+                const py = Math.random() * texSize;
+                const shade = Math.random();
+                x.fillStyle = shade > 0.5 ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)';
+                x.fillRect(px, py, 2, 2);
+            }
+            
+            x.strokeStyle = 'rgba(50, 50, 50, 0.4)';
+            x.lineWidth = 1;
+            for (let y = 0; y < texSize; y += 16) {
+                x.beginPath();
+                x.moveTo(0, y);
+                x.lineTo(texSize, y);
+                x.stroke();
+            }
+            for (let y = 0; y < texSize; y += 32) {
+                for (let xPos = 0; xPos < texSize; xPos += 32) {
+                    const offset = (y / 32) % 2 === 0 ? 0 : 16;
+                    x.beginPath();
+                    x.moveTo(xPos + offset, y);
+                    x.lineTo(xPos + offset, y + 16);
+                    x.stroke();
+                }
+            }
+            
+            return x.getImageData(0, 0, texSize, texSize).data;
+        }
+        
+        function generateCeilingTexture() {
+            const c = document.createElement('canvas');
+            c.width = texSize;
+            c.height = texSize;
+            const x = c.getContext('2d');
+            
+            x.fillStyle = '#e8e8e8';
+            x.fillRect(0, 0, texSize, texSize);
+            
+            x.strokeStyle = '#bbb';
+            x.lineWidth = 1;
+            x.beginPath();
+            for (let i = 0; i <= texSize; i += 16) {
+                x.moveTo(i, 0);
+                x.lineTo(i, texSize);
+                x.moveTo(0, i);
+                x.lineTo(texSize, i);
+            }
+            x.stroke();
+            
+            for (let i = 0; i < 100; i++) {
+                const px = Math.random() * texSize;
+                const py = Math.random() * texSize;
+                x.fillStyle = 'rgba(0,0,0,0.08)';
+                x.fillRect(px, py, 1, 1);
+            }
+            
+            return x.getImageData(0, 0, texSize, texSize).data;
+        }
+        
+        const woodTex = generateWoodTexture();
+        const wallTex = generateWallTexture();
+        const ceilingTex = generateCeilingTexture();
+        
+        function getTexColor(texData, u, v) {
+            u = ((u % 1) + 1) % 1;
+            v = ((v % 1) + 1) % 1;
+            const x = Math.floor(u * (texSize - 1));
+            const y = Math.floor(v * (texSize - 1));
+            const idx = (y * texSize + x) * 4;
+            return {
+                r: texData[idx],
+                g: texData[idx + 1],
+                b: texData[idx + 2]
+            };
+        }
+        
+        function setPixel(idx, r, g, b) {
+            pixels[idx] = r;
+            pixels[idx + 1] = g;
+            pixels[idx + 2] = b;
+            pixels[idx + 3] = 255;
+        }
+        
+        function getFloorTexCoord(rayAngle, distance) {
+            const wx = px + Math.cos(rayAngle) * distance;
+            const wy = py + Math.sin(rayAngle) * distance;
+            return { u: wx / block, v: wy / block };
+        }
+        
+        function castRay(rayAngle) {
+            while (rayAngle < 0) rayAngle += Math.PI * 2;
+            while (rayAngle >= Math.PI * 2) rayAngle -= Math.PI * 2;
+            
+            const sin = Math.sin(rayAngle);
+            const cos = Math.cos(rayAngle);
+            
+            let mx = Math.floor(px / block);
+            let my = Math.floor(py / block);
+            
+            const ddx = Math.abs(1 / cos);
+            const ddy = Math.abs(1 / sin);
+            
+            let stepX, stepY, sideX, sideY;
+            
+            if (cos < 0) {
+                stepX = -1;
+                sideX = (px / block - mx) * ddx;
+            } else {
+                stepX = 1;
+                sideX = (mx + 1 - px / block) * ddx;
+            }
+            
+            if (sin < 0) {
+                stepY = -1;
+                sideY = (py / block - my) * ddy;
+            } else {
+                stepY = 1;
+                sideY = (my + 1 - py / block) * ddy;
+            }
+            
+            let hit = false;
+            let side = 0;
+            
+            while (!hit) {
+                if (sideX < sideY) {
+                    sideX += ddx;
+                    mx += stepX;
+                    side = 0;
+                } else {
+                    sideY += ddy;
+                    my += stepY;
+                    side = 1;
+                }
+                
+                if (mx < 0 || mx >= mapW || my < 0 || my >= mapH || map[my][mx] === 1) {
+                    hit = true;
+                }
+            }
+            
+            let dist;
+            if (side === 0) {
+                dist = (mx - px / block + (1 - stepX) / 2) / cos;
+            } else {
+                dist = (my - py / block + (1 - stepY) / 2) / sin;
+            }
+            dist *= block;
+            
+            let wallX;
+            if (side === 0) {
+                wallX = py / block + dist / block * sin;
+            } else {
+                wallX = px / block + dist / block * cos;
+            }
+            wallX -= Math.floor(wallX);
+            
+            const projPlaneDist = (resX / 2) / Math.tan(fov / 2);
+            const wallH = projPlaneDist / (dist / block);
+            
+            return { dist, height: wallH, side, wallX, angle: rayAngle };
+        }
+        
+        function render() {
+            for (let i = 0; i < pixels.length; i += 4) {
+                pixels[i] = 0;
+                pixels[i + 1] = 0;
+                pixels[i + 2] = 0;
+                pixels[i + 3] = 255;
+            }
+            
+            // Clamp pitch to prevent extreme horizon calculations
+            const safePitch = Math.max(-maxPitch, Math.min(maxPitch, pitch));
+            const pitchOffset = Math.tan(safePitch) * (resY / 2);
+            const horizon = (resY / 2) + pitchOffset;
+            
+            // Clamp horizon to valid range to prevent overflow
+            const clampedHorizon = Math.max(-resY, Math.min(resY * 2, horizon));
+            
+            // Cast all rays
+            const rays = [];
+            for (let x = 0; x < resX; x++) {
+                const camX = 2 * x / resX - 1;
+                const rayAngle = yaw + camX * (fov / 2);
+                rays.push(castRay(rayAngle));
+            }
+            
+            // Draw columns
+            for (let x = 0; x < resX; x++) {
+                const ray = rays[x];
+                
+                const wallTop = clampedHorizon - ray.height / 2;
+                const wallBot = clampedHorizon + ray.height / 2;
+                
+                const drawStart = Math.max(0, Math.ceil(wallTop));
+                const drawEnd = Math.min(resY - 1, Math.floor(wallBot));
+                
+                // Ceiling - only draw if wall doesn't fill entire column
+                if (drawStart > 0) {
+                    for (let y = 0; y < drawStart; y++) {
+                        const dy = clampedHorizon - y;
+                        if (dy <= 0.1) continue; // Prevent division by near-zero
+                        
+                        // Limit the distance calculation to prevent overflow
+                        const rowDistance = Math.min(10000, (resY / 2) / dy * (block / 2) / Math.cos(safePitch));
+                        
+                        if (rowDistance >= ray.dist) continue;
+                        
+                        const texCoord = getFloorTexCoord(ray.angle, rowDistance);
+                        const c = getTexColor(ceilingTex, texCoord.u, texCoord.v);
+                        const shade = Math.max(0.4, 1 - rowDistance / 600);
+                        
+                        const idx = (y * resX + x) * 4;
+                        setPixel(idx, 
+                            Math.min(255, c.r * shade), 
+                            Math.min(255, c.g * shade), 
+                            Math.min(255, c.b * shade));
+                    }
+                }
+                
+                // Wall
+                for (let y = drawStart; y <= drawEnd; y++) {
+                    const texY = (y - wallTop) / ray.height;
+                    const c = getTexColor(wallTex, ray.wallX, texY);
+                    
+                    const shade = Math.max(0.3, 1 - ray.dist / 600) * (ray.side === 1 ? 0.7 : 1);
+                    
+                    const idx = (y * resX + x) * 4;
+                    setPixel(idx,
+                        Math.min(255, c.r * shade),
+                        Math.min(255, c.g * shade),
+                        Math.min(255, c.b * shade));
+                }
+                
+                // Floor - only draw if wall doesn't fill entire column
+                if (drawEnd < resY - 1) {
+                    for (let y = drawEnd + 1; y < resY; y++) {
+                        const dy = y - clampedHorizon;
+                        if (dy <= 0.1) continue;
+                        
+                        const rowDistance = Math.min(10000, (resY / 2) / dy * (block / 2) / Math.cos(safePitch));
+                        
+                        if (rowDistance >= ray.dist) continue;
+                        
+                        const texCoord = getFloorTexCoord(ray.angle, rowDistance);
+                        const c = getTexColor(woodTex, texCoord.u, texCoord.v);
+                        const shade = Math.max(0.4, 1 - rowDistance / 600);
+                        
+                        const idx = (y * resX + x) * 4;
+                        setPixel(idx,
+                            Math.min(255, c.r * shade),
+                            Math.min(255, c.g * shade),
+                            Math.min(255, c.b * shade));
+                    }
+                }
+            }
+            
+            bufCtx.putImageData(imgData, 0, 0);
+            ctx.imageSmoothingEnabled = true;
+            ctx.drawImage(bufCanvas, 0, 0, canvas.width, canvas.height);
+            
+            document.getElementById('pos').textContent = Math.floor(px) + ',' + Math.floor(py);
+            document.getElementById('yaw').textContent = Math.floor((yaw * 180 / Math.PI) % 360);
+            document.getElementById('pitch').textContent = Math.floor(safePitch * 180 / Math.PI);
+        }
+        
+        function update() {
+            const oldPx = px;
+            const oldPy = py;
+            
+            if (keys['KeyW']) {
+                px += Math.cos(yaw) * moveSpeed;
+                py += Math.sin(yaw) * moveSpeed;
+            }
+            if (keys['KeyS']) {
+                px -= Math.cos(yaw) * moveSpeed;
+                py -= Math.sin(yaw) * moveSpeed;
+            }
+            if (keys['KeyA']) {
+                px += Math.cos(yaw - Math.PI / 2) * moveSpeed;
+                py += Math.sin(yaw - Math.PI / 2) * moveSpeed;
+            }
+            if (keys['KeyD']) {
+                px += Math.cos(yaw + Math.PI / 2) * moveSpeed;
+                py += Math.sin(yaw + Math.PI / 2) * moveSpeed;
+            }
+            
+            if (map[Math.floor(oldPy / block)][Math.floor(px / block)] === 1) px = oldPx;
+            if (map[Math.floor(py / block)][Math.floor(oldPx / block)] === 1) py = oldPy;
+            
+            if (mouseLocked) {
+                yaw += mouseDx * 0.003;
+                pitch -= mouseDy * 0.003;
+                // Enforce pitch limits immediately
+                pitch = Math.max(-maxPitch, Math.min(maxPitch, pitch));
+                mouseDx = 0;
+                mouseDy = 0;
+            }
+            
+            if (keys['ArrowLeft']) yaw -= 0.03;
+            if (keys['ArrowRight']) yaw += 0.03;
+            if (keys['ArrowUp']) pitch = Math.min(maxPitch, pitch + 0.03);
+            if (keys['ArrowDown']) pitch = Math.max(-maxPitch, pitch - 0.03);
+            
+            render();
+            requestAnimationFrame(update);
+        }
+        
+        document.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (e.code === 'F11') {
+                e.preventDefault();
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        });
+        
+        document.addEventListener('keyup', e => keys[e.code] = false);
+        
+        canvas.addEventListener('click', () => canvas.requestPointerLock());
+        
+        document.addEventListener('pointerlockchange', () => {
+            mouseLocked = document.pointerLockElement === canvas;
+        });
+        
+        document.addEventListener('mousemove', e => {
+            if (mouseLocked) {
+                mouseDx += e.movementX;
+                mouseDy += e.movementY;
+            }
+        });
+        
+        update();
+    </script>
+</body>
+</html>
