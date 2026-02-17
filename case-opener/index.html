@@ -1008,13 +1008,42 @@
         }
         
         .slot-reel.spinning {
-            animation: reelBlur 0.1s linear infinite;
+            animation: slotSpin 0.15s linear infinite;
         }
         
-        @keyframes reelBlur {
-            0% { filter: blur(0px); }
-            50% { filter: blur(2px); }
-            100% { filter: blur(0px); }
+        @keyframes slotSpin {
+            0% { 
+                background: linear-gradient(135deg, #3a3a5e 0%, #1a1a2e 100%);
+                box-shadow: inset 0 0 30px rgba(235, 75, 75, 0.3);
+            }
+            25% { 
+                background: linear-gradient(135deg, #4a4a7e 0%, #2a2a3e 100%);
+                transform: translateY(-2px);
+            }
+            50% { 
+                background: linear-gradient(135deg, #3a3a5e 0%, #1a1a2e 100%);
+                box-shadow: inset 0 0 40px rgba(235, 75, 75, 0.5);
+            }
+            75% { 
+                background: linear-gradient(135deg, #2a2a4e 0%, #0a0a1e 100%);
+                transform: translateY(2px);
+            }
+            100% { 
+                background: linear-gradient(135deg, #3a3a5e 0%, #1a1a2e 100%);
+                box-shadow: inset 0 0 30px rgba(235, 75, 75, 0.3);
+            }
+        }
+        
+        .slot-reel.spinning::before {
+            content: '❓';
+            position: absolute;
+            animation: reelSymbolBlur 0.1s linear infinite;
+            font-size: 4rem;
+        }
+        
+        @keyframes reelSymbolBlur {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
         }
         
         .slot-reel.win {
@@ -1026,6 +1055,18 @@
         @keyframes reelWin {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.1); }
+        }
+
+                .slot-reel:has(.seven-red) {
+            color: var(--mythic);
+            text-shadow: 0 0 15px var(--mythic);
+        }
+        
+        .seven-red {
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+            font-weight: 900;
+            filter: drop-shadow(0 0 5px #ff0000);
         }
         
         .slots-payline {
@@ -1205,6 +1246,12 @@
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
+
+                @keyframes reelStopBounce {
+            0% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            100% { transform: translateY(0); }
+        }
         
     </style>
 </head>
@@ -1383,7 +1430,7 @@
                             <span class="slots-paytable-odds">3x Diamond = 25x bet</span>
                         </div>
                         <div class="slots-paytable-item">
-                            <span class="slots-paytable-icon">7️⃣7️⃣7️⃣</span>
+                                                        <span class="slots-paytable-icon" style="display: flex; flex-direction: column; font-size: 1rem; line-height: 0.8; color: #ff0000; text-shadow: 0 0 10px #ff0000;">7️<br>7️<br>7️</span>span>
                             <span class="slots-paytable-odds">3x Seven = 50x bet</span>
                         </div>
                         <div class="slots-paytable-item">
@@ -1563,7 +1610,7 @@ window.addEventListener('beforeunload', () => {
             { icon: "🍊", name: "Orange", weight: 20, multiplier: 5 },
             { icon: "🍇", name: "Grapes", weight: 15, multiplier: 10 },
             { icon: "💎", name: "Diamond", weight: 7, multiplier: 25 },
-            { icon: "7️⃣", name: "Seven", weight: 2.5, multiplier: 50 },
+            { icon: '<span class="seven-red">7️</span>', name: "Seven", weight: 2.5, multiplier: 50 },
             { icon: "🎰", name: "Jackpot", weight: 0.5, multiplier: 100 }
         ];
 
@@ -2343,28 +2390,49 @@ function updateBalance() {
             document.getElementById('slots-result').className = 'slots-result';
             document.getElementById('slots-payline').classList.remove('active');
             
-            // Add spinning animation
-            for (let i = 0; i < 3; i++) {
-                document.getElementById(`slot-${i}`).classList.add('spinning');
-            }
-            
-            // Determine results
+            // Determine final results first
             const results = [getRandomSymbol(), getRandomSymbol(), getRandomSymbol()];
             
-            // Animate reels stopping one by one
-            let stopDelay = 0;
+            // Start spinning animation with cycling symbols
+            const spinIntervals = [];
+            for (let i = 0; i < 3; i++) {
+                const reel = document.getElementById(`slot-${i}`);
+                reel.classList.add('spinning');
+                
+                // Cycle through random symbols during spin
+                spinIntervals[i] = setInterval(() => {
+                    const randomSym = slotsSymbols[Math.floor(Math.random() * slotsSymbols.length)];
+                    if (randomSym.name === "Seven") {
+                        reel.innerHTML = randomSym.icon;
+                    } else {
+                        reel.textContent = randomSym.icon;
+                    }
+                }, 80);
+            
+            // Stop reels one by one with delay
             for (let i = 0; i < 3; i++) {
                 setTimeout(() => {
                     const reel = document.getElementById(`slot-${i}`);
+                    clearInterval(spinIntervals[i]);
                     reel.classList.remove('spinning');
-                    reel.textContent = results[i].icon;
-                }, 500 + (i * 300));
+                    if (results[i].name === "Seven") {
+                        reel.innerHTML = results[i].icon;
+                    } else {
+                        reel.textContent = results[i].icon;
+                    }
+                    
+                    // Add a little bounce effect when stopping
+                    reel.style.animation = 'reelStopBounce 0.3s ease';
+                    setTimeout(() => {
+                        reel.style.animation = '';
+                    }, 300);
+                }, 800 + (i * 400));
             }
             
-            // Check win after animation
+            // Check win after all reels stop
             setTimeout(() => {
                 checkSlotsWin(results, bet);
-            }, 1500);
+            }, 2200);
         }
 
         function checkSlotsWin(results, bet) {
@@ -2388,7 +2456,8 @@ function updateBalance() {
                 }
                 document.getElementById('slots-payline').classList.add('active');
                 
-                resultDiv.textContent = `🎉 JACKPOT! ${results[0].name} x3! Won $${formatNumber(winAmount)}!`;
+                const displayName = results[0].name === "Seven" ? "777" : results[0].name;
+                resultDiv.textContent = `🎉 JACKPOT! ${displayName} x3! Won $${formatNumber(winAmount)}!`;
                 resultDiv.className = 'slots-result win';
                 
                 updateBalance();
@@ -2420,7 +2489,8 @@ function updateBalance() {
                     saveSlotsStats();
                     updateSlotsStats();
                     
-                    resultDiv.textContent = `✨ Two ${twoMatch.name}s! Won $${formatNumber(winAmount)}`;
+                    const displayName = twoMatch.name === "Seven" ? "7" : twoMatch.name;
+                    resultDiv.textContent = `✨ Two ${displayName}s! Won $${formatNumber(winAmount)}`;
                     resultDiv.style.color = '#5e98d9';
                     
                     updateBalance();
