@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>My Room - First Person</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <style>
+       body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
+       #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+       
+       #ui-layer {
+           position: absolute;
+           top: 0; left: 0; width: 100%; height: 100%;
+           z-index: 10; pointer-events: none;
+           display: flex; flex-direction: column; justify-content: space-between; padding: 2rem;
+       }
+
+       .key {
+           display: inline-block; background: rgba(255,255,255,0.2);
+           padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;
+           margin: 0 2px; border: 1px solid rgba(255,255,255,0.3);
+       }
+
+       #crosshair {
+           position: absolute; top: 50%; left: 50%;
+           width: 4px; height: 4px; background: rgba(255, 255, 255, 0.8);
+           border-radius: 50%; transform: translate(-50%, -50%);
+           pointer-events: none; z-index: 20; mix-blend-mode: difference;
+       }
+       
+       .active-crosshair { transform: translate(-50%, -50%) scale(2) !important; background: #0f0 !important; }
+
+       #tooltip {
+           position: absolute; background: rgba(0, 0, 0, 0.8); color: white;
+           padding: 8px 16px; border-radius: 6px; font-size: 14px;
+           pointer-events: none; opacity: 0; transition: opacity 0.2s;
+           transform: translate(-50%, -150%); white-space: nowrap;
+           backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1);
+           z-index: 20;
+       }
+
+       #sitting-indicator {
+           position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+           background: rgba(0, 0, 0, 0.7); color: #fff; padding: 10px 20px;
+           border-radius: 20px; font-weight: bold; opacity: 0; transition: opacity 0.3s;
+           pointer-events: none; z-index: 20; text-transform: uppercase; letter-spacing: 1px;
+       }
+
+       .controls-hint {
+           background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px);
+           padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+           color: rgba(255,255,255,0.9); font-size: 0.9rem; max-width: 320px; pointer-events: auto;
+       }
+       
+       #loader {
+           position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+           background: #111; z-index: 50; display: flex; justify-content: center; align-items: center;
+           color: white; flex-direction: column; transition: opacity 0.5s;
+       }
+       .spinner {
+           width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3);
+           border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; margin-bottom: 1rem;
+       }
+       @keyframes spin { to { transform: rotate(360deg); } }
+   </style>
+   
+   <script type="importmap">
+       {
+           "imports": {
+               "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+           }
+       }
+   </script>
+</head>
+<body>
+
+   <div id="loader">
+       <div class="spinner"></div>
+       <div>Waking up...</div>
+   </div>
+
+   <div id="ui-layer">
+       <div class="flex justify-between items-start w-full">
+           <div class="controls-hint">
+               <h2 class="text-xl font-bold text-white mb-2">My Room</h2>
+               <p class="mb-1"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> Move</p>
+               <p class="mb-1"><span class="key">SPACE</span> Jump / Stand</p>
+               <p class="mb-1"><span class="key">MOUSE</span> Look</p>
+               <p class="text-xs text-gray-400 mt-2">Click to lock cursor</p>
+           </div>
+       </div>
+   </div>
+
+   <div id="sitting-indicator">SITTING - Press SPACE to stand</div>
+   <div id="crosshair"></div>
+   <div id="tooltip"></div>
+   <div id="canvas-container"></div>
+
+   <script type="module">
+       import * as THREE from 'three';
+       import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+       import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+       // --- Configuration ---
+       const CONFIG = {
+           roomWidth: 20, roomHeight: 10, roomDepth: 20,
+           moveSpeed: 8.0, lookSpeed: 0.002,
+           playerHeight: 1.6, sitHeight: 1.0, crouchHeight: 0.8,
+           playerRadius: 0.35,
+           jumpForce: 9.0, gravity: 28.0,
+           bedHeight: 0.9
+       };
+
+       // --- State ---
+       let camera, scene, renderer, controls;
+       let raycaster;
+       const collidableObjects = [];
+       const interactables = [];
+       let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+       let canJump = false; let isJumping = false; let jumpVelocity = 0;
+       let prevTime = performance.now();
+       const velocity = new THREE.Vector3();
+       const direction = new THREE.Vector3();
+       let isSitting = false; let isOnBed = false;
+       
+       // Player Body Parts
+       let playerGroup, headGroup, leftLeg, rightLeg, leftArm, rightArm, torso, leftShoe, rightShoe;
+       let leftForeArm, rightForeArm, leftThigh, rightThigh, leftCalf, rightCalf;
+       let walkCycle = 0;
+       let isMoving = false;
+
+       let sunLight, ambientLight, lampLight, computerScreenMesh, computerLight;
+       let chairPosition = new THREE.Vector3(-4.0, 0, -6);
+       let chairRotation = -Math.PI / 2;
+       let bedPosition = new THREE.Vector3(0, 0, -6);
+
+       // --- Initialization ---
+       init();
+       animate();
+
+       function init() {
+           const container = document.getElementById('canvas-container');
+
+           scene = new THREE.Scene();
+           scene.background = new THREE.Color(0x87CEEB);
+           scene.fog = new THREE.Fog(0x87CEEB, 0, 40);
+
+           camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+           
+           renderer = new THREE.WebGLRenderer({ antialias: true });
+           renderer.setSize(window.innerWidth, window.innerHeight);
+           renderer.shadowMap.enabled = true;
+           renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+           container.appendChild(renderer.domElement);
+
+           // Player Setup (Body + Head)
+           setupPlayer();
+
+           controls = new PointerLockControls(camera, document.body);
+           controls.pointerSpeed = CONFIG.lookSpeed * 1000;
+
+           const instructions = document.querySelector('.controls-hint');
+           instructions.addEventListener('click', () => controls.lock());
+           controls.addEventListener('lock', () => instructions.style.display = 'none');
+           controls.addEventListener('unlock', () => instructions.style.display = 'block');
+
+           raycaster = new THREE.Raycaster();
+           document.addEventListener('keydown', onKeyDown);
+           document.addEventListener('keyup', onKeyUp);
+           document.addEventListener('click', onMouseClick);
+           window.addEventListener('resize', onWindowResize);
+
+           buildRoom();
+           buildFurniture();
+           
+           setTimeout(() => {
+               document.getElementById('loader').style.opacity = 0;
+               setTimeout(() => document.getElementById('loader').remove(), 500);
+           }, 1000);
+       }
+
+       function setupPlayer() {
+           // The playerGroup holds everything (body + camera)
+           playerGroup = new THREE.Group();
+           scene.add(playerGroup);
+           
+           // Camera positioned at eye level (properly above head, not in torso)
+           playerGroup.add(camera);
+           camera.position.set(0, CONFIG.playerHeight - 0.05, 0.15); // Eyes slightly forward and at top of head
+
+           // Materials with realistic properties
+           const skinMat = new THREE.MeshStandardMaterial({ 
+               color: 0xffdbac, 
+               roughness: 0.6,
+               metalness: 0.0
+           });
+           const shirtMat = new THREE.MeshStandardMaterial({ 
+               color: 0x3b82f6, 
+               roughness: 0.8,
+               metalness: 0.1
+           });
+           const pantsMat = new THREE.MeshStandardMaterial({ 
+               color: 0x1e293b, 
+               roughness: 0.9,
+               metalness: 0.1
+           });
+           const shoeMat = new THREE.MeshStandardMaterial({
+               color: 0x111111,
+               roughness: 0.4,
+               metalness: 0.2
+           });
+
+           // --- REALISTIC BODY PROPORTIONS ---
+           
+           // Hips/Pelvis (center point)
+           const hips = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.25, 0.35), pantsMat);
+           hips.position.set(0, CONFIG.playerHeight - 0.85, 0);
+           hips.castShadow = true;
+           playerGroup.add(hips);
+
+           // Torso with realistic proportions (wider shoulders, narrower waist)
+           // Upper chest
+           const chest = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.35, 0.3), shirtMat);
+           chest.position.set(0, CONFIG.playerHeight - 0.45, 0);
+           chest.castShadow = true;
+           playerGroup.add(chest);
+           
+           // Lower abdomen/stomach
+           const stomach = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.3, 0.28), shirtMat);
+           stomach.position.set(0, CONFIG.playerHeight - 0.75, 0);
+           stomach.castShadow = true;
+           playerGroup.add(stomach);
+
+           // Neck
+           const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.15), skinMat);
+           neck.position.set(0, CONFIG.playerHeight - 0.18, 0);
+           playerGroup.add(neck);
+
+           // Head Group (for animation)
+           headGroup = new THREE.Group();
+           headGroup.position.set(0, CONFIG.playerHeight - 0.1, 0);
+           playerGroup.add(headGroup);
+
+           // Head with realistic proportions (smaller than before)
+           const headGeo = new THREE.BoxGeometry(0.22, 0.28, 0.26);
+           const head = new THREE.Mesh(headGeo, skinMat);
+           head.position.set(0, 0, 0);
+           head.castShadow = true;
+           headGroup.add(head);
+
+           // Face details
+           const eyeGeo = new THREE.SphereGeometry(0.025, 8, 8);
+           const eyeMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+           const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+           leftEye.position.set(-0.06, 0.02, 0.13);
+           headGroup.add(leftEye);
+           const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+           rightEye.position.set(0.06, 0.02, 0.13);
+           headGroup.add(rightEye);
+
+           // --- REALISTIC LEGS (Thigh + Calf) ---
+           
+           // Left Thigh
+           leftThigh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.45, 0.18), pantsMat);
+           leftThigh.position.set(-0.16, CONFIG.playerHeight - 1.0, 0);
+           leftThigh.geometry.translate(0, -0.225, 0); // Pivot at top
+           leftThigh.castShadow = true;
+           playerGroup.add(leftThigh);
+           
+           // Left Calf
+           leftCalf = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.45, 0.14), skinMat);
+           leftCalf.position.set(0, -0.45, 0); // Relative to thigh
+           leftCalf.geometry.translate(0, -0.225, 0);
+           leftCalf.castShadow = true;
+           leftThigh.add(leftCalf);
+           
+           // Left Shoe
+           leftShoe = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.3), shoeMat);
+           leftShoe.position.set(0, -0.45, 0.05);
+           leftCalf.add(leftShoe);
+
+           // Right Thigh
+           rightThigh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.45, 0.18), pantsMat);
+           rightThigh.position.set(0.16, CONFIG.playerHeight - 1.0, 0);
+           rightThigh.geometry.translate(0, -0.225, 0);
+           rightThigh.castShadow = true;
+           playerGroup.add(rightThigh);
+           
+           // Right Calf
+           rightCalf = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.45, 0.14), skinMat);
+           rightCalf.position.set(0, -0.45, 0);
+           rightCalf.geometry.translate(0, -0.225, 0);
+           rightCalf.castShadow = true;
+           rightThigh.add(rightCalf);
+           
+           // Right Shoe
+           rightShoe = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.3), shoeMat);
+           rightShoe.position.set(0, -0.45, 0.05);
+           rightCalf.add(rightShoe);
+
+           // --- REALISTIC ARMS (Upper + Forearm) ---
+           
+           // Shoulders
+           const leftShoulder = new THREE.Mesh(new THREE.SphereGeometry(0.12), shirtMat);
+           leftShoulder.position.set(-0.35, CONFIG.playerHeight - 0.35, 0);
+           playerGroup.add(leftShoulder);
+           
+           const rightShoulder = new THREE.Mesh(new THREE.SphereGeometry(0.12), shirtMat);
+           rightShoulder.position.set(0.35, CONFIG.playerHeight - 0.35, 0);
+           playerGroup.add(rightShoulder);
+
+           // Left Upper Arm
+           const leftUpperArm = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.35, 0.13), shirtMat);
+           leftUpperArm.position.set(0, -0.1, 0);
+           leftUpperArm.geometry.translate(0, -0.175, 0);
+           leftShoulder.add(leftUpperArm);
+           
+           // Left Forearm
+           leftForeArm = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.35, 0.11), skinMat);
+           leftForeArm.position.set(0, -0.35, 0);
+           leftForeArm.geometry.translate(0, -0.175, 0);
+           leftUpperArm.add(leftForeArm);
+           
+           // Left Hand
+           const leftHand = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.1), skinMat);
+           leftHand.position.set(0, -0.35, 0);
+           leftForeArm.add(leftHand);
+
+           // Right Upper Arm
+           const rightUpperArm = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.35, 0.13), shirtMat);
+           rightUpperArm.position.set(0, -0.1, 0);
+           rightUpperArm.geometry.translate(0, -0.175, 0);
+           rightShoulder.add(rightUpperArm);
+           
+           // Right Forearm
+           rightForeArm = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.35, 0.11), skinMat);
+           rightForeArm.position.set(0, -0.35, 0);
+           rightForeArm.geometry.translate(0, -0.175, 0);
+           rightUpperArm.add(rightForeArm);
+           
+           // Right Hand
+           const rightHand = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.1), skinMat);
+           rightHand.position.set(0, -0.35, 0);
+           rightForeArm.add(rightHand);
+
+           // Store references for animation
+           leftLeg = leftThigh;
+           rightLeg = rightThigh;
+           leftArm = leftForeArm;
+           rightArm = rightForeArm;
+           torso = chest;
+       }
+
+       function buildRoom() {
+           // Floor
+           const floor = new THREE.Mesh(
+               new THREE.PlaneGeometry(CONFIG.roomWidth, CONFIG.roomDepth),
+               new THREE.MeshStandardMaterial({ color: 0xd4c5b0, roughness: 0.8 })
+           );
+           floor.rotation.x = -Math.PI / 2;
+           floor.receiveShadow = true;
+           scene.add(floor);
+
+           // Walls
+           const wallMat = new THREE.MeshStandardMaterial({ color: 0xeaeaea, roughness: 0.9 });
+           
+           // Back
+           const backWall = new THREE.Mesh(new THREE.BoxGeometry(CONFIG.roomWidth, CONFIG.roomHeight, 0.4), wallMat);
+           backWall.position.set(0, CONFIG.roomHeight/2, -CONFIG.roomDepth/2);
+           backWall.receiveShadow = true; backWall.castShadow = true;
+           scene.add(backWall); collidableObjects.push(backWall);
+
+           // Left
+           const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.4, CONFIG.roomHeight, CONFIG.roomDepth), wallMat);
+           leftWall.position.set(-CONFIG.roomWidth/2, CONFIG.roomHeight/2, 0);
+           leftWall.receiveShadow = true; leftWall.castShadow = true;
+           scene.add(leftWall); collidableObjects.push(leftWall);
+
+           // Right
+           const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.4, CONFIG.roomHeight, CONFIG.roomDepth), wallMat);
+           rightWall.position.set(CONFIG.roomWidth/2, CONFIG.roomHeight/2, 0);
+           rightWall.receiveShadow = true; rightWall.castShadow = true;
+           scene.add(rightWall); collidableObjects.push(rightWall);
+
+           // Front (Doorway)
+           const fLeft = new THREE.Mesh(new THREE.BoxGeometry(6, CONFIG.roomHeight, 0.4), wallMat);
+           fLeft.position.set(-7, CONFIG.roomHeight/2, CONFIG.roomDepth/2);
+           scene.add(fLeft); collidableObjects.push(fLeft);
+           
+           const fRight = new THREE.Mesh(new THREE.BoxGeometry(6, CONFIG.roomHeight, 0.4), wallMat);
+           fRight.position.set(7, CONFIG.roomHeight/2, CONFIG.roomDepth/2);
+           scene.add(fRight); collidableObjects.push(fRight);
+           
+           const fTop = new THREE.Mesh(new THREE.BoxGeometry(8, 3, 0.4), wallMat);
+           fTop.position.set(0, 8.5, CONFIG.roomDepth/2);
+           scene.add(fTop); collidableObjects.push(fTop);
+
+           // --- FIXED WINDOW ---
+           const windowGroup = new THREE.Group();
+           windowGroup.position.set(-9.8, CONFIG.roomHeight/2, 0);
+           
+           const frameMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+           const frameV = new THREE.Mesh(new THREE.BoxGeometry(0.2, 5, 0.2), frameMat);
+           const frameH = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 5), frameMat);
+           
+           const wTop = frameH.clone(); wTop.position.y = 2.5;
+           const wBot = frameH.clone(); wBot.position.y = -2.5;
+           const wLeft = frameV.clone(); wLeft.position.z = -2.5;
+           const wRight = frameV.clone(); wRight.position.z = 2.5;
+           
+           windowGroup.add(wTop, wBot, wLeft, wRight);
+           
+           const glass = new THREE.Mesh(
+               new THREE.PlaneGeometry(5, 5),
+               new THREE.MeshPhysicalMaterial({ color: 0xaaccff, transmission: 0.9, transparent: true, roughness: 0 })
+           );
+           glass.rotation.y = Math.PI / 2;
+           windowGroup.add(glass);
+           
+           scene.add(windowGroup);
+
+           // Light
+           ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+           scene.add(ambientLight);
+
+           sunLight = new THREE.DirectionalLight(0xfff5e6, 1.0);
+           sunLight.position.set(-10, 15, 5);
+           sunLight.castShadow = true;
+           sunLight.shadow.mapSize.width = 2048;
+           sunLight.shadow.mapSize.height = 2048;
+           scene.add(sunLight);
+       }
+
+       function buildFurniture() {
+           const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 });
+           const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 1.0 });
+           const darkMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6 });
+
+           // --- BED ---
+           const bedGroup = new THREE.Group();
+           bedGroup.position.copy(bedPosition);
+           
+           const frame = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.6, 6.2), woodMat);
+           frame.position.y = 0.3;
+           frame.castShadow = true;
+           bedGroup.add(frame);
+           
+           const headboard = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.2, 0.2), woodMat);
+           headboard.position.set(0, 0.9, -3.1);
+           headboard.castShadow = true;
+           bedGroup.add(headboard);
+
+           const mattress = new THREE.Mesh(new RoundedBoxGeometry(4.0, 0.5, 6.0, 4, 0.1), whiteMat);
+           mattress.position.y = 0.8;
+           mattress.castShadow = true;
+           bedGroup.add(mattress);
+
+           const pillowGeo = new RoundedBoxGeometry(1.4, 0.25, 0.9, 4, 0.1);
+           const p1 = new THREE.Mesh(pillowGeo, whiteMat); p1.position.set(-1, 1.1, -2.2); p1.rotation.x = 0.2;
+           const p2 = new THREE.Mesh(pillowGeo, whiteMat); p2.position.set(1, 1.1, -2.2); p2.rotation.x = 0.2;
+           bedGroup.add(p1, p2);
+           scene.add(bedGroup);
+           
+           const bedTop = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.1, 6.0), new THREE.MeshBasicMaterial({visible: false}));
+           bedTop.position.set(0, 1.05, 0);
+           bedTop.userData = { isBedSurface: true };
+           bedGroup.add(bedTop);
+           collidableObjects.push(bedTop);
+
+           const sideThick = 0.2;
+           const leftCol = new THREE.Mesh(new THREE.BoxGeometry(sideThick, 1.5, 6.4), new THREE.MeshBasicMaterial({visible: false}));
+           leftCol.position.set(-2.1, 0.75, 0);
+           bedGroup.add(leftCol); collidableObjects.push(leftCol);
+
+           const rightCol = new THREE.Mesh(new THREE.BoxGeometry(sideThick, 1.5, 6.4), new THREE.MeshBasicMaterial({visible: false}));
+           rightCol.position.set(2.1, 0.75, 0);
+           bedGroup.add(rightCol); collidableObjects.push(rightCol);
+           
+           const footCol = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.5, sideThick), new THREE.MeshBasicMaterial({visible: false}));
+           footCol.position.set(0, 0.75, 3.1);
+           bedGroup.add(footCol); collidableObjects.push(footCol);
+           
+           const headCol = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.5, sideThick), new THREE.MeshBasicMaterial({visible: false}));
+           headCol.position.set(0, 0.75, -3.1);
+           bedGroup.add(headCol); collidableObjects.push(headCol);
+
+           bedGroup.userData = { name: "Bed", action: "Jump on it" };
+           interactables.push(mattress);
+           mattress.userData = { parent: bedGroup };
+
+           // --- DESK & COMPUTER ---
+           const deskGroup = new THREE.Group();
+           deskGroup.position.set(-6, 0, -6);
+           deskGroup.rotation.y = Math.PI / 2;
+
+           const deskTop = new THREE.Mesh(new RoundedBoxGeometry(4.0, 0.1, 2.0, 4, 0.02), woodMat);
+           deskTop.position.y = 0.75;
+           deskTop.castShadow = true;
+           deskGroup.add(deskTop);
+
+           for(let x of [-1.8, 1.8]) {
+               for(let z of [-0.8, 0.8]) {
+                   const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.75, 0.08), darkMat);
+                   leg.position.set(x, 0.375, z);
+                   deskGroup.add(leg);
+               }
+           }
+
+           // --- SCREEN WITH BACKGROUND ---
+           const canvas = document.createElement('canvas');
+           canvas.width = 512; canvas.height = 288;
+           const ctx = canvas.getContext('2d');
+           
+           const grad = ctx.createLinearGradient(0,0,0,288);
+           grad.addColorStop(0, "#0f172a");
+           grad.addColorStop(1, "#312e81");
+           ctx.fillStyle = grad;
+           ctx.fillRect(0,0,512,288);
+           
+           ctx.fillStyle = "#1e1b4b";
+           ctx.beginPath(); ctx.moveTo(0,288); ctx.lineTo(100,150); ctx.lineTo(250,288); ctx.fill();
+           ctx.fillStyle = "#312e81";
+           ctx.beginPath(); ctx.moveTo(150,288); ctx.lineTo(300,120); ctx.lineTo(500,288); ctx.fill();
+           
+           ctx.fillStyle = "#fbbf24";
+           ctx.beginPath(); ctx.arc(400, 80, 30, 0, Math.PI*2); ctx.fill();
+           
+           ctx.fillStyle = "rgba(0,0,0,0.6)";
+           ctx.fillRect(0, 260, 512, 28);
+           
+           ctx.fillStyle = "rgba(255,255,255,0.2)";
+           ctx.strokeStyle = "rgba(255,255,255,0.4)";
+           for(let i=0; i<3; i++) {
+               ctx.fillRect(20, 20 + i*70, 40, 40);
+               ctx.strokeRect(20, 20 + i*70, 40, 40);
+           }
+
+           const screenTex = new THREE.CanvasTexture(canvas);
+           screenTex.colorSpace = THREE.SRGBColorSpace;
+           
+           const screenMat = new THREE.MeshStandardMaterial({ 
+               map: screenTex,
+               emissive: 0xffffff,
+               emissiveMap: screenTex,
+               emissiveIntensity: 0.5,
+               roughness: 0.2
+           });
+
+           const monitor = new THREE.Mesh(new RoundedBoxGeometry(1.6, 1.0, 0.1, 4, 0.02), darkMat);
+           monitor.position.set(0, 1.6, -0.4);
+           deskGroup.add(monitor);
+           
+           computerScreenMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.85), screenMat);
+           computerScreenMesh.position.set(0, 1.6, -0.35);
+           deskGroup.add(computerScreenMesh);
+
+           computerLight = new THREE.PointLight(0x4488ff, 0, 4);
+           computerLight.position.set(0, 1.6, 0.5);
+           deskGroup.add(computerLight);
+           
+           const kb = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, 0.4), darkMat);
+           kb.position.set(0, 0.78, 0.3);
+           deskGroup.add(kb);
+
+           scene.add(deskGroup);
+           
+           const deskCol = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.5, 2.2), new THREE.MeshBasicMaterial({visible: false}));
+           deskCol.position.set(-6, 0.75, -6);
+           deskCol.rotation.y = Math.PI / 2;
+           scene.add(deskCol); collidableObjects.push(deskCol);
+
+           deskGroup.userData = { name: "Computer", action: "Toggle Power", isComputer: true, isOn: true };
+           interactables.push(monitor);
+           monitor.userData = { parent: deskGroup };
+
+           // --- CHAIR ---
+           const chairGroup = new THREE.Group();
+           chairGroup.position.copy(chairPosition);
+           chairGroup.rotation.y = chairRotation;
+
+           const seat = new THREE.Mesh(new RoundedBoxGeometry(0.9, 0.15, 0.9, 4, 0.05), new THREE.MeshStandardMaterial({color: 0x333333}));
+           seat.position.y = 0.55;
+           chairGroup.add(seat);
+           
+           const back = new THREE.Mesh(new RoundedBoxGeometry(0.8, 1.0, 0.1, 4, 0.05), new THREE.MeshStandardMaterial({color: 0x333333}));
+           back.position.set(0, 1.1, -0.45);
+           back.rotation.x = -0.1;
+           chairGroup.add(back);
+           
+           const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05), darkMat);
+           base.position.y = 0.1;
+           chairGroup.add(base);
+           
+           const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5), new THREE.MeshStandardMaterial({color: 0x888888}));
+           stem.position.y = 0.3;
+           chairGroup.add(stem);
+
+           scene.add(chairGroup);
+           
+           const chairCol = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.8, 1.0), new THREE.MeshBasicMaterial({visible: false}));
+           chairCol.position.copy(chairPosition);
+           chairCol.position.y = 0.9;
+           scene.add(chairCol); collidableObjects.push(chairCol);
+
+           chairGroup.userData = { name: "Chair", action: "Click to Sit", isChair: true };
+           interactables.push(seat);
+           seat.userData = { parent: chairGroup };
+
+           // --- LAMP ---
+           const lampGroup = new THREE.Group();
+           lampGroup.position.set(6, 0, -8);
+           
+           const lBase = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05), darkMat);
+           lampGroup.add(lBase);
+           
+           const lPole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 3.0), new THREE.MeshStandardMaterial({color: 0x888888}));
+           lPole.position.y = 1.5;
+           lampGroup.add(lPole);
+           
+           const lShade = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.8, 32, 1, true), new THREE.MeshStandardMaterial({
+               color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.9
+           }));
+           lShade.position.y = 3.0;
+           lampGroup.add(lShade);
+
+           lampLight = new THREE.PointLight(0xffaa00, 0, 10);
+           lampLight.position.set(0, 2.8, 0);
+           lampLight.castShadow = true;
+           lampGroup.add(lampLight);
+           
+           const lampCol = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 3), new THREE.MeshBasicMaterial({visible: false}));
+           lampCol.position.set(6, 1.5, -8);
+           scene.add(lampCol); collidableObjects.push(lampCol);
+
+           scene.add(lampGroup);
+           lampGroup.userData = { name: "Lamp", action: "Toggle Light", isLamp: true };
+           interactables.push(lShade);
+           lShade.userData = { parent: lampGroup };
+       }
+
+       function onKeyDown(event) {
+           if (isSitting && event.code === 'Space') {
+               standUp();
+               return;
+           }
+
+           switch (event.code) {
+               case 'ArrowUp': case 'KeyW': moveForward = true; break;
+               case 'ArrowLeft': case 'KeyA': moveLeft = true; break;
+               case 'ArrowDown': case 'KeyS': moveBackward = true; break;
+               case 'ArrowRight': case 'KeyD': moveRight = true; break;
+               case 'Space':
+                   if (!isSitting && canJump) {
+                       jumpVelocity = CONFIG.jumpForce;
+                       canJump = false;
+                       isJumping = true;
+                   }
+                   break;
+           }
+       }
+
+       function onKeyUp(event) {
+           switch (event.code) {
+               case 'ArrowUp': case 'KeyW': moveForward = false; break;
+               case 'ArrowLeft': case 'KeyA': moveLeft = false; break;
+               case 'ArrowDown': case 'KeyS': moveBackward = false; break;
+               case 'ArrowRight': case 'KeyD': moveRight = false; break;
+           }
+       }
+
+       function sitDown() {
+           if (isSitting) return;
+           isSitting = true;
+           isOnBed = false;
+           velocity.set(0, 0, 0);
+           
+           playerGroup.position.x = chairPosition.x;
+           playerGroup.position.z = chairPosition.z;
+           camera.position.y = CONFIG.sitHeight;
+           
+           playerGroup.rotation.y = chairRotation;
+           
+           document.getElementById('sitting-indicator').style.opacity = 1;
+           showToast("Sitting - Press SPACE to stand");
+       }
+
+       function standUp() {
+           if (!isSitting) return;
+           isSitting = false;
+           canJump = true;
+           
+           camera.position.y = CONFIG.playerHeight - 0.05;
+           
+           // Reset movement flags to prevent stuck movement
+           moveForward = false;
+           moveBackward = false;
+           moveLeft = false;
+           moveRight = false;
+           velocity.set(0, 0, 0);
+           
+           // Move forward slightly
+           const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+           playerGroup.position.addScaledVector(forward, 0.5);
+           
+           document.getElementById('sitting-indicator').style.opacity = 0;
+           showToast("Standing up");
+       }
+
+       function onMouseClick() {
+           if (!controls.isLocked) {
+               controls.lock();
+               return;
+           }
+           if (isSitting) return;
+
+           raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+           const intersects = raycaster.intersectObjects(interactables, false);
+
+           if (intersects.length > 0 && intersects[0].distance < 4) {
+               const obj = intersects[0].object;
+               const data = obj.userData.parent ? obj.userData.parent.userData : obj.userData;
+
+               if (data.isChair) sitDown();
+               else if (data.isLamp) toggleLamp();
+               else if (data.isComputer) toggleComputer(data);
+               else if (data.action) showToast(data.action);
+           }
+       }
+
+       function toggleComputer(data) {
+           data.isOn = !data.isOn;
+           if (data.isOn) {
+               computerScreenMesh.material.emissiveIntensity = 0.5;
+               computerLight.intensity = 1.5;
+               computerScreenMesh.visible = true; // Show screen
+               data.action = "Click to power off";
+           } else {
+               computerScreenMesh.material.emissiveIntensity = 0;
+               computerLight.intensity = 0;
+               computerScreenMesh.visible = false; // Hide screen completely
+               data.action = "Click to power on";
+           }
+       }
+
+       function toggleLamp() {
+           const isOn = lampLight.intensity > 0;
+           lampLight.intensity = isOn ? 0 : 6;
+           showToast(isOn ? "Lamp Off" : "Lamp On");
+       }
+
+       function showToast(msg) {
+           const tt = document.getElementById('tooltip');
+           tt.innerText = msg; tt.style.opacity = 1;
+           setTimeout(() => tt.style.opacity = 0, 2000);
+       }
+
+       function onWindowResize() {
+           camera.aspect = window.innerWidth / window.innerHeight;
+           camera.updateProjectionMatrix();
+           renderer.setSize(window.innerWidth, window.innerHeight);
+       }
+
+       function checkCollision(newPos, checkBed = false) {
+           const height = isSitting ? CONFIG.sitHeight : (isOnBed ? CONFIG.bedHeight + 0.7 : CONFIG.playerHeight);
+           
+           const playerBox = new THREE.Box3(
+               new THREE.Vector3(newPos.x - CONFIG.playerRadius, newPos.y - height + 0.1, newPos.z - CONFIG.playerRadius),
+               new THREE.Vector3(newPos.x + CONFIG.playerRadius, newPos.y, newPos.z + CONFIG.playerRadius)
+           );
+           
+           for (let obj of collidableObjects) {
+               const objBox = new THREE.Box3().setFromObject(obj);
+               
+               if (checkBed && obj.userData.isBedSurface) {
+                   const bedTop = objBox.max.y;
+                   if (newPos.y - height < bedTop + 0.2 && newPos.y > bedTop &&
+                       newPos.x > objBox.min.x && newPos.x < objBox.max.x &&
+                       newPos.z > objBox.min.z && newPos.z < objBox.max.z) {
+                       return { onBed: true, bedY: bedTop };
+                   }
+               }
+               
+               if (playerBox.intersectsBox(objBox)) {
+                   if (isOnBed && obj.userData.isBedSurface) continue;
+                   return { collision: true };
+               }
+           }
+           
+           const m = CONFIG.playerRadius;
+           if (newPos.x < -10 + m || newPos.x > 10 - m || newPos.z < -10 + m || newPos.z > 10 - m) 
+               return { collision: true };
+               
+           return { collision: false };
+       }
+
+       function animate() {
+           requestAnimationFrame(animate);
+           const time = performance.now();
+           const delta = Math.min((time - prevTime) / 1000, 0.1);
+           prevTime = time;
+
+           if (controls.isLocked && !isSitting) {
+               velocity.x -= velocity.x * 10.0 * delta;
+               velocity.z -= velocity.z * 10.0 * delta;
+
+               direction.z = Number(moveForward) - Number(moveBackward);
+               direction.x = Number(moveRight) - Number(moveLeft);
+               direction.normalize();
+
+               if (moveForward || moveBackward) velocity.z -= direction.z * 100.0 * delta;
+               if (moveLeft || moveRight) velocity.x -= direction.x * 100.0 * delta;
+
+               const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+               forward.y = 0; forward.normalize();
+               const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+               right.y = 0; right.normalize();
+               
+               const moveVec = new THREE.Vector3()
+                   .addScaledVector(forward, -velocity.z * delta)
+                   .addScaledVector(right, -velocity.x * delta);
+               
+               const newPos = playerGroup.position.clone();
+               newPos.x += moveVec.x;
+               newPos.z += moveVec.z;
+               
+               const col = checkCollision(newPos, false);
+               if (!col.collision) {
+                   playerGroup.position.x = newPos.x;
+                   playerGroup.position.z = newPos.z;
+               }
+
+               if (isJumping || !canJump) {
+                   jumpVelocity -= CONFIG.gravity * delta;
+                   playerGroup.position.y += jumpVelocity * delta;
+                   
+                   const land = checkCollision(playerGroup.position, true);
+                   if (land.onBed) {
+                       isOnBed = true;
+                       canJump = true;
+                       isJumping = false;
+                       jumpVelocity = 0;
+                       playerGroup.position.y = land.bedY + 0.7;
+                   }
+                   
+                   const groundH = isOnBed ? CONFIG.bedHeight + 0.7 : CONFIG.playerHeight;
+                   if (playerGroup.position.y <= groundH) {
+                       playerGroup.position.y = groundH;
+                       jumpVelocity = 0;
+                       isJumping = false;
+                       canJump = true;
+                       if (isOnBed && groundH === CONFIG.playerHeight) isOnBed = false;
+                   }
+               }
+               
+               // --- REALISTIC WALKING ANIMATION ---
+               isMoving = moveForward || moveBackward || moveLeft || moveRight;
+               if (isMoving && canJump) {
+                   walkCycle += delta * 8;
+                   const legAmp = 0.6;
+                   const armAmp = 0.5;
+                   
+                   // Thighs swing
+                   leftLeg.rotation.x = Math.sin(walkCycle) * legAmp;
+                   rightLeg.rotation.x = Math.sin(walkCycle + Math.PI) * legAmp;
+                   
+                   // Knees bend when leg moves back
+                   leftCalf.rotation.x = Math.max(0, Math.sin(walkCycle - 0.5) * 1.2);
+                   rightCalf.rotation.x = Math.max(0, Math.sin(walkCycle + Math.PI - 0.5) * 1.2);
+                   
+                   // Arms swing opposite to legs
+                   leftArm.rotation.x = Math.sin(walkCycle + Math.PI) * armAmp;
+                   rightArm.rotation.x = Math.sin(walkCycle) * armAmp;
+                   
+                   // Elbows slightly bent
+                   leftForeArm.rotation.x = -0.3 + Math.abs(Math.sin(walkCycle)) * 0.2;
+                   rightForeArm.rotation.x = -0.3 + Math.abs(Math.sin(walkCycle + Math.PI)) * 0.2;
+                   
+                   // Head bob
+                   headGroup.position.y = (CONFIG.playerHeight - 0.1) + Math.abs(Math.sin(walkCycle * 2)) * 0.02;
+                   
+                   // Body bob
+                   camera.position.y = (isOnBed ? CONFIG.bedHeight + 0.7 : CONFIG.playerHeight - 0.05) + Math.abs(Math.sin(walkCycle * 2)) * 0.03;
+               } else {
+                   // Smooth return to idle
+                   leftLeg.rotation.x = THREE.MathUtils.lerp(leftLeg.rotation.x, 0, delta * 5);
+                   rightLeg.rotation.x = THREE.MathUtils.lerp(rightLeg.rotation.x, 0, delta * 5);
+                   leftCalf.rotation.x = THREE.MathUtils.lerp(leftCalf.rotation.x, 0, delta * 5);
+                   rightCalf.rotation.x = THREE.MathUtils.lerp(rightCalf.rotation.x, 0, delta * 5);
+                   leftArm.rotation.x = THREE.MathUtils.lerp(leftArm.rotation.x, 0, delta * 5);
+                   rightArm.rotation.x = THREE.MathUtils.lerp(rightArm.rotation.x, 0, delta * 5);
+                   leftForeArm.rotation.x = THREE.MathUtils.lerp(leftForeArm.rotation.x, -0.1, delta * 5);
+                   rightForeArm.rotation.x = THREE.MathUtils.lerp(rightForeArm.rotation.x, -0.1, delta * 5);
+                   headGroup.position.y = THREE.MathUtils.lerp(headGroup.position.y, CONFIG.playerHeight - 0.1, delta * 5);
+                   if (!isJumping) camera.position.y = THREE.MathUtils.lerp(camera.position.y, isOnBed ? CONFIG.bedHeight + 0.7 : CONFIG.playerHeight - 0.05, delta * 5);
+               }
+           } else {
+                // Sitting pose
+                if (isSitting) {
+                    leftLeg.rotation.x = -1.0;
+                    rightLeg.rotation.x = -1.0;
+                    leftCalf.rotation.x = 1.6;
+                    rightCalf.rotation.x = 1.6;
+                    leftArm.rotation.x = -0.5;
+                    rightArm.rotation.x = -0.5;
+                    leftForeArm.rotation.x = -1.0;
+                    rightForeArm.rotation.x = -1.0;
+                } else {
+                    // Idle standing
+                    leftLeg.rotation.x = THREE.MathUtils.lerp(leftLeg.rotation.x, 0, delta * 3);
+                    rightLeg.rotation.x = THREE.MathUtils.lerp(rightLeg.rotation.x, 0, delta * 3);
+                    leftCalf.rotation.x = THREE.MathUtils.lerp(leftCalf.rotation.x, 0, delta * 3);
+                    rightCalf.rotation.x = THREE.MathUtils.lerp(rightCalf.rotation.x, 0, delta * 3);
+                }
+           }
+
+           raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+           const intersects = raycaster.intersectObjects(interactables, false);
+           const ch = document.getElementById('crosshair');
+           
+           if (intersects.length > 0 && intersects[0].distance < 4 && !isSitting) {
+               ch.classList.add('active-crosshair');
+               const obj = intersects[0].object;
+               const data = obj.userData.parent ? obj.userData.parent.userData : obj.userData;
+               if(data.name) {
+                   const tt = document.getElementById('tooltip');
+                   tt.innerText = data.name; tt.style.opacity = 1;
+               }
+           } else {
+               ch.classList.remove('active-crosshair');
+               document.getElementById('tooltip').style.opacity = 0;
+           }
+
+           renderer.render(scene, camera);
+       }
+   </script>
+</body>
+</html>
