@@ -688,7 +688,7 @@
     
     <div id="startScreen">
         <div class="game-title">KEEP GAMBLING</div>
-        <button class="start-button" onclick="startGame()">START GAMBLING</button>
+        <button class="start-button" id="startBtn">START GAMBLING</button>
         <div class="instructions">
             <p><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> to move</p>
             <p><span class="key">MOUSE</span> to look</p>
@@ -776,6 +776,7 @@
     </div>
 
     <script>
+ 
         let scene, camera, renderer;
         let player = { x: 0, z: 0, rot: 0, height: 50 };
         let game = {
@@ -796,19 +797,34 @@
         let isScratching = false;
         let scratchedBoxes = new Set();
 
-        function startGame() {
-            console.log("Starting game...");
-            document.getElementById('startScreen').style.display = 'none';
-            document.getElementById('game').style.display = 'block';
-            
-            try {
-                init();
-                console.log("Game initialized successfully");
-            } catch (e) {
-                console.error("Error initializing game:", e);
-                alert("Error starting game: " + e.message);
-            }
-        }
+function startGame() {
+    console.log("Starting game...");
+    
+    if (typeof THREE === 'undefined') {
+        alert("Three.js failed to load! Check your internet connection.");
+        console.error("THREE is undefined");
+        return;
+    }
+    
+const startScreen = document.getElementById('startScreen');
+const gameDiv = document.getElementById('game');
+
+if (!startScreen || !gameDiv) {
+    console.error("Could not find startScreen or game div!");
+    return;
+}
+
+startScreen.style.display = 'none';
+gameDiv.style.display = 'block';
+    
+    try {
+        init();
+        console.log("Game initialized successfully");
+    } catch (e) {
+        console.error("Error initializing game:", e);
+        alert("Error starting game: " + e.message);
+    }
+}
 
         function init() {
             // Check if Three.js is loaded
@@ -990,15 +1006,20 @@
                 }
             });
 
-            document.addEventListener('click', () => {
-                if (!document.pointerLockElement && !game.isDead &&
-                    document.getElementById('ticketModal').style.display !== 'flex' &&
-                    document.getElementById('caseModal').style.display !== 'flex' &&
-                    document.getElementById('shopModal').style.display !== 'flex' &&
-                    document.getElementById('slotsModal').style.display !== 'flex') {
-                    document.body.requestPointerLock();
-                }
-            });
+document.addEventListener('click', (e) => {
+    // Don't request pointer lock if clicking on a button or modal
+    if (e.target.tagName === 'BUTTON' || e.target.closest('.modal')) return;
+    
+    if (!document.pointerLockElement && !game.isDead &&
+        document.getElementById('ticketModal').style.display !== 'flex' &&
+        document.getElementById('caseModal').style.display !== 'flex' &&
+        document.getElementById('shopModal').style.display !== 'flex' &&
+        document.getElementById('slotsModal').style.display !== 'flex') {
+        document.body.requestPointerLock().catch(err => {
+            console.log("Pointer lock failed:", err);
+        });
+    }
+});
 
             window.addEventListener('resize', () => {
                 if (camera && renderer) {
@@ -1012,14 +1033,14 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            if (game.isDead || 
-                document.getElementById('ticketModal').style.display === 'flex' ||
-                document.getElementById('caseModal').style.display === 'flex' ||
-                document.getElementById('shopModal').style.display === 'flex' ||
-                document.getElementById('slotsModal').style.display === 'flex') {
-                if (renderer && scene && camera) renderer.render(scene, camera);
-                return;
-            }
+const anyModalOpen = ['ticketModal', 'caseModal', 'shopModal', 'slotsModal'].some(
+    id => document.getElementById(id).style.display === 'flex'
+);
+
+if (game.isDead || anyModalOpen) {
+    if (renderer && scene && camera) renderer.render(scene, camera);
+    return;
+}
 
             // Movement
             const speed = game.keys['shift'] ? 5 : 2.5;
@@ -1536,5 +1557,22 @@
             ctx.shadowBlur = 0;
         }
     </script>
+
+    <script>
+        window.onload = function() {
+            console.log("Page loaded, THREE available:", typeof THREE);
+            console.log("startScreen:", document.getElementById('startScreen'));
+            console.log("game div:", document.getElementById('game'));
+            
+            const startBtn = document.getElementById('startBtn');
+            if (startBtn) {
+                startBtn.addEventListener('click', startGame);
+                console.log("Event listener attached to startBtn");
+            } else {
+                console.error("startBtn not found!");
+            }
+        };
+    </script>
+    
 </body>
 </html>
