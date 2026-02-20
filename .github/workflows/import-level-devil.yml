@@ -1,0 +1,33 @@
+name: Import Level Devil Files
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  import-files:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download Level Devil ZIP
+        run: |
+          curl -L https://github.com/McBlockYT/LvL-Devil/archive/refs/heads/main.zip -o lvl-devil.zip
+      
+      - name: Unzip and move files
+        run: |
+          unzip lvl-devil.zip
+          mkdir -p lev-dev
+          cp -r LvL-Devil-main/* lev-dev/
+          rm -rf LvL-Devil-main lvl-devil.zip
+          # Remove .git folder if it exists
+          rm -rf lev-dev/.git
+      
+      - name: Commit and push
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add lev-dev/
+          git commit -m "Imported Level Devil files from McBlockYT/LvL-Devil"
+          git push
