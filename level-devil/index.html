@@ -31,6 +31,8 @@
         const BLOCKED_KEYWORDS = ['securly', 'blocked', 'access denied', 'restricted'];
         let isReloading = false;
         let loadCount = 0;
+        let lastCheckTime = Date.now();
+        let checkInterval;
 
         function isAllowedUrl(url) {
             if (!url) return false;
@@ -43,75 +45,126 @@
             return BLOCKED_KEYWORDS.some(keyword => lowerUrl.includes(keyword));
         }
 
-        iframe.addEventListener('load', () => {
-            loadCount++;
-            
-            if (loadCount <= 1) {
-                setTimeout(() => {
-                    try {
-                        const currentUrl = iframe.contentWindow.location.href;
-                        if (!isAllowedUrl(currentUrl)) {
-                            triggerReload();
-                        }
-                    } catch (e) {
-                        // Wait for next load event
-                    }
-                }, 3000);
-                return;
-            }
-            
-            if (isReloading) return;
-            
-            setTimeout(() => {
-                checkAndReload();
-            }, 2000);
-        });
-
-        function checkAndReload() {
-            if (isReloading) return;
-            
-            try {
-                const currentUrl = iframe.contentWindow.location.href;
-                
-                if (currentUrl) {
-                    if (isAllowedUrl(currentUrl)) {
-                        return;
-                    }
-                    triggerReload();
-                }
-            } catch (e) {
-                const title = document.title.toLowerCase();
-                if (isBlockedUrl(title) || title.includes('securly')) {
-                    triggerReload();
-                }
-            }
-        }
-
         function triggerReload() {
             if (isReloading) return;
             isReloading = true;
-            setTimeout(() => location.reload(), 3000);
+            clearInterval(checkInterval);
+            setTimeout(() => location.reload(), 2000);
         }
 
+        // Aggressive periodic checking
+        function startChecking() {
+            checkInterval = setInterval(() => {
+                if (isReloading) return;
+                
+                try {
+                    // Try to access iframe
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const currentUrl = iframe.contentWindow.location.href;
+                    
+                    // If we can access URL and it's not allowed, reload
+                    if (currentUrl && !isAllowedUrl(currentUrl)) {
+                        triggerReload();
+                        return;
+                    }
+                    
+                    // Check if iframe body is empty or contains blocking text
+                    const bodyText = iframeDoc.body.innerText.toLowerCase();
+                    if (bodyText.includes('securly') || 
+                        bodyText.includes('blocked') ||
+                        bodyText.includes('access denied') ||
+                        iframeDoc.body.innerHTML.length < 50) {
+                        triggerReload();
+                        return;
+                    }
+                    
+                } catch (e) {
+                    // Cross-origin error - likely redirected to different domain
+                    // This is the main indicator of blocking
+                    triggerReload();
+                    return;
+                }
+                
+                // Additional check: try to detect if iframe is "stuck" or blank
+                try {
+                    const iframeWin = iframe.contentWindow;
+                    // If we can't access anything, likely blocked
+                    if (!iframeWin || iframeWin.length === undefined) {
+                        triggerReload();
+                    }
+                } catch (e) {
+                    triggerReload();
+                }
+                
+            }, 500); // Check every 500ms
+        }
+
+        iframe.addEventListener('load', () => {
+            loadCount++;
+            lastCheckTime = Date.now();
+            
+            if (loadCount === 1) {
+                // Start aggressive checking after initial load
+                setTimeout(startChecking, 2000);
+            }
+            
+            if (isReloading) return;
+            
+            // Immediate check on load
+            setTimeout(() => {
+                try {
+                    const currentUrl = iframe.contentWindow.location.href;
+                    if (!isAllowedUrl(currentUrl)) {
+                        triggerReload();
+                    }
+                } catch (e) {
+                    // Cross-origin on load event = definitely redirected
+                    triggerReload();
+                }
+            }, 1000);
+        });
+
+        // Backup: Monitor title aggressively
         const titleObserver = new MutationObserver(() => {
             if (isReloading) return;
             
             const title = document.title.toLowerCase();
-            if (BLOCKED_KEYWORDS.some(keyword => title.includes(keyword))) {
+            if (BLOCKED_KEYWORDS.some(keyword => title.includes(keyword)) || 
+                title.includes('securly')) {
                 triggerReload();
             }
         });
         
-        setTimeout(() => {
-            const titleElement = document.querySelector('title');
-            if (titleElement) {
-                titleObserver.observe(titleElement, {
-                    childList: true,
-                    subtree: true,
-                    characterData: true
-                });
+        titleObserver.observe(document.querySelector('title'), {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+
+        // Nuclear option: Force reload if page becomes hidden (some blockers do this)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && !isReloading) {
+                setTimeout(() => {
+                    if (document.hidden) {
+                        triggerReload();
+                    }
+                }, 1000);
             }
-        }, 4000);
+        });
+
+        // Final fallback: Reload after 30 seconds if we haven't confirmed we're on correct page
+        setTimeout(() => {
+            if (!isReloading && loadCount > 0) {
+                try {
+                    const currentUrl = iframe.contentWindow.location.href;
+                    if (!isAllowedUrl(currentUrl)) {
+                        triggerReload();
+                    }
+                } catch (e) {
+                    triggerReload();
+                }
+            }
+        }, 30000);
     </script>
 </body>
 </html>
