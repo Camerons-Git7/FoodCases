@@ -20,17 +20,32 @@ jobs:
         run: |
           curl -L https://github.com/McBlockYT/LvL-Devil/archive/refs/heads/main.zip -o lvl-devil.zip
       
-      - name: Unzip and flatten structure
+      - name: Unzip and organize files
         run: |
           unzip lvl-devil.zip
           # Create level-devil folder
           mkdir -p level-devil
-          # Move all files from LvL-Devil-main/source_code/ to level-devil/ (flattened)
-          cp -r LvL-Devil-main/source_code/* level-devil/ 2>/dev/null || cp -r LvL-Devil-main/* level-devil/
+          
+          # Move ALL files from LvL-Devil-main/ to level-devil/
+          # This includes source_1.js, game.zip, and everything else
+          cp -r LvL-Devil-main/* level-devil/
+          
+          # If source_code exists, move its contents to root and delete it
+          if [ -d "level-devil/source_code" ]; then
+            cp -r level-devil/source_code/* level-devil/ 2>/dev/null || true
+            rm -rf level-devil/source_code
+          fi
+          
           # Clean up temp files
           rm -rf LvL-Devil-main lvl-devil.zip
+          
           # Remove .git if exists
           rm -rf level-devil/.git
+      
+      - name: List files for verification
+        run: |
+          echo "Files in level-devil:"
+          ls -la level-devil/
       
       - name: Commit and push
         env:
@@ -39,5 +54,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add level-devil/
-          git commit -m "Added Level Devil files to level-devil/ folder"
+          git commit -m "Added Level Devil files (including source_1.js, game.zip, etc.)"
           git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
