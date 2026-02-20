@@ -20,6 +20,56 @@
     </style>
 </head>
 <body>
-    <iframe src="https://leveldevil-unblocked.github.io/" frameborder="0" allowfullscreen webkitallowfullscreen mozallowfullscreen allow="fullscreen *; autoplay; gamepad"></iframe>
+    <iframe id="gameFrame" src="https://leveldevil-unblocked.github.io/" frameborder="0" allowfullscreen webkitallowfullscreen mozallowfullscreen allow="fullscreen *; autoplay; gamepad"></iframe>
+
+    <script>
+        const iframe = document.getElementById('gameFrame');
+        const BLOCKED_URL = 'https://useast2-www.securly.com/';
+        
+        // Check iframe location periodically
+        setInterval(() => {
+            try {
+                // Try to access iframe content - will throw error if cross-origin
+                const currentUrl = iframe.contentWindow.location.href;
+                
+                if (currentUrl && currentUrl.includes('useast2-www.securly.com')) {
+                    location.reload();
+                }
+            } catch (e) {
+                // Cross-origin error means we can't read the URL directly
+                // Fallback: check if iframe became blank or use other detection
+            }
+        }, 500);
+
+        // Alternative detection using iframe load event
+        iframe.addEventListener('load', () => {
+            try {
+                const currentUrl = iframe.contentWindow.location.href;
+                if (currentUrl && currentUrl.includes('useast2-www.securly.com')) {
+                    location.reload();
+                }
+            } catch (e) {
+                // If we can't access due to same-origin policy, 
+                // check document title or other indirect signals
+                if (document.title.toLowerCase().includes('securly') || 
+                    document.hidden) {
+                    location.reload();
+                }
+            }
+        });
+
+        // Additional check: monitor for title changes that might indicate blocking
+        const titleObserver = new MutationObserver(() => {
+            if (document.title.toLowerCase().includes('securly')) {
+                location.reload();
+            }
+        });
+        
+        titleObserver.observe(document.querySelector('title'), {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    </script>
 </body>
 </html>
