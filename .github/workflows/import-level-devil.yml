@@ -3,6 +3,9 @@ name: Import Level Devil Files
 on:
   workflow_dispatch:  # Manual trigger only
 
+permissions:
+  contents: write
+
 jobs:
   import-files:
     runs-on: ubuntu-latest
@@ -10,24 +13,31 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Download Level Devil ZIP
         run: |
           curl -L https://github.com/McBlockYT/LvL-Devil/archive/refs/heads/main.zip -o lvl-devil.zip
       
-      - name: Unzip and move files
+      - name: Unzip and flatten structure
         run: |
           unzip lvl-devil.zip
-          mkdir -p lev-dev
-          cp -r LvL-Devil-main/* lev-dev/
+          # Create level-devil folder
+          mkdir -p level-devil
+          # Move all files from LvL-Devil-main/source_code/ to level-devil/ (flattened)
+          cp -r LvL-Devil-main/source_code/* level-devil/ 2>/dev/null || cp -r LvL-Devil-main/* level-devil/
+          # Clean up temp files
           rm -rf LvL-Devil-main lvl-devil.zip
-          # Remove .git folder if it exists
-          rm -rf lev-dev/.git
+          # Remove .git if exists
+          rm -rf level-devil/.git
       
       - name: Commit and push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add lev-dev/
-          git commit -m "Imported Level Devil files from McBlockYT/LvL-Devil"
-          git push
+          git add level-devil/
+          git commit -m "Added Level Devil files to level-devil/ folder"
+          git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
