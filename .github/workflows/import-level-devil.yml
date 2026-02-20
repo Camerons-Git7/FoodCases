@@ -22,31 +22,26 @@ jobs:
           curl -L https://github.com/pragsrv/level-devil/archive/refs/heads/main.zip -o level-devil.zip
           
           # Unzip
-          unzip level-devil.zip
+          unzip -q level-devil.zip
           
-          # Create level-devil folder
+          # Create level-devil folder (DELETE OLD ONE IF EXISTS)
+          rm -rf level-devil
           mkdir -p level-devil
           
           # Move all files from extracted folder to level-devil/
-          mv level-devil-main/* level-devil/ 2>/dev/null || mv level-devil-main-master/* level-devil/
+          mv level-devil-main/* level-devil/
           
           # Clean up
-          rm -rf level-devil-main level-devil-main-master level-devil.zip
-      
-      - name: Verify structure
-        run: |
-          echo "Contents of level-devil/:"
+          rm -rf level-devil-main level-devil.zip
+          
+          # Show what we got
+          echo "Created level-devil folder with:"
           ls -la level-devil/
-          echo ""
-          echo "Looking for index.html:"
-          find level-devil/ -name "index.html" | head -5
       
-      - name: Commit and push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit and push to repo
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add level-devil/
-          git commit -m "Imported full Level Devil game from pragsrv/level-devil" || echo "No changes"
-          git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git commit -m "Imported Level Devil game to level-devil folder" || echo "No changes"
+          git push
