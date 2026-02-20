@@ -1,0 +1,2343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Level Devil - Pixel Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        body {
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    #000 0px,
+                    #000 2px,
+                    #111 2px,
+                    #111 4px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    #000 0px,
+                    #000 2px,
+                    #111 2px,
+                    #111 4px
+                ),
+                linear-gradient(135deg, #1a0033 0%, #330066 50%, #000000 100%);
+            font-family: 'Press Start 2P', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            color: #fff;
+            overflow: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 25% 25%, #ff0066 0px, transparent 2px),
+                radial-gradient(circle at 75% 75%, #6600ff 0px, transparent 2px),
+                radial-gradient(circle at 50% 50%, #00ff66 0px, transparent 1px);
+            background-size: 40px 40px, 60px 60px, 20px 20px;
+            animation: pixelStars 30s linear infinite;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        @keyframes pixelStars {
+            0% { transform: translateY(0) translateX(0); }
+            100% { transform: translateY(-100px) translateX(-50px); }
+        }
+
+        .game-container {
+            text-align: center;
+            position: relative; 
+            background: 
+                linear-gradient(45deg, #000 25%, transparent 25%),
+                linear-gradient(-45deg, #000 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #000 75%),
+                linear-gradient(-45deg, transparent 75%, #000 75%),
+                linear-gradient(135deg, rgba(20, 0, 40, 0.9) 0%, rgba(10, 0, 20, 0.95) 100%);
+            background-size: 8px 8px, 8px 8px, 8px 8px, 8px 8px, 100% 100%;
+            background-position: 0 0, 0 4px, 4px -4px, -4px 0px, 0 0;
+            padding: 20px 0;
+            border-radius: 0;
+            border: 4px solid #ff0066;
+            box-shadow: 
+                0 0 0 4px #000,
+                0 0 0 8px #ff0066,
+                0 0 40px rgba(255, 0, 102, 0.6),
+                inset 0 0 40px rgba(0, 0, 0, 0.8);
+            height: 95vh;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            margin-right: 320px;
+            position: relative;
+        }
+
+        .hud-button {
+            font-family: 'Press Start 2P', cursive;
+            padding: 6px 8px;
+            margin: 5px;
+            background-color: transparent;
+            border: 2px solid #ff69b4;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 11px;
+            text-shadow: 0 0 5px rgba(255, 105, 180, 0.5);
+            box-shadow: 0 0 10px rgba(255, 105, 180, 0.3);
+            max-width: 100px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+            
+        .hud-button:hover {
+            border-color: #ff1493;
+            box-shadow: 0 0 15px rgba(255, 105, 180, 0.5);
+            text-shadow: 0 0 8px rgba(255, 105, 180, 0.8);
+        }
+
+        .control-buttons {
+            grid-column: span 2;
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            justify-content: space-between;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group .key {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            border: 2px solid #ff69b4;
+            box-shadow: 0 0 10px rgba(255, 105, 180, 0.3);
+            text-shadow: 0 0 5px rgba(255, 105, 180, 0.5);
+        }
+
+        .game-title {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #ff0066;
+            text-shadow: 
+                1px 1px 0px #000,
+                2px 2px 0px #330011,
+                3px 3px 0px #660022;
+            font-weight: normal;
+            letter-spacing: 1px;
+            position: relative;
+            animation: pixelGlow 2s ease-in-out infinite alternate;
+        }
+
+        .game-title::after {
+            content: '👹';
+            position: absolute;
+            right: -60px;
+            top: 0;
+            font-size: 0.6em;
+            animation: pixelBounce 1s ease-in-out infinite;
+            filter: drop-shadow(2px 2px 0px #000);
+        }
+
+        @keyframes pixelGlow {
+            0% { text-shadow: 2px 2px 0px #000, 4px 4px 0px #330011, 6px 6px 0px #660022; }
+            100% { text-shadow: 2px 2px 0px #000, 4px 4px 0px #ff0066, 6px 6px 0px #ff3388; }
+        }
+
+        @keyframes pixelBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .subtitle {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.7rem;
+            color: #00ff66;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        canvas {
+            border: 3px solid #ff0066;
+            background: 
+                linear-gradient(to bottom, 
+                    #000033 0%, 
+                    #000066 30%, 
+                    #330066 70%,
+                    #000033 100%);
+            box-shadow: 
+                0 0 0 1px #000,
+                0 0 0 4px #ff0066,
+                0 0 20px rgba(255, 0, 102, 0.5),
+                inset 0 0 20px rgba(0, 0, 0, 0.5);
+            image-rendering: pixelated;
+            max-width: 95vw;
+            max-height: 80vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            margin: 20px 0;
+        }
+
+        .hud-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto auto auto;
+            gap: 10px;
+            transform: scale(0.85);
+            transform-origin: top right;
+            max-width: calc(100vw - 40px);
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 320px;
+        }
+
+        .hud-left, .hud-right {
+            display: contents;
+        }
+
+        .hud-item {
+            background: 
+                linear-gradient(45deg, #000 25%, transparent 25%),
+                linear-gradient(-45deg, #000 25%, transparent 25%),
+                rgba(0, 0, 0, 0.9);
+            background-size: 3px 3px, 3px 3px, 100% 100%;
+            background-position: 0 0, 0 2px, 0 0;
+            padding: 8px;
+            border: 1px solid;
+            font-size: 0.7rem;
+            font-weight: normal;
+            text-align: center;
+            box-shadow: 
+                0 0 0 1px #000,
+                inset 0 0 5px rgba(255, 255, 255, 0.1);
+            position: relative;
+            animation: pixelHudGlow 3s ease-in-out infinite alternate;
+            text-shadow: 1px 1px 0px #000;
+            width: 100%;
+        }
+
+        @keyframes pixelHudGlow {
+            0% { box-shadow: 0 0 0 2px #000, inset 0 0 10px rgba(255, 255, 255, 0.1); }
+            100% { box-shadow: 0 0 0 2px #000, 0 0 15px rgba(255, 255, 255, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.2); }
+        }
+
+        .lives { border-color: #ff0066; color: #ff6699; }
+        .level { border-color: #00ff66; color: #66ff99; }
+        .score { border-color: #ffff00; color: #ffff66; }
+        .deaths { border-color: #ff6600; color: #ff9966; }
+        .time { border-color: #6600ff; color: #9966ff; }
+
+        .level-name {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.8rem;
+            color: #00ffff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        .progress-container {
+            position: fixed;
+            top: 250px;
+            right: 20px;
+            width: 280px;
+            z-index: 100;
+        }
+
+        .progress-container.hud-item {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px;
+            border-radius: 8px;
+            border: 2px solid #ff0066;
+            box-shadow: 0 0 0 1px #000;
+            grid-column: span 2;
+            width: 100%;
+            height: auto;
+            visibility: hidden;
+        }
+
+        .controls {
+            position: fixed;
+            top: calc(50vh + 20px);
+            right: 20px;
+            width: 280px;
+            font-size: 0.6rem;
+            color: #ccccdd;
+            background: 
+                linear-gradient(45deg, #000 25%, transparent 25%),
+                linear-gradient(-45deg, #000 25%, transparent 25%),
+                rgba(0, 0, 0, 0.8);
+            background-size: 4px 4px, 4px 4px, 100% 100%;
+            background-position: 0 0, 0 2px, 0 0;
+            padding: 15px;
+            border: 2px solid #9932CC;
+            box-shadow: 
+                0 0 0 1px #000, 
+                0 0 10px rgba(153, 50, 204, 0.5),
+                0 0 20px rgba(153, 50, 204, 0.3),
+                inset 0 0 15px rgba(153, 50, 204, 0.2);
+            z-index: 100;
+            border-radius: 8px;
+            max-height: calc(50vh - 40px);
+            overflow-y: auto;
+        }
+
+        .control-row {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .key {
+            background: 
+                linear-gradient(145deg, #333, #111),
+                linear-gradient(45deg, #444 25%, transparent 25%),
+                linear-gradient(-45deg, #444 25%, transparent 25%);
+            background-size: 100% 100%, 3px 3px, 3px 3px;
+            background-position: 0 0, 0 0, 0 2px;
+            color: white;
+            padding: 6px 8px;
+            border: 1px solid #666;
+            font-weight: normal;
+            min-width: 30px;
+            text-align: center;
+            box-shadow: 
+                0 0 0 1px #000,
+                0 2px 0 #222,
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.1s ease;
+            text-shadow: 1px 1px 0px #000;
+            font-size: 0.6rem;
+        }
+
+        .key:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 0 1px #000, 0 6px 0 #222;
+        }
+
+        .key:active {
+            transform: translateY(2px);
+            box-shadow: 0 0 0 1px #000, 0 2px 0 #222;
+        }
+
+        .game-over, .victory, .level-intro {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 50px;
+            font-size: 1.8rem;
+            display: none;
+            text-align: center;
+            border: 4px solid;
+            box-shadow: 
+                0 0 0 4px #000,
+                0 0 40px;
+            animation: pixelModalAppear 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1000;
+            text-shadow: 2px 2px 0px #000;
+            max-width: 600px;
+        }
+
+        .game-over {
+            background: 
+                linear-gradient(45deg, #660000 25%, transparent 25%),
+                linear-gradient(-45deg, #660000 25%, transparent 25%),
+                rgba(139, 0, 0, 0.95);
+            background-size: 8px 8px, 8px 8px, 100% 100%;
+            border-color: #ff3333;
+            color: white;
+            box-shadow: 0 0 0 4px #000, 0 0 40px rgba(255, 0, 0, 0.8);
+        }
+
+        .victory {
+            background: 
+                linear-gradient(45deg, #006600 25%, transparent 25%),
+                linear-gradient(-45deg, #006600 25%, transparent 25%),
+                rgba(0, 139, 0, 0.95);
+            background-size: 8px 8px, 8px 8px, 100% 100%;
+            border-color: #33ff33;
+            color: white;
+            box-shadow: 0 0 0 4px #000, 0 0 40px rgba(0, 255, 0, 0.8);
+        }
+
+        .level-intro {
+            background: 
+                linear-gradient(45deg, #000066 25%, transparent 25%),
+                linear-gradient(-45deg, #000066 25%, transparent 25%),
+                rgba(0, 0, 139, 0.95);
+            background-size: 8px 8px, 8px 8px, 100% 100%;
+            border-color: #3333ff;
+            color: white;
+            box-shadow: 0 0 0 4px #000, 0 0 40px rgba(0, 0, 255, 0.8);
+        }
+
+        @keyframes pixelModalAppear {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.3);
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        button {
+            background: 
+                linear-gradient(145deg, #ff0066, #cc0044),
+                linear-gradient(45deg, #ff3388 25%, transparent 25%),
+                linear-gradient(-45deg, #ff3388 25%, transparent 25%);
+            background-size: 100% 100%, 4px 4px, 4px 4px;
+            color: white;
+            border: 2px solid #000;
+            padding: 12px 25px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin: 12px;
+            font-family: 'Press Start 2P', monospace;
+            font-weight: normal;
+            transition: all 0.2s ease;
+            box-shadow: 
+                0 0 0 1px #ff0066,
+                0 4px 0 #660022,
+                0 6px 8px rgba(0, 0, 0, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0px #000;
+        }
+
+        button:hover {
+            background: 
+                linear-gradient(145deg, #ff3388, #ff0066),
+                linear-gradient(45deg, #ff66aa 25%, transparent 25%),
+                linear-gradient(-45deg, #ff66aa 25%, transparent 25%);
+            background-size: 100% 100%, 6px 6px, 6px 6px;
+            transform: translateY(-2px);
+            box-shadow: 
+                0 0 0 2px #ff0066,
+                0 8px 0 #660022,
+                0 10px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: 
+                0 0 0 2px #ff0066,
+                0 2px 0 #660022,
+                0 4px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            z-index: 10;
+            visibility: hidden;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: 
+                linear-gradient(45deg, #000 25%, transparent 25%),
+                linear-gradient(-45deg, #000 25%, transparent 25%),
+                rgba(0, 0, 0, 0.9);
+            background-size: 3px 3px, 3px 3px, 100% 100%;
+            border: 2px solid #ff0066;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 
+                0 0 0 1px #000,
+                inset 0 0 5px rgba(0, 0, 0, 0.8);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: 
+                linear-gradient(90deg, #ff0066, #ff3388, #ff0066),
+                linear-gradient(45deg, #ff6699 25%, transparent 25%),
+                linear-gradient(-45deg, #ff6699 25%, transparent 25%);
+            background-size: 200% 100%, 4px 4px, 4px 4px;
+            animation: progressPixelFlow 1s linear infinite;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+
+        @keyframes progressPixelFlow {
+            0% { background-position: 0% 50%, 0 0, 0 2px; }
+            100% { background-position: 200% 50%, 4px 0, 4px 2px; }
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: normal;
+            font-size: 0.9rem;
+            text-shadow: 
+                1px 1px 0px #000,
+                -1px -1px 0px #000,
+                1px -1px 0px #000,
+                -1px 1px 0px #000;
+            z-index: 1;
+        }
+
+        .warning {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: 
+                linear-gradient(45deg, #ff0000 25%, transparent 25%),
+                linear-gradient(-45deg, #ff0000 25%, transparent 25%),
+                rgba(255, 0, 0, 0.95);
+            background-size: 6px 6px, 6px 6px, 100% 100%;
+            color: white;
+            padding: 30px;
+            font-size: 1.6rem;
+            font-weight: normal;
+            display: none;
+            animation: pixelWarningPulse 0.6s ease-in-out infinite alternate;
+            box-shadow: 
+                0 0 0 3px #000,
+                0 0 0 6px #ff0000,
+                0 0 30px rgba(255, 0, 0, 0.8);
+            border: 3px solid #ffff00;
+            z-index: 500;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 0px #000;
+            max-width: 500px;
+        }
+
+        @keyframes pixelWarningPulse {
+            0% { 
+                transform: translate(-50%, -50%) scale(0.9);
+                box-shadow: 0 0 0 3px #000, 0 0 0 6px #ff0000, 0 0 30px rgba(255, 0, 0, 0.8);
+            }
+            100% { 
+                transform: translate(-50%, -50%) scale(1.1);
+                box-shadow: 0 0 0 3px #000, 0 0 0 6px #ff0000, 0 0 50px rgba(255, 0, 0, 1);
+            }
+        }
+
+        .audio-button {
+            background: 
+                linear-gradient(45deg, #000 25%, transparent 25%),
+                linear-gradient(-45deg, #000 25%, transparent 25%),
+                rgba(0, 100, 0, 0.9);
+            color: white;
+            border: 2px solid #00ff00;
+            padding: 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-family: 'Press Start 2P', monospace;
+            text-shadow: 1px 1px 0px #000;
+            box-shadow: 0 0 0 2px #000, 0 0 10px rgba(0, 255, 0, 0.3);
+            transition: all 0.2s ease;
+            grid-column: span 2;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .audio-button:hover {
+            background: 
+                linear-gradient(45deg, #003300 25%, transparent 25%),
+                linear-gradient(-45deg, #003300 25%, transparent 25%),
+                rgba(0, 150, 0, 0.9);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="game-title">LEVEL DEVIL</h1>
+        <div class="subtitle">In the depths of pixel hell, only the cunning survive...</div>
+        
+        <div class="hud-container">
+            <button class="audio-button" id="audioToggle" onclick="toggleAudio()">🔊 BGM ON</button>
+            <div class="level-name" id="levelName">The Beginning</div>
+            <div></div>
+            <div class="hud-item level" id="levelDisplay">LEVEL: 1</div>
+            <div class="hud-item lives" id="livesDisplay">LIVES: ❤️❤️❤️❤️❤️</div>
+            <div class="hud-item score" id="scoreDisplay">SCORE: 0</div>
+            <div class="hud-item deaths" id="deathDisplay">DEATHS: 0</div>
+            <div class="hud-item time" id="timeDisplay">TIME: 00:00</div>
+            <div class="control-buttons">
+                <div class="control-group">
+                    <div class="key">P</div>
+                    <button class="hud-button" id="pauseButton" onclick="togglePause()">PAUSE</button>
+                </div>
+                <div class="control-group">
+                    <div class="key">R</div>
+                    <button class="hud-button" id="restartButton" onclick="restartCurrentLevel()">RESTART</button>
+                </div>
+            </div>
+            <div class="hud-item progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                    <div class="progress-text" id="progressText">Level 1 / 10</div>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="1000" height="500"></canvas>
+
+        <div class="warning" id="warningText">DEVIL'S TRICK!</div>
+
+        <div class="level-intro" id="levelIntro">
+            <h2 id="levelIntroTitle">Level 1</h2>
+            <p id="levelIntroName">The Beginning</p>
+            <p id="levelIntroDescription">Welcome to hell...</p>
+            <button onclick="startLevel()">🔥 BEGIN 🔥</button>
+        </div>
+
+        <div class="controls">
+            <div class="control-row">
+                <div class="key">W</div>
+                <div class="key">A</div>
+                <div class="key">S</div>
+                <div class="key">D</div>
+                <span>or Arrow Keys to move and jump</span>
+            </div>
+            <div class="control-row">
+                <div class="key">SHIFT</div>
+                <span>Sprint (when available)</span>
+                <div class="key">SPACE</div>
+                <span>Special ability</span>
+            </div>
+            <div class="control-row">
+                <span>🚪 Reach the portal to complete each level!</span>
+            </div>
+            <div class="control-row">
+                <span>⚠️ Survive the devil's pixel nightmare!</span>
+            </div>
+        </div>
+
+        <div class="game-over" id="gameOver">
+            <h2>💀 GAME OVER! 💀</h2>
+            <p>Your soul belongs to the devil now...</p>
+            <p id="finalScore">Final Score: 0</p>
+            <p id="finalDeaths">Total Deaths: 0</p>
+            <p id="finalTime">Total Time: 00:00</p>
+            <button onclick="restartGame()">🔥 RETURN FROM HELL 🔥</button>
+        </div>
+
+        <div class="victory" id="victory">
+            <h2>👑 IMPOSSIBLE! 👑</h2>
+            <p>You have conquered the devil himself!</p>
+            <p id="victoryScore">Final Score: 0</p>
+            <p id="victoryDeaths">Total Deaths: 0</p>
+            <p id="victoryTime">Total Time: 00:00</p>
+            <button onclick="restartGame()">🎮 FACE THE DEVIL AGAIN 🎮</button>
+        </div>
+    </div>
+
+    <script>
+        // Fixed canvas setup (back to original 1000x500)
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Ensure pixelated rendering
+        ctx.imageSmoothingEnabled = false;
+        ctx.webkitImageSmoothingEnabled = false;
+        ctx.mozImageSmoothingEnabled = false;
+        ctx.msImageSmoothingEnabled = false;
+        
+        // UI Elements
+        const levelDisplay = document.getElementById('levelDisplay');
+        const levelName = document.getElementById('levelName');
+        const livesDisplay = document.getElementById('livesDisplay');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const deathDisplay = document.getElementById('deathDisplay');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const gameOverScreen = document.getElementById('gameOver');
+        const victoryScreen = document.getElementById('victory');
+        const levelIntroScreen = document.getElementById('levelIntro');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const warningText = document.getElementById('warningText');
+        const audioToggle = document.getElementById('audioToggle');
+
+        // Background Music System
+        let bgmPlaying = false;
+        let bgmAudioContext;
+        let bgmGainNode;
+        let bgmOscillators = [];
+
+        function initBGM() {
+            try {
+                bgmAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                bgmGainNode = bgmAudioContext.createGain();
+                bgmGainNode.connect(bgmAudioContext.destination);
+                bgmGainNode.gain.value = 0.1;
+            } catch(e) {
+                console.log('Audio not available');
+            }
+        }
+
+        function playBGM() {
+            if (!bgmAudioContext || bgmPlaying) return;
+            
+            bgmPlaying = true;
+            
+            // Create a dark, atmospheric loop
+            const playNote = (freq, delay, duration, type = 'triangle') => {
+                setTimeout(() => {
+                    if (!bgmPlaying) return;
+                    
+                    const osc = bgmAudioContext.createOscillator();
+                    const gain = bgmAudioContext.createGain();
+                    
+                    osc.connect(gain);
+                    gain.connect(bgmGainNode);
+                    
+                    osc.frequency.value = freq;
+                    osc.type = type;
+                    
+                    gain.gain.setValueAtTime(0, bgmAudioContext.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.05, bgmAudioContext.currentTime + 0.1);
+                    gain.gain.linearRampToValueAtTime(0, bgmAudioContext.currentTime + duration);
+                    
+                    osc.start(bgmAudioContext.currentTime);
+                    osc.stop(bgmAudioContext.currentTime + duration);
+                    
+                    bgmOscillators.push(osc);
+                }, delay);
+            };
+            
+            // Dark atmospheric loop (8-second pattern)
+            const loopBGM = () => {
+                if (!bgmPlaying) return;
+                
+                // Bass line
+                playNote(55, 0, 2, 'sawtooth');      // A1
+                playNote(82, 2000, 2, 'sawtooth');   // E2
+                playNote(73, 4000, 2, 'sawtooth');   // D2
+                playNote(65, 6000, 2, 'sawtooth');   // C2
+                
+                // Harmony
+                playNote(220, 1000, 1.5, 'triangle'); // A3
+                playNote(196, 3000, 1.5, 'triangle'); // G3
+                playNote(174, 5000, 1.5, 'triangle'); // F3
+                playNote(146, 7000, 1.5, 'triangle'); // D3
+                
+                // Atmospheric sounds
+                playNote(110, 500, 3, 'sine');        // A2 drone
+                playNote(165, 4500, 3, 'sine');       // E3 drone
+                
+                setTimeout(loopBGM, 8000); // Loop every 8 seconds
+            };
+            
+            loopBGM();
+        }
+
+        function stopBGM() {
+            bgmPlaying = false;
+            bgmOscillators.forEach(osc => {
+                try { osc.stop(); } catch(e) {}
+            });
+            bgmOscillators = [];
+        }
+
+        function toggleAudio() {
+            if (bgmPlaying) {
+                stopBGM();
+                audioToggle.textContent = '🔇 BGM OFF';
+                audioToggle.style.borderColor = '#ff0000';
+                audioToggle.style.backgroundColor = 'rgba(100, 0, 0, 0.9)';
+            } else {
+                if (!bgmAudioContext) initBGM();
+                if (bgmAudioContext.state === 'suspended') {
+                    bgmAudioContext.resume().then(() => playBGM());
+                } else {
+                    playBGM();
+                }
+                audioToggle.textContent = '🔊 BGM ON';
+                audioToggle.style.borderColor = '#00ff00';
+                audioToggle.style.backgroundColor = 'rgba(0, 100, 0, 0.9)';
+            }
+        }
+
+        // Enhanced Sound System for game effects
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(frequency, duration, type = 'sine', volume = 0.1, frequency2 = null) {
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = type;
+                
+                if (frequency2) {
+                    const oscillator2 = audioContext.createOscillator();
+                    oscillator2.connect(gainNode);
+                    oscillator2.frequency.value = frequency2;
+                    oscillator2.type = type;
+                    oscillator2.start(audioContext.currentTime);
+                    oscillator2.stop(audioContext.currentTime + duration);
+                }
+                
+                gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            } catch(e) {
+                console.log('Audio not available');
+            }
+        }
+
+        function playJumpSound() {
+            playSound(350, 0.15, 'square', 0.08);
+            setTimeout(() => playSound(450, 0.1, 'square', 0.06), 80);
+        }
+
+        function playDeathSound() {
+            playSound(150, 0.4, 'sawtooth', 0.12);
+            setTimeout(() => playSound(120, 0.4, 'sawtooth', 0.12), 200);
+            setTimeout(() => playSound(80, 0.6, 'sawtooth', 0.12), 400);
+        }
+
+        function playCollectSound() {
+            playSound(660, 0.1, 'triangle', 0.06);
+            setTimeout(() => playSound(880, 0.1, 'triangle', 0.05), 100);
+            setTimeout(() => playSound(1100, 0.15, 'triangle', 0.04), 200);
+        }
+
+        function playLevelCompleteSound() {
+            const notes = [523, 659, 784, 1047, 1319];
+            notes.forEach((note, i) => {
+                setTimeout(() => playSound(note, 0.3, 'sine', 0.08), i * 150);
+            });
+        }
+
+        function playTrapSound() {
+            playSound(100, 0.8, 'sawtooth', 0.1, 150);
+        }
+
+        function playTeleportSound() {
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => playSound(800 + i * 40, 0.08, 'square', 0.04), i * 25);
+            }
+        }
+
+        function playWarningSound() {
+            playSound(220, 0.2, 'triangle', 0.1);
+            setTimeout(() => playSound(220, 0.2, 'triangle', 0.1), 300);
+        }
+
+        // Game State (5 lives)
+        let currentLevel = 1;
+        let maxLevel = 10;
+        let lives = 5;
+        let score = 0;
+        let totalDeaths = 0;
+        let gameRunning = false;
+        let levelStarted = false;
+        let gameTime = 0;
+        let levelTime = 0;
+        let particles = [];
+        let screenShake = 0;
+        let gravity = 0.8;
+        let devilTricks = [];
+
+        // Enhanced Player
+        const player = {
+            x: 50, y: 400, width: 28, height: 28,
+            velocityX: 0, velocityY: 0,
+            speed: 6, jumpPower: 16,
+            onGround: false,
+            color: '#4169E1',
+            trail: [], invulnerable: 0, jumpHoldTime: 0,
+            reversed: false, facingDirection: 1
+        };
+
+        // Game Objects
+        let platforms = [], spikes = [], movingSpikes = [], fallingBlocks = [];
+        let disappearingPlatforms = [], collectibles = [], teleporters = [];
+        let fakePlatforms = [], reverseGravityZones = [], speedBoosts = [];
+        let goal = {};
+
+        // Input System
+        const keys = { left: false, right: false, up: false, down: false, shift: false, space: false };
+
+        // Game pause state
+        let isPaused = false;
+
+        function togglePause() {
+            isPaused = !isPaused;
+            const pauseButton = document.getElementById('pauseButton');
+            pauseButton.textContent = isPaused ? "RESUME" : "PAUSE";
+            
+            if (isPaused) {
+                gameRunning = false;
+            } else {
+                if (levelStarted) {
+                    gameRunning = true;
+                    gameLoop();
+                }
+            }
+        }
+
+        function restartCurrentLevel() {
+            lives--;
+            if (lives >= 0) {
+                loadLevel(currentLevel);
+                if (isPaused) {
+                    togglePause();
+                }
+                gameRunning = true;
+                levelStarted = true;
+            } else {
+                gameRunning = false;
+                document.getElementById('finalScore').textContent = `Final Score: ${score.toLocaleString()}`;
+                document.getElementById('finalDeaths').textContent = `Total Deaths: ${totalDeaths}`;
+                document.getElementById('finalTime').textContent = `Total Time: ${formatTime(gameTime)}`;
+                gameOverScreen.style.display = 'block';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (audioContext.state === 'suspended') audioContext.resume();
+            if (!bgmAudioContext && bgmPlaying) initBGM();
+            
+            switch(e.code) {
+                case 'KeyA': case 'ArrowLeft': keys.left = true; break;
+                case 'KeyD': case 'ArrowRight': keys.right = true; break;
+                case 'KeyW': case 'ArrowUp': keys.up = true; break;
+                case 'KeyS': case 'ArrowDown': keys.down = true; break;
+                case 'ShiftLeft': case 'ShiftRight': keys.shift = true; break;
+                case 'Space': keys.space = true; break;
+                case 'KeyP': togglePause(); break;
+                case 'KeyR': restartCurrentLevel(); break;
+            }
+            e.preventDefault();
+        });
+
+        document.addEventListener('keyup', (e) => {
+            switch(e.code) {
+                case 'KeyA': case 'ArrowLeft': keys.left = false; break;
+                case 'KeyD': case 'ArrowRight': keys.right = false; break;
+                case 'KeyW': case 'ArrowUp': keys.up = false; player.jumpHoldTime = 0; break;
+                case 'KeyS': case 'ArrowDown': keys.down = false; break;
+                case 'ShiftLeft': case 'ShiftRight': keys.shift = false; break;
+                case 'Space': keys.space = false; break;
+                case 'Enter': 
+                    // Check if level intro screen is visible
+                    if (levelIntroScreen.style.display === 'block') {
+                        startLevel();
+                    }
+                    // Check if game over screen is visible
+                    if (gameOverScreen.style.display === 'block') {
+                        restartGame();
+                    }
+                    // Check if victory screen is visible
+                    if (victoryScreen.style.display === 'block') {
+                        restartGame();
+                    }
+                    break;
+            }
+        });
+
+        // Level Definitions (Original coordinates for 1000x500 canvas)
+        const levels = {
+            1: {
+                name: "The Beginning",
+                description: "Welcome to your nightmare...",
+                platforms: [
+                    {x: 0, y: 480, width: 1000, height: 20},
+                    {x: 200, y: 400, width: 150, height: 20},
+                    {x: 450, y: 340, width: 150, height: 20},
+                    {x: 750, y: 280, width: 150, height: 20}
+                ],
+                spikes: [
+                    {x: 380, y: 460, width: 30, height: 20}
+                ],
+                collectibles: [
+                    {x: 230, y: 360, width: 25, height: 25, value: 100, collected: false},
+                    {x: 480, y: 300, width: 25, height: 25, value: 150, collected: false}
+                ],
+                goal: {x: 900, y: 220, width: 50, height: 60},
+                playerStart: {x: 50, y: 400}
+            },
+            
+            2: {
+                name: "False Security",
+                description: "Not everything is as it seems...",
+                platforms: [
+                    {x: 0, y: 480, width: 300, height: 20},
+                    {x: 450, y: 480, width: 550, height: 20},
+                    {x: 200, y: 380, width: 120, height: 20}
+                ],
+                spikes: [
+                    {x: 350, y: 460, width: 30, height: 20},
+                    {x: 380, y: 460, width: 30, height: 20}
+                ],
+                fakePlatforms: [
+                    {x: 350, y: 420, width: 100, height: 20, triggered: false}
+                ],
+                disappearingPlatforms: [
+                    {x: 200, y: 380, width: 120, height: 20, timer: 0, visible: true, respawnTimer: 0}
+                ],
+                collectibles: [
+                    {x: 230, y: 340, width: 25, height: 25, value: 200, collected: false}
+                ],
+                goal: {x: 900, y: 420, width: 50, height: 60},
+                playerStart: {x: 50, y: 400},
+                devilTrick: {type: "randomSpike", timer: 400, duration: 300}
+            },
+
+            3: {
+                name: "Gravity's Betrayal",
+                description: "Up is down, down is up...",
+                platforms: [
+                    {x: 0, y: 480, width: 250, height: 20},
+                    {x: 400, y: 480, width: 600, height: 20},
+                    {x: 150, y: 350, width: 100, height: 20},
+                    {x: 600, y: 250, width: 100, height: 20}
+                ],
+                spikes: [
+                    {x: 300, y: 460, width: 30, height: 20}
+                ],
+                movingSpikes: [
+                    {x: 500, y: 460, width: 30, height: 20, direction: 1, range: 200, startX: 500, speed: 3}
+                ],
+                reverseGravityZones: [
+                    {x: 700, y: 150, width: 150, height: 330}
+                ],
+                collectibles: [
+                    {x: 180, y: 310, width: 25, height: 25, value: 250, collected: false},
+                    {x: 630, y: 210, width: 25, height: 25, value: 300, collected: false}
+                ],
+                goal: {x: 900, y: 420, width: 50, height: 60},
+                playerStart: {x: 50, y: 400},
+                devilTrick: {type: "reverseControls", timer: 500, duration: 250}
+            },
+
+            4: {
+                name: "The Vanishing Path",
+                description: "Don't trust the ground beneath your feet...",
+                platforms: [
+                    {x: 0, y: 480, width: 1000, height: 20},
+                    {x: 120, y: 380, width: 80, height: 20},
+                    {x: 300, y: 320, width: 80, height: 20},
+                    {x: 550, y: 260, width: 80, height: 20},
+                    {x: 800, y: 200, width: 80, height: 20}
+                ],
+                spikes: [
+                    {x: 250, y: 460, width: 30, height: 20},
+                    {x: 450, y: 460, width: 30, height: 20}
+                ],
+                disappearingPlatforms: [
+                    {x: 120, y: 380, width: 80, height: 20, timer: 0, visible: true, respawnTimer: 0},
+                    {x: 300, y: 320, width: 80, height: 20, timer: 0, visible: true, respawnTimer: 0},
+                    {x: 550, y: 260, width: 80, height: 20, timer: 0, visible: true, respawnTimer: 0}
+                ],
+                fallingBlocks: [
+                    {x: 700, y: 100, width: 80, height: 20, falling: false, timer: 0, fallSpeed: 0}
+                ],
+                teleporters: [
+                    {x: 350, y: 290, width: 40, height: 40, targetX: 800, targetY: 170, cooldown: 0}
+                ],
+                collectibles: [
+                    {x: 150, y: 340, width: 25, height: 25, value: 400, collected: false}
+                ],
+                goal: {x: 900, y: 420, width: 50, height: 60},
+                playerStart: {x: 50, y: 400},
+                devilTrick: {type: "invisiblePlatforms", timer: 300, duration: 400}
+            },
+
+            5: {
+                name: "Speed Demon's Domain",
+                description: "Gotta go fast... or die trying!",
+                platforms: [
+                    {x: 0, y: 480, width: 200, height: 20},
+                    {x: 350, y: 480, width: 650, height: 20},
+                    {x: 120, y: 350, width: 60, height: 20},
+                    {x: 400, y: 300, width: 60, height: 20},
+                    {x: 650, y: 250, width: 60, height: 20}
+                ],
+                spikes: [
+                    {x: 250, y: 460, width: 30, height: 20},
+                    {x: 500, y: 460, width: 30, height: 20}
+                ],
+                movingSpikes: [
+                    {x: 380, y: 460, width: 30, height: 20, direction: 1, range: 250, startX: 380, speed: 5},
+                    {x: 700, y: 460, width: 30, height: 20, direction: -1, range: 200, startX: 700, speed: 6}
+                ],
+                speedBoosts: [
+                    {x: 300, y: 450, width: 40, height: 30, used: false},
+                    {x: 800, y: 450, width: 40, height: 30, used: false}
+                ],
+                collectibles: [
+                    {x: 150, y: 310, width: 25, height: 25, value: 500, collected: false}
+                ],
+                goal: {x: 900, y: 420, width: 50, height: 60},
+                playerStart: {x: 50, y: 400},
+                devilTrick: {type: "speedTrap", timer: 200, duration: 500}
+            },
+
+            6: {
+                name: "Mirror Maze",
+                description: "Left is right, right is wrong...",
+                platforms: [
+                    {x: 0, y: 480, width: 1000, height: 20},
+                    {x: 100, y: 380, width: 50, height: 20},
+                    {x: 200, y: 320, width: 50, height: 20},
+                    {x: 350, y: 280, width: 50, height: 20},
+                    {x: 500, y: 240, width: 50, height: 20},
+                    {x: 650, y: 200, width: 50, height: 20},
+                    {x: 800, y: 160, width: 50, height: 20}
+                ],
+                spikes: Array.from({length: 8}, (_, i) => ({
+                    x: 150 + i * 100,
+                    y: 460,
+                    width: 30,
+                    height: 20
+                })),
+                movingSpikes: [
+                    {x: 300, y: 460, width: 30, height: 20, direction: 1, range: 150, startX: 300, speed: 4},
+                    {x: 600, y: 460, width: 30, height: 20, direction: -1, range: 180, startX: 600, speed: 5}
+                ],
+                fakePlatforms: [
+                    {x: 250, y: 250, width: 80, height: 20, triggered: false},
+                    {x: 550, y: 170, width: 80, height: 20, triggered: false}
+                ],
+                teleporters: [
+                    {x: 370, y: 250, width: 40, height: 40, targetX: 650, targetY: 170, cooldown: 0}
+                ],
+                reverseGravityZones: [
+                    {x: 750, y: 50, width: 200, height: 270}
+                ],
+                collectibles: [
+                    {x: 130, y: 340, width: 25, height: 25, value: 600, collected: false}
+                ],
+                goal: {x: 900, y: 420, width: 50, height: 60},
+                playerStart: {x: 50, y: 400},
+                devilTrick: {type: "mirrorMode", timer: 150, duration: 400}
+            },
+
+            7: {
+                name: "Nightmare Fuel",
+                description: "Your worst fears come to life...",
+                platforms: [
+                    {x: 0, y: 480, width: 150, height: 20},
+                    {x: 250, y: 480, width: 750, height: 20},
+                    {x: 100, y: 350, width: 60, height: 20},
+                    {x: 350, y: 300, width: 60, height: 20},
+                    {x: 600, y: 250, width: 60, height: 20},
+                    {x: 850, y: 200, width: 60, height: 20}
+                ],
+                spikes: [
+                    {x: 200, y: 460, width: 30, height: 20},
+                    {x: 450, y: 460, width: 30, height: 20},
+                    {x: 700, y: 460, width: 30, height: 20}
+                ],
+                movingSpikes: [
+                    {x: 300, y: 460, width: 30, height: 20, direction: 1, range: 180, startX: 300, speed: 6},
+                    {x: 650, y: 460, width: 30, height: 20, direction: -1, range: 200, startX: 650, speed: 4}
+                ],
+                disappearingPlatforms: [
+                    {x: 100, y: 350, width: 60, height: 20, timer: 0, visible: true, respawnTimer: 0},
+                    {x: 350, y: 300, width: 60, height: 20, timer: 0, visible: true, respawnTimer: 0}
+                ],
+                collectibles: [
+                    {x: 130, y: 310, width: 25, height: 25, value: 750, collected: false}
+                ],
+                goal: {x: 900, y: 420, width: 50, height: 60},
+                playerStart: {x: 50, y: 400},
+                devilTrick: {type: "nightmare", timer: 100, duration: 600}
+            },
+
+            8: {
+                name: "The Devil's Gauntlet",
+                description: "Every nightmare combined...",
+                platforms: [
+                    {x: 0, y: 480, width: 1000, height: 20},
+                    {x: 80, y: 400, width: 40, height: 20},
+                    {x: 180, y: 350, width: 40, height: 20},
+                    {x: 280, y: 300, width: 40, height: 20},
+                    {x: 400, y: 250, width: 40, height: 20},
+                    {x: 550, y: 200, width: 40, height: 20},
+                    {x: 700, y: 150, width: 40, height: 20},
+                    {x: 850, y: 100, width: 40, height: 20}
+                ],
+                spikes: Array.from({length: 15}, (_, i) => ({
+                    x: 60 + i * 60,
+                    y: 460,
+                    width: 30,
+                    height: 20,
+                    invisible: i % 3 === 0
+                })),
+                movingSpikes: [
+                    {x: 150, y: 460, width: 30, height: 20, direction: 1, range: 100, startX: 150, speed: 8},
+                    {x: 450, y: 460, width: 30, height: 20, direction: -1, range: 150, startX: 450, speed: 6},
+                    {x: 750, y: 460, width: 30, height: 20, direction: 1, range: 120, startX: 750, speed: 7}
+                ],
+                disappearingPlatforms: [
+                    {x: 180, y: 350, width: 40, height: 20, timer: 0, visible: true, respawnTimer: 0},
+                    {x: 280, y: 300, width: 40, height: 20, timer: 0, visible: true, respawnTimer: 0},
+                    {x: 400, y: 250, width: 40, height: 20, timer: 0, visible: true, respawnTimer: 0}
+                ],
+                fallingBlocks: [
+                    {x: 480, y: 150, width: 40, height: 20, falling: false, timer: 0, fallSpeed: 0},
+                    {x: 630, y: 100, width: 40, height: 20, falling: false, timer: 0, fallSpeed: 0}
+                ],
+                fakePlatforms: [
+                    {x: 320, y: 220, width: 60, height: 20, triggered: false},
+                    {x: 620, y: 120, width: 60, height: 20, triggered: false}
+                ],
+                teleporters: [
+                    {x: 420, y: 220, width: 40, height: 40, targetX: 700, targetY: 120, cooldown: 0}
+                ],
+                reverseGravityZones: [
+                    {x: 600, y: 50, width: 300, height: 200}
+                ],
+                collectibles: [
+                    {x: 110, y: 360, width: 25, height: 25, value: 1000, collected: false}
+                ],
+                goal: {x: 900, y: 420, width: 50, height: 60},
+                playerStart: {x: 50, y: 400},
+                devilTrick: {type: "everything", timer: 50, duration: 800}
+            },
+
+            9: {
+                name: "Dante's Inferno",
+                description: "Abandon all hope...",
+                platforms: Array.from({length: 15}, (_, i) => ({
+                    x: 65 * i,
+                    y: 480 - Math.sin(i * 0.5) * 150,
+                    width: 50,
+                    height: 20
+                })),
+                spikes: Array.from({length: 20}, (_, i) => ({
+                    x: 50 + i * 45,
+                    y: 460,
+                    width: 30,
+                    height: 20,
+                    invisible: Math.random() < 0.4
+                })),
+                movingSpikes: Array.from({length: 8}, (_, i) => ({
+                    x: 100 + i * 110,
+                    y: 460,
+                    width: 30,
+                    height: 20,
+                    direction: i % 2 === 0 ? 1 : -1,
+                    range: 80 + i * 15,
+                    startX: 100 + i * 110,
+                    speed: 8 + i
+                })),
+                disappearingPlatforms: Array.from({length: 8}, (_, i) => ({
+                    x: 65 * (i + 1),
+                    y: 480 - Math.sin((i + 1) * 0.5) * 150,
+                    width: 50,
+                    height: 20,
+                    timer: 0,
+                    visible: true,
+                    respawnTimer: 0
+                })),
+                collectibles: [
+                    {x: 200, y: 300, width: 25, height: 25, value: 1500, collected: false}
+                ],
+                goal: {x: 900, y: 420, width: 50, height: 60},
+                playerStart: {x: 25, y: 400},
+                devilTrick: {type: "apocalypse", timer: 30, duration: 1000}
+            },
+
+            10: {
+                name: "Satan's Final Challenge",
+                description: "Face the devil himself...",
+                platforms: Array.from({length: 20}, (_, i) => ({
+                    x: 50 * i,
+                    y: 480 - Math.sin(i * 0.3) * 200 - Math.cos(i * 0.7) * 100,
+                    width: 35,
+                    height: 20
+                })),
+                spikes: Array.from({length: 25}, (_, i) => ({
+                    x: 40 + i * 36,
+                    y: 460,
+                    width: 30,
+                    height: 20,
+                    invisible: Math.random() < 0.6
+                })),
+                movingSpikes: Array.from({length: 10}, (_, i) => ({
+                    x: 80 + i * 85,
+                    y: 460,
+                    width: 30,
+                    height: 20,
+                    direction: i % 2 === 0 ? 1 : -1,
+                    range: 60 + i * 12,
+                    startX: 80 + i * 85,
+                    speed: 10 + i * 2
+                })),
+                disappearingPlatforms: Array.from({length: 10}, (_, i) => ({
+                    x: 50 * (i + 2),
+                    y: 480 - Math.sin((i + 2) * 0.3) * 200 - Math.cos((i + 2) * 0.7) * 100,
+                    width: 35,
+                    height: 20,
+                    timer: 0,
+                    visible: true,
+                    respawnTimer: 0
+                })),
+                fallingBlocks: Array.from({length: 6}, (_, i) => ({
+                    x: 150 + i * 120,
+                    y: 50 + i * 40,
+                    width: 35,
+                    height: 20,
+                    falling: false,
+                    timer: 0,
+                    fallSpeed: 0
+                })),
+                fakePlatforms: Array.from({length: 4}, (_, i) => ({
+                    x: 200 + i * 150,
+                    y: 200 + i * 50,
+                    width: 70,
+                    height: 20,
+                    triggered: false
+                })),
+                reverseGravityZones: [
+                    {x: 300, y: 100, width: 400, height: 300},
+                    {x: 750, y: 50, width: 250, height: 350}
+                ],
+                teleporters: [
+                    {x: 250, y: 150, width: 40, height: 40, targetX: 650, targetY: 100, cooldown: 0},
+                    {x: 650, y: 100, width: 40, height: 40, targetX: 850, targetY: 200, cooldown: 0}
+                ],
+                collectibles: [
+                    {x: 100, y: 300, width: 30, height: 30, value: 2500, collected: false}
+                ],
+                goal: {x: 900, y: 420, width: 60, height: 80},
+                playerStart: {x: 20, y: 400},
+                devilTrick: {type: "satan", timer: 10, duration: 1500}
+            }
+        };
+
+        // Devil's tricks system (same as before)
+        function activateDevilTrick(trick) {
+            if (!trick) return;
+            
+            playTrapSound();
+            showWarning("DEVIL'S TRICK ACTIVATED!");
+            
+            switch(trick.type) {
+                case "randomSpike":
+                    for (let i = 0; i < 3; i++) {
+                        spikes.push({
+                            x: Math.random() * (canvas.width - 100) + 50,
+                            y: 460,
+                            width: 30,
+                            height: 20,
+                            temporary: true
+                        });
+                    }
+                    setTimeout(() => {
+                        spikes = spikes.filter(spike => !spike.temporary);
+                    }, trick.duration * 16.67);
+                    break;
+                    
+                case "reverseControls":
+                    player.reversed = true;
+                    setTimeout(() => {
+                        player.reversed = false;
+                    }, trick.duration * 16.67);
+                    break;
+                    
+                case "invisiblePlatforms":
+                    platforms.forEach(platform => {
+                        if (Math.random() < 0.5) {
+                            platform.invisible = true;
+                            setTimeout(() => {
+                                platform.invisible = false;
+                            }, trick.duration * 16.67);
+                        }
+                    });
+                    break;
+                    
+                case "mirrorMode":
+                    canvas.style.transform = "scaleX(-1)";
+                    setTimeout(() => {
+                        canvas.style.transform = "scaleX(1)";
+                    }, trick.duration * 16.67);
+                    break;
+                    
+                case "speedTrap":
+                    const oldSpeed = player.speed;
+                    player.speed = Math.random() < 0.5 ? 2 : 12;
+                    setTimeout(() => {
+                        player.speed = oldSpeed;
+                    }, trick.duration * 16.67);
+                    break;
+                    
+                case "nightmare":
+                    gravity = 1.5;
+                    activateDevilTrick({type: "randomSpike", duration: trick.duration});
+                    activateDevilTrick({type: "reverseControls", duration: trick.duration / 2});
+                    setTimeout(() => {
+                        gravity = 0.8;
+                    }, trick.duration * 16.67);
+                    break;
+                    
+                case "everything":
+                    activateDevilTrick({type: "randomSpike", duration: trick.duration});
+                    activateDevilTrick({type: "reverseControls", duration: trick.duration / 2});
+                    activateDevilTrick({type: "speedTrap", duration: trick.duration});
+                    activateDevilTrick({type: "invisiblePlatforms", duration: trick.duration / 3});
+                    break;
+                    
+                case "apocalypse":
+                    activateDevilTrick({type: "everything", duration: trick.duration});
+                    activateDevilTrick({type: "mirrorMode", duration: trick.duration / 3});
+                    document.body.style.filter = "hue-rotate(180deg) invert(0.1)";
+                    setTimeout(() => {
+                        document.body.style.filter = "none";
+                    }, trick.duration * 16.67);
+                    break;
+                    
+                case "satan":
+                    activateDevilTrick({type: "apocalypse", duration: trick.duration});
+                    screenShake = 50;
+                    break;
+            }
+        }
+
+        function showWarning(text) {
+            warningText.textContent = text;
+            warningText.style.display = 'block';
+            playWarningSound();
+            setTimeout(() => {
+                warningText.style.display = 'none';
+            }, 2000);
+        }
+
+        // Enhanced particle system with pixel style
+        function createParticle(x, y, color, velocityX, velocityY, life) {
+            particles.push({
+                x, y, velocityX, velocityY, color, life,
+                maxLife: life,
+                size: Math.floor(Math.random() * 4) + 2 // Pixel-sized particles
+            });
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let particle = particles[i];
+                particle.x += particle.velocityX;
+                particle.y += particle.velocityY;
+                particle.velocityY += 0.2;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function renderParticles() {
+            for (let particle of particles) {
+                ctx.save();
+                ctx.globalAlpha = particle.life / particle.maxLife;
+                ctx.fillStyle = particle.color;
+                // Draw pixel-perfect squares
+                ctx.fillRect(Math.floor(particle.x), Math.floor(particle.y), particle.size, particle.size);
+                ctx.restore();
+            }
+        }
+
+        function loadLevel(levelNum) {
+            const level = levels[levelNum];
+            if (!level) return false;
+
+            // Reset player (no scaling needed, back to original coordinates)
+            player.x = level.playerStart.x;
+            player.y = level.playerStart.y;
+            player.velocityX = 0;
+            player.velocityY = 0;
+            player.trail = [];
+            player.invulnerable = 0;
+            player.reversed = false;
+
+            // Load level objects (no scaling needed)
+            platforms = [...level.platforms];
+            spikes = level.spikes ? [...level.spikes] : [];
+            movingSpikes = level.movingSpikes ? level.movingSpikes.map(spike => ({...spike})) : [];
+            fallingBlocks = level.fallingBlocks ? level.fallingBlocks.map(block => ({...block})) : [];
+            disappearingPlatforms = level.disappearingPlatforms ? level.disappearingPlatforms.map(platform => ({...platform})) : [];
+            collectibles = level.collectibles ? level.collectibles.map(item => ({...item})) : [];
+            teleporters = level.teleporters ? level.teleporters.map(tp => ({...tp})) : [];
+            fakePlatforms = level.fakePlatforms ? level.fakePlatforms.map(fp => ({...fp})) : [];
+            reverseGravityZones = level.reverseGravityZones || [];
+            speedBoosts = level.speedBoosts ? level.speedBoosts.map(sb => ({...sb})) : [];
+            goal = {...level.goal};
+
+            // Reset devil tricks
+            devilTricks = [];
+            if (level.devilTrick) {
+                devilTricks.push({...level.devilTrick});
+            }
+
+            // Reset game state
+            levelTime = 0;
+            particles = [];
+            screenShake = 0;
+            gravity = 0.8;
+
+            progressFill.style.width = `${(currentLevel / maxLevel) * 100}%`;
+            progressText.textContent = `Level ${currentLevel} / ${maxLevel}`;
+            return true;
+        }
+
+        // Show Level Introduction
+        function showLevelIntro() {
+            const level = levels[currentLevel];
+            document.getElementById('levelIntroTitle').textContent = `Level ${currentLevel}`;
+            document.getElementById('levelIntroName').textContent = level.name;
+            document.getElementById('levelIntroDescription').textContent = level.description;
+            levelIntroScreen.style.display = 'block';
+            gameRunning = false;
+            levelStarted = false;
+        }
+
+        function startLevel() {
+            levelIntroScreen.style.display = 'none';
+            gameRunning = true;
+            levelStarted = true;
+            
+            // Start BGM if not already playing
+            if (!bgmPlaying) {
+                toggleAudio();
+            }
+            
+            gameLoop();
+        }
+
+        function updatePlayer() {
+            if (!gameRunning || !levelStarted) return;
+
+            levelTime++;
+            gameTime++;
+            
+            if (player.invulnerable > 0) {
+                player.invulnerable--;
+            }
+
+            // Handle input (with potential reversal)
+            let leftKey = player.reversed ? keys.right : keys.left;
+            let rightKey = player.reversed ? keys.left : keys.right;
+
+            if (leftKey) {
+                player.velocityX = Math.max(player.velocityX - 0.5, -player.speed);
+                player.facingDirection = -1;
+            } else if (rightKey) {
+                player.velocityX = Math.min(player.velocityX + 0.5, player.speed);
+                player.facingDirection = 1;
+            } else {
+                player.velocityX *= 0.8;
+            }
+
+            if (keys.up && player.onGround) {
+                player.velocityY = -player.jumpPower;
+                player.onGround = false;
+                player.jumpHoldTime = 15;
+                playJumpSound();
+                createParticle(player.x + player.width/2, player.y + player.height, '#ffffff', 
+                              (Math.random() - 0.5) * 4, Math.random() * 2 + 1, 30);
+            } else if (keys.up && player.jumpHoldTime > 0) {
+                player.velocityY -= 0.6;
+                player.jumpHoldTime--;
+            }
+
+            // Check reverse gravity zones
+            let inReverseZone = false;
+            for (let zone of reverseGravityZones) {
+                if (player.x < zone.x + zone.width &&
+                    player.x + player.width > zone.x &&
+                    player.y < zone.y + zone.height &&
+                    player.y + player.height > zone.y) {
+                    inReverseZone = true;
+                    break;
+                }
+            }
+
+            // Apply gravity
+            if (inReverseZone) {
+                player.velocityY -= gravity;
+                if (player.velocityY < -15) player.velocityY = -15;
+            } else {
+                player.velocityY += gravity;
+                if (player.velocityY > 15) player.velocityY = 15;
+            }
+
+            // Update position
+            player.x += player.velocityX;
+            player.y += player.velocityY;
+
+            // Keep player in bounds
+            if (player.x < 0) player.x = 0;
+            if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+
+            // Update trail
+            player.trail.push({x: player.x, y: player.y, alpha: 1});
+            if (player.trail.length > 8) {
+                player.trail.shift();
+            }
+            for (let i = 0; i < player.trail.length; i++) {
+                player.trail[i].alpha -= 0.15;
+            }
+
+            // Check collisions
+            player.onGround = false;
+            checkPlatformCollisions();
+            checkSpikeCollisions();
+            checkCollectibleCollisions();
+            checkTeleporterCollisions();
+            checkFakePlatformCollisions();
+            checkSpeedBoostCollisions();
+            checkGoalCollision();
+
+            // Check if player fell off screen
+            if (player.y > canvas.height) {
+                playerDied();
+            }
+        }
+
+        function checkPlatformCollisions() {
+            const allPlatforms = [...platforms.filter(p => !p.invisible), ...disappearingPlatforms.filter(p => p.visible), ...fallingBlocks];
+            
+            for (let platform of allPlatforms) {
+                if (player.x < platform.x + platform.width &&
+                    player.x + player.width > platform.x &&
+                    player.y < platform.y + platform.height &&
+                    player.y + player.height > platform.y) {
+                    
+                    if (player.velocityY > 0 && player.y < platform.y) {
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                        player.onGround = true;
+                        
+                        for (let i = 0; i < 3; i++) {
+                            createParticle(player.x + Math.random() * player.width, 
+                                          player.y + player.height, 
+                                          '#8B4513', 
+                                          (Math.random() - 0.5) * 6, 
+                                          -Math.random() * 3, 20);
+                        }
+                    } else if (player.velocityY < 0 && player.y > platform.y) {
+                        player.y = platform.y + platform.height;
+                        player.velocityY = 0;
+                    } else if (player.velocityX > 0) {
+                        player.x = platform.x - player.width;
+                    } else if (player.velocityX < 0) {
+                        player.x = platform.x + platform.width;
+                    }
+                }
+            }
+        }
+
+        function checkSpikeCollisions() {
+            if (player.invulnerable > 0) return;
+            
+            const allSpikes = [...spikes, ...movingSpikes];
+            
+            for (let spike of allSpikes) {
+                if (spike.invisible) continue;
+                
+                if (player.x < spike.x + spike.width &&
+                    player.x + player.width > spike.x &&
+                    player.y < spike.y + spike.height &&
+                    player.y + player.height > spike.y) {
+                    playerDied();
+                    return;
+                }
+            }
+        }
+
+        function checkCollectibleCollisions() {
+            for (let collectible of collectibles) {
+                if (!collectible.collected &&
+                    player.x < collectible.x + collectible.width &&
+                    player.x + player.width > collectible.x &&
+                    player.y < collectible.y + collectible.height &&
+                    player.y + player.height > collectible.y) {
+                    
+                    collectible.collected = true;
+                    score += collectible.value;
+                    playCollectSound();
+                    
+                    for (let i = 0; i < 8; i++) {
+                        createParticle(collectible.x + collectible.width/2, 
+                                      collectible.y + collectible.height/2, 
+                                      '#FFD700', 
+                                      (Math.random() - 0.5) * 8, 
+                                      (Math.random() - 0.5) * 8, 40);
+                    }
+                }
+            }
+        }
+
+        function checkTeleporterCollisions() {
+            for (let teleporter of teleporters) {
+                if (teleporter.cooldown <= 0 &&
+                    player.x < teleporter.x + teleporter.width &&
+                    player.x + player.width > teleporter.x &&
+                    player.y < teleporter.y + teleporter.height &&
+                    player.y + player.height > teleporter.y) {
+                    
+                    playTeleportSound();
+                    
+                    for (let i = 0; i < 15; i++) {
+                        createParticle(player.x + player.width/2, player.y + player.height/2, 
+                                      '#9400D3', (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10, 50);
+                    }
+                    
+                    player.x = teleporter.targetX;
+                    player.y = teleporter.targetY;
+                    player.velocityX = 0;
+                    player.velocityY = 0;
+                    teleporter.cooldown = 120;
+                    
+                    for (let i = 0; i < 15; i++) {
+                        createParticle(player.x + player.width/2, player.y + player.height/2, 
+                                      '#9400D3', (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10, 50);
+                    }
+                }
+            }
+        }
+
+        function checkFakePlatformCollisions() {
+            for (let fakePlatform of fakePlatforms) {
+                if (!fakePlatform.triggered &&
+                    player.x < fakePlatform.x + fakePlatform.width &&
+                    player.x + player.width > fakePlatform.x &&
+                    player.y < fakePlatform.y + fakePlatform.height &&
+                    player.y + player.height > fakePlatform.y) {
+                    
+                    fakePlatform.triggered = true;
+                    playTrapSound();
+                    showWarning("FAKE PLATFORM!");
+                    
+                    for (let i = 0; i < 10; i++) {
+                        createParticle(fakePlatform.x + Math.random() * fakePlatform.width, 
+                                      fakePlatform.y, '#FF4444', 
+                                      (Math.random() - 0.5) * 8, -Math.random() * 5, 40);
+                    }
+                }
+            }
+        }
+
+        function checkSpeedBoostCollisions() {
+            for (let boost of speedBoosts) {
+                if (!boost.used &&
+                    player.x < boost.x + boost.width &&
+                    player.x + player.width > boost.x &&
+                    player.y < boost.y + boost.height &&
+                    player.y + player.height > boost.y) {
+                    
+                    boost.used = true;
+                    player.speed *= 2;
+                    playCollectSound();
+                    
+                    setTimeout(() => {
+                        player.speed /= 2;
+                    }, 3000);
+                    
+                    for (let i = 0; i < 12; i++) {
+                        createParticle(boost.x + boost.width/2, boost.y + boost.height/2, 
+                                      '#00FFFF', (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12, 60);
+                    }
+                }
+            }
+        }
+
+        function checkGoalCollision() {
+            if (player.x < goal.x + goal.width &&
+                player.x + player.width > goal.x &&
+                player.y < goal.y + goal.height &&
+                player.y + player.height > goal.y) {
+                
+                score += 500 * currentLevel;
+                playLevelCompleteSound();
+                
+                if (currentLevel < maxLevel) {
+                    currentLevel++;
+                    loadLevel(currentLevel);
+                    showLevelIntro();
+                    
+                    for (let i = 0; i < 20; i++) {
+                        createParticle(player.x + player.width/2, player.y + player.height/2, 
+                                      '#00FF00', (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12, 60);
+                    }
+                } else {
+                    gameRunning = false;
+                    document.getElementById('victoryScore').textContent = `Final Score: ${score.toLocaleString()}`;
+                    document.getElementById('victoryDeaths').textContent = `Total Deaths: ${totalDeaths}`;
+                    document.getElementById('victoryTime').textContent = `Total Time: ${formatTime(gameTime)}`;
+                    victoryScreen.style.display = 'block';
+                }
+            }
+        }
+
+        function playerDied() {
+            if (player.invulnerable > 0) return;
+            
+            playDeathSound();
+            totalDeaths++;
+            
+            for (let i = 0; i < 25; i++) {
+                createParticle(player.x + player.width/2, player.y + player.height/2, 
+                              '#FF0000', (Math.random() - 0.5) * 15, (Math.random() - 0.5) * 15, 80);
+            }
+            
+            screenShake = 20;
+            lives--;
+            
+            if (lives <= 0) {
+                gameRunning = false;
+                document.getElementById('finalScore').textContent = `Final Score: ${score.toLocaleString()}`;
+                document.getElementById('finalDeaths').textContent = `Total Deaths: ${totalDeaths}`;
+                document.getElementById('finalTime').textContent = `Total Time: ${formatTime(gameTime)}`;
+                gameOverScreen.style.display = 'block';
+            } else {
+                const level = levels[currentLevel];
+                player.x = level.playerStart.x;
+                player.y = level.playerStart.y;
+                player.velocityX = 0;
+                player.velocityY = 0;
+                player.invulnerable = 120;
+                player.reversed = false;
+            }
+        }
+
+        function updateMovingSpikes() {
+            for (let spike of movingSpikes) {
+                spike.x += spike.direction * (spike.speed || 2);
+                
+                if (spike.x > spike.startX + spike.range || spike.x < spike.startX - spike.range) {
+                    spike.direction *= -1;
+                }
+            }
+        }
+
+        function updateFallingBlocks() {
+            for (let block of fallingBlocks) {
+                if (!block.falling && Math.abs(player.x - block.x) < 80) {
+                    block.timer++;
+                    if (block.timer > 30) {
+                        block.falling = true;
+                        block.fallSpeed = 1;
+                        playWarningSound();
+                    }
+                }
+
+                if (block.falling) {
+                    block.fallSpeed += 0.3;
+                    block.y += block.fallSpeed;
+                    
+                    if (Math.random() < 0.3) {
+                        createParticle(block.x + Math.random() * block.width, block.y, 
+                                      '#8B4513', (Math.random() - 0.5) * 4, Math.random() * 2, 30);
+                    }
+                }
+
+                if (player.invulnerable <= 0 &&
+                    player.x < block.x + block.width &&
+                    player.x + player.width > block.x &&
+                    player.y < block.y + block.height &&
+                    player.y + player.height > block.y) {
+                    playerDied();
+                }
+            }
+        }
+
+        function updateDisappearingPlatforms() {
+            for (let platform of disappearingPlatforms) {
+                if (platform.visible &&
+                    player.x < platform.x + platform.width &&
+                    player.x + player.width > platform.x &&
+                    player.y + player.height >= platform.y &&
+                    player.y + player.height <= platform.y + 10) {
+                    
+                    platform.timer++;
+                    if (platform.timer > 45) {
+                        platform.visible = false;
+                        platform.respawnTimer = 120;
+                        playWarningSound();
+                        
+                        for (let i = 0; i < 10; i++) {
+                            createParticle(platform.x + Math.random() * platform.width, 
+                                          platform.y, '#8B4513', 
+                                          (Math.random() - 0.5) * 6, -Math.random() * 3, 40);
+                        }
+                    }
+                }
+                
+                if (!platform.visible && platform.respawnTimer > 0) {
+                    platform.respawnTimer--;
+                    if (platform.respawnTimer <= 0) {
+                        platform.visible = true;
+                        platform.timer = 0;
+                        
+                        for (let i = 0; i < 8; i++) {
+                            createParticle(platform.x + Math.random() * platform.width, 
+                                          platform.y + platform.height, '#8B4513', 
+                                          (Math.random() - 0.5) * 4, -Math.random() * 2, 30);
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateTeleporters() {
+            for (let teleporter of teleporters) {
+                if (teleporter.cooldown > 0) {
+                    teleporter.cooldown--;
+                }
+            }
+        }
+
+        function updateDevilTricks() {
+            for (let i = devilTricks.length - 1; i >= 0; i--) {
+                let trick = devilTricks[i];
+                trick.timer--;
+                
+                if (trick.timer <= 0) {
+                    activateDevilTrick(trick);
+                    devilTricks.splice(i, 1);
+                }
+            }
+        }
+
+        function formatTime(frames) {
+            const seconds = Math.floor(frames / 60);
+            const minutes = Math.floor(seconds / 60);
+            return `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+        }
+
+        function render() {
+            ctx.save();
+            if (screenShake > 0) {
+                ctx.translate(Math.floor(Math.random() * screenShake - screenShake/2), 
+                             Math.floor(Math.random() * screenShake - screenShake/2));
+                screenShake--;
+            }
+            
+            // Clear canvas with pixel-perfect gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#000033');
+            gradient.addColorStop(0.3, '#000066');
+            gradient.addColorStop(0.7, '#330066');
+            gradient.addColorStop(1, '#000033');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw pixel grid overlay
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+            for (let x = 0; x < canvas.width; x += 4) {
+                ctx.fillRect(x, 0, 1, canvas.height);
+            }
+            for (let y = 0; y < canvas.height; y += 4) {
+                ctx.fillRect(0, y, canvas.width, 1);
+            }
+
+            // Draw reverse gravity zones
+            for (let zone of reverseGravityZones) {
+                ctx.save();
+                ctx.fillStyle = 'rgba(128, 0, 128, 0.2)';
+                ctx.fillRect(Math.floor(zone.x), Math.floor(zone.y), Math.floor(zone.width), Math.floor(zone.height));
+                
+                // Pixel dashed border
+                ctx.fillStyle = '#800080';
+                for (let x = zone.x; x < zone.x + zone.width; x += 8) {
+                    ctx.fillRect(Math.floor(x), Math.floor(zone.y), 4, 2);
+                    ctx.fillRect(Math.floor(x), Math.floor(zone.y + zone.height - 2), 4, 2);
+                }
+                for (let y = zone.y; y < zone.y + zone.height; y += 8) {
+                    ctx.fillRect(Math.floor(zone.x), Math.floor(y), 2, 4);
+                    ctx.fillRect(Math.floor(zone.x + zone.width - 2), Math.floor(y), 2, 4);
+                }
+                ctx.restore();
+            }
+
+            // Draw platforms with pixel-perfect rendering
+            ctx.fillStyle = '#8B4513';
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+            for (let platform of platforms) {
+                if (!platform.invisible) {
+                    ctx.fillRect(Math.floor(platform.x), Math.floor(platform.y), Math.floor(platform.width), Math.floor(platform.height));
+                    ctx.strokeRect(Math.floor(platform.x), Math.floor(platform.y), Math.floor(platform.width), Math.floor(platform.height));
+                    
+                    // Add pixel texture
+                    ctx.fillStyle = '#A0522D';
+                    for (let i = 0; i < platform.width; i += 8) {
+                        ctx.fillRect(Math.floor(platform.x + i), Math.floor(platform.y), 2, Math.floor(platform.height));
+                    }
+                    ctx.fillStyle = '#8B4513';
+                }
+            }
+
+            // Draw disappearing platforms
+            for (let platform of disappearingPlatforms) {
+                if (platform.visible) {
+                    let alpha = 1;
+                    if (platform.timer > 20) {
+                        alpha = 1 - (platform.timer - 20) / 25;
+                    }
+                    
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = platform.timer > 20 ? '#CD853F' : '#8B4513';
+                    ctx.fillRect(Math.floor(platform.x), Math.floor(platform.y), Math.floor(platform.width), Math.floor(platform.height));
+                    ctx.restore();
+                }
+            }
+
+            // Draw fake platforms
+            for (let fakePlatform of fakePlatforms) {
+                if (!fakePlatform.triggered) {
+                    ctx.save();
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(Math.floor(fakePlatform.x), Math.floor(fakePlatform.y), Math.floor(fakePlatform.width), Math.floor(fakePlatform.height));
+                    
+                    // Add danger indicators (red pixels)
+                    ctx.fillStyle = '#FF4444';
+                    for (let i = 0; i < fakePlatform.width; i += 4) {
+                        ctx.fillRect(Math.floor(fakePlatform.x + i), Math.floor(fakePlatform.y), 2, 2);
+                    }
+                    ctx.restore();
+                }
+            }
+
+            // Draw spikes with pixel art style
+            ctx.fillStyle = '#FF4444';
+            ctx.strokeStyle = '#CC0000';
+            ctx.lineWidth = 1;
+            for (let spike of spikes) {
+                if (!spike.invisible) {
+                    drawPixelSpike(spike.x, spike.y, spike.width, spike.height);
+                }
+            }
+
+            // Draw moving spikes with pixel glow effect
+            for (let spike of movingSpikes) {
+                if (!spike.invisible) {
+                    ctx.save();
+                    // Create pixel glow by drawing multiple layers
+                    ctx.fillStyle = '#FF6666';
+                    drawPixelSpike(spike.x - 1, spike.y - 1, spike.width + 2, spike.height + 2);
+                    ctx.fillStyle = '#FF4444';
+                    drawPixelSpike(spike.x, spike.y, spike.width, spike.height);
+                    ctx.restore();
+                }
+            }
+
+            // Draw falling blocks
+            ctx.fillStyle = '#666';
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 1;
+            for (let block of fallingBlocks) {
+                ctx.save();
+                if (!block.falling && block.timer > 10) {
+                    // Pixel shake effect
+                    ctx.translate(Math.floor(Math.random() * 4) - 2, 0);
+                }
+                ctx.fillRect(Math.floor(block.x), Math.floor(block.y), Math.floor(block.width), Math.floor(block.height));
+                ctx.strokeRect(Math.floor(block.x), Math.floor(block.y), Math.floor(block.width), Math.floor(block.height));
+                
+                // Add crack texture when shaking
+                if (!block.falling && block.timer > 10) {
+                    ctx.fillStyle = '#999';
+                    ctx.fillRect(Math.floor(block.x + 2), Math.floor(block.y + 2), 2, Math.floor(block.height - 4));
+                    ctx.fillRect(Math.floor(block.x + block.width - 4), Math.floor(block.y + 2), 2, Math.floor(block.height - 4));
+                }
+                ctx.restore();
+            }
+
+            // Draw collectibles with pixel animation
+            for (let collectible of collectibles) {
+                if (!collectible.collected) {
+                    ctx.save();
+                    // Pixel rotation effect
+                    const rotFrame = Math.floor(Date.now() / 200) % 4;
+                    ctx.fillStyle = '#FFD700';
+                    
+                    if (rotFrame === 0) {
+                        ctx.fillRect(Math.floor(collectible.x), Math.floor(collectible.y), Math.floor(collectible.width), Math.floor(collectible.height));
+                    } else if (rotFrame === 1) {
+                        ctx.fillRect(Math.floor(collectible.x + 2), Math.floor(collectible.y + 2), Math.floor(collectible.width - 4), Math.floor(collectible.height - 4));
+                    } else if (rotFrame === 2) {
+                        ctx.fillRect(Math.floor(collectible.x + 4), Math.floor(collectible.y + 4), Math.floor(collectible.width - 8), Math.floor(collectible.height - 8));
+                    } else {
+                        ctx.fillRect(Math.floor(collectible.x + 2), Math.floor(collectible.y + 2), Math.floor(collectible.width - 4), Math.floor(collectible.height - 4));
+                    }
+                    
+                    // Add sparkle pixels
+                    ctx.fillStyle = '#FFFFFF';
+                    if (Math.random() < 0.3) {
+                        ctx.fillRect(Math.floor(collectible.x + Math.random() * collectible.width), 
+                                   Math.floor(collectible.y + Math.random() * collectible.height), 2, 2);
+                    }
+                    ctx.restore();
+                }
+            }
+
+            // Draw teleporters with pixel
+                        // Draw teleporters with pixel portal effect
+            for (let teleporter of teleporters) {
+                ctx.save();
+                ctx.fillStyle = teleporter.cooldown > 0 ? '#666666' : '#9400D3';
+                ctx.fillRect(Math.floor(teleporter.x), Math.floor(teleporter.y), Math.floor(teleporter.width), Math.floor(teleporter.height));
+                
+                if (teleporter.cooldown <= 0) {
+                    // Draw pixel portal swirl
+                    const portalFrame = Math.floor(Date.now() / 150) % 8;
+                    ctx.fillStyle = '#DA70D6';
+                    for (let i = 0; i < 8; i++) {
+                        if (i === portalFrame) {
+                            const angle = (i / 8) * Math.PI * 2;
+                            const centerX = teleporter.x + teleporter.width / 2;
+                            const centerY = teleporter.y + teleporter.height / 2;
+                            const radius = 8;
+                            ctx.fillRect(
+                                Math.floor(centerX + Math.cos(angle) * radius),
+                                Math.floor(centerY + Math.sin(angle) * radius),
+                                2, 2
+                            );
+                        }
+                    }
+                }
+                ctx.restore();
+            }
+
+            // Draw speed boosts with pixel effect
+            for (let boost of speedBoosts) {
+                if (!boost.used) {
+                    ctx.save();
+                    ctx.fillStyle = '#00FFFF';
+                    ctx.fillRect(Math.floor(boost.x), Math.floor(boost.y), Math.floor(boost.width), Math.floor(boost.height));
+                    
+                    // Speed lines with pixel style
+                    ctx.fillStyle = '#FFFFFF';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(Math.floor(boost.x + 4 + i * 8), Math.floor(boost.y + 6), 6, 2);
+                        ctx.fillRect(Math.floor(boost.x + 4 + i * 8), Math.floor(boost.y + 18), 6, 2);
+                    }
+                    ctx.restore();
+                }
+            }
+
+            // Draw goal with enhanced pixel portal
+            ctx.save();
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(Math.floor(goal.x), Math.floor(goal.y), Math.floor(goal.width), Math.floor(goal.height));
+            
+            // Portal interior
+            ctx.fillStyle = '#800000';
+            ctx.fillRect(Math.floor(goal.x + 4), Math.floor(goal.y + 4), Math.floor(goal.width - 8), Math.floor(goal.height - 8));
+            
+            // Door handle
+            ctx.fillStyle = '#FFFF00';
+            ctx.fillRect(Math.floor(goal.x + 8), Math.floor(goal.y + 20), 6, 6);
+            
+            // Pulsing pixel border
+            const pulseFrame = Math.floor(Date.now() / 100) % 4;
+            if (pulseFrame < 2) {
+                ctx.fillStyle = '#FF6666';
+                // Top border
+                ctx.fillRect(Math.floor(goal.x - 2), Math.floor(goal.y - 2), Math.floor(goal.width + 4), 2);
+                // Bottom border
+                ctx.fillRect(Math.floor(goal.x - 2), Math.floor(goal.y + goal.height), Math.floor(goal.width + 4), 2);
+                // Left border
+                ctx.fillRect(Math.floor(goal.x - 2), Math.floor(goal.y - 2), 2, Math.floor(goal.height + 4));
+                // Right border
+                ctx.fillRect(Math.floor(goal.x + goal.width), Math.floor(goal.y - 2), 2, Math.floor(goal.height + 4));
+            }
+            ctx.restore();
+
+            // Draw player trail with pixel style
+            for (let i = 0; i < player.trail.length; i++) {
+                let trail = player.trail[i];
+                if (trail.alpha > 0) {
+                    ctx.save();
+                    ctx.globalAlpha = trail.alpha * 0.5;
+                    ctx.fillStyle = player.color;
+                    ctx.fillRect(Math.floor(trail.x), Math.floor(trail.y), Math.floor(player.width), Math.floor(player.height));
+                    ctx.restore();
+                }
+            }
+
+            // Draw player with enhanced pixel art
+            ctx.save();
+            if (player.invulnerable > 0 && Math.floor(player.invulnerable / 5) % 2) {
+                ctx.globalAlpha = 0.5;
+            }
+            
+            // Main body
+            ctx.fillStyle = player.color;
+            ctx.fillRect(Math.floor(player.x), Math.floor(player.y), Math.floor(player.width), Math.floor(player.height));
+            
+            // Inner body
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(Math.floor(player.x + 4), Math.floor(player.y + 4), Math.floor(player.width - 8), Math.floor(player.height - 8));
+            
+            // Eyes
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(Math.floor(player.x + 6), Math.floor(player.y + 6), 4, 4);
+            ctx.fillRect(Math.floor(player.x + player.width - 10), Math.floor(player.y + 6), 4, 4);
+            
+            // Eye pupils
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(Math.floor(player.x + 7), Math.floor(player.y + 7), 2, 2);
+            ctx.fillRect(Math.floor(player.x + player.width - 9), Math.floor(player.y + 7), 2, 2);
+            
+            // Devil horns when reversed
+            if (player.reversed) {
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(Math.floor(player.x + 4), Math.floor(player.y - 4), 4, 6);
+                ctx.fillRect(Math.floor(player.x + player.width - 8), Math.floor(player.y - 4), 4, 6);
+            }
+            
+            // Movement animation
+            if (Math.abs(player.velocityX) > 1) {
+                const animFrame = Math.floor(Date.now() / 200) % 2;
+                ctx.fillStyle = '#4169E1';
+                if (animFrame === 0) {
+                    ctx.fillRect(Math.floor(player.x + 2), Math.floor(player.y + player.height - 4), 4, 2);
+                    ctx.fillRect(Math.floor(player.x + player.width - 6), Math.floor(player.y + player.height - 4), 4, 2);
+                } else {
+                    ctx.fillRect(Math.floor(player.x + 4), Math.floor(player.y + player.height - 4), 4, 2);
+                    ctx.fillRect(Math.floor(player.x + player.width - 8), Math.floor(player.y + player.height - 4), 4, 2);
+                }
+            }
+            ctx.restore();
+
+            // Draw particles
+            renderParticles();
+
+            ctx.restore();
+
+            // Update UI with enhanced lives display
+            levelDisplay.textContent = `LEVEL: ${currentLevel}`;
+            levelName.textContent = levels[currentLevel].name;
+            const heartsArray = Array(lives).fill('❤️');
+            livesDisplay.textContent = `LIVES: ${heartsArray.join('')}`;
+            scoreDisplay.textContent = `SCORE: ${score.toLocaleString()}`;
+            deathDisplay.textContent = `DEATHS: ${totalDeaths}`;
+            timeDisplay.textContent = `TIME: ${formatTime(gameTime)}`;
+        }
+
+        function drawPixelSpike(x, y, width, height) {
+            // Draw pixel-perfect spike
+            const centerX = Math.floor(x + width / 2);
+            const bottomY = Math.floor(y + height);
+            const topY = Math.floor(y);
+            
+            // Draw spike body
+            for (let i = 0; i < Math.floor(width / 2); i++) {
+                const currentHeight = Math.floor(height * (1 - i / (width / 2)));
+                ctx.fillRect(Math.floor(x + i), bottomY - currentHeight, 1, currentHeight);
+                ctx.fillRect(Math.floor(x + width - 1 - i), bottomY - currentHeight, 1, currentHeight);
+            }
+            
+            // Draw spike tip
+            ctx.fillStyle = '#FF6666';
+            ctx.fillRect(centerX - 1, topY, 2, 2);
+        }
+
+        function gameLoop() {
+            if (!isPaused) {
+                updatePlayer();
+                updateMovingSpikes();
+                updateFallingBlocks();
+                updateDisappearingPlatforms();
+                updateTeleporters();
+                updateDevilTricks();
+                updateParticles();
+            }
+            render();
+
+            if (gameRunning) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function restartGame() {
+            currentLevel = 1;
+            lives = 5; // Reset to 5 lives
+            score = 0;
+            totalDeaths = 0;
+            gameTime = 0;
+            gameRunning = false;
+            levelStarted = false;
+            particles = [];
+            screenShake = 0;
+            gravity = 0.8;
+            gameOverScreen.style.display = 'none';
+            victoryScreen.style.display = 'none';
+            document.body.style.filter = 'none';
+            canvas.style.transform = 'scaleX(1)';
+            loadLevel(currentLevel);
+            showLevelIntro();
+        }
+
+        // Initialize game
+        initBGM();
+        loadLevel(currentLevel);
+        showLevelIntro();
+    </script>
+</body>
+</html>
