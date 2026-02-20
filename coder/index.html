@@ -1,3 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👨🏻‍💻 Code Runner 👨🏻‍💻</title>
+    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            overflow: hidden;
+        }
+
+        textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+        textarea::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+
+        .squircle {
+            border-radius: 24px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .squircle:focus-within {
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+            border-color: #6366f1;
+        }
+
+        .btn-enter {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
+        }
+        .btn-enter:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(79, 70, 229, 0.5);
+        }
+        .btn-enter:active {
+            transform: translateY(0);
+        }
+
+        .fade-out {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Full page iframe styles */
+        #preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center relative">
+
+    <div id="input-container" class="w-full max-w-3xl p-6 flex flex-col gap-6 z-10 transition-opacity duration-500">
+        
+        <div class="text-center space-y-2">
+            <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
+                HTML Runner
+            </h1>
+            <p class="text-slate-400 text-sm">Paste your HTML code or a URL below and hit Enter.</p>
+        </div>
+
+        <div class="squircle bg-slate-800 border border-slate-700 p-1 flex flex-col shadow-2xl">
+            <textarea 
+                id="code-input" 
+                class="w-full h-64 bg-transparent text-slate-200 p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed"
+                placeholder="<!DOCTYPE html>
+<html>
+<body>
+  <h1>Hello World</h1>
+</body>
+</html>
+
+Or just type: https://example.com"
+                spellcheck="false"
+            ></textarea>
+            
+            <div class="px-4 pb-4 flex justify-end">
+                <button 
+                    id="run-btn"
+                    class="btn-enter text-white font-bold py-2 px-8 rounded-xl shadow-lg flex items-center gap-2"
+                >
+                    <span>Run Code</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <div class="text-center text-xs text-slate-600">
+            Tip: Refresh the page to reset.
+        </div>
+    </div>
+
+    <div id="preview-container" class="absolute inset-0 w-full h-full bg-white hidden z-0">
+        <!-- Content will be injected here -->
+    </div>
+
 <script>
     const inputContainer = document.getElementById('input-container');
     const codeInput = document.getElementById('code-input');
@@ -75,3 +191,5 @@
         codeInput.focus();
     });
 </script>
+</body>
+</html>
