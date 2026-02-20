@@ -24,14 +24,16 @@ jobs:
           # Unzip
           unzip -q level-devil.zip
           
-          # Create level-devil folder (DELETE OLD ONE IF EXISTS)
+          # Remove old folder if exists (clean slate)
           rm -rf level-devil
+          
+          # Create fresh level-devil folder
           mkdir -p level-devil
           
           # Move all files from extracted folder to level-devil/
           mv level-devil-main/* level-devil/
           
-          # Clean up
+          # Clean up temp files
           rm -rf level-devil-main level-devil.zip
           
           # Show what we got
