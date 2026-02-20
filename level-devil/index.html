@@ -1,153 +1,27 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>😈 Level Devil 😈</title>
-    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: block;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>😈 Level Devil 😈</title>
+  <link rel="icon" href="https://math.hws.edu/favicon.ico" type="image/x-icon" />
+  <style>
+    /* Remove default margin/padding and make iframe fill entire viewport */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    iframe {
+      width: 100vw;
+      height: 100vh;
+      border: none;
+      display: block;
+    }
+  </style>
 </head>
 <body>
-    <iframe id="gameFrame" src="https://leveldevil-unblocked.github.io/" frameborder="0" allowfullscreen webkitallowfullscreen mozallowfullscreen allow="fullscreen *; autoplay; gamepad"></iframe>
-
-    <script>
-        const iframe = document.getElementById('gameFrame');
-        const BASE_URL = 'https://leveldevil-unblocked.github.io';
-        const BLOCKED_KEYWORDS = ['securly', 'blocked', 'access denied', 'restricted', 'goguardian', 'iboss', 'contentkeeper', 'lightspeed'];
-        let isReloading = false;
-        let loadConfirmed = false;
-        let checkInterval;
-
-        function normalizeUrl(url) {
-            if (!url) return '';
-            return url.replace(/^https?:\/\//, '')
-                     .replace(/^www\./, '')
-                     .replace(/\/+$/, '')
-                     .toLowerCase();
-        }
-
-        function isAllowedUrl(url) {
-            if (!url || url === 'about:blank') return false;
-            const normalized = normalizeUrl(url);
-            const baseNormalized = normalizeUrl(BASE_URL);
-            return normalized === baseNormalized || 
-                   normalized.startsWith(baseNormalized + '/') ||
-                   normalized.startsWith(baseNormalized + '#');
-        }
-
-        function triggerReload(reason) {
-            if (isReloading) return;
-            isReloading = true;
-            clearInterval(checkInterval);
-            console.log('RELOADING:', reason);
-            location.reload();
-        }
-
-        function checkIframe() {
-            if (isReloading) return;
-            
-            try {
-                const currentUrl = iframe.contentWindow.location.href;
-                const doc = iframe.contentDocument || iframe.contentWindow.document;
-                
-                // Check if URL is allowed
-                if (!isAllowedUrl(currentUrl)) {
-                    triggerReload('URL not allowed: ' + currentUrl);
-                    return;
-                }
-                
-                // Check for blocked keywords in content
-                if (doc && doc.body) {
-                    const content = (doc.body.innerText || '').toLowerCase();
-                    const title = (doc.title || '').toLowerCase();
-                    const combined = content + ' ' + title;
-                    
-                    for (let keyword of BLOCKED_KEYWORDS) {
-                        if (combined.includes(keyword)) {
-                            triggerReload('Blocked keyword found: ' + keyword);
-                            return;
-                        }
-                    }
-                    
-                    // Check if page is essentially blank (common with blockers)
-                    if (content.length < 100 && doc.body.innerHTML.length < 500) {
-                        // Might be blocked, but give it time if we haven't loaded yet
-                        if (loadConfirmed) {
-                            triggerReload('Page appears blank after load');
-                            return;
-                        }
-                    }
-                }
-                
-                // If we get here, check passed
-                if (!loadConfirmed) {
-                    loadConfirmed = true;
-                    console.log('Load confirmed good:', currentUrl);
-                }
-                
-            } catch (e) {
-                // Cross-origin error - we're on a different domain (blocked)
-                // This happens when securly/goguardian redirects to their block page
-                triggerReload('Cross-origin access denied (likely blocked)');
-            }
-        }
-
-        // Start checking immediately and frequently at first
-        let rapidCheckCount = 0;
-        const rapidCheck = setInterval(() => {
-            rapidCheckCount++;
-            checkIframe();
-            
-            // After 20 rapid checks (10 seconds), switch to slower interval
-            if (rapidCheckCount > 20) {
-                clearInterval(rapidCheck);
-                checkInterval = setInterval(checkIframe, 1000);
-            }
-        }, 500);
-
-        // Also check on load event as backup
-        iframe.addEventListener('load', () => {
-            console.log('Load event fired');
-            setTimeout(checkIframe, 100);
-        });
-
-        // Monitor title changes aggressively
-        const titleObserver = new MutationObserver(() => {
-            const title = document.title.toLowerCase();
-            for (let keyword of BLOCKED_KEYWORDS) {
-                if (title.includes(keyword)) {
-                    triggerReload('Blocked keyword in page title: ' + keyword);
-                    return;
-                }
-            }
-        });
-        
-        if (document.querySelector('title')) {
-            titleObserver.observe(document.querySelector('title'), {
-                childList: true,
-                subtree: true,
-                characterData: true
-            });
-        }
-
-        // Absolute fallback: reload if we never confirm good load after 8 seconds
-        setTimeout(() => {
-            if (!loadConfirmed && !isReloading) {
-                triggerReload('Timeout: Never confirmed good load');
-            }
-        }, 8000);
-    </script>
+  <iframe src="https://leveldevil-unblocked.github.io/" title="Level Devil"></iframe>
 </body>
 </html>
