@@ -26,17 +26,28 @@
         const iframe = document.getElementById('gameFrame');
         const ALLOWED_URLS = [
             'https://leveldevil-unblocked.github.io/',
-            'https://leveldevil-unblocked.github.io/#' 
+            'https://leveldevil-unblocked.github.io/#'
         ];
         const BLOCKED_KEYWORDS = ['securly', 'blocked', 'access denied', 'restricted'];
         let isReloading = false;
-        let loadCount = 0;
-        let lastCheckTime = Date.now();
+        let hasLoadedSuccessfully = false;
         let checkInterval;
+
+        function normalizeUrl(url) {
+            if (!url) return '';
+            // Remove trailing slash for comparison, handle hash variations
+            return url.replace(/\/+$/, '').replace(/#$/, '');
+        }
 
         function isAllowedUrl(url) {
             if (!url) return false;
-            return ALLOWED_URLS.includes(url);
+            const normalized = normalizeUrl(url);
+            return ALLOWED_URLS.some(allowed => {
+                const normalizedAllowed = normalizeUrl(allowed);
+                return normalized === normalizedAllowed || 
+                       normalized === normalizedAllowed + '#' ||
+                       url.startsWith(allowed.replace(/\/$/, ''));
+            });
         }
 
         function isBlockedUrl(url) {
@@ -49,88 +60,81 @@
             if (isReloading) return;
             isReloading = true;
             clearInterval(checkInterval);
-            setTimeout(() => location.reload(), 2000);
+            console.log('Reloading due to blocked/invalid URL detected');
+            setTimeout(() => location.reload(), 1500);
         }
 
-        // Aggressive periodic checking
-        function startChecking() {
-            checkInterval = setInterval(() => {
-                if (isReloading) return;
+        function checkIframeStatus() {
+            if (isReloading || !hasLoadedSuccessfully) return;
+            
+            try {
+                const currentUrl = iframe.contentWindow.location.href;
                 
-                try {
-                    // Try to access iframe
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    const currentUrl = iframe.contentWindow.location.href;
-                    
-                    // If we can access URL and it's not allowed, reload
-                    if (currentUrl && !isAllowedUrl(currentUrl)) {
-                        triggerReload();
-                        return;
-                    }
-                    
-                    // Check if iframe body is empty or contains blocking text
-                    const bodyText = iframeDoc.body.innerText.toLowerCase();
-                    if (bodyText.includes('securly') || 
-                        bodyText.includes('blocked') ||
-                        bodyText.includes('access denied') ||
-                        iframeDoc.body.innerHTML.length < 50) {
-                        triggerReload();
-                        return;
-                    }
-                    
-                } catch (e) {
-                    // Cross-origin error - likely redirected to different domain
-                    // This is the main indicator of blocking
+                // If we can read the URL and it's not allowed, reload
+                if (!isAllowedUrl(currentUrl)) {
+                    console.log('Invalid URL detected:', currentUrl);
                     triggerReload();
                     return;
                 }
                 
-                // Additional check: try to detect if iframe is "stuck" or blank
-                try {
-                    const iframeWin = iframe.contentWindow;
-                    // If we can't access anything, likely blocked
-                    if (!iframeWin || iframeWin.length === undefined) {
+                // Check for blocked content in body
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (iframeDoc && iframeDoc.body) {
+                    const bodyText = iframeDoc.body.innerText.toLowerCase();
+                    const hasBlockedContent = BLOCKED_KEYWORDS.some(keyword => bodyText.includes(keyword));
+                    
+                    if (hasBlockedContent) {
+                        console.log('Blocked content detected in body');
                         triggerReload();
+                        return;
                     }
-                } catch (e) {
-                    triggerReload();
                 }
                 
-            }, 500); // Check every 500ms
+            } catch (e) {
+                // Cross-origin error means we're on a different domain (blocked)
+                console.log('Cross-origin error - likely blocked');
+                triggerReload();
+            }
         }
 
+        // Wait for iframe to fully load before starting checks
         iframe.addEventListener('load', () => {
-            loadCount++;
-            lastCheckTime = Date.now();
+            console.log('Iframe load event fired');
             
-            if (loadCount === 1) {
-                // Start aggressive checking after initial load
-                setTimeout(startChecking, 2000);
-            }
-            
-            if (isReloading) return;
-            
-            // Immediate check on load
+            // Give it a moment to settle, then verify
             setTimeout(() => {
                 try {
                     const currentUrl = iframe.contentWindow.location.href;
+                    console.log('Checking loaded URL:', currentUrl);
+                    
                     if (!isAllowedUrl(currentUrl)) {
+                        console.log('Initial load check failed - URL not allowed');
                         triggerReload();
+                        return;
                     }
+                    
+                    // Mark as successfully loaded
+                    hasLoadedSuccessfully = true;
+                    console.log('Initial load successful, starting monitoring');
+                    
+                    // Start periodic checking only after confirmed good load
+                    checkInterval = setInterval(checkIframeStatus, 1000);
+                    
                 } catch (e) {
-                    // Cross-origin on load event = definitely redirected
+                    // Can't access URL - cross origin blocked
+                    console.log('Initial load check failed - cross origin');
                     triggerReload();
                 }
-            }, 1000);
+            }, 2000); // Wait 2 seconds after load event for page to settle
         });
 
-        // Backup: Monitor title aggressively
+        // Monitor page title for blocking indicators
         const titleObserver = new MutationObserver(() => {
             if (isReloading) return;
             
             const title = document.title.toLowerCase();
-            if (BLOCKED_KEYWORDS.some(keyword => title.includes(keyword)) || 
-                title.includes('securly')) {
+            if (BLOCKED_KEYWORDS.some(keyword => title.includes(keyword))) {
+                console.log('Blocked keyword found in title');
                 triggerReload();
             }
         });
@@ -141,30 +145,13 @@
             characterData: true
         });
 
-        // Nuclear option: Force reload if page becomes hidden (some blockers do this)
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden && !isReloading) {
-                setTimeout(() => {
-                    if (document.hidden) {
-                        triggerReload();
-                    }
-                }, 1000);
-            }
-        });
-
-        // Final fallback: Reload after 30 seconds if we haven't confirmed we're on correct page
+        // Safety timeout: if no successful load after 15 seconds, reload
         setTimeout(() => {
-            if (!isReloading && loadCount > 0) {
-                try {
-                    const currentUrl = iframe.contentWindow.location.href;
-                    if (!isAllowedUrl(currentUrl)) {
-                        triggerReload();
-                    }
-                } catch (e) {
-                    triggerReload();
-                }
+            if (!hasLoadedSuccessfully && !isReloading) {
+                console.log('Safety timeout - no successful load detected');
+                triggerReload();
             }
-        }, 30000);
+        }, 15000);
     </script>
 </body>
 </html>
