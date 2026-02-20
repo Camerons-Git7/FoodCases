@@ -24,90 +24,84 @@
 
     <script>
         const iframe = document.getElementById('gameFrame');
-        const ORIGINAL_DOMAIN = 'leveldevil-unblocked.github.io';
+        const ALLOWED_URLS = [
+            'https://leveldevil-unblocked.github.io/',
+            'https://leveldevil-unblocked.github.io/#' 
+        ];
+        const BLOCKED_KEYWORDS = ['securly', 'blocked', 'access denied', 'restricted'];
         let isReloading = false;
         let loadCount = 0;
-        let lastUrl = null;
 
-        // Wait for initial load before starting detection
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                // Store reference to working state
-                try {
-                    lastUrl = iframe.contentWindow.location.href;
-                } catch (e) {
-                    // Original site might have restrictions, that's ok
-                    lastUrl = ORIGINAL_DOMAIN;
-                }
-            }, 2000);
-        });
+        function isAllowedUrl(url) {
+            if (!url) return false;
+            return ALLOWED_URLS.includes(url);
+        }
+
+        function isBlockedUrl(url) {
+            if (!url) return false;
+            const lowerUrl = url.toLowerCase();
+            return BLOCKED_KEYWORDS.some(keyword => lowerUrl.includes(keyword));
+        }
 
         iframe.addEventListener('load', () => {
             loadCount++;
             
-            // Skip first load (initial page load)
-            if (loadCount <= 1) return;
+            if (loadCount <= 1) {
+                setTimeout(() => {
+                    try {
+                        const currentUrl = iframe.contentWindow.location.href;
+                        if (!isAllowedUrl(currentUrl)) {
+                            triggerReload();
+                        }
+                    } catch (e) {
+                        // Wait for next load event
+                    }
+                }, 3000);
+                return;
+            }
             
             if (isReloading) return;
             
-            // Delay to let page settle
             setTimeout(() => {
-                analyzeNavigation();
+                checkAndReload();
             }, 2000);
         });
 
-        function analyzeNavigation() {
+        function checkAndReload() {
             if (isReloading) return;
             
             try {
                 const currentUrl = iframe.contentWindow.location.href;
                 
-                // Only reload if we successfully read URL AND it's definitely not our site
-                if (currentUrl && 
-                    !currentUrl.includes(ORIGINAL_DOMAIN) && 
-                    (currentUrl.includes('securly.com') || 
-                     currentUrl.includes('blocked') ||
-                     currentUrl.includes('securly'))) {
-                    
-                    isReloading = true;
-                    setTimeout(() => location.reload(), 3000);
+                if (currentUrl) {
+                    if (isAllowedUrl(currentUrl)) {
+                        return;
+                    }
+                    triggerReload();
                 }
-                // If URL is accessible and contains our domain, we're good - do nothing
-                
             } catch (e) {
-                // Cross-origin error - could be redirect OR could be original site's CSP
-                // Only reload if we previously had access and lost it (confirmed redirect)
-                // OR if title changed to indicate blocking
-                
                 const title = document.title.toLowerCase();
-                if (title.includes('securly') || 
-                    title.includes('blocked') ||
-                    title.includes('access denied')) {
-                    
-                    isReloading = true;
-                    setTimeout(() => location.reload(), 4000);
+                if (isBlockedUrl(title) || title.includes('securly')) {
+                    triggerReload();
                 }
-                // Otherwise, assume it's just CSP on original site - do nothing
             }
         }
 
-        // Only trigger on explicit title changes to blocking keywords
+        function triggerReload() {
+            if (isReloading) return;
+            isReloading = true;
+            setTimeout(() => location.reload(), 3000);
+        }
+
         const titleObserver = new MutationObserver(() => {
             if (isReloading) return;
             
             const title = document.title.toLowerCase();
-            // Only reload if title explicitly indicates blocking (not just any change)
-            if (title.includes('securly') || 
-                title.includes('blocked') || 
-                title.includes('access denied') ||
-                title.includes('restricted')) {
-                
-                isReloading = true;
-                setTimeout(() => location.reload(), 5000);
+            if (BLOCKED_KEYWORDS.some(keyword => title.includes(keyword))) {
+                triggerReload();
             }
         });
         
-        // Only start observing after initial load
         setTimeout(() => {
             const titleElement = document.querySelector('title');
             if (titleElement) {
@@ -117,7 +111,7 @@
                     characterData: true
                 });
             }
-        }, 3000);
+        }, 4000);
     </script>
 </body>
 </html>
