@@ -14,20 +14,21 @@ jobs:
       - name: Get latest code
         uses: actions/checkout@v4
         
-      - name: Sync ALL files to InfinityFree
+      - name: Sync files to InfinityFree
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
+          protocol: ftp
           port: 21
-          server-dir: /htdocs/
-          local-dir: ./
+          server-dir: htdocs/level-devil/
+          local-dir: ./level-devil/
+          log-level: verbose
+          dry-run: false
           exclude: |
             **/.git*
             **/.git*/**
-            **/node_modules/**
             **/.github/**
-            **/README.md
-            **/.gitignore
+            README.md
+            .gitignore
