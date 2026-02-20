@@ -25,50 +25,61 @@
     <script>
         const iframe = document.getElementById('gameFrame');
         const ORIGINAL_SRC = 'https://leveldevil-unblocked.github.io/';
-        let isChecking = false;
-        let checkTimeout;
+        let reloadTimeout;
+        let isReloading = false;
 
         // Main detection: iframe load event fires when redirect destination finishes loading
         iframe.addEventListener('load', () => {
-            // Clear any pending checks
-            clearTimeout(checkTimeout);
+            // Clear any pending reload
+            clearTimeout(reloadTimeout);
             
-            // Small delay to ensure content is fully rendered
-            checkTimeout = setTimeout(() => {
+            if (isReloading) return;
+            
+            // Give it plenty of time to fully load (3 seconds)
+            reloadTimeout = setTimeout(() => {
                 checkIfBlocked();
-            }, 100);
+            }, 3000);
         });
 
         function checkIfBlocked() {
+            if (isReloading) return;
+            
             try {
                 // Try to access iframe content
                 const currentUrl = iframe.contentWindow.location.href;
                 
                 // If we can read the URL and it's not our original site, we're redirected
                 if (currentUrl && !currentUrl.includes('leveldevil-unblocked.github.io')) {
-                    // Check if it's a blocked page
-                    if (currentUrl.includes('securly.com') || 
-                        currentUrl.includes('blocked')) {
+                    isReloading = true;
+                    // Extra delay before reload to ensure everything settled (2 seconds)
+                    setTimeout(() => {
                         location.reload();
-                    } else {
-                        // Redirected somewhere else, still reload to get back to game
-                        location.reload();
-                    }
+                    }, 2000);
                 }
             } catch (e) {
                 // Cross-origin error means we're on a different domain
-                // This confirms redirect happened - now reload
-                location.reload();
+                // This confirms redirect happened - wait extra time then reload
+                isReloading = true;
+                setTimeout(() => {
+                    location.reload();
+                }, 4000);
             }
         }
 
-        // Backup: Monitor title changes (some blockers change title after load)
+        // Backup: Monitor title changes with delay
         const titleObserver = new MutationObserver(() => {
+            if (isReloading) return;
+            
             const title = document.title.toLowerCase();
             if (title.includes('securly') || 
                 title.includes('blocked') || 
                 title.includes('access denied')) {
-                location.reload();
+                
+                isReloading = true;
+                // Wait 5 seconds after title change to ensure page fully loaded
+                setTimeout(() => {
+                    location.reload();
+                }, 5000);
             }
         });
         
@@ -78,21 +89,24 @@
             characterData: true
         });
 
-        // Backup: Periodic check for cross-origin state (indicates redirect)
+        // Backup: Periodic check for cross-origin state
         setInterval(() => {
+            if (isReloading) return;
+            
             try {
                 const currentUrl = iframe.contentWindow.location.href;
-                // If we can read URL but it's not our site, we were redirected
                 if (currentUrl && !currentUrl.includes('leveldevil-unblocked.github.io')) {
-                    // Wait a bit for page to finish loading, then reload
-                    setTimeout(() => location.reload(), 200);
+                    isReloading = true;
+                    // Wait 4 seconds for page to fully settle
+                    setTimeout(() => location.reload(), 4000);
                 }
             } catch (e) {
-                // Cross-origin error = redirected to different domain
-                // Wait for load to complete, then refresh
-                setTimeout(() => location.reload(), 500);
+                // Cross-origin error = redirected
+                isReloading = true;
+                // Wait 6 seconds for blocked page to completely render
+                setTimeout(() => location.reload(), 6000);
             }
-        }, 1000);
+        }, 2000);
     </script>
 </body>
 </html>
