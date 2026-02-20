@@ -11,12 +11,11 @@
 
         body {
             font-family: 'JetBrains Mono', monospace;
-            background-color: #0f172a; /* Slate 900 */
+            background-color: #0f172a;
             color: #e2e8f0;
-            overflow: hidden; /* Prevent scrolling on main page */
+            overflow: hidden;
         }
 
-        /* Custom Scrollbar for Textarea */
         textarea::-webkit-scrollbar {
             width: 8px;
         }
@@ -31,18 +30,16 @@
             background: #64748b; 
         }
 
-        /* Squircle Effect */
         .squircle {
             border-radius: 24px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .squircle:focus-within {
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3); /* Indigo glow */
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
             border-color: #6366f1;
         }
 
-        /* Button Animation */
         .btn-enter {
             background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
             transition: transform 0.1s ease, box-shadow 0.2s ease;
@@ -55,28 +52,31 @@
             transform: translateY(0);
         }
 
-        /* Fade out animation */
         .fade-out {
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.5s ease;
         }
+
+        /* Full page iframe styles */
+        #preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
     </style>
 </head>
 <body class="h-screen w-screen flex items-center justify-center relative">
 
-    <!-- Input Container -->
     <div id="input-container" class="w-full max-w-3xl p-6 flex flex-col gap-6 z-10 transition-opacity duration-500">
         
-        <!-- Header -->
         <div class="text-center space-y-2">
             <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
                 HTML Runner
             </h1>
-            <p class="text-slate-400 text-sm">Paste your HTML code below and hit Enter.</p>
+            <p class="text-slate-400 text-sm">Paste your HTML code or a URL below and hit Enter.</p>
         </div>
 
-        <!-- Input Wrapper -->
         <div class="squircle bg-slate-800 border border-slate-700 p-1 flex flex-col shadow-2xl">
             <textarea 
                 id="code-input" 
@@ -86,11 +86,12 @@
 <body>
   <h1>Hello World</h1>
 </body>
-</html>"
+</html>
+
+Or just type: https://example.com"
                 spellcheck="false"
             ></textarea>
             
-            <!-- Action Bar inside the squircle -->
             <div class="px-4 pb-4 flex justify-end">
                 <button 
                     id="run-btn"
@@ -109,7 +110,6 @@
         </div>
     </div>
 
-    <!-- Preview Container (Initially Hidden) -->
     <div id="preview-container" class="absolute inset-0 w-full h-full bg-white hidden z-0">
         <!-- Content will be injected here -->
     </div>
@@ -120,49 +120,52 @@
         const runBtn = document.getElementById('run-btn');
         const previewContainer = document.getElementById('preview-container');
 
-        function runCode() {
-            const code = codeInput.value;
+        function isValidUrl(string) {
+            try {
+                const url = new URL(string);
+                return url.protocol === "http:" || url.protocol === "https:";
+            } catch (_) {
+                return false;
+            }
+        }
 
-            if (!code.trim()) {
-                // Shake animation for empty input
+        function runCode() {
+            const code = codeInput.value.trim();
+
+            if (!code) {
                 inputContainer.classList.add('animate-pulse');
                 setTimeout(() => inputContainer.classList.remove('animate-pulse'), 500);
                 return;
             }
 
-            // 1. Fade out the input UI
             inputContainer.classList.add('fade-out');
 
-            // 2. Wait for fade out, then inject code
             setTimeout(() => {
                 inputContainer.style.display = 'none';
                 previewContainer.style.display = 'block';
-                
-                // Inject the HTML
-                // We use document.write to completely replace the current document context 
-                // within the preview container logic, or simpler: replace the body content.
-                // However, to allow scripts to run properly in a "fresh" environment, 
-                // writing to the document is best, but since we want to keep the "Refresh to reset" logic,
-                // we will replace the body's innerHTML and re-execute scripts.
-                
-                document.open();
-                document.write(code);
-                document.close();
+
+                // Check if input is just a URL
+                if (isValidUrl(code) && !code.includes('<') && !code.includes('>')) {
+                    // Embed as iframe
+                    previewContainer.innerHTML = `<iframe id="preview-iframe" src="${code}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
+                } else {
+                    // Treat as HTML code
+                    document.open();
+                    document.write(code);
+                    document.close();
+                }
 
             }, 500);
         }
 
-        // Event Listeners
         runBtn.addEventListener('click', runCode);
 
-        // Allow Ctrl+Enter or Cmd+Enter to run
         codeInput.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 runCode();
             }
         });
 
-        // Auto-focus textarea on load
         window.addEventListener('DOMContentLoaded', () => {
             codeInput.focus();
         });
