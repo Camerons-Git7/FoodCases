@@ -25,16 +25,13 @@
     <script>
         const iframe = document.getElementById('gameFrame');
         const BASE_URL = 'https://leveldevil-unblocked.github.io';
-        const BLOCKED_KEYWORDS = ['securly', 'blocked', 'access denied', 'restricted', 'goguardian', 'iboss'];
+        const BLOCKED_KEYWORDS = ['securly', 'blocked', 'access denied', 'restricted', 'goguardian', 'iboss', 'contentkeeper', 'lightspeed'];
         let isReloading = false;
-        let confirmedGoodLoad = false;
-        let lastGoodUrl = null;
+        let loadConfirmed = false;
         let checkInterval;
-        let gracePeriod = true;
 
         function normalizeUrl(url) {
             if (!url) return '';
-            // Remove protocol, www, and trailing slashes for comparison
             return url.replace(/^https?:\/\//, '')
                      .replace(/^www\./, '')
                      .replace(/\/+$/, '')
@@ -42,11 +39,9 @@
         }
 
         function isAllowedUrl(url) {
-            if (!url) return false;
+            if (!url || url === 'about:blank') return false;
             const normalized = normalizeUrl(url);
             const baseNormalized = normalizeUrl(BASE_URL);
-            
-            // Allow base URL and any paths/hash on it
             return normalized === baseNormalized || 
                    normalized.startsWith(baseNormalized + '/') ||
                    normalized.startsWith(baseNormalized + '#');
@@ -56,108 +51,103 @@
             if (isReloading) return;
             isReloading = true;
             clearInterval(checkInterval);
-            console.log('Reloading because:', reason);
-            setTimeout(() => location.reload(), 1000);
+            console.log('RELOADING:', reason);
+            location.reload();
         }
 
-        function getIframeUrl() {
-            try {
-                return iframe.contentWindow.location.href;
-            } catch (e) {
-                return 'CROSS_ORIGIN';
-            }
-        }
-
-        function checkStatus() {
+        function checkIframe() {
             if (isReloading) return;
             
-            const currentUrl = getIframeUrl();
-            
-            // If we can't access URL (cross-origin), it might be blocked
-            if (currentUrl === 'CROSS_ORIGIN') {
-                // Only reload if we previously had a good load and now can't access
-                if (confirmedGoodLoad && lastGoodUrl) {
-                    triggerReload('Lost access to iframe (cross-origin) after good load');
+            try {
+                const currentUrl = iframe.contentWindow.location.href;
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                
+                // Check if URL is allowed
+                if (!isAllowedUrl(currentUrl)) {
+                    triggerReload('URL not allowed: ' + currentUrl);
+                    return;
                 }
-                return;
-            }
-
-            // Update last known good URL
-            if (isAllowedUrl(currentUrl)) {
-                lastGoodUrl = currentUrl;
-                if (!confirmedGoodLoad) {
-                    confirmedGoodLoad = true;
-                    gracePeriod = false;
-                    console.log('Confirmed good load on:', currentUrl);
+                
+                // Check for blocked keywords in content
+                if (doc && doc.body) {
+                    const content = (doc.body.innerText || '').toLowerCase();
+                    const title = (doc.title || '').toLowerCase();
+                    const combined = content + ' ' + title;
+                    
+                    for (let keyword of BLOCKED_KEYWORDS) {
+                        if (combined.includes(keyword)) {
+                            triggerReload('Blocked keyword found: ' + keyword);
+                            return;
+                        }
+                    }
+                    
+                    // Check if page is essentially blank (common with blockers)
+                    if (content.length < 100 && doc.body.innerHTML.length < 500) {
+                        // Might be blocked, but give it time if we haven't loaded yet
+                        if (loadConfirmed) {
+                            triggerReload('Page appears blank after load');
+                            return;
+                        }
+                    }
                 }
-                return;
-            }
-
-            // URL is not allowed
-            if (!gracePeriod && confirmedGoodLoad) {
-                triggerReload('Navigated to disallowed URL: ' + currentUrl);
+                
+                // If we get here, check passed
+                if (!loadConfirmed) {
+                    loadConfirmed = true;
+                    console.log('Load confirmed good:', currentUrl);
+                }
+                
+            } catch (e) {
+                // Cross-origin error - we're on a different domain (blocked)
+                // This happens when securly/goguardian redirects to their block page
+                triggerReload('Cross-origin access denied (likely blocked)');
             }
         }
 
-        // Handle load event
-        iframe.addEventListener('load', () => {
-            console.log('Iframe load event');
+        // Start checking immediately and frequently at first
+        let rapidCheckCount = 0;
+        const rapidCheck = setInterval(() => {
+            rapidCheckCount++;
+            checkIframe();
             
-            // Wait for iframe to settle
-            setTimeout(() => {
-                const url = getIframeUrl();
-                console.log('Checking URL after load:', url);
-                
-                if (url !== 'CROSS_ORIGIN' && isAllowedUrl(url)) {
-                    confirmedGoodLoad = true;
-                    lastGoodUrl = url;
-                    gracePeriod = false;
-                    console.log('Initial load confirmed good');
-                    
-                    // Start monitoring
-                    if (!checkInterval) {
-                        checkInterval = setInterval(checkStatus, 2000);
-                    }
-                } else if (url === 'CROSS_ORIGIN') {
-                    // Might still be loading, give it more time
-                    console.log('Cross-origin on initial load, waiting...');
-                } else {
-                    triggerReload('Initial load to bad URL: ' + url);
-                }
-            }, 3000); // 3 second grace period for initial load
+            // After 20 rapid checks (10 seconds), switch to slower interval
+            if (rapidCheckCount > 20) {
+                clearInterval(rapidCheck);
+                checkInterval = setInterval(checkIframe, 1000);
+            }
+        }, 500);
+
+        // Also check on load event as backup
+        iframe.addEventListener('load', () => {
+            console.log('Load event fired');
+            setTimeout(checkIframe, 100);
         });
 
-        // Monitor title changes
+        // Monitor title changes aggressively
         const titleObserver = new MutationObserver(() => {
             const title = document.title.toLowerCase();
-            if (BLOCKED_KEYWORDS.some(k => title.includes(k))) {
-                triggerReload('Blocked keyword in title');
+            for (let keyword of BLOCKED_KEYWORDS) {
+                if (title.includes(keyword)) {
+                    triggerReload('Blocked keyword in page title: ' + keyword);
+                    return;
+                }
             }
         });
         
-        titleObserver.observe(document.querySelector('title'), {
-            childList: true,
-            subtree: true,
-            characterData: true
-        });
+        if (document.querySelector('title')) {
+            titleObserver.observe(document.querySelector('title'), {
+                childList: true,
+                subtree: true,
+                characterData: true
+            });
+        }
 
-        // End grace period after 10 seconds regardless
+        // Absolute fallback: reload if we never confirm good load after 8 seconds
         setTimeout(() => {
-            gracePeriod = false;
-            if (!confirmedGoodLoad && !isReloading) {
-                triggerReload('Never confirmed good load within grace period');
+            if (!loadConfirmed && !isReloading) {
+                triggerReload('Timeout: Never confirmed good load');
             }
-        }, 10000);
-
-        // Handle messages from iframe (some games postMessage)
-        window.addEventListener('message', (e) => {
-            // If we get messages, iframe is likely working
-            if (!confirmedGoodLoad && isAllowedUrl(e.origin)) {
-                console.log('Received message from allowed origin:', e.origin);
-                confirmedGoodLoad = true;
-                gracePeriod = false;
-            }
-        });
+        }, 8000);
     </script>
 </body>
 </html>
