@@ -24,57 +24,51 @@
 
     <script>
         const iframe = document.getElementById('gameFrame');
-        const BLOCKED_URL = 'https://useast2-www.securly.com/';
         const ORIGINAL_SRC = 'https://leveldevil-unblocked.github.io/';
-        
-        let lastKnownSrc = ORIGINAL_SRC;
-        let redirectCount = 0;
-        const MAX_REDIRECTS = 5;
+        let isChecking = false;
+        let checkTimeout;
 
-        // Method 1: Periodic URL checking with cross-origin handling
-        setInterval(() => {
-            try {
-                const currentUrl = iframe.contentWindow.location.href;
-                
-                if (currentUrl && (
-                    currentUrl.includes('securly.com') || 
-                    currentUrl.includes('blocked') ||
-                    currentUrl !== lastKnownSrc
-                )) {
-                    handleRedirect();
-                }
-            } catch (e) {
-                // Cross-origin error - likely redirected to different domain
-                // This is actually a good indicator of a redirect
-                checkIframeHealth();
-            }
-        }, 300);
-
-        // Method 2: Enhanced load event listener
+        // Main detection: iframe load event fires when redirect destination finishes loading
         iframe.addEventListener('load', () => {
-            try {
-                const currentUrl = iframe.contentWindow.location.href;
-                lastKnownSrc = currentUrl;
-                
-                if (currentUrl && (
-                    currentUrl.includes('securly.com') || 
-                    currentUrl.includes('blocked')
-                )) {
-                    handleRedirect();
-                }
-            } catch (e) {
-                // Cross-origin access denied = redirected away from original domain
-                checkIframeHealth();
-            }
+            // Clear any pending checks
+            clearTimeout(checkTimeout);
+            
+            // Small delay to ensure content is fully rendered
+            checkTimeout = setTimeout(() => {
+                checkIfBlocked();
+            }, 100);
         });
 
-        // Method 3: Monitor document title for blocking indicators
+        function checkIfBlocked() {
+            try {
+                // Try to access iframe content
+                const currentUrl = iframe.contentWindow.location.href;
+                
+                // If we can read the URL and it's not our original site, we're redirected
+                if (currentUrl && !currentUrl.includes('leveldevil-unblocked.github.io')) {
+                    // Check if it's a blocked page
+                    if (currentUrl.includes('securly.com') || 
+                        currentUrl.includes('blocked')) {
+                        location.reload();
+                    } else {
+                        // Redirected somewhere else, still reload to get back to game
+                        location.reload();
+                    }
+                }
+            } catch (e) {
+                // Cross-origin error means we're on a different domain
+                // This confirms redirect happened - now reload
+                location.reload();
+            }
+        }
+
+        // Backup: Monitor title changes (some blockers change title after load)
         const titleObserver = new MutationObserver(() => {
             const title = document.title.toLowerCase();
             if (title.includes('securly') || 
                 title.includes('blocked') || 
                 title.includes('access denied')) {
-                handleRedirect();
+                location.reload();
             }
         });
         
@@ -84,95 +78,21 @@
             characterData: true
         });
 
-        // Method 4: Check if iframe content is accessible/visible
-        function checkIframeHealth() {
+        // Backup: Periodic check for cross-origin state (indicates redirect)
+        setInterval(() => {
             try {
-                // Try to access iframe document - if we can't, it might be blocked
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                const bodyContent = iframeDoc.body.innerHTML;
-                
-                // Check if body is empty or contains blocking keywords
-                if (bodyContent.length < 100 || 
-                    bodyContent.toLowerCase().includes('securly') ||
-                    bodyContent.toLowerCase().includes('blocked')) {
-                    handleRedirect();
+                const currentUrl = iframe.contentWindow.location.href;
+                // If we can read URL but it's not our site, we were redirected
+                if (currentUrl && !currentUrl.includes('leveldevil-unblocked.github.io')) {
+                    // Wait a bit for page to finish loading, then reload
+                    setTimeout(() => location.reload(), 200);
                 }
             } catch (e) {
-                // Cross-origin error strongly suggests redirect to different domain
-                handleRedirect();
+                // Cross-origin error = redirected to different domain
+                // Wait for load to complete, then refresh
+                setTimeout(() => location.reload(), 500);
             }
-        }
-
-        // Method 5: Monitor iframe src attribute changes
-        const srcObserver = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
-                    const newSrc = iframe.src;
-                    if (newSrc.includes('securly.com') || newSrc !== ORIGINAL_SRC) {
-                        handleRedirect();
-                    }
-                }
-            });
-        });
-        
-        srcObserver.observe(iframe, {
-            attributes: true,
-            attributeFilter: ['src']
-        });
-
-        // Central redirect handler with reload/reset logic
-        function handleRedirect() {
-            redirectCount++;
-            
-            if (redirectCount > MAX_REDIRECTS) {
-                // Too many redirects, try resetting iframe completely
-                redirectCount = 0;
-                resetIframe();
-            } else {
-                // Reload the entire page
-                location.reload();
-            }
-        }
-
-        // Nuclear option: completely rebuild the iframe
-        function resetIframe() {
-            const parent = iframe.parentNode;
-            const newIframe = document.createElement('iframe');
-            
-            newIframe.id = 'gameFrame';
-            newIframe.src = ORIGINAL_SRC;
-            newIframe.frameBorder = '0';
-            newIframe.allowFullscreen = true;
-            newIframe.webkitallowfullscreen = true;
-            newIframe.mozallowfullscreen = true;
-            newIframe.setAttribute('allow', 'fullscreen *; autoplay; gamepad');
-            
-            parent.removeChild(iframe);
-            parent.appendChild(newIframe);
-            
-            // Re-attach event listeners to new iframe
-            location.reload(); // Still reload to ensure clean state
-        }
-
-        // Method 6: Window message event (some blockers communicate via postMessage)
-        window.addEventListener('message', (event) => {
-            if (event.data && (
-                event.data.type === 'blocked' || 
-                event.data.blocked === true ||
-                (typeof event.data === 'string' && event.data.includes('securly'))
-            )) {
-                handleRedirect();
-            }
-        });
-
-        // Method 7: Visibility change detection (some blockers change visibility)
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                setTimeout(() => {
-                    checkIframeHealth();
-                }, 100);
-            }
-        });
+        }, 1000);
     </script>
 </body>
 </html>
