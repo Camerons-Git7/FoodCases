@@ -31,6 +31,12 @@
       color: #fff;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      transition: opacity 1s ease;
+      opacity: 1;
+    }
+    /* Fade-out animation */
+    body.fade-out {
+      opacity: 0;
     }
     #matrixCanvas {
       position: fixed;
@@ -209,6 +215,19 @@
       }
     }
     setInterval(draw, 30);
+
+    // Fade-out animation before redirect
+    document.querySelectorAll('.game-button').forEach(button => {
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        const url = button.getAttribute('href');
+        document.body.classList.add('fade-out');
+        // Redirect after duration matches CSS transition (1s)
+        setTimeout(() => {
+          window.location.href = url;
+        }, 1000);
+      });
+    });
   </script>
 </body>
 </html>
