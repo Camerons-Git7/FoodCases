@@ -31,7 +31,13 @@
       color: #fff;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      
+      /* Start transparent for fade-in on load */
+      opacity: 0;
       transition: opacity 1s ease;
+    }
+    /* Fade-in to full opacity */
+    body.fade-in {
       opacity: 1;
     }
     /* Fade-out animation */
@@ -190,7 +196,7 @@
     const nums = '0123456789';
     const alphabet = katakana + latin + nums;
     const fontSize = 16;
-    const columns = canvas.width / fontSize;
+    const columns = Math.floor(canvas.width / fontSize);
     const rainDrops = [];
 
     for (let x = 0; x < columns; x++) {
@@ -221,12 +227,26 @@
       button.addEventListener('click', event => {
         event.preventDefault();
         const url = button.getAttribute('href');
+        document.body.classList.remove('fade-in'); // Remove fade-in before fade-out
         document.body.classList.add('fade-out');
         // Redirect after duration matches CSS transition (1s)
         setTimeout(() => {
           window.location.href = url;
         }, 1000);
       });
+    });
+
+    // On page load, trigger fade-in
+    window.onload = () => {
+      document.body.classList.add('fade-in');
+    };
+
+    // Remove fade classes when page is shown (including back navigation)
+    window.addEventListener('pageshow', () => {
+      document.body.classList.remove('fade-out', 'fade-in');
+      // Immediately add fade-in to trigger fade effect on bfcache navigation
+      void document.body.offsetWidth; // Trigger reflow
+      document.body.classList.add('fade-in');
     });
   </script>
 </body>
