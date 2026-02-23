@@ -1,186 +1,214 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔗 Seamless Games 🔗</title>
-    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --accent: #0f0; /* Matrix Green */
-            --bg: #000;
-            --surface: #050505;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            min-height: 100vh;
-            background: var(--bg);
-            font-family: 'Nunito', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 3rem;
-            overflow-x: hidden;
-            color: #fff;
-        }
-
-        /* Matrix Canvas Background */
-        #matrixCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            opacity: 0.6;
-        }
-
-        .title {
-            font-size: 4rem;
-            font-weight: 900;
-            color: var(--accent);
-            text-align: center;
-            letter-spacing: 0.05em;
-            margin-bottom: 2rem;
-            text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
-            animation: textPulse 2s infinite alternate;
-        }
-
-        @keyframes textPulse {
-            from { text-shadow: 0 0 10px var(--accent); }
-            to { text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0; }
-        }
-
-        .button-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.5rem;
-            width: 300px;
-        }
-
-        .game-button {
-            font-family: 'Courier New', Courier, monospace; /* Matrix feel */
-            font-size: 1.5rem;
-            font-weight: 700;
-            border: 2px solid var(--accent);
-            padding: 1rem 2rem;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.3s ease;
-            width: 100%;
-            border-radius: 10px;
-            text-decoration: none;
-            z-index: 1;
-            display: block;
-            background: rgba(0, 0, 0, 0.7);
-            color: var(--accent);
-            text-align: center;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
-        }
-
-.button-content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    position: relative;
-    z-index: 2;
-}
-
-.button-content span:not(:nth-child(2)) {
-    color: transparent;
-    text-shadow: 0 0 0 var(--accent);
-    font-size: 1.3rem;
-}
-        .game-button:hover {
-            transform: translateX(10px);
-            box-shadow: 0 0 20px var(--accent);
-            background: rgba(0, 50, 0, 0.8);
-        }
-
-        .game-button:active {
-            transform: translateX(5px);
-        }
-
-        /* Fixed the broken HTML structure in the original snippet */
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🔗 Seamless Games 🔗</title>
+  <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --accent: #0f0; /* Matrix Green */
+      --bg: #000;
+      --surface: #050505;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      font-family: 'Nunito', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 3rem;
+      overflow-x: hidden;
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    #matrixCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.6;
+    }
+    .title {
+      font-size: 4rem;
+      font-weight: 900;
+      color: var(--accent);
+      text-align: center;
+      letter-spacing: 0.05em;
+      margin-bottom: 2rem;
+      text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+      animation: textPulse 2s infinite alternate;
+      user-select: none;
+    }
+    @keyframes textPulse {
+      from {
+        text-shadow: 0 0 10px var(--accent);
+      }
+      to {
+        text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0;
+      }
+    }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      width: max-content;
+      margin: 0 auto 4rem;
+      flex-wrap: wrap;
+    }
+    .game-button {
+      --button-size: 168px; /* 280 * 0.6 */
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      width: var(--button-size);
+      height: var(--button-size);
+      padding: 1.2rem 0.6rem 0.9rem; /* scaled from 2rem 1rem 1.5rem */
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: none;
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: 700;
+      font-size: 0.96rem; /* 1.6 * 0.6 */
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      user-select: none;
+      text-shadow: none; /* Remove glow from button text */
+    }
+    .game-button:hover {
+      transform: translateX(10px);
+      box-shadow: 0 0 40px var(--accent);
+      background: rgba(0, 50, 0, 0.9);
+    }
+    .game-button:active {
+      transform: translateX(5px);
+    }
+    .emoji {
+      font-size: 5.1rem; /* 8.5 * 0.6 */
+      color: var(--accent);
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      line-height: 1;
+      filter: drop-shadow(0 0 2px var(--accent)); /* Keeps glowing emoji */
+    }
+    .game-name {
+      font-size: 0.96rem; /* 1.6 * 0.6 */
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+      user-select: none;
+      margin-top: 0.24rem; /* 0.4 * 0.6 */
+      line-height: 1.2;
+    }
+    @media (max-width: 320px) {
+      .game-button {
+        --button-size: 132px; /* 220 * 0.6 */
+        font-size: 0.78rem;
+        padding: 0.9rem 0.5rem 0.7rem;
+      }
+      .emoji {
+        font-size: 3.6rem;
+      }
+      .game-name {
+        font-size: 0.78rem;
+      }
+    }
+  </style>
 </head>
 <body>
-    <canvas id="matrixCanvas"></canvas>
-    
-    <h1 class="title">SEAMLESS GAMES</h1>
-    
-    <div class="button-container">
-        <a href="https://menist.free.nf/case-opener/" class="game-button">
-            <span class="button-content"> <span>🍔</span> <span>FoodCases</span> <span>🍔</span>
-        </a>
-        <a href="https://menist.free.nf/black-jack/" class="game-button">
-            <span class="button-content"> <span>🃏</span> <span>Blackjack</span> <span>🃏</span>
-        </a>
-        <a href="https://menist.free.nf/word-bomb/" class="game-button">
-            <span class="button-content"> <span>💣</span> <span>WordBomb</span> <span>💣</span>
-        </a>
-        <a href="https://menist.free.nf/level-devil/" class="game-button">
-            <span class="button-content"> <span>😈</span> <span>Lev-Devil</span> <span>😈</span>
-        </a>
-        <a href="https://menist.free.nf/chronophoto/" class="game-button">
-            <span class="button-content"> <span>🎥</span> <span>ChronoPhoto</span> <span>🎥</span>
-        </a>
-    </div>
+  <canvas id="matrixCanvas"></canvas>
+  <h1 class="title">SEAMLESS GAMES</h1>
+  <div class="button-container" role="group" aria-label="Seamless Games menu">
+    <a href="https://menist.free.nf/case-opener/" class="game-button" aria-label="FoodCases">
+      <div class="emoji" aria-hidden="true">🍔</div>
+      <div class="game-name">FoodCases</div>
+    </a>
+    <a href="https://menist.free.nf/black-jack/" class="game-button" aria-label="Blackjack">
+      <div class="emoji" aria-hidden="true">🃏</div>
+      <div class="game-name">Blackjack</div>
+    </a>
+    <a href="https://menist.free.nf/word-bomb/" class="game-button" aria-label="WordBomb">
+      <div class="emoji" aria-hidden="true">💣</div>
+      <div class="game-name">WordBomb</div>
+    </a>
+    <a href="https://menist.free.nf/level-devil/" class="game-button" aria-label="Lev-Devil">
+      <div class="emoji" aria-hidden="true">😈</div>
+      <div class="game-name">Lev-Devil</div>
+    </a>
+    <a href="https://menist.free.nf/chronophoto/" class="game-button" aria-label="ChronoPhoto">
+      <div class="emoji" aria-hidden="true">🎥</div>
+      <div class="game-name">ChronoPhoto</div>
+    </a>
+  </div>
 
-    <script>
-        // Matrix Digital Rain Effect
-        const canvas = document.getElementById('matrixCanvas');
-        const ctx = canvas.getContext('2d');
+  <script>
+    // Matrix Digital Rain Effect
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
 
-        const katakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
-        const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const nums = '0123456789';
-        const alphabet = katakana + latin + nums;
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
-        const fontSize = 16;
-        const columns = canvas.width / fontSize;
+    const katakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const nums = '0123456789';
+    const alphabet = katakana + latin + nums;
+    const fontSize = 16;
+    const columns = canvas.width / fontSize;
+    const rainDrops = [];
 
-        const rainDrops = [];
-        for (let x = 0; x < columns; x++) {
-            rainDrops[x] = 1;
+    for (let x = 0; x < columns; x++) {
+      rainDrops[x] = 1;
+    }
+
+    function draw() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#0F0'; // Matrix green text
+      ctx.font = fontSize + 'px monospace';
+
+      for (let i = 0; i < rainDrops.length; i++) {
+        const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+        ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+        if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          rainDrops[i] = 0;
         }
-
-        const draw = () => {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.fillStyle = '#0F0'; // Green text
-            ctx.font = fontSize + 'px monospace';
-
-            for (let i = 0; i < rainDrops.length; i++) {
-                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-                ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
-
-                if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                    rainDrops[i] = 0;
-                }
-                rainDrops[i]++;
-            }
-        };
-
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        });
-
-        setInterval(draw, 30);
-    </script>
+        rainDrops[i]++;
+      }
+    }
+    setInterval(draw, 30);
+  </script>
 </body>
 </html>
