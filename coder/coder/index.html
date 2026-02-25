@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>👨🏻‍💻 Code Runner 👨🏻‍💻</title>
+<link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+body {
+    font-family: 'JetBrains Mono', monospace;
+    background-color: #0f172a;
+    color: #e2e8f0;
+    overflow: hidden;
+}
+textarea::-webkit-scrollbar {
+    width: 8px;
+}
+textarea::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+textarea::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 4px;
+}
+textarea::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+.squircle {
+    border-radius: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.squircle:focus-within {
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+    border-color: #6366f1;
+}
+.btn-enter {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+.btn-enter:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px "-10px" rgba(79, 70, 229, 0.5);
+}
+.btn-enter:active {
+    transform: translateY(0);
+}
+.fade-out {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+/* Full page iframe styles */
+#preview-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+</style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center relative">
+<div id="input-container" class="w-full max-w-3xl p-6 flex flex-col gap-6 z-10 transition-opacity duration-500">
+    <div class="text-center space-y-2">
+        <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400"> HTML Runner </h1>
+        <p class="text-slate-400 text-sm">Paste your HTML code or GitHub file link below and hit Enter.</p>
+    </div>
+    <div class="squircle bg-slate-800 border border-slate-700 p-1 flex flex-col shadow-2xl">
+        <textarea id="code-input" class="w-full h-64 bg-transparent text-slate-200 p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed" placeholder="<!DOCTYPE html> <html> <body> <h1>Hello World</h1> </body> </html>" spellcheck="false"
+        ></textarea>
+        <div class="px-4 pb-4 flex justify-end">
+            <button id="run-btn" class="btn-enter text-white font-bold py-2 px-8 rounded-xl shadow-lg flex items-center gap-2" >
+                <span>Run Code</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+            </button>
+        </div>
+    </div>
+    <div class="text-center text-xs text-slate-600"> Tip: Refresh the page to reset. </div>
+</div>
+<div id="preview-container" class="absolute inset-0 w-full h-full bg-white hidden z-0">
+    <!-- Content will be injected here -->
+</div>
+<script>
+    const inputContainer = document.getElementById('input-container');
+    const codeInput = document.getElementById('code-input');
+    const runBtn = document.getElementById('run-btn');
+    const previewContainer = document.getElementById('preview-container');
+
+    function isValidUrl(string) {
+        try {
+            const url = new URL(string);
+            return url.protocol === "http:" || url.protocol === "https:";
+        } catch (_) {
+            return false;
+        }
+    }
+
+    // Function to check if the URL is a GitHub file URL
+    function isGitHubUrl(url) {
+        return url.includes('github.com') && url.includes('/blob/');
+    }
+
+    // Function to fetch the raw code from a GitHub URL
+    async function fetchGitHubCode(githubUrl) {
+        // Convert a standard GitHub URL to a raw URL for fetching the file content
+        const rawUrl = githubUrl
+            .replace('github.com', 'raw.githubusercontent.com')
+            .replace('/blob/', '/');
+        
+        try {
+            const response = await fetch(rawUrl);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return await response.text();
+        } catch (error) {
+            console.error('Error fetching GitHub code:', error);
+            alert('Failed to fetch code. Ensure the URL is correct and the repository allows CORS [1].');
+            return null;
+        }
+    }
+
+    async function runCode() { // Make runCode async
+        let code = codeInput.value.trim();
+        if (!code) {
+            inputContainer.classList.add('animate-pulse');
+            setTimeout(() => inputContainer.classList.remove('animate-pulse'), 500);
+            return;
+        }
+
+        // Handle GitHub URL
+        if (isGitHubUrl(code)) {
+            const fetchedCode = await fetchGitHubCode(code);
+            if (fetchedCode) {
+                code = fetchedCode; // Use the fetched code
+            } else {
+                return; // Stop if fetching failed
+            }
+        }
+        
+        inputContainer.classList.add('fade-out');
+        setTimeout(() => {
+            inputContainer.style.display = 'none';
+            previewContainer.style.display = 'block';
+
+            // Check for socks command
+            const socksPrefix = "socks ";
+            if (code.toLowerCase().startsWith(socksPrefix)) {
+                // Extract URL after "socks "
+                const target = code.substring(socksPrefix.length).trim();
+                // Validate URL format (add http if missing)
+                let urlToProxy;
+                if (!target.startsWith("http://") && !target.startsWith("https://")) {
+                    urlToProxy = "https://" + target;
+                } else {
+                    urlToProxy = target;
+                }
+                // Check if valid URL
+                if (isValidUrl(urlToProxy)) {
+                    // Note: This proxy service URL is from the original code; its availability is not guaranteed.
+                    const proxyUrl = `https://socks-proxy-47dh.onrender.com/proxy?url=${encodeURIComponent(urlToProxy)}`;
+                    previewContainer.innerHTML = `<iframe id="preview-iframe" src="${proxyUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
+                    return;
+                }
+            }
+
+            // Otherwise usual URL handling
+            if (isValidUrl(code) && !code.includes('<') && !code.includes('>')) {
+                previewContainer.innerHTML = `<iframe id="preview-iframe" src="${code}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
+            } else {
+                // Treat as HTML code
+                // Clear the main document body and write the new code
+                document.body.innerHTML = code;
+                // Since we're replacing the whole body, the original script is removed.
+                // Re-add the script if necessary, or better, use an iframe for isolation.
+                // The following method runs the code in the main document.
+            }
+        }, 500);
+    }
+    
+    runBtn.addEventListener('click', runCode);
+    codeInput.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            runCode();
+        }
+    });
+    window.addEventListener('DOMContentLoaded', () => {
+        codeInput.focus();
+    });
+</script>
+</body>
+</html>
