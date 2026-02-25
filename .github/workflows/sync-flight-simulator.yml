@@ -2,8 +2,8 @@ name: Sync 3D Flight Simulator
 
 on:
   schedule:
-    - cron: '0 8 * * *'       # once per day at 8:00 UTC – adjust as you like
-  workflow_dispatch:          # allows manual trigger from Actions tab
+    - cron: '0 8 * * *'       # daily at 8:00 UTC – change if desired
+  workflow_dispatch:          # manual trigger button
 
 jobs:
   sync:
@@ -13,31 +13,26 @@ jobs:
       - name: Checkout your repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0          # needed for proper git commit history
+          fetch-depth: 0
+
+      - name: Create flight-simulator directory if missing
+        run: mkdir -p flight-simulator
 
       - name: Download latest 3Dflightsimulator.html
         run: |
           curl -L -o flight-simulator/index.html \
             https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/3Dflightsimulator.html
 
-      - name: Check if there are changes
-        id: changes
+      - name: Check if there are changes and commit/push if needed
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "actions@github.com"
           
-          # stage the file
           git add flight-simulator/index.html
           
-          # only create commit if something actually changed
           if git diff --staged --quiet; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "No changes – skipping commit"
+            echo "No changes detected – nothing to commit."
           else
-            echo "changed=true" >> $GITHUB_OUTPUT
             git commit -m "chore: sync 3D Flight Simulator from upstream"
+            git push origin HEAD:${{ github.ref_name }}
           fi
-
-      - name: Push changes (if any)
-        if: steps.changes.outputs.changed == 'true'
-        run: git push origin HEAD:${{ github.ref_name }}
