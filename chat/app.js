@@ -5,7 +5,7 @@ var c4game = require('./game');
 require('dotenv').config({silent: true});
 
 //=========================================================
-// Bot Setup
+// Bot Setups
 //=========================================================
 
 // Setup Restify Server
