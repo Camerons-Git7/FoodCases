@@ -118,6 +118,33 @@
         }
     }
 
+    function looksLikeDomainOrPath(input) {
+        // Very basic check: starts with domain-like string or /path
+        // but doesn't start with < (html), data:, about:, etc.
+        input = input.trim();
+        if (input.startsWith('<') || input.startsWith('data:') || input.startsWith('about:') || input.startsWith('javascript:')) {
+            return false;
+        }
+        // Contains at least one dot or starts with / or has typical path chars
+        return /[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/.test(input) || input.startsWith('/') || input.includes('/');
+    }
+
+    function normalizeUrl(input) {
+        input = input.trim();
+        if (isValidUrl(input)) {
+            return input;
+        }
+        // If it looks like a domain or path → prepend https://
+        if (looksLikeDomainOrPath(input)) {
+            // If it already starts with // → add https:
+            if (input.startsWith('//')) {
+                return 'https:' + input;
+            }
+            return 'https://' + input;
+        }
+        return input;
+    }
+
     function runCode() {
         let code = codeInput.value.trim();
         if (!code) {
@@ -136,14 +163,9 @@
             if (code.toLowerCase().startsWith(socksPrefix)) {
                 // Extract URL after "socks "
                 const target = code.substring(socksPrefix.length).trim();
-                // Validate URL format (add http if missing)
-                let urlToProxy;
-                if (!target.startsWith("http://") && !target.startsWith("https://")) {
-                    urlToProxy = "https://" + target;
-                } else {
-                    urlToProxy = target;
-                }
-                // Check if valid URL
+                // Normalize (add https:// if missing)
+                const urlToProxy = normalizeUrl(target);
+
                 if (isValidUrl(urlToProxy)) {
                     const proxyUrl = `https://socks-proxy-47dh.onrender.com/proxy?url=${encodeURIComponent(urlToProxy)}`;
                     previewContainer.innerHTML = 
@@ -154,14 +176,15 @@
                 }
             }
 
-            // Otherwise usual URL handling
-            if (isValidUrl(code) && !code.includes('<') && !code.includes('>')) {
+            // Normal URL handling — try to normalize first
+            const possibleUrl = normalizeUrl(code);
+            if (isValidUrl(possibleUrl) && !code.includes('<') && !code.includes('>')) {
                 previewContainer.innerHTML = 
-                    `<iframe id="preview-iframe" src="${code}" ` +
+                    `<iframe id="preview-iframe" src="${possibleUrl}" ` +
                     `sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation" ` +
                     `allow="camera; microphone; local-network-access"></iframe>`;
             } else {
-                // Treat as HTML code (direct document.write → no sandbox/allow needed)
+                // Treat as raw HTML
                 document.open();
                 document.write(code);
                 document.close();
