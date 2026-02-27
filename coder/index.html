@@ -14,6 +14,8 @@
             background-color: #0f172a;
             color: #e2e8f0;
             overflow: hidden;
+            margin: 0;
+            height: 100vh;
         }
 
         textarea::-webkit-scrollbar {
@@ -58,15 +60,22 @@
             transition: opacity 0.5s ease;
         }
 
-        /* Full page iframe styles */
         #preview-iframe {
             width: 100%;
             height: 100%;
             border: none;
+            background: white;
+        }
+
+        #error-message {
+            color: #f87171;
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.1rem;
         }
     </style>
 </head>
-<body class="h-screen w-screen flex items-center justify-center relative">
+<body class="flex items-center justify-center relative">
 
     <div id="input-container" class="w-full max-w-3xl p-6 flex flex-col gap-6 z-10 transition-opacity duration-500">
         
@@ -74,19 +83,19 @@
             <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
                 HTML Runner
             </h1>
-            <p class="text-slate-400 text-sm">Paste your HTML code below and hit Enter.</p>
+            <p class="text-slate-400 text-sm">Paste HTML or type <code>socks https://example.com</code> and hit Run / Ctrl+Enter</p>
         </div>
 
         <div class="squircle bg-slate-800 border border-slate-700 p-1 flex flex-col shadow-2xl">
             <textarea 
                 id="code-input" 
-                class="w-full h-64 bg-transparent text-slate-200 p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed"
-                placeholder="<!DOCTYPE html>
+                class="w-full h-64 bg-transparent text-slate-200 p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed whitespace-pre"
+                placeholder='<!DOCTYPE html>
 <html>
 <body>
   <h1>Hello World</h1>
 </body>
-</html>"
+</html>'
                 spellcheck="false"
             ></textarea>
             
@@ -104,12 +113,12 @@
         </div>
         
         <div class="text-center text-xs text-slate-600">
-            Tip: Refresh the page to reset.
+            Tip: Refresh the page to return to editor
         </div>
     </div>
 
-    <div id="preview-container" class="absolute inset-0 w-full h-full bg-white hidden z-0">
-        <!-- Content will be injected here -->
+    <div id="preview-container" class="absolute inset-0 w-full h-full bg-white hidden z-0 overflow-hidden">
+        <!-- iframe or error message will be placed here -->
     </div>
 
 <script>
@@ -118,7 +127,7 @@
     const runBtn = document.getElementById('run-btn');
     const previewContainer = document.getElementById('preview-container');
 
-    function isValidUrl(string) {
+    function isValidHttpUrl(string) {
         try {
             const url = new URL(string);
             return url.protocol === "http:" || url.protocol === "https:";
@@ -127,12 +136,23 @@
         }
     }
 
+    function createIframe(src) {
+        return `<iframe id="preview-iframe" src="${src}" 
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                allowfullscreen
+                style="width:100%;height:100%;border:none;"></iframe>`;
+    }
+
+    function showError(msg) {
+        previewContainer.innerHTML = `<div id="error-message">${msg}</div>`;
+    }
+
     function runCode() {
         let code = codeInput.value.trim();
 
         if (!code) {
             inputContainer.classList.add('animate-pulse');
-            setTimeout(() => inputContainer.classList.remove('animate-pulse'), 500);
+            setTimeout(() => inputContainer.classList.remove('animate-pulse'), 600);
             return;
         }
 
@@ -141,37 +161,43 @@
         setTimeout(() => {
             inputContainer.style.display = 'none';
             previewContainer.style.display = 'block';
+            previewContainer.innerHTML = ''; // clear previous content
 
-            // Check for socks command
             const socksPrefix = "socks ";
-            if (code.toLowerCase().startsWith(socksPrefix)) {
-                // Extract URL after "socks "
-                const target = code.substring(socksPrefix.length).trim();
+            const lowerCode = code.toLowerCase();
 
-                // Validate URL format (add http if missing)
-                let urlToProxy;
-                if (!target.startsWith("http://") && !target.startsWith("https://")) {
-                    urlToProxy = "https://" + target;
-                } else {
-                    urlToProxy = target;
+            // ── Proxy mode ────────────────────────────────────────
+            if (lowerCode.startsWith(socksPrefix)) {
+                let target = code.substring(socksPrefix.length).trim();
+
+                // Auto-add https:// if no protocol
+                if (!target.includes('://')) {
+                    target = 'https://' + target;
                 }
 
-                // Check if valid URL
-                if (isValidUrl(urlToProxy)) {
-                    const proxyUrl = `https://socks-proxy-47dh.onrender.com/proxy?url=${encodeURIComponent(urlToProxy)}`;
-                    previewContainer.innerHTML = `<iframe id="preview-iframe" src="${proxyUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
+                if (!isValidHttpUrl(target)) {
+                    showError(`Invalid URL: <b>${target}</b><br>Try something like: socks example.com`);
                     return;
                 }
+
+                const proxyUrl = `https://socks-proxy-47dh.onrender.com/proxy?url=${encodeURIComponent(target)}`;
+                previewContainer.innerHTML = createIframe(proxyUrl);
+                return;
             }
 
-            // Otherwise usual URL handling
-            if (isValidUrl(code) && !code.includes('<') && !code.includes('>')) {
-                previewContainer.innerHTML = `<iframe id="preview-iframe" src="${code}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
-            } else {
-                // Treat as HTML code
+            // ── Direct URL mode ───────────────────────────────────
+            if (isValidHttpUrl(code) && !code.includes('<') && !code.includes('>')) {
+                previewContainer.innerHTML = createIframe(code);
+                return;
+            }
+
+            // ── Raw HTML / document.write mode ────────────────────
+            try {
                 document.open();
                 document.write(code);
                 document.close();
+            } catch (err) {
+                showError('Error rendering HTML:<br><pre>' + err.message + '</pre>');
             }
 
         }, 500);
@@ -181,10 +207,12 @@
 
     codeInput.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
             runCode();
         }
     });
 
+    // Auto-focus on load
     window.addEventListener('DOMContentLoaded', () => {
         codeInput.focus();
     });
