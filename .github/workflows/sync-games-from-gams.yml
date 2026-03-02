@@ -1,0 +1,55 @@
+name: Sync Gams-Offline/Gams into FoodCases/games
+
+on:
+  workflow_dispatch:
+    # You can also add schedule if you want it to run automatically
+    # schedule:
+    #   - cron: '0 4 * * *'    # every day at 4:00 UTC
+
+permissions:
+  contents: write
+
+jobs:
+  sync-games-folder:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout target repository (FoodCases)
+        uses: actions/checkout@v4
+        with:
+          repository: Camerons-Git7/FoodCases
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}          # default token works for the current repo
+          path: target-repo
+
+      - name: Checkout source repository (Gams-Offline/Gams)
+        uses: actions/checkout@v4
+        with:
+          repository: Gams-Offline/Gams
+          ref: main
+          path: source-gams
+
+      - name: Create games folder and copy all files
+        run: |
+          mkdir -p target-repo/games
+          rsync -av --delete source-gams/ target-repo/games/
+          # --delete = remove files in target/games that no longer exist in source
+          # remove --delete if you want to keep old files that were removed from source
+
+      - name: Commit and push changes
+        run: |
+          cd target-repo
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          
+          git add .
+          
+          # Only commit if there are changes
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          
+          git commit -m "chore: sync games from Gams-Offline/Gams (main branch)"
+          git push origin main
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf target-repo source-gams
