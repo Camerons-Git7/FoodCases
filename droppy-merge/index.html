@@ -155,7 +155,14 @@
     let startCol = Math.floor(COLS / 2);
     const startX = OFFSET_X + startCol * TILE_SIZE + TILE_SIZE / 2;
     const startY = OFFSET_Y - TILE_SIZE / 2;
-    const num = Math.random() < 0.8 ? 2 : 4;
+
+    // New chance to spawn 8:
+    // 80% chance 2, 15% chance 4, 5% chance 8
+    let r = Math.random();
+    let num;
+    if (r < 0.8) num = 2;
+    else if (r < 0.95) num = 4;
+    else num = 8;
 
     let tileCont = scene.add.container(startX, startY);
     let rect = scene.add.rectangle(0, 0, TILE_SIZE - 16, TILE_SIZE - 16, numberToColor(num))
