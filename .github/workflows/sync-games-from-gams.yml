@@ -1,55 +1,54 @@
-name: Sync Gams-Offline/Gams into FoodCases/games
+name: Sync → games/ (full replace from Gams-Offline/Gams)
 
 on:
-  workflow_dispatch:
-    # You can also add schedule if you want it to run automatically
-    # schedule:
-    #   - cron: '0 4 * * *'    # every day at 4:00 UTC
+  workflow_dispatch:          # Run manually from the Actions tab
+  # schedule:                 # Optional: uncomment to run daily at 4:00 UTC
+  #   - cron: '0 4 * * *'
 
 permissions:
   contents: write
 
 jobs:
-  sync-games-folder:
+  sync-and-replace:
     runs-on: ubuntu-latest
     steps:
-
-      - name: Checkout target repository (FoodCases)
+      - name: Checkout your repo (FoodCases)
         uses: actions/checkout@v4
         with:
-          repository: Camerons-Git7/FoodCases
-          ref: main
-          token: ${{ secrets.GITHUB_TOKEN }}          # default token works for the current repo
           path: target-repo
 
-      - name: Checkout source repository (Gams-Offline/Gams)
+      - name: Checkout source repo (Gams-Offline/Gams main)
         uses: actions/checkout@v4
         with:
           repository: Gams-Offline/Gams
           ref: main
           path: source-gams
 
-      - name: Create games folder and copy all files
+      - name: Replace games/ folder contents (sync + delete removed files)
         run: |
           mkdir -p target-repo/games
-          rsync -av --delete source-gams/ target-repo/games/
-          # --delete = remove files in target/games that no longer exist in source
-          # remove --delete if you want to keep old files that were removed from source
+          
+          # Use rsync to mirror source → games/ and delete anything extra in target
+          rsync -av --delete \
+            source-gams/ \
+            target-repo/games/
+          
+          # Safety: never allow a nested .git folder
+          rm -rf target-repo/games/.git
+          rm -rf target-repo/games/.gitignore   # optional - if you don't want their .gitignore
 
-      - name: Commit and push changes
+      - name: Commit & push only if there are actual changes
+        working-directory: target-repo
         run: |
-          cd target-repo
-          git config user.name "GitHub Action"
-          git config user.email "action@github.com"
+          git config user.name "GitHub Action (sync)"
+          git config user.email "actions@github.com"
           
-          git add .
+          git add -A games/
           
-          # Only commit if there are changes
-          git diff --staged --quiet && echo "No changes to commit" && exit 0
-          
-          git commit -m "chore: sync games from Gams-Offline/Gams (main branch)"
-          git push origin main
-
-      - name: Cleanup
-        if: always()
-        run: rm -rf target-repo source-gams
+          if git diff --staged --quiet; then
+            echo "No changes detected → nothing to commit"
+          else
+            git commit -m "chore: full sync/replace games/ from Gams-Offline/Gams@main"
+            git push origin HEAD:main
+            echo "Changes committed and pushed"
+          fi
