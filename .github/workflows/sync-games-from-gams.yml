@@ -1,54 +1,27 @@
-name: Sync → games/ (full replace from Gams-Offline/Gams)
+name: Delete games folder
 
 on:
-  workflow_dispatch:          # Run manually from the Actions tab
-  # schedule:                 # Optional: uncomment to run daily at 4:00 UTC
-  #   - cron: '0 4 * * *'
-
-permissions:
-  contents: write
+  workflow_dispatch:   # Allows manual trigger
 
 jobs:
-  sync-and-replace:
+  delete-folder:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout your repo (FoodCases)
-        uses: actions/checkout@v4
-        with:
-          path: target-repo
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Checkout source repo (Gams-Offline/Gams main)
-        uses: actions/checkout@v4
-        with:
-          repository: Gams-Offline/Gams
-          ref: main
-          path: source-gams
+    - name: Remove the 'games' folder
+      run: |
+        rm -rf ./games
 
-      - name: Replace games/ folder contents (sync + delete removed files)
-        run: |
-          mkdir -p target-repo/games
-          
-          # Use rsync to mirror source → games/ and delete anything extra in target
-          rsync -av --delete \
-            source-gams/ \
-            target-repo/games/
-          
-          # Safety: never allow a nested .git folder
-          rm -rf target-repo/games/.git
-          rm -rf target-repo/games/.gitignore   # optional - if you don't want their .gitignore
-
-      - name: Commit & push only if there are actual changes
-        working-directory: target-repo
-        run: |
-          git config user.name "GitHub Action (sync)"
-          git config user.email "actions@github.com"
-          
-          git add -A games/
-          
-          if git diff --staged --quiet; then
-            echo "No changes detected → nothing to commit"
-          else
-            git commit -m "chore: full sync/replace games/ from Gams-Offline/Gams@main"
-            git push origin HEAD:main
-            echo "Changes committed and pushed"
-          fi
+    - name: Commit and push changes
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add -A
+        git commit -m "Delete 'games' folder"
+        git push
+      env:
+        # The default GITHUB_TOKEN has push permissions if configured correctly in repo settings
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
