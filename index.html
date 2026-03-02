@@ -150,6 +150,24 @@
         font-size: 0.78rem;
       }
     }
+
+    /* Bottom note styling */
+    .bottom-note {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 0.9rem;
+      color: var(--accent);
+      text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+      animation: textPulse 2s infinite alternate;
+      user-select: none;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 10;
+    }
   </style>
 </head>
 <body>
@@ -181,6 +199,8 @@
       <div class="game-name">DroppyMerge</div>
     </a>
   </div>
+
+  <div class="bottom-note">Game Updates Are Only Applied Upon Refresh</div>
 
   <script>
     // Matrix Digital Rain Effect
