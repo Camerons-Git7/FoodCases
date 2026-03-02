@@ -134,7 +134,7 @@
     const x = OFFSET_X + startCol * TILE_SIZE + TILE_SIZE/2;
     const y = OFFSET_Y - TILE_SIZE;
 
-    let num = (Math.random() < 0.8) ? 2 : (Math.random() < 0.75) ? 4 : 8;
+    let num = (Math.random() < 0.35) ? 2 : (Math.random() < 0.70) ? 4 : (Math.random() < 0.94) ? 8 : 16;
 
     let cont = scene.add.container(x, y);
     let rect = scene.add.rectangle(0,0, TILE_SIZE-16, TILE_SIZE-16, numberToColor(num))
