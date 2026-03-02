@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Drop n Merge Puzzle Game (Phaser 3)</title>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+<style>
+  body {
+    margin: 0;
+    background: #222;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #game-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+    background: #111;
+  }
+  canvas {
+    display: block;
+    width: 100vw !important;
+    height: 100vh !important;
+  }
+</style>
+</head>
+<body>
+<div id="game-container"></div>
+<script>
+(() => {
+  const FULL_WIDTH = window.innerWidth;
+  const FULL_HEIGHT = window.innerHeight;
+
+  // Grid definition
+  const COLS = 5;
+  const ROWS = 7;
+
+  // Padding around grid and space for score text
+  const PADDING = 40;
+  // Max tile size calculated dynamically to fit width and height
+  const maxTileWidth = (FULL_WIDTH - PADDING * 2) / COLS;
+  const maxTileHeight = (FULL_HEIGHT - PADDING * 2 - 60) / ROWS; // 60px extra for score space
+  const TILE_SIZE = Math.floor(Math.min(maxTileWidth, maxTileHeight));
+
+  // Offsets center grid horizontally and move it down a bit (80px vertical offset)
+  const OFFSET_X = (FULL_WIDTH - COLS * TILE_SIZE) / 2;
+  const OFFSET_Y = 80;
+
+  const DROP_SPEED = 1000; // pixels per second dropping speed
+
+  const config = {
+    type: Phaser.AUTO,
+    width: FULL_WIDTH,
+    height: FULL_HEIGHT,
+    backgroundColor: '#111',
+    parent: 'game-container',
+    scene: { preload, create, update }
+  };
+
+  let game = new Phaser.Game(config);
+
+  let grid = [];
+  let currentTile = null;
+  let isDropping = false;
+  let score = 0;
+  let scoreText;
+  let inputEnabled = true;
+
+  function preload() {}
+
+  function create() {
+    const scene = this;
+
+    // Initialize empty grid array
+    grid = [];
+    for (let c = 0; c < COLS; c++) {
+      grid[c] = [];
+    }
+
+    // Draw background grid cells
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const x = OFFSET_X + c * TILE_SIZE + TILE_SIZE / 2;
+        const y = OFFSET_Y + r * TILE_SIZE + TILE_SIZE / 2;
+        scene.add.rectangle(x, y, TILE_SIZE - 6, TILE_SIZE - 6, 0x222222)
+          .setStrokeStyle(2, 0x555555);
+      }
+    }
+
+    // Score text top-left, font size relative to tile size for good visibility
+    scoreText = scene.add.text(10, 10, 'Score: 0', {
+      fontSize: `${Math.floor(TILE_SIZE / 3)}px`,
+      fill: '#eeeeee',
+      fontFamily: 'Arial',
+      fontWeight: 'bold'
+    }).setOrigin(0, 0);
+
+    spawnNewTile(scene);
+
+    // Keyboard input handlers
+    scene.input.keyboard.on('keydown-LEFT', () => {
+      if (inputEnabled && !isDropping) {
+        moveTile(-1);
+      }
+    });
+    scene.input.keyboard.on('keydown-RIGHT', () => {
+      if (inputEnabled && !isDropping) {
+        moveTile(1);
+      }
+    });
+    scene.input.keyboard.on('keydown-DOWN', () => {
+      if (inputEnabled && !isDropping) {
+        dropTile(scene);
+      }
+    });
+
+    // Pointer input to drop tile
+    scene.input.on('pointerdown', () => {
+      if (inputEnabled && !isDropping) {
+        dropTile(scene);
+      }
+    });
+  }
+
+  function update() {}
+
+  // Return tile color for given number
+  function numberToColor(n) {
+    const colors = {
+      2: 0xeee4da,
+      4: 0xede0c8,
+      8: 0xf2b179,
+      16: 0xf59563,
+      32: 0xf67c5f,
+      64: 0xf65e3b,
+      128: 0xedcf72,
+      256: 0xedcc61,
+      512: 0xedc850,
+      1024: 0xedc53f,
+      2048: 0xedc22e,
+    };
+    return colors[n] || 0x3c3a32;
+  }
+
+  // Choose text color based on tile number for readability
+  function getTextColor(number) {
+    return number <= 4 ? '#776e65' : '#f9f6f2';
+  }
+
+  // Spawn a new tile above the grid, centered horizontally
+  function spawnNewTile(scene) {
+    let startCol = Math.floor(COLS / 2);
+    const startX = OFFSET_X + startCol * TILE_SIZE + TILE_SIZE / 2;
+    const startY = OFFSET_Y - TILE_SIZE / 2;
+    const num = Math.random() < 0.8 ? 2 : 4;
+
+    let tileCont = scene.add.container(startX, startY);
+    let rect = scene.add.rectangle(0, 0, TILE_SIZE - 16, TILE_SIZE - 16, numberToColor(num))
+      .setStrokeStyle(3, 0xbbada0);
+
+    let textSize = Math.floor(TILE_SIZE / 2);
+    let text = scene.add.text(0, 0, num, {
+      fontFamily: 'Arial',
+      fontSize: `${textSize}px`,
+      fontWeight: 'bold',
+      color: '#776e65'
+    }).setOrigin(0.5);
+
+    tileCont.add([rect, text]);
+    tileCont.number = num;
+    tileCont.col = startCol;
+    tileCont.row = ROWS; // start above the grid row-wise
+
+    currentTile = tileCont;
+    isDropping = false;
+  }
+
+  // Animate horizontal sliding instead of teleport
+  function moveTile(direction) {
+    if (!currentTile) return;
+    const newCol = currentTile.col + direction;
+    if (newCol < 0 || newCol >= COLS) return;
+
+    currentTile.col = newCol;
+    const newX = OFFSET_X + newCol * TILE_SIZE + TILE_SIZE / 2;
+
+    const scene = currentTile.scene || game.scene.scenes[0];
+    scene.tweens.add({
+      targets: currentTile,
+      x: newX,
+      duration: 150,
+      ease: 'Power2'
+    });
+  }
+
+  // Drop the current tile to the lowest empty row in its column
+  function dropTile(scene) {
+    if (!currentTile) return;
+    isDropping = true;
+    inputEnabled = false;
+
+    const col = currentTile.col;
+    const stack = grid[col];
+    const landingRow = stack.length;
+
+    const landingY = OFFSET_Y + (ROWS - 1 - landingRow) * TILE_SIZE + TILE_SIZE / 2;
+    const distance = landingY - currentTile.y;
+    const dropDuration = (distance / DROP_SPEED) * 1000;
+
+    scene.tweens.add({
+      targets: currentTile,
+      y: landingY,
+      duration: dropDuration,
+      ease: 'Linear',
+      onComplete: () => {
+        currentTile.row = landingRow;
+        stack.push(currentTile);
+        currentTile.y = landingY;
+
+        checkAndMergeTiles(scene, col).then(() => {
+          if (isGridFull()) {
+            gameOver(scene);
+          } else {
+            spawnNewTile(scene);
+            isDropping = false;
+            inputEnabled = true;
+          }
+        });
+      }
+    });
+  }
+
+  // Check if grid is full (any column max rows reached)
+  function isGridFull() {
+    for (let c = 0; c < COLS; c++) {
+      if (grid[c].length < ROWS) return false;
+    }
+    return true;
+  }
+
+  // Show "Game Over" text centered
+  function gameOver(scene) {
+    inputEnabled = false;
+    isDropping = true;
+    scene.add.text(FULL_WIDTH / 2, FULL_HEIGHT / 2, "GAME OVER", {
+      fontSize: '48px',
+      fill: '#ff4444',
+      fontFamily: 'Arial',
+      fontWeight: 'bold'
+    }).setOrigin(0.5);
+  }
+
+  // Recursive check and merge tiles vertically in a column
+  async function checkAndMergeTiles(scene, col) {
+    const stack = grid[col];
+    if (stack.length < 2) return;
+
+    let didMerge = false;
+
+    outerLoop:
+    for (let i = 0; i < stack.length - 1; i++) {
+      let tileA = stack[i];
+      let tileB = stack[i + 1];
+      if (tileA.number === tileB.number) {
+        didMerge = true;
+        await mergePair(scene, stack, i, i + 1);
+        break outerLoop;
+      }
+    }
+    if (didMerge) {
+      reorganizeStack(scene, col);
+      await checkAndMergeTiles(scene, col);
+    }
+  }
+
+  // Animate merging pair of tiles at indices i & j (j > i)
+  function mergePair(scene, stack, i, j) {
+    return new Promise(resolve => {
+      const tileA = stack[i];
+      const tileB = stack[j];
+
+      scene.tweens.add({
+        targets: tileB,
+        y: tileA.y,
+        duration: 250,
+        ease: 'Power2',
+      });
+      scene.tweens.add({
+        targets: tileB,
+        alpha: 0,
+        duration: 250,
+        ease: 'Power2',
+        onComplete: () => {
+          tileB.list.forEach(child => child.destroy());
+          if (tileB && tileB.destroy) tileB.destroy();
+          stack.splice(j, 1);
+
+          tileA.number *= 2;
+
+          let rect = tileA.list.find(c => c.type === 'Rectangle');
+          rect.fillColor = numberToColor(tileA.number);
+          let text = tileA.list.find(c => c.type === 'Text');
+          text.setText(tileA.number);
+          text.setColor(getTextColor(tileA.number));
+
+          score += tileA.number;
+          scoreText.setText('Score: ' + score);
+
+          resolve();
+        }
+      });
+    });
+  }
+
+  // Shift remaining tiles down to fill merged gaps in a column
+  function reorganizeStack(scene, col) {
+    const stack = grid[col];
+    for (let i = 0; i < stack.length; i++) {
+      const targetY = OFFSET_Y + (ROWS - 1 - i) * TILE_SIZE + TILE_SIZE / 2;
+      stack[i].row = i;
+      scene.tweens.add({
+        targets: stack[i],
+        y: targetY,
+        duration: 300,
+        ease: 'Power2'
+      });
+    }
+  }
+})();
+</script>
+</body>
+</html>
