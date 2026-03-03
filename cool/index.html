@@ -1,0 +1,402 @@
+<!-- Copyright (c) Bloxcraft Studios 2025 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>☠️ Hub ☠️</title>
+  <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg-dark:#0e0e10;
+      --panel:#111217;
+      --glass: rgba(255,255,255,0.06);
+      --accent1:#4f46e5;
+      --accent2:#6d28d9;
+      --white: #ffffff;
+      --viewer-blue: #5555FF;
+    }
+    *{box-sizing:border-box;font-family: 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    body{margin:0;background:linear-gradient(180deg,#09090b 0%, #0f0f13 100%);color:var(--white);min-height:100vh;}
+    
+    #viewerBar{
+      position:fixed;
+      top:0; left:0;
+      width:100%;
+      height:100px;
+      background: linear-gradient(90deg, var(--viewer-blue), #7b61ff);
+      backdrop-filter: blur(10px);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 16px 22px;
+      gap:12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      z-index:9999;
+    }
+    #viewerTitleWrap{display:flex;align-items:center;gap:14px;min-width:0;}
+    #viewerIcon{
+      width:64px;height:64px;border-radius:8px;background:linear-gradient(135deg,var(--accent1),var(--accent2)); flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:18px;
+      box-shadow: 0 6px 24px rgba(77,56,183,0.28);
+    }
+    #viewerTitle{
+      font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70vw;
+    }
+    .viewer-controls{display:flex;gap:10px;align-items:center;}
+    .bloxy-btn {
+      position: relative;
+      padding: 12px 24px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      text-transform: uppercase;
+      text-decoration: none;
+      letter-spacing: 1px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      display: inline-block;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .bloxy-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s ease;
+      z-index: 1;
+    }
+
+    .bloxy-btn:hover::before { left: 100%; }
+    .bloxy-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 0 40px rgba(139, 92, 246, 0.6), 0 12px 48px rgba(0,0,0,0.3);
+    }
+    .bloxy-btn:active { transform: translateY(-1px) scale(1.02); }
+
+    .bloxy-blue-btn { background: rgba(0, 0, 139, 0.3); border-color: rgba(0, 0, 139, 0.5); }
+
+    .bloxy-rainbow-btn {
+      background: linear-gradient(135deg, rgba(255, 95, 109, 0.3), rgba(255, 195, 113, 0.3), rgba(71, 207, 115, 0.3), rgba(56, 249, 215, 0.3));
+      border-color: rgba(255, 95, 109, 0.5);
+      animation: rainbow-shift 3s infinite;
+    }
+
+    @keyframes rainbow-shift {
+      0%, 100% { border-color: rgba(255, 95, 109, 0.5); }
+      25% { border-color: rgba(255, 195, 113, 0.5); }
+      50% { border-color: rgba(71, 207, 115, 0.5); }
+      75% { border-color: rgba(56, 249, 215, 0.5); }
+    }
+
+    .bloxy-rainbow-btn:hover {
+      background: linear-gradient(135deg, rgba(255, 95, 109, 0.5), rgba(255, 195, 113, 0.5), rgba(71, 207, 115, 0.5), rgba(56, 249, 215, 0.5));
+      box-shadow: 0 0 50px rgba(255, 95, 109, 0.8),
+                  0 0 80px rgba(71, 207, 115, 0.4),
+                  0 12px 48px rgba(0, 0, 0, 0.3);
+    }
+
+    main{padding-top:120px;max-width:1200px;margin:0 auto;width:94%;}
+    .games-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+      gap:18px;
+      margin-bottom:48px;
+    }
+    .game-card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.04);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);cursor:pointer;display:flex;flex-direction:column;
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .game-card:hover{transform:translateY(-6px);box-shadow:0 18px 50px rgba(0,0,0,0.6);}
+    .game-thumb{height:140px; width:100%; object-fit:cover; display:block; background:#222;}
+    .game-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;flex:1;}
+    .game-title{font-weight:700;font-size:14px;}
+    .game-meta{font-size:12px;color:rgba(255,255,255,0.72);display:flex;justify-content:space-between;align-items:center;}
+    .play-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:auto;}
+
+    #viewerFrame{
+      position:fixed;
+      left:0;
+      top:100px;
+      width:100%;
+      height:calc(100vh - 100px);
+      border:none;
+      background:#000;
+      z-index:2;
+    }
+    
+      body {
+      background: linear-gradient(-45deg, #1e1b4b, #312e81, #3730a3, #1e3a8a);
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    
+    .navbar {
+  display: flex; 
+  justify-content: center; 
+  align-items: center;
+  background-color: #000;
+  padding: 10px 20px;
+  width: 100%; 
+  box-sizing: border-box;
+  
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  right: 0; 
+}
+
+.navbar a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 17px;
+  padding: 10px 16px;
+  transition: background 0.3s;
+}
+
+.navbar a:hover {
+  background-color: #444;
+}
+    
+    #viewerBar.hidden, #viewerFrame.hidden {display:none;}
+    @media (max-width:640px){
+      #viewerTitle{font-size:15px;}
+      #viewerIcon{width:52px;height:52px;font-size:16px;}
+      .game-thumb{height:110px;}
+    }
+    
+    h1, h2, h3, h4, h5, h6, p, span, div, input, a, button {
+    position: relative;
+    z-index: 1;
+  }
+  
+  #bgFrame {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    z-index: 0;
+    pointer-events: none; 
+    filter: brightness(0.8); 
+    background: transparent;
+  }
+
+  </style>
+</head>
+<body>
+
+  <div id="viewerBar" class="hidden" role="banner" aria-hidden="true">
+    <div id="viewerTitleWrap">
+      <div id="viewerIcon">UBG</div>
+      <div>
+        <div id="viewerTitle">Fetching...</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:4px;">Bloxcraft Unblocked Hub</div>
+      </div>
+    </div>
+
+    <div class="viewer-controls">
+      <button id="openNewTab" class="bloxy-btn bloxy-blue-btn">Play In New Tab</button>
+      <button id="closeViewer" class="bloxy-btn bloxy-blue-btn">Close</button>
+    </div>
+  </div>
+
+  <iframe id="viewerFrame" class="hidden" sandbox="allow-scripts allow-same-origin allow-forms allow-modals"></iframe>
+
+  <main id="mainContent">
+      
+      <iframe id="bgFrame" srcdoc='
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root { --fade-dur:500ms; --logo-size:100px; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { height:100vh; width:100vw; display:flex; justify-content:center; align-items:center; background:transparent; background-size:400% 400%; animation:gradientMove 10s ease infinite; overflow:hidden; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial; color:white; position:relative; }
+@keyframes gradientMove { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+.dot { position:absolute; background:white; border-radius:50%; opacity:0.4; top:-10px; animation:fall linear infinite; }
+@keyframes fall { 0%{transform:translateY(0) scale(1);opacity:0.8} 100%{transform:translateY(110vh) scale(1.2);opacity:0.2} }
+.container { display:flex; align-items:center; gap:40px; z-index:10; text-align:center; }
+.text-section { display:flex; flex-direction:column; align-items:center; }
+.text-container { position:relative; display:inline-block; padding-bottom:8px; }
+.underline { position:absolute; bottom:0; left:0; height:3px; width:100%; background:linear-gradient(90deg,#818cf8,#a78bfa); border-radius:10px; box-shadow:0 0 10px #a78bfa; }
+h1:first-child{color:#808080} h1:last-child{color:white} h2{font-size:32px;margin-top:10px;color:white;font-weight:500}
+#Changing-Text{display:inline-block; opacity:1; transition:opacity var(--fade-dur) ease; margin-left:8px;}
+.fade-out{opacity:0}.fade-in{opacity:1}
+.logo{width:var(--logo-size);height:var(--logo-size);user-select:none}
+</style>
+</head>
+<body>
+<script>
+const numDots=500;
+for(let i=0;i<numDots;i++){
+  const d=document.createElement("div");
+  d.className="dot";
+  const s=Math.random()*4+2;
+  d.style.width=s+"px";
+  d.style.height=s+"px";
+  d.style.left=Math.random()*100+"%";
+  d.style.animationDuration=(1+Math.random()*10)+"s";
+  d.style.animationDelay=Math.random()*5+"s";
+  document.body.appendChild(d);
+  d.addEventListener("animationiteration",()=>{ d.style.left=Math.random()*100+"%"; d.style.animationDuration=(4+Math.random()*8)+"s"; });
+}
+</script>
+
+<div class="container">
+  <div class="text-section">
+    <div class="text-container">
+      <h1 style="color:#E1D9D1;">Bloxcraft <span style="color:white;">Unblocked</span> Hub</h1>
+      <h2><span id="Changing-Text" style="color:#E1D9D1;">G@m3s M3nu</span></h2>
+      <div class="underline"></div>
+    </div>
+  </div>
+  <img src="https://cdn.jsdelivr.net/gh/tharun9772/tharun9772.github.io@main/bloxcraft_transparent.png" alt="Logo" class="logo">
+</div>
+
+<script>
+const words=["G@m3s M3nu","Games Menu","@pps M3nu","Apps Menu","G@m1ng","Gaming","Unbl#cked G@ming","Unblocked Gaming"];
+const el=document.getElementById("Changing-Text");let idx=0;
+function changeWord(){ el.classList.add("fade-out"); setTimeout(()=>{ idx=(idx+1)%words.length; el.textContent=words[idx]; el.classList.remove("fade-out"); el.classList.add("fade-in"); setTimeout(()=>el.classList.remove("fade-in"),600); },600); }
+setInterval(changeWord,2200);
+</script>
+</body>
+</html>'>
+</iframe>
+  <div class="navbar">
+    <a href="https://bloxcraft-ubg.pages.dev" target="_blank">Bloxcraft UBG</a>
+    <a href="https://youtube.com/@bloxcraftstudios">Youtube</a>
+    <a href="https://discord.gg/sqPFYEsz8F" target="_blank">Discord Server</a>
+    <a href="https://docs.google.com/document/d/1UC3Eo6UoPCVlq1SiOFEj0HahQGPqqbadXSho5NKHbQU/edit?tab=t.0" target="_blank" >Bloxcraft Unblocked Games List</a>
+  </div>
+      
+    <h1 style="margin:20px 0 8px;">Bloxcraft Unblocked Hub</h1>
+    <p style="margin:20px 0 8px;">A Hub WIth Many Apps And Games</p>
+    <div class="games-grid" id="gamesGrid" aria-live="polite"></div>
+  </main>
+
+<script>
+  const games = [
+    { id: "1", web: "An AI Assistant!", gnote: "Bloxcraft Studios & Tharun9772", title: "Bloxy AI", img: "https://cdn.jsdelivr.net/gh/tharun9772/bloxy-ai@main/assets_bloxy_ai.png", src: "https://cdn.jsdelivr.net/gh/tharun9772/bloxcraft-unblocked-hub@main/src/apps/bloxy-ai.html" },
+    
+    
+{ id: "2", web: "An HTML Viewer That Lets You View Your Code In A Blob!", gnote: "Bloxcraft Studios & Tharun9772", title: "HTML Viewer", img: "https://cdn.jsdelivr.net/gh/tharun9772/tharun9772.github.io@main/assets_developer_tools.png", src: "https://cdn.jsdelivr.net/gh/tharun9772/bloxcraft-unblocked-hub@main/src/apps/html-viewer.html" },
+
+
+{ id: "3", web: "A UBG Site With 500+ Games!", gnote: "GN-Math", title: "GN-Math", img: "https://cdn.jsdelivr.net/gh/gn-math/gn-math-DONTDMCA@main/favicon.png", src: "https://cdn.jsdelivr.net/gh/tharun9772/bloxcraft-unblocked-hub@main/src/apps/gn-math.html" },
+
+
+{ id: "4", web: "A UBG Site With 200+ Games!", gnote: "Hutchinsan", title: "Elite Gamez", img: "https://cdn.jsdelivr.net/gh/elite-gamez/fac@main/logoo.png", src: "https://cdn.jsdelivr.net/gh/tharun9772/bloxcraft-unblocked-hub@main/src/apps/elite-gamez.html" },
+
+
+{ id: "5", web: "A Proxy That Has A Browser Feel!", gnote: "Dominum Network", title: "Dominum Browser", img: "https://cdn.jsdelivr.net/gh/tharun9772/tharun9772.github.io@main/39e50783014f84b22616ad0a139b1e54.png", src: "https://cdn.jsdelivr.net/gh/tharun9772/bloxcraft-unblocked-hub@main/src/apps/dominum-browser.html" },
+
+
+{ id: "6", web: "A Proxy That Looks Simple, But Is Very Good!", gnote: "Sandstone", title: "Sandstone Proxy", img: "https://cdn.jsdelivr.net/gh/genizy/sandstone-gn/image.png", src: "https://cdn.jsdelivr.net/gh/tharun9772/bloxcraft-unblocked-hub@main/src/apps/sandstone-proxy.html" },
+
+
+{ id: "6", web: "An App That Can Let You View Games Made With Ruffle!", gnote: "Ruffle", title: "Ruffle", img: "https://cdn.jsdelivr.net/gh/tharun9772/game-assets@main/rs.ruffle.Ruffle.png", src: "https://cdn.jsdelivr.net/gh/tharun9772/bloxcraft-unblocked-hub@main/src/apps/ruffle.html" },
+  
+{ id: "7", web: "The Single HTML File That Lets You Play Hundreds Of Games!", gnote: "Bubblefan", title: "Ultimate Game Stash", img: "https://cdn-icons-png.flaticon.com/512/5968/5968517.png", src: "https://cdn.jsdelivr.net/gh/tharun9772/bloxcraft-unblocked-hub@main/src/apps/ultimate-game-stash.html" },
+  
+  ];
+
+  const gridEl = document.getElementById('gamesGrid');
+  const viewerBar = document.getElementById('viewerBar');
+  const viewerTitle = document.getElementById('viewerTitle');
+  const viewerFrame = document.getElementById('viewerFrame');
+  const openNewTabBtn = document.getElementById('openNewTab');
+  const closeViewerBtn = document.getElementById('closeViewer');
+  const params = new URLSearchParams(location.search);
+  const playId = params.get('play');
+
+  function escapeHtml(s){ return (s+'').replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+
+  function buildGrid(){
+    gridEl.innerHTML = '';
+    games.forEach(g=>{
+      const card = document.createElement('div');
+      card.className = 'game-card';
+      card.innerHTML = `
+        <img class="game-thumb" src="${g.img}" alt="${escapeHtml(g.title)} thumbnail" loading="lazy" />
+        <div class="game-body">
+          <div class="game-title">${escapeHtml(g.title)}</div>
+          <div class="game-meta"><span>${g.web}</span><span>${g.gnote}</span></div>
+          <div class="play-row">
+            <button class="bloxy-btn bloxy-rainbow-btn" data-id="${g.id}">Play</button>
+          </div>
+        </div>
+      `;
+
+      card.querySelector('.bloxy-btn').addEventListener('click', (e)=>{
+        const id = e.currentTarget.dataset.id;
+        location.href = `${location.pathname}?play=${encodeURIComponent(id)}`;
+      });
+
+      gridEl.appendChild(card);
+    });
+  }
+
+  async function openViewerForId(id, pushUrl=true){
+    const game = games.find(x=>x.id === String(id));
+    if(!game) return alert('Game not found');
+
+    document.getElementById('mainContent').style.display = 'none';
+    viewerBar.classList.remove('hidden');
+    viewerBar.setAttribute('aria-hidden','false');
+    viewerFrame.classList.remove('hidden');
+    viewerFrame.style.zIndex = 2;
+    viewerTitle.textContent = game.title;
+    document.getElementById('viewerIcon').textContent = game.title.split(' ').map(x=>x[0]).slice(0,3).join('').toUpperCase();
+    openNewTabBtn.onclick = ()=> window.open(game.src, '_blank');
+
+    if(pushUrl){ history.replaceState({}, '', location.pathname + '?play=' + encodeURIComponent(game.id)); }
+
+    try {
+      const shouldFetch = /\.html$/.test(game.src) || /cdn\.jsdelivr\.net|raw\.githubusercontent\.com|github\.com/.test(game.src);
+      if(shouldFetch){
+        const res = await fetch(game.src, {cache: "no-store"});
+        if(!res.ok) throw new Error('Fetch failed: '+res.status);
+        const text = await res.text();
+        const blob = new Blob([text], {type: 'text/html'});
+        const blobUrl = URL.createObjectURL(blob);
+        viewerFrame.src = blobUrl;
+        viewerFrame.onload = () => { setTimeout(()=> URL.revokeObjectURL(blobUrl), 2000); };
+      } else { viewerFrame.src = game.src; }
+    } catch(e){ viewerFrame.src = game.src; }
+  }
+
+  function closeViewer(){
+    try { viewerFrame.src = 'about:blank'; } catch(e) {}
+    viewerBar.classList.add('hidden'); viewerBar.setAttribute('aria-hidden','true');
+    viewerFrame.classList.add('hidden');
+    document.getElementById('mainContent').style.display = '';
+    history.replaceState({}, '', location.pathname);
+  }
+
+  buildGrid();
+  if(playId){ openViewerForId(playId, false).catch(()=> { const g = games.find(x=>x.id===playId); if(g) location.href = g.src; }); }
+  closeViewerBtn.addEventListener('click', closeViewer);
+  window.addEventListener('keydown', ev=>{ if(ev.key==='Escape' && !viewerBar.classList.contains('hidden')) closeViewer(); });
+  window.addEventListener('popstate', ()=>{ const p=new URLSearchParams(location.search).get('play'); if(p) openViewerForId(p,false); else closeViewer(); });
+
+</script>
+</body>
+</html>
