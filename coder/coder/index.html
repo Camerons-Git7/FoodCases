@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>👨🏻‍💻 Code Runner 👨🏻‍💻</title>
+<title>HTML Runner – Fast Preview</title>
 <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -13,20 +13,14 @@
     background-color: #0f172a;
     color: #e2e8f0;
     overflow: hidden;
+    margin: 0;
+    height: 100vh;
   }
-  textarea::-webkit-scrollbar {
-    width: 8px;
-  }
-  textarea::-webkit-scrollbar-track {
-    background: #1e293b;
-  }
-  textarea::-webkit-scrollbar-thumb {
-    background: #475569;
-    border-radius: 4px;
-  }
-  textarea::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
-  }
+  textarea::-webkit-scrollbar { width: 8px; }
+  textarea::-webkit-scrollbar-track { background: #1e293b; }
+  textarea::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+  textarea::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
   .squircle {
     border-radius: 24px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -35,151 +29,203 @@
     box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
     border-color: #6366f1;
   }
+
   .btn-enter {
     background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
     transition: transform 0.1s ease, box-shadow 0.2s ease;
   }
-  .btn-enter:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px -10px rgba(79, 70, 229, 0.5);
-  }
-  .btn-enter:active {
-    transform: translateY(0);
-  }
+  .btn-enter:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(79, 70, 229, 0.5); }
+  .btn-enter:active { transform: translateY(0); }
+
   .fade-out {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.5s ease;
   }
+
   #preview-iframe {
     width: 100%;
     height: 100%;
     border: none;
+    background: white;
   }
+
   .btn-import {
     background-color: #475569;
     transition: background-color 0.2s ease;
   }
-  .btn-import:hover {
-    background-color: #64748b;
+  .btn-import:hover { background-color: #64748b; }
+
+  #loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
   }
+  #loading-overlay.visible { opacity: 1; pointer-events: auto; }
 </style>
 </head>
-<body class="h-screen w-screen flex items-center justify-center relative">
+<body class="flex items-center justify-center relative">
 
 <div id="input-container" class="w-full max-w-3xl p-6 flex flex-col gap-6 z-10 transition-opacity duration-500">
   <div class="text-center space-y-2">
-    <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">HTML Runner</h1>
-    <p class="text-slate-400 text-sm">Paste code, import a file (auto-runs), or paste URL and hit Enter / Run.</p>
+    <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
+      HTML Runner
+    </h1>
+    <p class="text-slate-400 text-sm">
+      Paste code, import file (auto-runs), or paste URL → Enter / Run
+    </p>
   </div>
 
-  <div class="squircle bg-slate-800 border border-slate-700 p-1 flex flex-col shadow-2xl">
-    <textarea id="code-input" class="w-full h-64 bg-transparent text-slate-200 p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed"
-      placeholder="<!DOCTYPE html>..." spellcheck="false"></textarea>
+  <div class="squircle bg-slate-800 border border-slate-700 p-1 flex flex-col shadow-2xl relative">
+    <textarea id="code-input"
+      class="w-full h-64 bg-transparent text-slate-200 p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed"
+      placeholder='<!DOCTYPE html>\n<html>\n  <body>\n    <h1>Hello</h1>\n  </body>\n</html>'
+      spellcheck="false"></textarea>
 
     <div class="px-4 pb-4 flex justify-between items-center">
-      <!-- File Import Button -->
       <div class="relative">
-        <input type="file" id="file-input" accept=".html,.htm,.txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-        <label for="file-input" class="btn-import text-white font-bold py-2 px-4 rounded-xl shadow-lg cursor-pointer">
+        <input type="file" id="file-input" accept=".html,.htm,.txt" class="absolute inset-0 opacity-0 cursor-pointer">
+        <label for="file-input" class="btn-import text-white font-bold py-2 px-5 rounded-xl shadow-lg cursor-pointer">
           Import File
         </label>
       </div>
 
       <button id="run-btn" class="btn-enter text-white font-bold py-2 px-8 rounded-xl shadow-lg flex items-center gap-2">
         <span>Run Code</span>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
         </svg>
       </button>
     </div>
   </div>
 
-  <div class="text-center text-xs text-slate-600">Tip: Imported files run automatically • Ctrl+Enter = manual run</div>
+  <div class="text-center text-xs text-slate-600">
+    Tip: Files > ~800 KB show a warning • Ctrl+Enter = run manually
+  </div>
 </div>
 
-<div id="preview-container" class="absolute inset-0 w-full h-full bg-white hidden z-0">
-  <!-- iframe will be placed here -->
-</div>
+<div id="preview-container" class="absolute inset-0 bg-white hidden z-0"></div>
+
+<div id="loading-overlay" class="">Loading preview...</div>
 
 <script>
-  const inputContainer = document.getElementById('input-container');
-  const codeInput = document.getElementById('code-input');
-  const runBtn = document.getElementById('run-btn');
+  const inputContainer   = document.getElementById('input-container');
+  const codeInput        = document.getElementById('code-input');
+  const runBtn           = document.getElementById('run-btn');
   const previewContainer = document.getElementById('preview-container');
-  const fileInput = document.getElementById('file-input');
+  const fileInput        = document.getElementById('file-input');
+  const loadingOverlay   = document.getElementById('loading-overlay');
 
-  function isValidUrl(string) {
+  function isValidUrl(str) {
     try {
-      const url = new URL(string);
-      return url.protocol === "http:" || url.protocol === "https:";
-    } catch (_) {
+      const url = new URL(str);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
       return false;
     }
   }
 
-  function runCode() {
-    let code = codeInput.value.trim();
-    if (!code) return;
-
-    inputContainer.classList.add('fade-out');
-    setTimeout(() => {
-      inputContainer.style.display = 'none';
-      previewContainer.style.display = 'block';
-
-      // socks proxy command
-      const socksPrefix = "socks ";
-      if (code.toLowerCase().startsWith(socksPrefix)) {
-        const target = code.substring(socksPrefix.length).trim();
-        let urlToProxy = target.startsWith("http") ? target : "https://" + target;
-        if (isValidUrl(urlToProxy)) {
-          const proxyUrl = `https://socks-proxy-47dh.onrender.com/proxy?url=${encodeURIComponent(urlToProxy)}`;
-          previewContainer.innerHTML = `<iframe id="preview-iframe" src="${proxyUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
-          return;
-        }
-      }
-
-      // Direct URL
-      if (isValidUrl(code) && !code.includes('<') && !code.includes('>')) {
-        previewContainer.innerHTML = `<iframe id="preview-iframe" src="${code}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
-      } 
-      // HTML content
-      else {
-        const iframe = document.createElement('iframe');
-        iframe.id = 'preview-iframe';
-        previewContainer.innerHTML = '';
-        previewContainer.appendChild(iframe);
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-        doc.open();
-        doc.write(code);
-        doc.close();
-      }
-    }, 480); // slightly shorter than fade transition
+  function showLoading(show = true) {
+    loadingOverlay.classList.toggle('visible', show);
   }
 
-  // ───────────────────────────────────────────────
-  //  Auto-run when file is imported
-  // ───────────────────────────────────────────────
-  function handleFileImport(event) {
-    const file = event.target.files[0];
+  async function runCode() {
+    const raw = codeInput.value.trim();
+    if (!raw) return;
+
+    showLoading(true);
+    inputContainer.classList.add('fade-out');
+
+    await new Promise(r => setTimeout(r, 480)); // let fade finish
+
+    inputContainer.style.display = 'none';
+    previewContainer.style.display = 'block';
+    previewContainer.innerHTML = '';
+
+    // socks proxy command
+    const socksPrefix = "socks ";
+    if (raw.toLowerCase().startsWith(socksPrefix)) {
+      let target = raw.substring(socksPrefix.length).trim();
+      if (!target.match(/^https?:\/\//)) target = 'https://' + target;
+      if (isValidUrl(target)) {
+        const proxy = `https://socks-proxy-47dh.onrender.com/proxy?url=${encodeURIComponent(target)}`;
+        previewContainer.innerHTML = `<iframe id="preview-iframe" src="${proxy}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
+        showLoading(false);
+        return;
+      }
+    }
+
+    // direct URL
+    if (isValidUrl(raw) && !raw.includes('<') && !raw.includes('>')) {
+      previewContainer.innerHTML = `<iframe id="preview-iframe" src="${raw}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
+      showLoading(false);
+      return;
+    }
+
+    // HTML via Blob (much better for large content)
+    try {
+      const blob = new Blob([raw], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      const iframe = document.createElement('iframe');
+      iframe.id = 'preview-iframe';
+      iframe.sandbox = 'allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation';
+      iframe.src = url;
+
+      previewContainer.appendChild(iframe);
+
+      iframe.onload = () => {
+        // Optional: clean up blob url after load (saves a tiny bit of memory)
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        showLoading(false);
+      };
+    } catch (err) {
+      previewContainer.innerHTML = `<div class="p-8 text-red-400 font-bold">Error rendering preview: ${err.message}</div>`;
+      showLoading(false);
+    }
+  }
+
+  function handleFileSelect(e) {
+    const file = e.target.files?.[0];
     if (!file) return;
 
+    showLoading(true);
+
     const reader = new FileReader();
-    reader.onload = (e) => {
-      codeInput.value = e.target.result;
-      // Automatically run the code after loading
+    reader.onload = (ev) => {
+      codeInput.value = ev.target.result;
+
+      const sizeKB = (ev.target.result.length / 1024) | 0;
+
+      if (sizeKB > 800) {
+        showLoading(false);
+        if (!confirm(`This file is quite large (~${sizeKB} KB).\nRendering might take several seconds or temporarily freeze the tab.\n\nContinue anyway?`)) {
+          codeInput.value = '';
+          return;
+        }
+        showLoading(true);
+      }
+
+      // Auto-run
       runCode();
     };
     reader.readAsText(file);
   }
 
-  // ───────────────────────────────────────────────
-  //  Event listeners
-  // ───────────────────────────────────────────────
-  fileInput.addEventListener('change', handleFileImport);
+  // ─── Events ────────────────────────────────────────
+  fileInput.addEventListener('change', handleFileSelect);
   runBtn.addEventListener('click', runCode);
 
-  codeInput.addEventListener('keydown', (e) => {
+  codeInput.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       runCode();
