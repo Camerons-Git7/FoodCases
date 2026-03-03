@@ -51,7 +51,6 @@
     pointer-events: none;
     transition: opacity 0.5s ease;
   }
-  /* Full page iframe styles */
   #preview-iframe {
     width: 100%;
     height: 100%;
@@ -67,23 +66,27 @@
 </style>
 </head>
 <body class="h-screen w-screen flex items-center justify-center relative">
+
 <div id="input-container" class="w-full max-w-3xl p-6 flex flex-col gap-6 z-10 transition-opacity duration-500">
   <div class="text-center space-y-2">
-    <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400"> HTML Runner </h1>
-    <p class="text-slate-400 text-sm">Paste your HTML code or import a file below and hit Enter.</p>
+    <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">HTML Runner</h1>
+    <p class="text-slate-400 text-sm">Paste code, import a file (auto-runs), or paste URL and hit Enter / Run.</p>
   </div>
+
   <div class="squircle bg-slate-800 border border-slate-700 p-1 flex flex-col shadow-2xl">
-    <textarea id="code-input" class="w-full h-64 bg-transparent text-slate-200 p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed" placeholder="<!DOCTYPE html> <html> <body> <h1>Hello World</h1> </body> </html>" spellcheck="false" ></textarea>
+    <textarea id="code-input" class="w-full h-64 bg-transparent text-slate-200 p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed"
+      placeholder="<!DOCTYPE html>..." spellcheck="false"></textarea>
+
     <div class="px-4 pb-4 flex justify-between items-center">
-      <!-- File Import Button and Input -->
+      <!-- File Import Button -->
       <div class="relative">
-        <input type="file" id="file-input" accept=".html,.txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+        <input type="file" id="file-input" accept=".html,.htm,.txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
         <label for="file-input" class="btn-import text-white font-bold py-2 px-4 rounded-xl shadow-lg cursor-pointer">
           Import File
         </label>
       </div>
 
-      <button id="run-btn" class="btn-enter text-white font-bold py-2 px-8 rounded-xl shadow-lg flex items-center gap-2" >
+      <button id="run-btn" class="btn-enter text-white font-bold py-2 px-8 rounded-xl shadow-lg flex items-center gap-2">
         <span>Run Code</span>
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -91,11 +94,14 @@
       </button>
     </div>
   </div>
-  <div class="text-center text-xs text-slate-600"> Tip: Refresh the page to reset. </div>
+
+  <div class="text-center text-xs text-slate-600">Tip: Imported files run automatically • Ctrl+Enter = manual run</div>
 </div>
+
 <div id="preview-container" class="absolute inset-0 w-full h-full bg-white hidden z-0">
-  <!-- Content will be injected here -->
+  <!-- iframe will be placed here -->
 </div>
+
 <script>
   const inputContainer = document.getElementById('input-container');
   const codeInput = document.getElementById('code-input');
@@ -112,71 +118,74 @@
     }
   }
 
-  function handleFileImport(event) {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        codeInput.value = e.target.result;
-      };
-      reader.readAsText(file);
-    }
-  }
-
   function runCode() {
     let code = codeInput.value.trim();
-    if (!code) {
-      inputContainer.classList.add('animate-pulse');
-      setTimeout(() => inputContainer.classList.remove('animate-pulse'), 500);
-      return;
-    }
+    if (!code) return;
+
     inputContainer.classList.add('fade-out');
     setTimeout(() => {
       inputContainer.style.display = 'none';
       previewContainer.style.display = 'block';
-      // Check for socks command
+
+      // socks proxy command
       const socksPrefix = "socks ";
       if (code.toLowerCase().startsWith(socksPrefix)) {
-        // Extract URL after "socks "
         const target = code.substring(socksPrefix.length).trim();
-        // Validate URL format (add http if missing)
-        let urlToProxy;
-        if (!target.startsWith("http://") && !target.startsWith("https://")) {
-          urlToProxy = "https://" + target;
-        } else {
-          urlToProxy = target;
-        }
-        // Check if valid URL
+        let urlToProxy = target.startsWith("http") ? target : "https://" + target;
         if (isValidUrl(urlToProxy)) {
           const proxyUrl = `https://socks-proxy-47dh.onrender.com/proxy?url=${encodeURIComponent(urlToProxy)}`;
           previewContainer.innerHTML = `<iframe id="preview-iframe" src="${proxyUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
           return;
         }
       }
-      // Otherwise usual URL handling
+
+      // Direct URL
       if (isValidUrl(code) && !code.includes('<') && !code.includes('>')) {
         previewContainer.innerHTML = `<iframe id="preview-iframe" src="${code}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
-      } else {
-        // Treat as HTML code
+      } 
+      // HTML content
+      else {
         const iframe = document.createElement('iframe');
         iframe.id = 'preview-iframe';
-        previewContainer.innerHTML = ''; // Clear previous content
+        previewContainer.innerHTML = '';
         previewContainer.appendChild(iframe);
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write(code);
-        iframeDoc.close();
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(code);
+        doc.close();
       }
-    }, 500);
+    }, 480); // slightly shorter than fade transition
   }
 
-  runBtn.addEventListener('click', runCode);
+  // ───────────────────────────────────────────────
+  //  Auto-run when file is imported
+  // ───────────────────────────────────────────────
+  function handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      codeInput.value = e.target.result;
+      // Automatically run the code after loading
+      runCode();
+    };
+    reader.readAsText(file);
+  }
+
+  // ───────────────────────────────────────────────
+  //  Event listeners
+  // ───────────────────────────────────────────────
   fileInput.addEventListener('change', handleFileImport);
+  runBtn.addEventListener('click', runCode);
+
   codeInput.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
       runCode();
     }
   });
+
   window.addEventListener('DOMContentLoaded', () => {
     codeInput.focus();
   });
