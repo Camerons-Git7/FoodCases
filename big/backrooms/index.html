@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>🥇 1v1.lol 🥇</title>
+  <title>✈️ Flight Simulator ✈️</title>
   <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico"/>
   <style>
     * { margin:0; padding:0; border:0; }
@@ -41,7 +41,7 @@
 <body>
 
 <div id="loading">
-  <div>Loading Game...</div>
+  <div>Loading Flight Simulator...</div>
   <div style="margin-top:12px; opacity:0.7; font-size:0.9rem;">Please Wait — Loading May Take Up To 1 Minute</div>
 </div>
 
@@ -50,7 +50,7 @@
 <div id="error" style="display:none;"></div>
 
 <script>
-const GAME_URL = "https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/refs/heads/master/offline/bowmasters.html";
+const GAME_URL = "https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/3Dflightsimulator.html";
 
 async function start() {
   const loading = document.getElementById('loading');
@@ -60,12 +60,12 @@ async function start() {
   try {
     const resp = await fetch(GAME_URL);
     if (!resp.ok) {
-      throw new Error(`GitHub responded ${resp.status} — maybe rate limit or file moved`);
+      throw new Error(`GitHub responded ${resp.status} — maybe rate limit, file moved, or doesn't exist`);
     }
 
     const text = await resp.text();
 
-    // This is the key part — same technique your runner uses
+    // Create blob URL from the fetched HTML content
     const blob = new Blob([text], { type: 'text/html;charset=utf-8' });
     const blobUrl = URL.createObjectURL(blob);
 
@@ -73,26 +73,27 @@ async function start() {
     frame.onload = () => {
       loading.style.display = 'none';
       frame.style.display = 'block';
-      // Optional: clean up after a delay
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+      // Clean up blob URL after some time to free memory
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
     };
 
   } catch (err) {
     loading.style.display = 'none';
     errDiv.style.display = 'flex';
     errDiv.innerHTML = `
-      <strong>Failed to load game</strong><br><br>
+      <strong>Failed to load 3D Flight Simulator</strong><br><br>
       ${err.message}<br><br>
-      • Check your internet<br>
-      • GitHub may be throttling<br>
-      • File might have been removed/renamed<br><br>
-      Size hint: original file is ~36 MB — large downloads can fail on slow/unstable connections.
+      • Check your internet connection<br>
+      • GitHub may be rate-limiting your IP<br>
+      • The file might have been renamed, moved or removed<br><br>
+      Tip: You can also try opening this URL directly:<br>
+      <a href="${GAME_URL}" target="_blank" style="color:#4fc3f7;">${GAME_URL}</a>
     `;
     console.error(err);
   }
 }
 
-// Go immediately
+// Start loading immediately
 start();
 </script>
 
