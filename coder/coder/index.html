@@ -3,237 +3,529 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HTML Runner – Fast Preview</title>
-<link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
+<title>Universal Code Runner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
   body {
     font-family: 'JetBrains Mono', monospace;
-    background-color: #0f172a;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     color: #e2e8f0;
     overflow: hidden;
     margin: 0;
     height: 100vh;
   }
-  textarea::-webkit-scrollbar { width: 8px; }
-  textarea::-webkit-scrollbar-track { background: #1e293b; }
-  textarea::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-  textarea::-webkit-scrollbar-thumb:hover { background: #64748b; }
-
-  .squircle {
-    border-radius: 24px;
+  
+  .glow-btn {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite;
+    box-shadow: 0 0 60px rgba(99, 102, 241, 0.5), inset 0 0 20px rgba(255,255,255,0.1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .squircle:focus-within {
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+  
+  .glow-btn:hover {
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 0 80px rgba(139, 92, 246, 0.6), inset 0 0 30px rgba(255,255,255,0.2);
+  }
+  
+  .glow-btn:active {
+    transform: scale(0.98);
+  }
+  
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  .drop-zone {
+    border: 3px dashed rgba(99, 102, 241, 0.3);
+    transition: all 0.3s ease;
+  }
+  
+  .drop-zone.dragover {
     border-color: #6366f1;
+    background: rgba(99, 102, 241, 0.1);
+    transform: scale(1.02);
   }
-
-  .btn-enter {
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-    transition: transform 0.1s ease, box-shadow 0.2s ease;
-  }
-  .btn-enter:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(79, 70, 229, 0.5); }
-  .btn-enter:active { transform: translateY(0); }
-
-  .fade-out {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.5s ease;
-  }
-
+  
   #preview-iframe {
     width: 100%;
     height: 100%;
     border: none;
     background: white;
   }
-
-  .btn-import {
-    background-color: #475569;
-    transition: background-color 0.2s ease;
-  }
-  .btn-import:hover { background-color: #64748b; }
-
-  #loading-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.2rem;
-    z-index: 20;
-    pointer-events: none;
+  
+  .fade-out {
     opacity: 0;
-    transition: opacity 0.4s ease;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
   }
-  #loading-overlay.visible { opacity: 1; pointer-events: auto; }
+  
+  .file-icon {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
 </style>
 </head>
 <body class="flex items-center justify-center relative">
 
-<div id="input-container" class="w-full max-w-3xl p-6 flex flex-col gap-6 z-10 transition-opacity duration-500">
-  <div class="text-center space-y-2">
-    <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-400">
-      HTML Runner
+<div id="main-container" class="w-full max-w-2xl p-8 flex flex-col items-center gap-8 z-10 transition-all duration-500">
+  
+  <div class="text-center space-y-4">
+    <h1 class="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
+      Universal Runner
     </h1>
-    <p class="text-slate-400 text-sm">
-      Paste code, import file (auto-runs), or paste URL → Enter / Run
+    <p class="text-slate-400 text-lg">
+      Drop or click to run HTML, ZIP, GitHub repos & more
     </p>
   </div>
 
-  <div class="squircle bg-slate-800 border border-slate-700 p-1 flex flex-col shadow-2xl relative">
-    <textarea id="code-input"
-      class="w-full h-64 bg-transparent text-slate-200 p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed"
-      placeholder='<!DOCTYPE html>\n<html>\n  <body>\n    <h1>Hello</h1>\n  </body>\n</html>'
-      spellcheck="false"></textarea>
-
-    <div class="px-4 pb-4 flex justify-between items-center">
-      <div class="relative">
-        <input type="file" id="file-input" accept=".html,.htm,.txt" class="absolute inset-0 opacity-0 cursor-pointer">
-        <label for="file-input" class="btn-import text-white font-bold py-2 px-5 rounded-xl shadow-lg cursor-pointer">
-          Import File
-        </label>
+  <div id="drop-zone" class="drop-zone w-full aspect-square max-w-md rounded-3xl flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group">
+    <input type="file" id="file-input" class="absolute inset-0 opacity-0 cursor-pointer z-20" accept=".html,.htm,.zip,.txt,.js,.css,.json,.md">
+    
+    <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+    
+    <div class="file-icon text-6xl mb-4">📦</div>
+    
+    <div class="text-center space-y-2 z-10">
+      <div class="glow-btn text-white font-bold py-4 px-12 rounded-2xl text-xl shadow-2xl inline-block">
+        Import & Run
       </div>
-
-      <button id="run-btn" class="btn-enter text-white font-bold py-2 px-8 rounded-xl shadow-lg flex items-center gap-2">
-        <span>Run Code</span>
-        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
-        </svg>
-      </button>
+      <p class="text-slate-500 text-sm mt-4">Supports: HTML, ZIP, GitHub Repos, TXT, JS, CSS, JSON</p>
+    </div>
+    
+    <div id="loading-indicator" class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-30">
+      <div class="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p id="loading-text" class="text-indigo-400 font-bold">Processing...</p>
     </div>
   </div>
 
-  <div class="text-center text-xs text-slate-600">
-    Tip: Files > ~800 KB show a warning • Ctrl+Enter = run manually
+  <div class="text-center text-xs text-slate-600 max-w-md">
+    <p>GitHub repos: Download as ZIP → Import here. Auto-detects index.html or finds HTML entry points.</p>
   </div>
 </div>
 
 <div id="preview-container" class="absolute inset-0 bg-white hidden z-0"></div>
 
-<div id="loading-overlay" class="">Loading preview...</div>
+<div id="error-toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-red-500/90 text-white px-6 py-3 rounded-xl shadow-2xl opacity-0 pointer-events-none transition-all duration-300 z-50 backdrop-blur-sm">
+  <span id="error-text">Error message</span>
+</div>
 
 <script>
-  const inputContainer   = document.getElementById('input-container');
-  const codeInput        = document.getElementById('code-input');
-  const runBtn           = document.getElementById('run-btn');
+  const mainContainer = document.getElementById('main-container');
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
   const previewContainer = document.getElementById('preview-container');
-  const fileInput        = document.getElementById('file-input');
-  const loadingOverlay   = document.getElementById('loading-overlay');
+  const loadingIndicator = document.getElementById('loading-indicator');
+  const loadingText = document.getElementById('loading-text');
+  const errorToast = document.getElementById('error-toast');
+  const errorText = document.getElementById('error-text');
 
-  function isValidUrl(str) {
-    try {
-      const url = new URL(str);
-      return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch {
-      return false;
-    }
+  let currentFiles = new Map(); // Store files for relative path resolution
+
+  function showLoading(text = 'Processing...') {
+    loadingText.textContent = text;
+    loadingIndicator.classList.remove('opacity-0', 'pointer-events-none');
   }
 
-  function showLoading(show = true) {
-    loadingOverlay.classList.toggle('visible', show);
+  function hideLoading() {
+    loadingIndicator.classList.add('opacity-0', 'pointer-events-none');
   }
 
-  async function runCode() {
-    const raw = codeInput.value.trim();
-    if (!raw) return;
-
-    showLoading(true);
-    inputContainer.classList.add('fade-out');
-
-    await new Promise(r => setTimeout(r, 480)); // let fade finish
-
-    inputContainer.style.display = 'none';
-    previewContainer.style.display = 'block';
-    previewContainer.innerHTML = '';
-
-    // socks proxy command
-    const socksPrefix = "socks ";
-    if (raw.toLowerCase().startsWith(socksPrefix)) {
-      let target = raw.substring(socksPrefix.length).trim();
-      if (!target.match(/^https?:\/\//)) target = 'https://' + target;
-      if (isValidUrl(target)) {
-        const proxy = `https://socks-proxy-47dh.onrender.com/proxy?url=${encodeURIComponent(target)}`;
-        previewContainer.innerHTML = `<iframe id="preview-iframe" src="${proxy}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
-        showLoading(false);
-        return;
-      }
-    }
-
-    // direct URL
-    if (isValidUrl(raw) && !raw.includes('<') && !raw.includes('>')) {
-      previewContainer.innerHTML = `<iframe id="preview-iframe" src="${raw}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"></iframe>`;
-      showLoading(false);
-      return;
-    }
-
-    // HTML via Blob (much better for large content)
-    try {
-      const blob = new Blob([raw], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-
-      const iframe = document.createElement('iframe');
-      iframe.id = 'preview-iframe';
-      iframe.sandbox = 'allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation';
-      iframe.src = url;
-
-      previewContainer.appendChild(iframe);
-
-      iframe.onload = () => {
-        // Optional: clean up blob url after load (saves a tiny bit of memory)
-        setTimeout(() => URL.revokeObjectURL(url), 4000);
-        showLoading(false);
-      };
-    } catch (err) {
-      previewContainer.innerHTML = `<div class="p-8 text-red-400 font-bold">Error rendering preview: ${err.message}</div>`;
-      showLoading(false);
-    }
+  function showError(msg) {
+    errorText.textContent = msg;
+    errorToast.classList.remove('opacity-0', 'pointer-events-none');
+    setTimeout(() => {
+      errorToast.classList.add('opacity-0', 'pointer-events-none');
+    }, 4000);
   }
 
-  function handleFileSelect(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Drag and drop handlers
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
 
-    showLoading(true);
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      codeInput.value = ev.target.result;
-
-      const sizeKB = (ev.target.result.length / 1024) | 0;
-
-      if (sizeKB > 800) {
-        showLoading(false);
-        if (!confirm(`This file is quite large (~${sizeKB} KB).\nRendering might take several seconds or temporarily freeze the tab.\n\nContinue anyway?`)) {
-          codeInput.value = '';
-          return;
-        }
-        showLoading(true);
-      }
-
-      // Auto-run
-      runCode();
-    };
-    reader.readAsText(file);
-  }
-
-  // ─── Events ────────────────────────────────────────
-  fileInput.addEventListener('change', handleFileSelect);
-  runBtn.addEventListener('click', runCode);
-
-  codeInput.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      runCode();
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFile(files[0]);
     }
   });
 
-  window.addEventListener('DOMContentLoaded', () => {
-    codeInput.focus();
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      handleFile(e.target.files[0]);
+    }
+  });
+
+  async function handleFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    
+    showLoading(`Loading ${file.name}...`);
+
+    try {
+      if (ext === 'zip') {
+        await processZip(file);
+      } else if (['html', 'htm'].includes(ext)) {
+        await processHtml(file);
+      } else if (['txt', 'js', 'css', 'json', 'md'].includes(ext)) {
+        await processTextFile(file);
+      } else {
+        // Try to detect if it's HTML content anyway
+        const text = await readFileAsText(file);
+        if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+          await runHtml(text);
+        } else {
+          showError(`Unsupported file type: .${ext}`);
+          hideLoading();
+        }
+      }
+    } catch (err) {
+      showError(`Error: ${err.message}`);
+      hideLoading();
+    }
+  }
+
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = (e) => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  }
+
+  function readFileAsArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = (e) => reject(new Error('Failed to read file'));
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  async function processHtml(file) {
+    const content = await readFileAsText(file);
+    await runHtml(content);
+  }
+
+  async function processTextFile(file) {
+    const content = await readFileAsText(file);
+    // Wrap in HTML for display
+    const wrapped = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${file.name}</title>
+  <style>
+    body { 
+      font-family: 'JetBrains Mono', monospace; 
+      background: #0f172a; 
+      color: #e2e8f0; 
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    pre { 
+      background: #1e293b; 
+      padding: 1rem; 
+      border-radius: 8px; 
+      overflow-x: auto;
+      border: 1px solid #334155;
+    }
+    h1 { color: #6366f1; border-bottom: 2px solid #334155; padding-bottom: 0.5rem; }
+    .meta { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>📄 ${file.name}</h1>
+  <div class="meta">Size: ${(file.size / 1024).toFixed(2)} KB | Type: ${file.type || 'text/plain'}</div>
+  <pre><code>${escapeHtml(content)}</code></pre>
+</body>
+</html>`;
+    await runHtml(wrapped);
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  async function processZip(file) {
+    showLoading('Extracting ZIP...');
+    
+    const arrayBuffer = await readFileAsArrayBuffer(file);
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    
+    currentFiles.clear();
+    const files = [];
+    
+    // Collect all files
+    zip.forEach((relativePath, zipEntry) => {
+      if (!zipEntry.dir) {
+        files.push({
+          path: relativePath,
+          entry: zipEntry,
+          name: zipEntry.name.split('/').pop(),
+          dir: zipEntry.name.split('/').slice(0, -1).join('/')
+        });
+      }
+    });
+
+    showLoading('Processing files...');
+
+    // Find entry point
+    let entryPoint = null;
+    
+    // Priority order for entry points
+    const priorities = [
+      'index.html', 'Index.html', 'INDEX.HTML',
+      'main.html', 'Main.html', 'main.htm',
+      'home.html', 'Home.html',
+      'default.html', 'Default.html'
+    ];
+    
+    // Check root level first
+    for (const priority of priorities) {
+      const found = files.find(f => f.path.toLowerCase() === priority.toLowerCase() || 
+                                   f.path.endsWith('/' + priority.toLowerCase()));
+      if (found) {
+        entryPoint = found;
+        break;
+      }
+    }
+    
+    // If no standard entry point, find any HTML file
+    if (!entryPoint) {
+      const htmlFiles = files.filter(f => f.name.match(/\.(html|htm)$/i));
+      if (htmlFiles.length > 0) {
+        // Prefer root-level or least nested
+        entryPoint = htmlFiles.sort((a, b) => {
+          const depthA = a.path.split('/').length;
+          const depthB = b.path.split('/').length;
+          return depthA - depthB;
+        })[0];
+      }
+    }
+
+    if (!entryPoint) {
+      // No HTML found, show file browser
+      await showFileBrowser(files, zip);
+      return;
+    }
+
+    showLoading(`Loading ${entryPoint.name}...`);
+    
+    // Extract all files to memory for relative path resolution
+    for (const file of files) {
+      const content = await file.entry.async('uint8array');
+      const blob = new Blob([content]);
+      currentFiles.set(file.path, {
+        blob: blob,
+        url: URL.createObjectURL(blob),
+        type: getMimeType(file.name)
+      });
+    }
+
+    // Get entry point content
+    const entryContent = await entryPoint.entry.async('text');
+    await runHtml(entryContent, entryPoint.path);
+  }
+
+  async function showFileBrowser(files, zip) {
+    // Create a file browser UI for non-HTML zips
+    const fileList = files.map(f => `<li style="margin: 0.5rem 0; cursor: pointer; color: #6366f1;" onclick="window.viewFile('${f.path}')">📄 ${f.path}</li>`).join('');
+    
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ZIP Contents</title>
+  <style>
+    body { 
+      font-family: 'JetBrains Mono', monospace; 
+      background: #0f172a; 
+      color: #e2e8f0; 
+      padding: 2rem;
+    }
+    h1 { color: #6366f1; }
+    ul { list-style: none; padding: 0; }
+    li:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>📦 ZIP Archive Contents</h1>
+  <p>No HTML entry point found. Click a file to view:</p>
+  <ul>${fileList}</ul>
+</body>
+</html>`;
+    
+    // Store zip for later access
+    window.currentZip = zip;
+    window.viewFile = async (path) => {
+      const file = files.find(f => f.path === path);
+      if (file) {
+        const content = await file.entry.async('text');
+        const wrapped = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${path}</title>
+  <style>
+    body { font-family: monospace; background: #0f172a; color: #e2e8f0; padding: 2rem; }
+    pre { background: #1e293b; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>${path}</h1>
+  <pre>${escapeHtml(content)}</pre>
+</body>
+</html>`;
+        await runHtml(wrapped);
+      }
+    };
+    
+    await runHtml(html);
+  }
+
+  function getMimeType(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const types = {
+      'html': 'text/html',
+      'htm': 'text/html',
+      'js': 'application/javascript',
+      'css': 'text/css',
+      'json': 'application/json',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'svg': 'image/svg+xml',
+      'webp': 'image/webp',
+      'woff': 'font/woff',
+      'woff2': 'font/woff2',
+      'ttf': 'font/ttf',
+      'otf': 'font/otf'
+    };
+    return types[ext] || 'application/octet-stream';
+  }
+
+  async function runHtml(htmlContent, basePath = '') {
+    showLoading('Rendering...');
+    
+    // Get base directory for relative path resolution
+    const baseDir = basePath ? basePath.split('/').slice(0, -1).join('/') : '';
+    
+    // Process HTML to handle relative paths
+    let processedHtml = htmlContent;
+    
+    // Replace relative URLs with blob URLs
+    const urlPatterns = [
+      { regex: /href=["']([^"']+)["']/g, type: 'href' },
+      { regex: /src=["']([^"']+)["']/g, type: 'src' },
+      { regex: /url\(["']?([^"')]+)["']?\)/g, type: 'url' }
+    ];
+    
+    for (const pattern of urlPatterns) {
+      processedHtml = processedHtml.replace(pattern.regex, (match, url) => {
+        // Skip absolute URLs, data URIs, and anchors
+        if (url.match(/^(https?:|data:|javascript:|#|\/\/)/)) return match;
+        
+        // Resolve relative path
+        let resolvedPath;
+        if (url.startsWith('/')) {
+          resolvedPath = url.slice(1);
+        } else if (baseDir) {
+          resolvedPath = baseDir + '/' + url;
+        } else {
+          resolvedPath = url;
+        }
+        
+        // Normalize path (handle ../ and ./)
+        resolvedPath = normalizePath(resolvedPath);
+        
+        // Check if we have this file
+        const file = currentFiles.get(resolvedPath) || 
+                    currentFiles.get(resolvedPath.replace(/^\.\//, '')) ||
+                    findFileCaseInsensitive(resolvedPath);
+        
+        if (file) {
+          if (pattern.type === 'url') {
+            return `url("${file.url}")`;
+          } else {
+            return `${pattern.type}="${file.url}"`;
+          }
+        }
+        
+        return match;
+      });
+    }
+
+    // Hide main UI
+    mainContainer.classList.add('fade-out');
+    setTimeout(() => {
+      mainContainer.style.display = 'none';
+      previewContainer.style.display = 'block';
+    }, 500);
+
+    // Create blob and run
+    const blob = new Blob([processedHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    previewContainer.innerHTML = `<iframe id="preview-iframe" src="${url}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation allow-modals"></iframe>`;
+    
+    hideLoading();
+    
+    // Cleanup blob URL after load
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  function normalizePath(path) {
+    const parts = path.split('/');
+    const result = [];
+    for (const part of parts) {
+      if (part === '..') {
+        result.pop();
+      } else if (part !== '.' && part !== '') {
+        result.push(part);
+      }
+    }
+    return result.join('/');
+  }
+
+  function findFileCaseInsensitive(path) {
+    const lowerPath = path.toLowerCase();
+    for (const [key, value] of currentFiles) {
+      if (key.toLowerCase() === lowerPath) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  // Allow going back
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && previewContainer.style.display === 'block') {
+      previewContainer.style.display = 'none';
+      previewContainer.innerHTML = '';
+      mainContainer.style.display = 'flex';
+      mainContainer.classList.remove('fade-out');
+      currentFiles.clear();
+    }
   });
 </script>
 </body>
