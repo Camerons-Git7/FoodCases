@@ -2,114 +2,284 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>▶︎ YouTube ▶︎</title>
-  <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
- 
+  <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    html, body { height:100%; overflow:hidden; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html,
     body {
-      font-family:'Inter',system-ui,sans-serif;
-      background:#0f0f0f; color:#e5e5e5;
-      display:flex; flex-direction:column;
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      font-family: "Inter", system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #e5e5e5;
+      display: flex;
+      flex-direction: column;
     }
     #input-screen {
-      flex:1; display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      padding:2rem; text-align:center;
-      transition:opacity 0.4s ease; overflow-y:auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      text-align: center;
+      transition: opacity 0.4s ease;
+      overflow-y: auto;
     }
-    h1 { font-size:3rem; font-weight:700; margin-bottom:1.5rem; letter-spacing:-0.02em; }
-    p.subtitle { font-size:1.25rem; color:#a1a1aa; margin-bottom:2.5rem; max-width:500px; }
-    .input-group { display:flex; flex-wrap:wrap; gap:1rem; max-width:700px; width:100%; justify-content:center; }
+    h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+    }
+    p.subtitle {
+      font-size: 1.25rem;
+      color: #a1a1aa;
+      margin-bottom: 2.5rem;
+      max-width: 500px;
+    }
+    .input-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      max-width: 700px;
+      width: 100%;
+      justify-content: center;
+    }
     input[type="text"] {
-      flex:1; min-width:300px; padding:1rem 1.5rem; font-size:1.1rem;
-      background:#1f1f1f; border:1px solid #333; border-radius:12px;
-      color:white; outline:none; transition:all 0.2s;
+      flex: 1;
+      min-width: 300px;
+      padding: 1rem 1.5rem;
+      font-size: 1.1rem;
+      background: #1f1f1f;
+      border: 1px solid #333;
+      border-radius: 12px;
+      color: white;
+      outline: none;
+      transition: all 0.2s;
     }
-    input[type="text"]:focus { border-color:#ff0000; box-shadow:0 0 0 3px rgba(255,0,0,0.15); }
+    input[type="text"]:focus {
+      border-color: #ff0000;
+      box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.15);
+    }
     button {
-      padding:1rem 2.5rem; font-size:1.1rem; font-weight:600;
-      background:#ff0000; color:white; border:none; border-radius:12px;
-      cursor:pointer; transition:all 0.2s;
+      padding: 1rem 2.5rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      background: #ff0000;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
     }
-    button:hover { background:#cc0000; transform:translateY(-2px); }
-    button:active { transform:translateY(0); }
-    button.secondary { background:#333; }
-    button.secondary:hover { background:#444; }
-    .button-group { display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; }
+    button:hover {
+      background: #cc0000;
+      transform: translateY(-2px);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    button.secondary {
+      background: #333;
+    }
+    button.secondary:hover {
+      background: #444;
+    }
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
     #video-screen {
-      position:fixed; inset:0; background:black; display:none;
-      flex-direction:column; align-items:center; justify-content:center; z-index:10;
+      position: fixed;
+      inset: 0;
+      background: black;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
     }
-    .video-container { position:relative; width:100%; height:100vh; max-width:100vw; overflow:hidden; background:#000; }
-    .video-container iframe { position:absolute; inset:0; width:100%; height:100%; border:none; }
+    .video-container {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      max-width: 100vw;
+      overflow: hidden;
+      background: #000;
+    }
+    .video-container iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
     #browse-screen {
-      position:fixed; inset:0; background:#0f0f0f; display:none;
-      flex-direction:column; z-index:20; height:100vh;
+      position: fixed;
+      inset: 0;
+      background: #0f0f0f;
+      display: none;
+      flex-direction: column;
+      z-index: 20;
+      height: 100vh;
+      overflow-y: auto;
+      padding-bottom: 2rem;
     }
     .browse-header {
-      display:flex; align-items:center; justify-content:space-between;
-      padding:1rem 2rem; background:#1f1f1f; border-bottom:1px solid #333;
-      flex-shrink:0; height:60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background: #1f1f1f;
+      border-bottom: 1px solid #333;
+      flex-shrink: 0;
+      height: 60px;
     }
-    .browse-header h2 { font-size:1.5rem; color:#ff0000; }
-    .back-btn { padding:0.5rem 1.5rem; font-size:0.9rem; }
-    .browse-content { flex:1; overflow-y:auto; padding:2rem; position:relative; }
+    .browse-header h2 {
+      font-size: 1.5rem;
+      color: #ff0000;
+      margin: 0;
+      user-select: none;
+    }
+    .back-btn {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.9rem;
+    }
+
+    /* New styles for stacked channel sections */
+    .channel-section {
+      max-width: 900px;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+    }
+    .channel-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #ff0000;
+      border-bottom: 2px solid #ff0000;
+      padding-bottom: 0.3rem;
+      user-select: none;
+    }
     .video-grid {
-      display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
-      gap:1.5rem; max-width:1600px; margin:0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
     }
     .video-card {
-      background:#1f1f1f; border-radius:12px; overflow:hidden; cursor:pointer;
-      transition:transform 0.2s, border-color 0.2s; border:1px solid #333;
+      background: #1f1f1f;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+      border: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
     }
-    .video-card:hover { transform:translateY(-4px); border-color:#ff0000; }
-    .video-thumb { width:100%; height:0; padding-bottom:56.25%; background:#000; position:relative; overflow:hidden; }
+    .video-card:hover {
+      transform: translateY(-3px);
+      border-color: #ff0000;
+    }
+    .video-thumb {
+      width: 100%;
+      padding-bottom: 56.25%;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
     .video-thumb img {
-      position:absolute; top:0; left:0; width:100%; height:100%;
-      object-fit:cover; display:block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
-    .video-info { padding:1rem; }
-    .video-title {
-      font-size:0.95rem; font-weight:600; color:#fff; line-height:1.4;
-      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+    .video-info {
+      padding: 0.75rem 1rem;
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.3;
+      white-space: normal;
     }
-    .loading { font-size:1.5rem; color:#888; text-align:center; padding:3rem; }
-    .error-msg { color:#ff4444; padding:2rem; text-align:center; }
-    .retry-btn { margin-top:1rem; padding:0.5rem 1rem; font-size:0.9rem; }
-    .load-more-btn {
-      grid-column:1 / -1; padding:1rem; margin-top:1rem;
-      background:#333; border:none; border-radius:8px; color:white;
-      cursor:pointer; font-size:1rem; transition:background 0.2s;
+    .loading {
+      font-size: 1.5rem;
+      color: #888;
+      text-align: center;
+      padding: 2rem 0;
     }
-    .load-more-btn:hover { background:#444; }
-    .load-more-btn:disabled { background:#222; color:#666; cursor:not-allowed; }
-    @media (max-width:600px) {
-      h1 { font-size:2.4rem; }
-      .input-group { flex-direction:column; align-items:stretch; }
-      input, button { width:100%; }
-      .browse-header { padding:1rem; height:auto; }
-      .browse-header h2 { font-size:1.2rem; }
-      .browse-content { padding:1rem; }
-      .video-grid { grid-template-columns:1fr; gap:1rem; }
+    .error-msg {
+      color: #ff4444;
+      padding: 2rem;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1rem;
+      user-select: none;
+    }
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 2.4rem;
+      }
+      .input-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      input,
+      button {
+        width: 100%;
+      }
+      .browse-header {
+        padding: 1rem;
+        height: auto;
+      }
+      .browse-header h2 {
+        font-size: 1.2rem;
+      }
+      #browse-screen {
+        padding: 0 0 2rem 0;
+      }
+      .channel-section {
+        max-width: 100%;
+        margin: 1rem 1rem 2rem;
+      }
+      .video-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
-
   <div id="input-screen">
     <h1>▶︎ YouTube ▶︎</h1>
     <p class="subtitle">Paste Your Youtube Link Below or Browse Videos</p>
-   
+
     <div class="input-group">
-      <input id="url" type="text" placeholder="https://www.youtube.com/watch?v= ..." autofocus />
+      <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." autofocus />
     </div>
-   
+
     <div class="button-group" style="margin-top: 1rem;">
       <button id="submit">Watch</button>
       <button id="browse-btn" class="secondary">Browse Videos</button>
@@ -122,66 +292,87 @@
         id="player"
         src=""
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen>
-      </iframe>
+        allowfullscreen
+      ></iframe>
     </div>
     <div class="loading" id="loading">Loading video...</div>
   </div>
 
   <div id="browse-screen">
     <div class="browse-header">
-      <h2>▶︎ Joe Barts Gaming Videos</h2>
+      <h2>▶︎ Joe Bart Videos</h2>
       <button class="back-btn secondary" onclick="closeBrowse()">Back</button>
     </div>
-    <div class="browse-content" id="browse-content">
-      <div class="loading" id="browse-loading">Loading videos...</div>
-      <div class="video-grid" id="video-grid" style="display: none;"></div>
+    <div id="browse-content">
+      <!-- Channel video sections will be inserted here dynamically -->
     </div>
   </div>
 
   <script>
-    const submitBtn     = document.getElementById('submit');
-    const browseBtn     = document.getElementById('browse-btn');
-    const urlInput      = document.getElementById('url');
-    const inputScreen   = document.getElementById('input-screen');
-    const videoScreen   = document.getElementById('video-screen');
-    const browseScreen  = document.getElementById('browse-screen');
-    const player        = document.getElementById('player');
-    const browseLoading = document.getElementById('browse-loading');
-    const videoGrid     = document.getElementById('video-grid');
-    const loading       = document.getElementById('loading');
+    const submitBtn = document.getElementById("submit");
+    const browseBtn = document.getElementById("browse-btn");
+    const urlInput = document.getElementById("url");
+    const inputScreen = document.getElementById("input-screen");
+    const videoScreen = document.getElementById("video-screen");
+    const browseScreen = document.getElementById("browse-screen");
+    const browseContent = document.getElementById("browse-content");
+    const player = document.getElementById("player");
+    const loading = document.getElementById("loading");
 
-    const embedBase   = "https://www.youtube-nocookie.com/embed/";
-    const embedParams = "?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1";
-
+    // Proxy servers to avoid CORS
     const proxies = [
       "https://api.allorigins.win/raw?url=",
       "https://api.codetabs.com/v1/proxy?quest=",
-      "https://thingproxy.freeboard.io/fetch/"
+      "https://thingproxy.freeboard.io/fetch/",
     ];
 
-    let currentChannelUrl = null;
-    let continuationToken = null;
-    let apiKey            = null;
-    let clientVersion     = null;
-    let allVideos         = [];
-    let currentProxy      = null;
+    // Channels to load - each with channel videos URL, id and title for headings
+    const channels = [
+      {
+        id: "joe-bart-gaming",
+        title: "Joe Bart Gaming Videos",
+        url: "https://www.youtube.com/@JoeBartGames/videos",
+      },
+      {
+        id: "joe-bart",
+        title: "Joe Bart General Videos",
+        url: "https://www.youtube.com/@JoeBartolozzi/videos",
+      },
+      {
+        id: "joe-bart-vods",
+        title: "Joe Bart Vods",
+        url: "https://www.youtube.com/@JoeBartVOD/videos",
+      },
+      {
+        id: "joe-bart-philosophy",
+        title: "Joe Bart Philosophy Videos",
+        url: "https://www.youtube.com/@Joe-Bart-Philosophy/videos",
+      },
+    ];
 
-    // Attach listeners — elements now exist
-    submitBtn.addEventListener('click', handleSubmit);
-    urlInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleSubmit(); });
-    browseBtn.addEventListener('click', () => openBrowse("https://www.youtube.com/@JoeBartGames/videos?gl=US&hl=en"));
+    // Storage objects for videos and API info per channel
+    let allChannelVideos = {};
+    let channelStates = {}; // continuationToken, apiKey, clientVersion, proxy
+
+    submitBtn.addEventListener("click", handleSubmit);
+    urlInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") handleSubmit();
+    });
+    browseBtn.addEventListener("click", openBrowse);
 
     function handleSubmit() {
       let input = urlInput.value.trim();
       if (!input) return;
 
-      const channelMatch = input.match(/youtube\.com\/(?:@[^/]+|channel\/[^/]+|c\/[^/]+)(?:\/videos)?/i);
+      const channelMatch = input.match(
+        /youtube\.com\/(?:@[^/]+|channel\/[^/]+|c\/[^/]+)(?:\/videos)?/i
+      );
       if (channelMatch) {
+        // If input is a channel URL, open browse filtered to that
         let url = input;
-        if (!/\/videos/i.test(url)) url += (url.includes('?') ? '&' : '/') + 'videos';
-        if (!url.includes('gl=') && !url.includes('hl=')) {
-          url += (url.includes('?') ? '&' : '?') + 'gl=US&hl=en';
+        if (!/\/videos/i.test(url)) url += url.includes("?") ? "&" : "/" + "videos";
+        if (!url.includes("gl=") && !url.includes("hl=")) {
+          url += url.includes("?") ? "&" : "?" + "gl=US&hl=en";
         }
         openBrowse(url);
         return;
@@ -191,7 +382,8 @@
     }
 
     function playVideo(input) {
-      let videoId = input.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1];
+      let videoId =
+        input.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1] || null;
       if (!videoId && input.length === 11) videoId = input;
 
       if (!videoId) {
@@ -199,115 +391,167 @@
         return;
       }
 
-      inputScreen.style.opacity = '0';
-      setTimeout(() => { inputScreen.style.display = 'none'; }, 400);
-      browseScreen.style.display = 'none';
-      videoScreen.style.display = 'flex';
-      player.src = embedBase + videoId + embedParams;
-      setTimeout(() => { loading.style.display = 'none'; }, 1800);
+      inputScreen.style.opacity = "0";
+      setTimeout(() => {
+        inputScreen.style.display = "none";
+      }, 400);
+      browseScreen.style.display = "none";
+      videoScreen.style.display = "flex";
+      player.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1`;
+      loading.style.display = "block";
+      setTimeout(() => {
+        loading.style.display = "none";
+      }, 1800);
     }
 
-    async function openBrowse(channelUrl) {
-      currentChannelUrl = channelUrl;
-      inputScreen.style.display = 'none';
-      videoScreen.style.display = 'none';
-      browseScreen.style.display = 'flex';
-      browseLoading.style.display = 'block';
-      browseLoading.innerHTML = 'Loading videos...';
-      videoGrid.style.display = 'none';
-      videoGrid.innerHTML = '';
-      allVideos = [];
-      continuationToken = null;
-      apiKey = null;
-      clientVersion = null;
-      currentProxy = null;
+    async function openBrowse(filterUrl = null) {
+      inputScreen.style.display = "none";
+      videoScreen.style.display = "none";
+      browseScreen.style.display = "flex";
 
-      let lastError = null;
+      browseContent.innerHTML = ""; // Clear previous content
 
-      for (const proxy of proxies) {
-        try {
-          console.log('Trying proxy:', proxy);
-          const response = await fetch(proxy + encodeURIComponent(channelUrl), {
-            method: 'GET',
-            headers: { 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' }
-          });
+      // If filterUrl provided, only show that single dynamic channel section (optional)
+      // For now, ignore filtering, always show all three stacked
 
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const html = await response.text();
-          if (!html || html.length < 1000) throw new Error('Empty or invalid response');
+      allChannelVideos = {};
+      channelStates = {};
 
-          apiKey = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/)?.[1];
-          clientVersion = html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/)?.[1];
+      for (const ch of channels) {
+        // Create a container section for each channel
+        const section = document.createElement("section");
+        section.classList.add("channel-section");
+        section.id = `channel-section-${ch.id}`;
 
-          const videos = parseVideos(html);
-          if (videos.length === 0) throw new Error('No videos parsed from page');
+        const title = document.createElement("h2");
+        title.classList.add("channel-title");
+        title.textContent = ch.title;
+        section.appendChild(title);
 
-          currentProxy = proxy;
-          allVideos = videos;
-          renderVideos();
+        // A grid container for videos
+        const grid = document.createElement("div");
+        grid.classList.add("video-grid");
+        grid.id = `video-grid-${ch.id}`;
 
-          if (continuationToken && allVideos.length < 30) {
-            await loadMoreVideos(proxy);
-          }
+        // Initial loading message
+        const loadingMsg = document.createElement("div");
+        loadingMsg.className = "loading";
+        loadingMsg.textContent = "Loading videos...";
+        grid.appendChild(loadingMsg);
 
-          browseLoading.style.display = 'none';
-          videoGrid.style.display = 'grid';
-          return;
+        section.appendChild(grid);
+        browseContent.appendChild(section);
 
-        } catch (err) {
-          console.error('Proxy failed:', proxy, err);
-          lastError = err;
-        }
+        allChannelVideos[ch.id] = [];
+        channelStates[ch.id] = {
+          continuationToken: null,
+          apiKey: null,
+          clientVersion: null,
+          proxy: null,
+          loading: true,
+          error: null,
+        };
       }
 
-      browseLoading.innerHTML = `
-        <div class="error-msg">
-          <div>Failed to load videos. All proxies failed.</div>
-          <div style="font-size:0.8rem; margin-top:0.5rem; color:#666;">${lastError?.message || 'Unknown error'}</div>
-          <button class="retry-btn secondary" onclick="openBrowse(currentChannelUrl)">Retry</button>
-        </div>
-      `;
+      // Start loading all channels sequentially to avoid too many simultaneous fetches
+      for (const ch of channels) {
+        await loadAllChannelVideos(ch);
+      }
     }
 
-    async function loadMoreVideos(proxy) {
-      if (!continuationToken || !apiKey || !proxy) return;
+    async function loadAllChannelVideos(channel) {
+      const grid = document.getElementById(`video-grid-${channel.id}`);
+      grid.innerHTML = ""; // clear loading text
 
       try {
-        const browseUrl = 'https://www.youtube.com/youtubei/v1/browse?key=' + apiKey;
-        const body = {
-          context: {
-            client: { clientName: "WEB", clientVersion: clientVersion || "2.20240729.00.00", hl: "en", gl: "US" }
-          },
-          continuation: continuationToken
-        };
+        // Find working proxy and initial API keys + first videos
+        let initSuccess = false;
+        let lastError = null;
+        for (const proxy of proxies) {
+          try {
+            const response = await fetch(proxy + encodeURIComponent(channel.url), {
+              method: "GET",
+              headers: { Accept: "text/html" },
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const html = await response.text();
+            if (!html || html.length < 1000)
+              throw new Error("Empty or invalid response");
 
-        const res = await fetch(proxy + encodeURIComponent(browseUrl), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
+            const apiKey = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/)?.[1];
+            const clientVersion = html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/)?.[1];
+            if (!apiKey || !clientVersion)
+              throw new Error("Missing API key or client version");
 
-        if (!res.ok) return;
-        const data = await res.json();
-        const newVideos = parseContinuationVideos(data);
+            const initialVideos = parseVideos(html);
+            if (initialVideos.length === 0)
+              throw new Error("No videos parsed from initial page");
+            const continuationToken = findContinuation(html);
 
-        if (newVideos.length > 0) {
-          allVideos = allVideos.concat(newVideos);
-          renderVideos();
+            allChannelVideos[channel.id] = initialVideos;
+            channelStates[channel.id] = {
+              continuationToken,
+              apiKey,
+              clientVersion,
+              proxy,
+              loading: false,
+              error: null,
+            };
 
-          const newToken = data?.continuationContents?.gridContinuation?.continuations?.[0]?.nextContinuationData?.continuation;
-          if (newToken) {
-            continuationToken = newToken;
-            if (allVideos.length < 30) await loadMoreVideos(proxy);
-          } else {
-            continuationToken = null;
+            renderChannelVideos(channel);
+            initSuccess = true;
+
+            break; // Found working proxy, exit loop
+          } catch (e) {
+            lastError = e;
+            console.warn(`Proxy ${proxy} failed for ${channel.id}:`, e);
           }
         }
+        if (!initSuccess) {
+          grid.innerHTML = `<div class="error-msg">Failed to load videos for this channel.<br>${lastError?.message ||
+            "Unknown error"}</div>`;
+          channelStates[channel.id].loading = false;
+          channelStates[channel.id].error = lastError?.message || "Unknown error";
+          return;
+        }
+
+        // Recursively load continuations until no more or 120 videos
+        while (
+          channelStates[channel.id].continuationToken &&
+          allChannelVideos[channel.id].length < 120
+        ) {
+          const ok = await loadMoreVideos(channel);
+          if (!ok) break;
+          renderChannelVideos(channel);
+          await sleep(200); // slight delay to reduce load bursts
+        }
       } catch (err) {
-        console.error('loadMore failed:', err);
+        grid.innerHTML = `<div class="error-msg">Error loading videos: ${err.message}</div>`;
+        channelStates[channel.id].loading = false;
+        channelStates[channel.id].error = err.message || "Error";
+        console.error("Error loading channel videos:", err);
       }
+
+      // Final render after done loading
+      renderChannelVideos(channel);
     }
 
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    // Parse continuation token from HTML string
+    function findContinuation(html) {
+      try {
+        const match = html.match(/"continuationCommand":{"token":"([^"]+)"}/);
+        if (match) return match[1];
+        const altMatch = html.match(/"continuation":"([^"]+)"/);
+        if (altMatch) return altMatch[1];
+      } catch {}
+      return null;
+    }
+
+    // Same parseVideos function, extracting videos from the initial html
     function parseVideos(html) {
       const videos = [];
       try {
@@ -316,9 +560,14 @@
           const data = JSON.parse(match[1]);
           const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
           for (const tab of tabs) {
-            if (tab?.tabRenderer?.title?.toLowerCase?.() === 'videos' || tabs.length === 1) {
-              const contents = tab?.tabRenderer?.content?.richGridRenderer?.contents ||
-                               tab?.tabRenderer?.content?.sectionListRenderer?.contents || [];
+            if (
+              tab?.tabRenderer?.title?.toLowerCase?.() === "videos" ||
+              tabs.length === 1
+            ) {
+              const contents =
+                tab?.tabRenderer?.content?.richGridRenderer?.contents ||
+                tab?.tabRenderer?.content?.sectionListRenderer?.contents ||
+                [];
 
               for (const item of contents) {
                 let vr;
@@ -337,31 +586,29 @@
 
                 if (vr?.videoId) {
                   let title = getBestTitle(vr.title);
-                  if (!title || title.trim() === '') title = 'Untitled Video';
+                  if (!title || title.trim() === "") title = "Untitled Video";
 
                   const thumbs = vr.thumbnail?.thumbnails || [];
-                  const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
+                  const thumb =
+                    thumbs[thumbs.length - 1]?.url ||
+                    `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
 
                   videos.push({
                     id: vr.videoId,
                     title,
-                    thumbnail: thumb
+                    thumbnail: thumb,
                   });
                 }
               }
-
-              const cont = tab?.tabRenderer?.content?.richGridRenderer?.continuations?.[0]?.nextContinuationData?.continuation;
-              if (cont) continuationToken = cont;
             }
           }
         }
       } catch (e) {
-        console.error('JSON parse error:', e);
+        console.error("JSON parse error:", e);
       }
 
-      // Improved fallback when JSON parsing gives poor results
-      if (videos.length < 5) {
-        console.log('Using fallback title matching...');
+      // Fallback parsing if empty
+      if (videos.length === 0) {
         const idMatches = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)];
         const titleRe = /"text":"([^"]{4,100})"/g;
         const titleCandidates = [];
@@ -381,7 +628,7 @@
           let minDist = Infinity;
           const idPos = idMatch.index;
 
-          titleCandidates.forEach(t => {
+          titleCandidates.forEach((t) => {
             const tPos = html.indexOf(t);
             if (tPos === -1) return;
             const dist = Math.abs(tPos - idPos);
@@ -394,75 +641,138 @@
           videos.push({
             id,
             title: bestTitle,
-            thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+            thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
           });
         });
       }
 
-      console.log(`Parsed ${videos.length} videos`);
       return videos;
     }
 
     function getBestTitle(titleObj) {
-      if (!titleObj) return '';
+      if (!titleObj) return "";
       if (titleObj.runs?.[0]?.text) return titleObj.runs[0].text.trim();
       if (titleObj.simpleText) return titleObj.simpleText.trim();
       if (titleObj.accessibility?.accessibilityData?.label) {
         return titleObj.accessibility.accessibilityData.label.trim();
       }
-      return '';
+      return "";
     }
 
-    function parseContinuationVideos(data) {
-      const videos = [];
+    // Load more videos from continuation token API call
+    async function loadMoreVideos(channel) {
+      const state = channelStates[channel.id];
+      if (!state.continuationToken || !state.apiKey || !state.proxy) return false;
+
       try {
-        const items = data?.continuationContents?.gridContinuation?.items || [];
+        const browseUrl = `https://www.youtube.com/youtubei/v1/browse?key=${state.apiKey}`;
+        const body = {
+          context: {
+            client: {
+              clientName: "WEB",
+              clientVersion: state.clientVersion || "2.20240729.00.00",
+              hl: "en",
+              gl: "US",
+            },
+          },
+          continuation: state.continuationToken,
+        };
+
+        const res = await fetch(state.proxy + encodeURIComponent(browseUrl), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+
+        const newVideos = parseContinuationVideos(data);
+        if (newVideos.length === 0) {
+          state.continuationToken = null;
+          return false;
+        }
+
+        // Only add new unique videos
+        const existingIDs = new Set(allChannelVideos[channel.id].map((v) => v.id));
+        const uniqueNewVideos = newVideos.filter((v) => !existingIDs.has(v.id));
+
+        allChannelVideos[channel.id].push(...uniqueNewVideos);
+
+        // Grab next continuation token
+        let cont =
+          data?.continuationContents?.gridContinuation?.continuations?.[0]
+            ?.nextContinuationData?.continuation ||
+          data?.onResponseReceivedActions?.[0]?.appendContinuationItemsAction?.continuationItems?.find(
+            (item) => item.continuationItemRenderer
+          )?.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token ||
+          null;
+
+        state.continuationToken = cont;
+
+        return true;
+      } catch (err) {
+        console.error("loadMoreVideos error:", err);
+        return false;
+      }
+    }
+
+    // Parse videos from continuation API response JSON
+    function parseContinuationVideos(data) {
+      let videos = [];
+      try {
+        const items =
+          data?.continuationContents?.gridContinuation?.items ||
+          data?.onResponseReceivedActions?.[0]?.appendContinuationItemsAction?.continuationItems ||
+          [];
+
         for (const item of items) {
-          const vr = item.gridVideoRenderer || item.videoRenderer || item.richItemRenderer?.content?.videoRenderer;
+          const vr =
+            item.gridVideoRenderer ||
+            item.videoRenderer ||
+            item.richItemRenderer?.content?.videoRenderer;
           if (vr?.videoId) {
             let title = getBestTitle(vr.title);
-            if (!title) title = 'Untitled Video';
+            if (!title) title = "Untitled Video";
 
             const thumbs = vr.thumbnail?.thumbnails || [];
-            const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
+            const thumb =
+              thumbs[thumbs.length - 1]?.url ||
+              `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
 
             videos.push({
               id: vr.videoId,
               title,
-              thumbnail: thumb
+              thumbnail: thumb,
             });
           }
         }
-        const newToken = data?.continuationContents?.gridContinuation?.continuations?.[0]?.nextContinuationData?.continuation;
-        if (newToken) continuationToken = newToken;
-        else continuationToken = null;
       } catch (e) {
-        console.error('parseContinuation error:', e);
+        console.error("parseContinuationVideos error:", e);
       }
       return videos;
     }
 
-    function renderVideos() {
-      videoGrid.innerHTML = '';
-      allVideos.forEach(v => videoGrid.appendChild(createVideoCard(v)));
-
-      if (continuationToken && allVideos.length < 50) {
-        const btn = document.createElement('button');
-        btn.className = 'load-more-btn';
-        btn.textContent = `Load More Videos (${allVideos.length} loaded)`;
-        btn.onclick = async () => {
-          btn.disabled = true;
-          btn.textContent = 'Loading...';
-          if (currentProxy) await loadMoreVideos(currentProxy);
-          btn.remove();
-        };
-        videoGrid.appendChild(btn);
+    // Render videos for one channel inside video-grid container
+    function renderChannelVideos(channel) {
+      const grid = document.getElementById(`video-grid-${channel.id}`);
+      if (!grid) return;
+      grid.innerHTML = "";
+      const videos = allChannelVideos[channel.id];
+      if (!videos || videos.length === 0) {
+        grid.innerHTML = `<div class="loading">No videos found for ${channel.title}.</div>`;
+        return;
       }
+      videos.forEach((video) => {
+        grid.appendChild(createVideoCard(video));
+      });
     }
 
+    // Create a video card element (thumbnail + title)
     function createVideoCard(video) {
-      const card = document.createElement('div');
-      card.className = 'video-card';
+      const card = document.createElement("div");
+      card.className = "video-card";
       card.onclick = () => playVideo(video.id);
 
       card.innerHTML = `
@@ -472,28 +782,28 @@
                loading="lazy"
                onerror="this.src='https://i.ytimg.com/vi/${video.id}/mqdefault.jpg'; this.onerror=function(){this.src='https://via.placeholder.com/480x270/1f1f1f/ff0000?text=No+Image'}">
         </div>
-        <div class="video-info">
-          <div class="video-title">${escapeHtml(video.title)}</div>
-        </div>
+        <div class="video-info">${escapeHtml(video.title)}</div>
       `;
       return card;
     }
 
     function escapeHtml(text) {
-      const div = document.createElement('div');
+      const div = document.createElement("div");
       div.textContent = text;
       return div.innerHTML;
     }
 
     function closeBrowse() {
-      browseScreen.style.display = 'none';
-      inputScreen.style.display = 'flex';
-      inputScreen.style.opacity = '1';
-      videoGrid.innerHTML = '';
-      allVideos = [];
-      continuationToken = null;
-      currentChannelUrl = null;
-      currentProxy = null;
+      browseScreen.style.display = "none";
+      inputScreen.style.display = "flex";
+      inputScreen.style.opacity = "1";
+      player.src = "";
+      loading.style.display = "none";
+
+      // Clear videos and states
+      browseContent.innerHTML = "";
+      allChannelVideos = {};
+      channelStates = {};
     }
   </script>
 </body>
