@@ -275,7 +275,6 @@
     
     if (firstFile && firstFile.includes('/')) {
       const potentialRoot = firstFile.split('/')[0];
-      // Check if all files are under this folder
       const allInRoot = filePaths.every(p => p.startsWith(potentialRoot + '/'));
       if (allInRoot) {
         rootFolder = potentialRoot + '/';
@@ -287,7 +286,7 @@
     zip.forEach((relativePath, zipEntry) => {
       if (!zipEntry.dir) {
         const cleanPath = rootFolder ? relativePath.replace(rootFolder, '') : relativePath;
-        if (cleanPath) { // Skip empty paths
+        if (cleanPath) {
           files.push({
             path: cleanPath,
             fullPath: relativePath,
@@ -310,7 +309,6 @@
       'default.html', 'Default.html'
     ];
     
-    // Check root level first
     for (const priority of priorities) {
       const found = files.find(f => f.path.toLowerCase() === priority.toLowerCase());
       if (found) {
@@ -319,7 +317,6 @@
       }
     }
     
-    // If no root level, check any level but prefer less nested
     if (!entryPoint) {
       const htmlFiles = files.filter(f => f.name.match(/\.(html|htm)$/i));
       if (htmlFiles.length > 0) {
@@ -426,31 +423,19 @@
   async function runHtml(htmlContent, filePath = '') {
     showLoading('Rendering...');
     
-    // Check if this is a server-side template (Holy Unblocker, etc.)
+    // Check if this is a server-side template
     const hasTemplates = htmlContent.includes('{{') && htmlContent.includes('}}');
-    const templatePatterns = [
-      /\{\{\s*ifSEO\s*\}\}/gi,
-      /\{\{\s*getSplash\s*\}\}/gi,
-      /\{\{\s*inline\s*\}\}/gi,
-      /\{\{\s*mask\s*\}\}/gi,
-      /\{\{\s*version\s*\}\}/gi,
-      /\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g
-    ];
     
-    const isTemplated = templatePatterns.some(pattern => pattern.test(htmlContent));
-    
-    if (isTemplated) {
-      console.log('Detected server-side templates, stripping...');
+    if (hasTemplates) {
+      console.log('Detected server-side templates, processing...');
       htmlContent = stripTemplates(htmlContent);
     }
     
-    // Get base directory for relative path resolution
     const baseDir = filePath ? filePath.split('/').slice(0, -1).join('/') : '';
     
     // Process HTML to handle relative paths
     let processedHtml = htmlContent;
     
-    // Replace relative URLs with blob URLs
     const replacements = [
       { regex: /href=["']([^"']+)["']/g, type: 'href' },
       { regex: /src=["']([^"']+)["']/g, type: 'src' },
@@ -459,10 +444,8 @@
     
     for (const pattern of replacements) {
       processedHtml = processedHtml.replace(pattern.regex, (match, url) => {
-        // Skip absolute URLs, data URIs, javascript, and anchors
         if (url.match(/^(https?:|data:|javascript:|#|\/\/|mailto:|tel:)/i)) return match;
         
-        // Resolve relative path
         let resolvedPath;
         if (url.startsWith('/')) {
           resolvedPath = url.slice(1);
@@ -472,10 +455,8 @@
           resolvedPath = url;
         }
         
-        // Normalize path
         resolvedPath = normalizePath(resolvedPath);
         
-        // Try to find file (case insensitive)
         const file = findFileCaseInsensitive(resolvedPath);
         
         if (file) {
@@ -486,7 +467,7 @@
           }
         }
         
-        // If not found, try common variations
+        // Try common variations
         const variations = [
           resolvedPath,
           'views/' + resolvedPath,
@@ -530,24 +511,35 @@
   }
 
   function stripTemplates(html) {
-    // Handle Holy Unblocker style templates
     let stripped = html;
     
-    // Replace {{mask}}...{{/mask}} or {{mask}}content{{/mask}} with content
-    stripped = stripped.replace(/\{\{\s*mask\s*\}\}\{\{\s*\/mask\s*\}\}/gi, '');
-    stripped = stripped.replace(/\{\{\s*mask\s*\}\}(.*?)\{\{\s*\/mask\s*\}\}/gis, '$1');
+    // Handle {{mask}}content{{/mask}} - keep content, remove tags
+    // Use [\s\S] to match any character including newlines
+    stripped = stripped.replace(/\{\{\s*mask\s*\}\}([\s\S]*?)\{\{\s*\/mask\s*\}\}/gi, '$1');
     
-    // Replace template variables with placeholders or empty
-    stripped = stripped.replace(/\{\{\s*ifSEO\s*\}\}(.*?)\{\{\s*\/ifSEO\s*\}\}/gis, '$1');
-    stripped = stripped.replace(/\{\{\s*getSplash\s*\}\}/gi, '<div class="splash">Holy Unblocker</div>');
+    // Handle standalone {{mask}} tags (opening/closing separately)
+    stripped = stripped.replace(/\{\{\s*mask\s*\}\}/gi, '');
+    stripped = stripped.replace(/\{\{\s*\/mask\s*\}\}/gi, '');
+    
+    // Handle {{ifSEO}}...{{/ifSEO}} - keep content
+    stripped = stripped.replace(/\{\{\s*ifSEO\s*\}\}([\s\S]*?)\{\{\s*\/ifSEO\s*\}\}/gi, '$1');
+    stripped = stripped.replace(/\{\{\s*ifSEO\s*\}\}/gi, '');
+    
+    // Handle specific Holy Unblocker templates
+    stripped = stripped.replace(/\{\{\s*getSplash\s*\}\}/gi, '<div style="padding:2rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;text-align:center;border-radius:8px;margin:1rem 0;"><h1>Holy Unblocker</h1><p>Web Proxy Service</p></div>');
+    
     stripped = stripped.replace(/\{\{\s*inline\s*\}\}/gi, '');
-    stripped = stripped.replace(/\{\{\s*version\s*\}\}/gi, '1.0.0');
+    stripped = stripped.replace(/\{\{\s*version\s*\}\}/gi, '6.0.0');
     
-    // Generic template cleanup - remove remaining {{...}}
-    stripped = stripped.replace(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
+    // Handle any other {{variable}} patterns - remove them but preserve structure
+    // This catches things like {{title}}, {{description}}, etc.
+    stripped = stripped.replace(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/gi, '');
     
-    // Clean up empty lines
+    // Clean up multiple consecutive empty lines
     stripped = stripped.replace(/\n\s*\n\s*\n/g, '\n\n');
+    
+    // Clean up empty template artifacts
+    stripped = stripped.replace(/\{\{\s*\}\}/g, '');
     
     return stripped;
   }
