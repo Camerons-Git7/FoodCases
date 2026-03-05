@@ -30,14 +30,19 @@
     }
     #loading-text {
       text-align: center;
+      margin-bottom: 4rem;
     }
     #download-container {
       position: absolute;
       bottom: 15vh;
       left: 50%;
       transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
     }
-    .download-btn {
+    .btn {
       display: inline-flex;
       align-items: center;
       gap: 10px;
@@ -53,7 +58,7 @@
       border: none;
       cursor: pointer;
     }
-    .download-btn:hover {
+    .btn:hover {
       transform: scale(1.05);
       box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
     }
@@ -69,62 +74,83 @@
       min-width: 100%;
       min-height: 100%;
       border: none !important;
-      position: fixed !important;   /* stronger containment */
+      position: fixed !important;
       inset: 0 !important;
       background: #000;
     }
   </style>
 </head>
 <body>
-
 <div id="loading">
   <div id="loading-text">
     <div>Loading Game...</div>
     <div style="margin-top:12px; opacity:0.7; font-size:0.9rem;">Please Wait — Loading May Take Up To 1 Minute</div>
   </div>
-  
+ 
   <div id="download-container">
-    <a href="https://drive.google.com/uc?export=download&id=1uFWzWm1gJ4GuTuUrivmfP_Uf8EBJBR0Q" 
-       class="download-btn" 
+    <a href="https://drive.google.com/uc?export=download&id=1uFWzWm1gJ4GuTuUrivmfP_Uf8EBJBR0Q"
+       class="btn"
        download>
       ⬇ Download Cool World File
     </a>
+
+    <button id="fs-button" class="btn">
+      ⛶ Enter Fullscreen (recommended)
+    </button>
   </div>
 </div>
 
 <iframe id="gameframe" style="display:none;"></iframe>
-
 <div id="error" style="display:none;"></div>
 
 <script>
 const GAME_URL = "https://cdn.jsdelivr.net/gh/CoolDude2349/Offline-HTML-Games-Pack@master/offline/1.8.html";
 
+function enterFullscreen() {
+  const elem = document.documentElement;
+  
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen().catch(() => {});
+  } else if (elem.webkitRequestFullscreen) {
+    elem.webkitRequestFullscreen();
+  } else if (elem.mozRequestFullScreen) {
+    elem.mozRequestFullScreen();
+  } else if (elem.msRequestFullscreen) {
+    elem.msRequestFullscreen();
+  }
+}
+
 async function start() {
-  const loading = document.getElementById('loading');
-  const frame = document.getElementById('gameframe');
-  const errDiv = document.getElementById('error');
+  const loading  = document.getElementById('loading');
+  const frame    = document.getElementById('gameframe');
+  const errDiv   = document.getElementById('error');
+  const fsButton = document.getElementById('fs-button');
+
+  // Click → go fullscreen + remove button immediately
+  fsButton.addEventListener('click', () => {
+    enterFullscreen();
+    fsButton.style.display = 'none';
+  }, { once: true });
 
   try {
-    const resp = await fetch(GAME_URL, { 
-      cache: "force-cache"
-    });
-
+    const resp = await fetch(GAME_URL, { cache: "force-cache" });
     if (!resp.ok) {
-      throw new Error(`Server responded ${resp.status} — try again later or check connection`);
+      throw new Error(`Server responded ${resp.status}`);
     }
-
     const text = await resp.text();
-
     const blob = new Blob([text], { type: 'text/html;charset=utf-8' });
     const blobUrl = URL.createObjectURL(blob);
-
+    
     frame.src = blobUrl;
+    
     frame.onload = () => {
+      // Game loaded → hide loading screen + fs button
       loading.style.display = 'none';
       frame.style.display = 'block';
+      fsButton.style.display = 'none';   // just in case
+
       setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
     };
-
   } catch (err) {
     loading.style.display = 'none';
     errDiv.style.display = 'flex';
@@ -133,9 +159,9 @@ async function start() {
       ${err.message}<br><br>
       • Check internet connection<br>
       • Antivirus / firewall may be blocking<br>
-      • Try different network / mobile hotspot<br>
-      • jsDelivr / GitHub may be temporarily slow<br><br>
-      File size hint: ~36 MB — large files can fail on unstable Wi-Fi
+      • Try different network<br>
+      • GitHub/jsDelivr may be slow<br><br>
+      File ~36 MB — unstable connection can fail
     `;
     console.error(err);
   }
@@ -143,6 +169,5 @@ async function start() {
 
 start();
 </script>
-
 </body>
 </html>
