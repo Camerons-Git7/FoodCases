@@ -7,25 +7,10 @@
   <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-    rel="stylesheet"
-  />
-
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    /* ────────────────────────────────────────────── */
-    /*  (unchanged CSS - keeping exactly as original)  */
-    /* ────────────────────────────────────────────── */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    html,
-    body {
-      height: 100%;
-      overflow: hidden;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
     body {
       font-family: "Inter", system-ui, sans-serif;
       background: #0f0f0f;
@@ -43,19 +28,10 @@
       text-align: center;
       transition: opacity 0.4s ease;
       overflow-y: auto;
+      background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
     }
-    h1 {
-      font-size: 3rem;
-      font-weight: 700;
-      margin-bottom: 1.5rem;
-      letter-spacing: -0.02em;
-    }
-    p.subtitle {
-      font-size: 1.25rem;
-      color: #a1a1aa;
-      margin-bottom: 2.5rem;
-      max-width: 500px;
-    }
+    h1 { font-size: 3rem; font-weight: 700; margin-bottom: 1.5rem; letter-spacing: -0.02em; }
+    p.subtitle { font-size: 1.25rem; color: #a1a1aa; margin-bottom: 2.5rem; max-width: 500px; }
     .input-group {
       display: flex;
       flex-wrap: wrap;
@@ -91,25 +67,11 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-    button:hover {
-      background: #cc0000;
-      transform: translateY(-2px);
-    }
-    button:active {
-      transform: translateY(0);
-    }
-    button.secondary {
-      background: #333;
-    }
-    button.secondary:hover {
-      background: #444;
-    }
-    .button-group {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
+    button:hover { background: #cc0000; transform: translateY(-2px); }
+    button:active { transform: translateY(0); }
+    button.secondary { background: #333; }
+    button.secondary:hover { background: #444; }
+    .button-group { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
     #video-screen {
       position: fixed;
       inset: 0;
@@ -162,16 +124,12 @@
       margin: 0;
       user-select: none;
     }
-    .back-btn {
-      padding: 0.5rem 1.5rem;
-      font-size: 0.9rem;
-    }
-
-    /* New styles for stacked channel sections */
+    .back-btn { padding: 0.5rem 1.5rem; font-size: 0.9rem; }
     .channel-section {
       max-width: 900px;
       margin: 1.5rem auto;
       padding: 0 1rem;
+      display: none; /* hidden until all loaded */
     }
     .channel-title {
       font-size: 1.6rem;
@@ -198,10 +156,7 @@
       flex-direction: column;
       user-select: none;
     }
-    .video-card:hover {
-      transform: translateY(-3px);
-      border-color: #ff0000;
-    }
+    .video-card:hover { transform: translateY(-3px); border-color: #ff0000; }
     .video-thumb {
       width: 100%;
       padding-bottom: 56.25%;
@@ -241,36 +196,41 @@
       font-size: 1rem;
       user-select: none;
     }
-
+    #global-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      gap: 1.5rem;
+    }
+    #global-loading-text {
+      font-size: 1.5rem;
+      color: #888;
+      text-align: center;
+    }
+    /* Red Loading Spinner */
+    .red-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 0, 0, 0.2);
+      border-top: 4px solid #ff0000;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
     @media (max-width: 600px) {
-      h1 {
-        font-size: 2.4rem;
-      }
-      .input-group {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      input,
-      button {
-        width: 100%;
-      }
-      .browse-header {
-        padding: 1rem;
-        height: auto;
-      }
-      .browse-header h2 {
-        font-size: 1.2rem;
-      }
-      #browse-screen {
-        padding: 0 0 2rem 0;
-      }
-      .channel-section {
-        max-width: 100%;
-        margin: 1rem 1rem 2rem;
-      }
-      .video-grid {
-        grid-template-columns: 1fr;
-      }
+      h1 { font-size: 2.4rem; }
+      .input-group { flex-direction: column; align-items: stretch; }
+      input, button { width: 100%; }
+      .browse-header { padding: 1rem; height: auto; }
+      .browse-header h2 { font-size: 1.2rem; }
+      #browse-screen { padding: 0 0 2rem 0; }
+      .channel-section { max-width: 100%; margin: 1rem 1rem 2rem; }
+      .video-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -278,11 +238,9 @@
   <div id="input-screen">
     <h1>▶︎ YouTube</h1>
     <p class="subtitle">Paste Your YouTube Link Below or Browse Videos</p>
-
     <div class="input-group">
       <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." autofocus />
     </div>
-
     <div class="button-group" style="margin-top: 1rem;">
       <button id="submit">Watch</button>
       <button id="browse-btn" class="secondary">Browse Videos</button>
@@ -291,12 +249,7 @@
 
   <div id="video-screen">
     <div class="video-container">
-      <iframe
-        id="player"
-        src=""
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen
-      ></iframe>
+      <iframe id="player" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
     </div>
     <div class="loading" id="loading">Loading video...</div>
   </div>
@@ -306,9 +259,11 @@
       <h2>Joe Bart Videos</h2>
       <button class="back-btn secondary" onclick="closeBrowse()">Back</button>
     </div>
-    <div id="browse-content">
-      <!-- Channel video sections will be inserted here dynamically -->
+    <div id="global-loading">
+      <div id="global-loading-text">Loading Videos...</div>
+      <div class="red-spinner"></div>
     </div>
+    <div id="browse-content"></div>
   </div>
 
   <script>
@@ -319,475 +274,373 @@
     const videoScreen = document.getElementById("video-screen");
     const browseScreen = document.getElementById("browse-screen");
     const browseContent = document.getElementById("browse-content");
+    const globalLoading = document.getElementById("global-loading");
     const player = document.getElementById("player");
     const loading = document.getElementById("loading");
 
-    // Proxy servers to avoid CORS
     const proxies = [
       "https://api.allorigins.win/raw?url=",
       "https://api.codetabs.com/v1/proxy?quest=",
       "https://thingproxy.freeboard.io/fetch/",
     ];
 
-    // Channels to load - updated with correct/official titles
     const channels = [
-      {
-        id: "joe-bart-gaming",
-        title: "Gaming Videos",
-        url: "https://www.youtube.com/@JoeBartGames/videos",
-      },
-      {
-        id: "joe-bart",
-        title: "General Videos",
-        url: "https://www.youtube.com/@JoeBartolozzi/videos",
-      },
-      {
-        id: "joe-bart-vods",
-        title: "Vods",
-        url: "https://www.youtube.com/@JoeBartVOD/videos",
-      },
-      {
-        id: "joe-bart-philosophy",
-        title: "Philosophy Videos",
-        url: "https://www.youtube.com/@Joe-Bart-Philosophy/videos",
-      },
+      { id: "joe-bart-gaming", title: "Joe Bart Gaming", url: "https://www.youtube.com/@JoeBartGames/videos" },
+      { id: "joe-bart", title: "General Videos", url: "https://www.youtube.com/@JoeBartolozzi/videos" },
+      { id: "joe-bart-vods", title: "Vods", url: "https://www.youtube.com/@JoeBartVOD/videos" },
+      { id: "joe-bart-philosophy", title: "Philosophy Videos", url: "https://www.youtube.com/@Joe-Bart-Philosophy/videos" },
     ];
 
-    // Storage objects for videos and API info per channel
     let allChannelVideos = {};
-    let channelStates = {}; // continuationToken, apiKey, clientVersion, proxy
+    let channelStates = {};
 
     submitBtn.addEventListener("click", handleSubmit);
-    urlInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") handleSubmit();
-    });
-    browseBtn.addEventListener("click", openBrowse);
+    urlInput.addEventListener("keypress", e => { if (e.key === "Enter") handleSubmit(); });
+    browseBtn.addEventListener("click", () => openBrowse());
 
     function handleSubmit() {
       let input = urlInput.value.trim();
       if (!input) return;
-
-      const channelMatch = input.match(
-        /youtube\.com\/(?:@[^/]+|channel\/[^/]+|c\/[^/]+)(?:\/videos)?/i
-      );
+      
+      // Check if it's a channel/profile link
+      const channelMatch = input.match(/youtube\.com\/(@[^/]+|channel\/[^/]+|c\/[^/]+)/i);
       if (channelMatch) {
-        // If input is a channel URL, open browse filtered to that
         let url = input;
-        if (!/\/videos/i.test(url)) url += url.includes("?") ? "&" : "/" + "videos";
-        if (!url.includes("gl=") && !url.includes("hl=")) {
-          url += url.includes("?") ? "&" : "?" + "gl=US&hl=en";
+        // Ensure it ends with /videos
+        if (!/\/videos/i.test(url)) {
+          // Remove any trailing slashes or query params before adding /videos
+          url = url.replace(/\/?(\?.*)?$/, '') + "/videos";
         }
-        openBrowse(url);
+        // Force English/US region
+        if (!url.includes("gl=") && !url.includes("hl=")) {
+          url += (url.includes("?") ? "&" : "?") + "gl=US&hl=en";
+        }
+        
+        // Create a dynamic single channel entry for the pasted URL
+        const dynamicChannel = [
+          { id: "dynamic-channel", title: "Channel Videos", url: url }
+        ];
+        
+        openBrowse(null, dynamicChannel);
         return;
       }
-
+      
+      // Otherwise treat as video
       playVideo(input);
     }
 
     function playVideo(input) {
-      let videoId =
-        input.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1] || null;
-      if (!videoId && input.length === 11) videoId = input;
-
+      let videoId = input.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1] || (input.length === 11 ? input : null);
       if (!videoId) {
         alert("Couldn't find a valid YouTube video ID. Try a full link.");
         return;
       }
-
       inputScreen.style.opacity = "0";
-      setTimeout(() => {
-        inputScreen.style.display = "none";
-      }, 400);
+      setTimeout(() => inputScreen.style.display = "none", 400);
       browseScreen.style.display = "none";
       videoScreen.style.display = "flex";
       player.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1`;
       loading.style.display = "block";
-      setTimeout(() => {
-        loading.style.display = "none";
-      }, 1800);
+      setTimeout(() => loading.style.display = "none", 1800);
     }
 
-    async function openBrowse(filterUrl = null) {
+    async function openBrowse(e, customChannels = null) {
       inputScreen.style.display = "none";
       videoScreen.style.display = "none";
       browseScreen.style.display = "flex";
-
-      browseContent.innerHTML = ""; // Clear previous content
-
-      // If filterUrl provided, only show that single dynamic channel section (optional)
-      // For now, ignore filtering, always show all three stacked
+      browseContent.innerHTML = "";
+      globalLoading.style.display = "flex";
 
       allChannelVideos = {};
       channelStates = {};
+      
+      // Use custom channels if provided (from pasted URL), otherwise use default Joe Bart channels
+      const channelsToLoad = customChannels || channels;
+      
+      // Update header title if custom channel
+      const headerTitle = document.querySelector(".browse-header h2");
+      if (customChannels) {
+        headerTitle.textContent = "Channel Videos";
+      } else {
+        headerTitle.textContent = "Joe Bart Videos";
+      }
 
-      for (const ch of channels) {
-        // Create a container section for each channel
+      channelsToLoad.forEach(ch => {
         const section = document.createElement("section");
-        section.classList.add("channel-section");
+        section.className = "channel-section";
         section.id = `channel-section-${ch.id}`;
 
-        const title = document.createElement("h2");
-        title.classList.add("channel-title");
-        title.textContent = ch.title;
-        section.appendChild(title);
+        const titleEl = document.createElement("h2");
+        titleEl.className = "channel-title";
+        titleEl.textContent = ch.title;
 
-        // A grid container for videos
         const grid = document.createElement("div");
-        grid.classList.add("video-grid");
+        grid.className = "video-grid";
         grid.id = `video-grid-${ch.id}`;
 
-        // Initial loading message
-        const loadingMsg = document.createElement("div");
-        loadingMsg.className = "loading";
-        loadingMsg.textContent = "Loading videos...";
-        grid.appendChild(loadingMsg);
-
-        section.appendChild(grid);
+        section.append(titleEl, grid);
         browseContent.appendChild(section);
 
         allChannelVideos[ch.id] = [];
-        channelStates[ch.id] = {
-          continuationToken: null,
-          apiKey: null,
-          clientVersion: null,
-          proxy: null,
-          loading: true,
-          error: null,
-        };
-      }
+        channelStates[ch.id] = { continuationToken: null, apiKey: null, clientVersion: null, proxy: null, loading: true, error: null };
+      });
 
-      // Start loading all channels sequentially to avoid too many simultaneous fetches
-      for (const ch of channels) {
-        await loadAllChannelVideos(ch);
-      }
+      await Promise.all(channelsToLoad.map(ch => loadAllChannelVideos(ch)));
+
+      globalLoading.style.display = "none";
+      document.querySelectorAll(".channel-section").forEach(sec => sec.style.display = "block");
     }
-
-    // ──────────────────────────────────────────────
-    // The rest of the script remains completely unchanged
-    // ──────────────────────────────────────────────
 
     async function loadAllChannelVideos(channel) {
       const grid = document.getElementById(`video-grid-${channel.id}`);
-      grid.innerHTML = ""; // clear loading text
-
       try {
-        // Find working proxy and initial API keys + first videos
         let initSuccess = false;
         let lastError = null;
+
         for (const proxy of proxies) {
           try {
-            const response = await fetch(proxy + encodeURIComponent(channel.url), {
-              method: "GET",
-              headers: { Accept: "text/html" },
+            // Add hl=en&gl=US to force English titles
+            let fetchUrl = channel.url;
+            if (!fetchUrl.includes("hl=")) {
+              fetchUrl += (fetchUrl.includes("?") ? "&" : "?") + "hl=en&gl=US";
+            }
+            
+            const res = await fetch(proxy + encodeURIComponent(fetchUrl), { 
+              headers: { 
+                "Accept": "text/html",
+                "Accept-Language": "en-US,en;q=0.9"
+              } 
             });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const html = await response.text();
-            if (!html || html.length < 1000)
-              throw new Error("Empty or invalid response");
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const html = await res.text();
+            if (html.length < 2000) throw new Error("Empty response");
 
             const apiKey = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/)?.[1];
             const clientVersion = html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/)?.[1];
-            if (!apiKey || !clientVersion)
-              throw new Error("Missing API key or client version");
+            if (!apiKey || !clientVersion) throw new Error("Missing API key/version");
 
-            const initialVideos = parseVideos(html);
-            if (initialVideos.length === 0)
-              throw new Error("No videos parsed from initial page");
+            const videos = parseVideos(html);
+            if (videos.length === 0) throw new Error("No videos parsed from initial page");
+
             const continuationToken = findContinuation(html);
 
-            allChannelVideos[channel.id] = initialVideos;
+            allChannelVideos[channel.id] = videos;
             channelStates[channel.id] = {
               continuationToken,
               apiKey,
               clientVersion,
               proxy,
               loading: false,
-              error: null,
+              error: null
             };
 
             renderChannelVideos(channel);
             initSuccess = true;
-
-            break; // Found working proxy, exit loop
+            break;
           } catch (e) {
             lastError = e;
-            console.warn(`Proxy ${proxy} failed for ${channel.id}:`, e);
           }
         }
-        if (!initSuccess) {
-          grid.innerHTML = `<div class="error-msg">Failed to load videos for this channel.<br>${lastError?.message ||
-            "Unknown error"}</div>`;
-          channelStates[channel.id].loading = false;
-          channelStates[channel.id].error = lastError?.message || "Unknown error";
-          return;
-        }
 
-        // Recursively load continuations until no more or 120 videos
-        while (
-          channelStates[channel.id].continuationToken &&
-          allChannelVideos[channel.id].length < 120
-        ) {
+        if (!initSuccess) throw lastError || new Error("All proxies failed");
+
+        while (channelStates[channel.id].continuationToken && allChannelVideos[channel.id].length < 120) {
           const ok = await loadMoreVideos(channel);
           if (!ok) break;
           renderChannelVideos(channel);
-          await sleep(200); // slight delay to reduce load bursts
+          await new Promise(r => setTimeout(r, 200));
         }
       } catch (err) {
-        grid.innerHTML = `<div class="error-msg">Error loading videos: ${err.message}</div>`;
+        grid.innerHTML = `<div class="error-msg">Failed to load videos<br>${err.message}</div>`;
+        channelStates[channel.id].error = err.message;
+        console.error(channel.title + " error:", err);
+      } finally {
         channelStates[channel.id].loading = false;
-        channelStates[channel.id].error = err.message || "Error";
-        console.error("Error loading channel videos:", err);
+        renderChannelVideos(channel);
       }
-
-      // Final render after done loading
-      renderChannelVideos(channel);
     }
 
-    function sleep(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
-    }
-
-    // Parse continuation token from HTML string
     function findContinuation(html) {
-      try {
-        const match = html.match(/"continuationCommand":{"token":"([^"]+)"}/);
-        if (match) return match[1];
-        const altMatch = html.match(/"continuation":"([^"]+)"/);
-        if (altMatch) return altMatch[1];
-      } catch {}
-      return null;
+      const m = html.match(/"continuationCommand":\s*{"token":"([^"]+)"}/) ||
+                html.match(/"continuation":"([^"]+)"/);
+      return m ? m[1] : null;
     }
 
-    // Same parseVideos function, extracting videos from the initial html
     function parseVideos(html) {
       const videos = [];
       try {
         const match = html.match(/var ytInitialData = ({.+?});<\/script>/s);
         if (match) {
           const data = JSON.parse(match[1]);
-          const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
-          for (const tab of tabs) {
-            if (
-              tab?.tabRenderer?.title?.toLowerCase?.() === "videos" ||
-              tabs.length === 1
-            ) {
-              const contents =
-                tab?.tabRenderer?.content?.richGridRenderer?.contents ||
-                tab?.tabRenderer?.content?.sectionListRenderer?.contents ||
-                [];
-
-              for (const item of contents) {
-                let vr;
-                if (item.richItemRenderer?.content?.videoRenderer) {
-                  vr = item.richItemRenderer.content.videoRenderer;
-                } else if (item.gridVideoRenderer) {
-                  vr = item.gridVideoRenderer;
-                } else if (item.itemSectionRenderer?.contents) {
-                  for (const sub of item.itemSectionRenderer.contents) {
-                    if (sub.videoRenderer || sub.gridVideoRenderer) {
-                      vr = sub.videoRenderer || sub.gridVideoRenderer;
-                      break;
-                    }
-                  }
+          function recurse(obj) {
+            if (!obj || typeof obj !== "object") return;
+            if (obj.videoRenderer || obj.gridVideoRenderer) {
+              const vr = obj.videoRenderer || obj.gridVideoRenderer;
+              if (vr?.videoId) {
+                // Prioritize runs[0].text for English titles, avoid accessibilityData which may contain localized text
+                let title = "";
+                if (vr.title?.runs?.[0]?.text) {
+                  title = vr.title.runs[0].text.trim();
+                } else if (vr.title?.simpleText) {
+                  title = vr.title.simpleText.trim();
+                } else {
+                  title = "Untitled Video";
                 }
-
-                if (vr?.videoId) {
-                  let title = getBestTitle(vr.title);
-                  if (!title || title.trim() === "") title = "Untitled Video";
-
-                  const thumbs = vr.thumbnail?.thumbnails || [];
-                  const thumb =
-                    thumbs[thumbs.length - 1]?.url ||
-                    `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
-
-                  videos.push({
-                    id: vr.videoId,
-                    title,
-                    thumbnail: thumb,
-                  });
-                }
+                
+                const thumbs = vr.thumbnail?.thumbnails || [];
+                const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
+                videos.push({ id: vr.videoId, title, thumbnail: thumb });
               }
             }
+            if (obj.richItemRenderer?.content?.videoRenderer) {
+              const vr = obj.richItemRenderer.content.videoRenderer;
+              if (vr?.videoId) {
+                let title = "";
+                if (vr.title?.runs?.[0]?.text) {
+                  title = vr.title.runs[0].text.trim();
+                } else if (vr.title?.simpleText) {
+                  title = vr.title.simpleText.trim();
+                } else {
+                  title = "Untitled Video";
+                }
+                
+                const thumbs = vr.thumbnail?.thumbnails || [];
+                const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
+                videos.push({ id: vr.videoId, title, thumbnail: thumb });
+              }
+            }
+            Object.values(obj).forEach(recurse);
           }
+          recurse(data);
         }
       } catch (e) {
-        console.error("JSON parse error:", e);
+        console.error("JSON parse failed:", e);
       }
 
-      // Fallback parsing if empty
+      // Fallback: regex scan if JSON empty or failed
       if (videos.length === 0) {
         const idMatches = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)];
-        const titleRe = /"text":"([^"]{4,100})"/g;
-        const titleCandidates = [];
-        let m;
-        while ((m = titleRe.exec(html)) !== null) {
-          const t = m[1].trim();
-          if (t && t.length > 3 && !/^\d+$/.test(t)) titleCandidates.push(t);
-        }
-
         const seen = new Set();
-        idMatches.forEach((idMatch, idx) => {
-          const id = idMatch[1];
+        idMatches.forEach(m => {
+          const id = m[1];
           if (seen.has(id)) return;
           seen.add(id);
-
-          let bestTitle = `Video ${videos.length + 1}`;
-          let minDist = Infinity;
-          const idPos = idMatch.index;
-
-          titleCandidates.forEach((t) => {
-            const tPos = html.indexOf(t);
-            if (tPos === -1) return;
-            const dist = Math.abs(tPos - idPos);
-            if (dist < minDist && dist < 4000) {
-              minDist = dist;
-              bestTitle = t;
-            }
-          });
-
           videos.push({
             id,
-            title: bestTitle,
-            thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+            title: "Video (fallback)",
+            thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
           });
         });
       }
 
-      return videos;
-    }
-
-    function getBestTitle(titleObj) {
-      if (!titleObj) return "";
-      if (titleObj.runs?.[0]?.text) return titleObj.runs[0].text.trim();
-      if (titleObj.simpleText) return titleObj.simpleText.trim();
-      if (titleObj.accessibility?.accessibilityData?.label) {
-        return titleObj.accessibility.accessibilityData.label.trim();
+      // Dedupe just in case
+      const unique = [];
+      const seenIds = new Set();
+      for (const v of videos) {
+        if (!seenIds.has(v.id)) {
+          seenIds.add(v.id);
+          unique.push(v);
+        }
       }
-      return "";
+      return unique;
     }
 
-    // Load more videos from continuation token API call
     async function loadMoreVideos(channel) {
-      const state = channelStates[channel.id];
-      if (!state.continuationToken || !state.apiKey || !state.proxy) return false;
-
+      const s = channelStates[channel.id];
+      if (!s.continuationToken || !s.apiKey || !s.proxy) return false;
       try {
-        const browseUrl = `https://www.youtube.com/youtubei/v1/browse?key=${state.apiKey}`;
+        const url = `https://www.youtube.com/youtubei/v1/browse?key=${s.apiKey}`;
         const body = {
           context: {
             client: {
               clientName: "WEB",
-              clientVersion: state.clientVersion || "2.20240729.00.00",
+              clientVersion: s.clientVersion || "2.20250301.01.00",
               hl: "en",
-              gl: "US",
-            },
+              gl: "US"
+            }
           },
-          continuation: state.continuationToken,
+          continuation: s.continuationToken
         };
-
-        const res = await fetch(state.proxy + encodeURIComponent(browseUrl), {
+        const res = await fetch(s.proxy + encodeURIComponent(url), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+          headers: { 
+            "Content-Type": "application/json",
+            "Accept-Language": "en-US,en;q=0.9"
+          },
+          body: JSON.stringify(body)
         });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
+        if (!res.ok) return false;
         const data = await res.json();
 
         const newVideos = parseContinuationVideos(data);
         if (newVideos.length === 0) {
-          state.continuationToken = null;
+          s.continuationToken = null;
           return false;
         }
 
-        // Only add new unique videos
-        const existingIDs = new Set(allChannelVideos[channel.id].map((v) => v.id));
-        const uniqueNewVideos = newVideos.filter((v) => !existingIDs.has(v.id));
+        const seen = new Set(allChannelVideos[channel.id].map(v => v.id));
+        allChannelVideos[channel.id].push(...newVideos.filter(v => !seen.has(v.id)));
 
-        allChannelVideos[channel.id].push(...uniqueNewVideos);
-
-        // Grab next continuation token
-        let cont =
-          data?.continuationContents?.gridContinuation?.continuations?.[0]
-            ?.nextContinuationData?.continuation ||
-          data?.onResponseReceivedActions?.[0]?.appendContinuationItemsAction?.continuationItems?.find(
-            (item) => item.continuationItemRenderer
-          )?.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token ||
+        s.continuationToken =
+          data?.continuationContents?.gridContinuation?.continuations?.[0]?.nextContinuationData?.continuation ||
+          data?.onResponseReceivedActions?.[0]?.appendContinuationItemsAction?.continuationItems
+            ?.find(i => i.continuationItemRenderer)
+            ?.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token ||
           null;
 
-        state.continuationToken = cont;
-
         return true;
-      } catch (err) {
-        console.error("loadMoreVideos error:", err);
+      } catch (e) {
+        console.warn("Continuation error:", e);
         return false;
       }
     }
 
-    // Parse videos from continuation API response JSON
     function parseContinuationVideos(data) {
-      let videos = [];
-      try {
-        const items =
-          data?.continuationContents?.gridContinuation?.items ||
-          data?.onResponseReceivedActions?.[0]?.appendContinuationItemsAction?.continuationItems ||
-          [];
-
-        for (const item of items) {
-          const vr =
-            item.gridVideoRenderer ||
-            item.videoRenderer ||
-            item.richItemRenderer?.content?.videoRenderer;
-          if (vr?.videoId) {
-            let title = getBestTitle(vr.title);
-            if (!title) title = "Untitled Video";
-
-            const thumbs = vr.thumbnail?.thumbnails || [];
-            const thumb =
-              thumbs[thumbs.length - 1]?.url ||
-              `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
-
-            videos.push({
-              id: vr.videoId,
-              title,
-              thumbnail: thumb,
-            });
+      const videos = [];
+      function recurse(obj) {
+        if (!obj || typeof obj !== "object") return;
+        const vr = obj.gridVideoRenderer || obj.videoRenderer || obj.richItemRenderer?.content?.videoRenderer;
+        if (vr?.videoId) {
+          // Prioritize runs[0].text for English titles, avoid accessibilityData
+          let title = "";
+          if (vr.title?.runs?.[0]?.text) {
+            title = vr.title.runs[0].text.trim();
+          } else if (vr.title?.simpleText) {
+            title = vr.title.simpleText.trim();
+          } else {
+            title = "Untitled";
           }
+          
+          const thumbs = vr.thumbnail?.thumbnails || [];
+          const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
+          videos.push({ id: vr.videoId, title, thumbnail: thumb });
         }
-      } catch (e) {
-        console.error("parseContinuationVideos error:", e);
+        Object.values(obj).forEach(recurse);
       }
+      recurse(data);
       return videos;
     }
 
-    // Render videos for one channel inside video-grid container
     function renderChannelVideos(channel) {
       const grid = document.getElementById(`video-grid-${channel.id}`);
       if (!grid) return;
       grid.innerHTML = "";
-      const videos = allChannelVideos[channel.id];
-      if (!videos || videos.length === 0) {
-        grid.innerHTML = `<div class="loading">No videos found for ${channel.title}.</div>`;
+      const videos = allChannelVideos[channel.id] || [];
+      if (videos.length === 0) {
+        grid.innerHTML = `<div class="loading">No videos found</div>`;
         return;
       }
-      videos.forEach((video) => {
-        grid.appendChild(createVideoCard(video));
-      });
+      videos.forEach(v => grid.appendChild(createVideoCard(v)));
     }
 
-    // Create a video card element (thumbnail + title)
     function createVideoCard(video) {
       const card = document.createElement("div");
       card.className = "video-card";
       card.onclick = () => playVideo(video.id);
-
       card.innerHTML = `
         <div class="video-thumb">
-          <img src="https://i.ytimg.com/vi/${video.id}/hqdefault.jpg"
-               alt="${escapeHtml(video.title)}"
-               loading="lazy"
-               onerror="this.src='https://i.ytimg.com/vi/${video.id}/mqdefault.jpg'; this.onerror=function(){this.src='https://via.placeholder.com/480x270/1f1f1f/ff0000?text=No+Image'}">
+          <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}" loading="lazy"
+               onerror="this.src='https://i.ytimg.com/vi/${video.id}/mqdefault.jpg'; this.onerror=null;">
         </div>
         <div class="video-info">${escapeHtml(video.title)}</div>
       `;
@@ -806,11 +659,14 @@
       inputScreen.style.opacity = "1";
       player.src = "";
       loading.style.display = "none";
-
-      // Clear videos and states
+      globalLoading.style.display = "none";
       browseContent.innerHTML = "";
       allChannelVideos = {};
       channelStates = {};
+      
+      // Reset header title
+      const headerTitle = document.querySelector(".browse-header h2");
+      headerTitle.textContent = "Joe Bart Videos";
     }
   </script>
 </body>
