@@ -8,264 +8,108 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
+ 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    html, body {
-      height: 100%;
-      overflow: hidden;
-    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; overflow:hidden; }
     body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: #0f0f0f;
-      color: #e5e5e5;
-      display: flex;
-      flex-direction: column;
+      font-family:'Inter',system-ui,sans-serif;
+      background:#0f0f0f; color:#e5e5e5;
+      display:flex; flex-direction:column;
     }
     #input-screen {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-      text-align: center;
-      transition: opacity 0.4s ease;
-      overflow-y: auto;
+      flex:1; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      padding:2rem; text-align:center;
+      transition:opacity 0.4s ease; overflow-y:auto;
     }
-    h1 {
-      font-size: 3rem;
-      font-weight: 700;
-      margin-bottom: 1.5rem;
-      letter-spacing: -0.02em;
-    }
-    p.subtitle {
-      font-size: 1.25rem;
-      color: #a1a1aa;
-      margin-bottom: 2.5rem;
-      max-width: 500px;
-    }
-    .input-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      max-width: 700px;
-      width: 100%;
-      justify-content: center;
-    }
+    h1 { font-size:3rem; font-weight:700; margin-bottom:1.5rem; letter-spacing:-0.02em; }
+    p.subtitle { font-size:1.25rem; color:#a1a1aa; margin-bottom:2.5rem; max-width:500px; }
+    .input-group { display:flex; flex-wrap:wrap; gap:1rem; max-width:700px; width:100%; justify-content:center; }
     input[type="text"] {
-      flex: 1;
-      min-width: 300px;
-      padding: 1rem 1.5rem;
-      font-size: 1.1rem;
-      background: #1f1f1f;
-      border: 1px solid #333;
-      border-radius: 12px;
-      color: white;
-      outline: none;
-      transition: all 0.2s;
+      flex:1; min-width:300px; padding:1rem 1.5rem; font-size:1.1rem;
+      background:#1f1f1f; border:1px solid #333; border-radius:12px;
+      color:white; outline:none; transition:all 0.2s;
     }
-    input[type="text"]:focus {
-      border-color: #ff0000;
-      box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.15);
-    }
+    input[type="text"]:focus { border-color:#ff0000; box-shadow:0 0 0 3px rgba(255,0,0,0.15); }
     button {
-      padding: 1rem 2.5rem;
-      font-size: 1.1rem;
-      font-weight: 600;
-      background: #ff0000;
-      color: white;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
+      padding:1rem 2.5rem; font-size:1.1rem; font-weight:600;
+      background:#ff0000; color:white; border:none; border-radius:12px;
+      cursor:pointer; transition:all 0.2s;
     }
-    button:hover {
-      background: #cc0000;
-      transform: translateY(-2px);
-    }
-    button:active {
-      transform: translateY(0);
-    }
-    button.secondary {
-      background: #333;
-    }
-    button.secondary:hover {
-      background: #444;
-    }
-    .button-group {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
+    button:hover { background:#cc0000; transform:translateY(-2px); }
+    button:active { transform:translateY(0); }
+    button.secondary { background:#333; }
+    button.secondary:hover { background:#444; }
+    .button-group { display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; }
     #video-screen {
-      position: fixed;
-      inset: 0;
-      background: black;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
+      position:fixed; inset:0; background:black; display:none;
+      flex-direction:column; align-items:center; justify-content:center; z-index:10;
     }
-    .video-container {
-      position: relative;
-      width: 100%;
-      height: 100vh;
-      max-width: 100vw;
-      overflow: hidden;
-      background: #000;
-    }
-    .video-container iframe {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
+    .video-container { position:relative; width:100%; height:100vh; max-width:100vw; overflow:hidden; background:#000; }
+    .video-container iframe { position:absolute; inset:0; width:100%; height:100%; border:none; }
     #browse-screen {
-      position: fixed;
-      inset: 0;
-      background: #0f0f0f;
-      display: none;
-      flex-direction: column;
-      z-index: 20;
-      height: 100vh;
+      position:fixed; inset:0; background:#0f0f0f; display:none;
+      flex-direction:column; z-index:20; height:100vh;
     }
     .browse-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem 2rem;
-      background: #1f1f1f;
-      border-bottom: 1px solid #333;
-      flex-shrink: 0;
-      height: 60px;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:1rem 2rem; background:#1f1f1f; border-bottom:1px solid #333;
+      flex-shrink:0; height:60px;
     }
-    .browse-header h2 {
-      font-size: 1.5rem;
-      color: #ff0000;
-    }
-    .back-btn {
-      padding: 0.5rem 1.5rem;
-      font-size: 0.9rem;
-    }
-    .browse-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 2rem;
-      position: relative;
-    }
+    .browse-header h2 { font-size:1.5rem; color:#ff0000; }
+    .back-btn { padding:0.5rem 1.5rem; font-size:0.9rem; }
+    .browse-content { flex:1; overflow-y:auto; padding:2rem; position:relative; }
     .video-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1.5rem;
-      max-width: 1600px;
-      margin: 0 auto;
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+      gap:1.5rem; max-width:1600px; margin:0 auto;
     }
     .video-card {
-      background: #1f1f1f;
-      border-radius: 12px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.2s, border-color 0.2s;
-      border: 1px solid #333;
+      background:#1f1f1f; border-radius:12px; overflow:hidden; cursor:pointer;
+      transition:transform 0.2s, border-color 0.2s; border:1px solid #333;
     }
-    .video-card:hover {
-      transform: translateY(-4px);
-      border-color: #ff0000;
-    }
-    .video-thumb {
-      width: 100%;
-      height: 0;
-      padding-bottom: 56.25%;
-      background: #000;
-      position: relative;
-      overflow: hidden;
-    }
+    .video-card:hover { transform:translateY(-4px); border-color:#ff0000; }
+    .video-thumb { width:100%; height:0; padding-bottom:56.25%; background:#000; position:relative; overflow:hidden; }
     .video-thumb img {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
+      position:absolute; top:0; left:0; width:100%; height:100%;
+      object-fit:cover; display:block;
     }
-    .video-info {
-      padding: 1rem;
-    }
+    .video-info { padding:1rem; }
     .video-title {
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: #fff;
-      line-height: 1.4;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      font-size:0.95rem; font-weight:600; color:#fff; line-height:1.4;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
     }
-    .loading {
-      font-size: 1.5rem;
-      color: #888;
-      text-align: center;
-      padding: 3rem;
-    }
-    .error-msg {
-      color: #ff4444;
-      padding: 2rem;
-      text-align: center;
-    }
-    .retry-btn {
-      margin-top: 1rem;
-      padding: 0.5rem 1rem;
-      font-size: 0.9rem;
-    }
+    .loading { font-size:1.5rem; color:#888; text-align:center; padding:3rem; }
+    .error-msg { color:#ff4444; padding:2rem; text-align:center; }
+    .retry-btn { margin-top:1rem; padding:0.5rem 1rem; font-size:0.9rem; }
     .load-more-btn {
-      grid-column: 1 / -1;
-      padding: 1rem;
-      margin-top: 1rem;
-      background: #333;
-      border: none;
-      border-radius: 8px;
-      color: white;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: background 0.2s;
+      grid-column:1 / -1; padding:1rem; margin-top:1rem;
+      background:#333; border:none; border-radius:8px; color:white;
+      cursor:pointer; font-size:1rem; transition:background 0.2s;
     }
-    .load-more-btn:hover {
-      background: #444;
-    }
-    .load-more-btn:disabled {
-      background: #222;
-      color: #666;
-      cursor: not-allowed;
-    }
-    @media (max-width: 600px) {
-      h1 { font-size: 2.4rem; }
-      .input-group { flex-direction: column; align-items: stretch; }
-      input, button { width: 100%; }
-      .browse-header { padding: 1rem; height: auto; }
-      .browse-header h2 { font-size: 1.2rem; }
-      .browse-content { padding: 1rem; }
-      .video-grid { grid-template-columns: 1fr; gap: 1rem; }
+    .load-more-btn:hover { background:#444; }
+    .load-more-btn:disabled { background:#222; color:#666; cursor:not-allowed; }
+    @media (max-width:600px) {
+      h1 { font-size:2.4rem; }
+      .input-group { flex-direction:column; align-items:stretch; }
+      input, button { width:100%; }
+      .browse-header { padding:1rem; height:auto; }
+      .browse-header h2 { font-size:1.2rem; }
+      .browse-content { padding:1rem; }
+      .video-grid { grid-template-columns:1fr; gap:1rem; }
     }
   </style>
 </head>
 <body>
+
   <div id="input-screen">
     <h1>▶︎ YouTube ▶︎</h1>
     <p class="subtitle">Paste Your Youtube Link Below or Browse Videos</p>
-    
+   
     <div class="input-group">
       <input id="url" type="text" placeholder="https://www.youtube.com/watch?v= ..." autofocus />
     </div>
-    
+   
     <div class="button-group" style="margin-top: 1rem;">
       <button id="submit">Watch</button>
       <button id="browse-btn" class="secondary">Browse Videos</button>
@@ -274,10 +118,10 @@
 
   <div id="video-screen">
     <div class="video-container">
-      <iframe 
-        id="player" 
-        src="" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+      <iframe
+        id="player"
+        src=""
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowfullscreen>
       </iframe>
     </div>
@@ -296,45 +140,60 @@
   </div>
 
   <script>
-    const submitBtn = document.getElementById('submit');
-    const browseBtn = document.getElementById('browse-btn');
-    const urlInput  = document.getElementById('url');
-    const inputScreen = document.getElementById('input-screen');
-    const videoScreen = document.getElementById('video-screen');
-    const browseScreen = document.getElementById('browse-screen');
-    const player     = document.getElementById('player');
+    const submitBtn     = document.getElementById('submit');
+    const browseBtn     = document.getElementById('browse-btn');
+    const urlInput      = document.getElementById('url');
+    const inputScreen   = document.getElementById('input-screen');
+    const videoScreen   = document.getElementById('video-screen');
+    const browseScreen  = document.getElementById('browse-screen');
+    const player        = document.getElementById('player');
     const browseLoading = document.getElementById('browse-loading');
-    const videoGrid = document.getElementById('video-grid');
-    const loading    = document.getElementById('loading');
+    const videoGrid     = document.getElementById('video-grid');
+    const loading       = document.getElementById('loading');
 
-    const base = "https://www.youtube-nocookie.com/embed/";
-    const params = "?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1";
-    
+    const embedBase   = "https://www.youtube-nocookie.com/embed/";
+    const embedParams = "?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1";
+
     const proxies = [
       "https://api.allorigins.win/raw?url=",
       "https://api.codetabs.com/v1/proxy?quest=",
       "https://thingproxy.freeboard.io/fetch/"
     ];
-    
-    const channelUrl = "https://www.youtube.com/@JoeBartGames/videos";
+
+    let currentChannelUrl = null;
     let continuationToken = null;
-    let apiKey = null;
-    let clientVersion = null;
-    let allVideos = [];
+    let apiKey            = null;
+    let clientVersion     = null;
+    let allVideos         = [];
+    let currentProxy      = null;
 
-    submitBtn.addEventListener('click', () => {
-      const input = urlInput.value.trim();
+    // Attach listeners — elements now exist
+    submitBtn.addEventListener('click', handleSubmit);
+    urlInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleSubmit(); });
+    browseBtn.addEventListener('click', () => openBrowse("https://www.youtube.com/@JoeBartGames/videos?gl=US&hl=en"));
+
+    function handleSubmit() {
+      let input = urlInput.value.trim();
       if (!input) return;
-      playVideo(input);
-    });
 
-    browseBtn.addEventListener('click', () => {
-      openBrowse();
-    });
+      const channelMatch = input.match(/youtube\.com\/(?:@[^/]+|channel\/[^/]+|c\/[^/]+)(?:\/videos)?/i);
+      if (channelMatch) {
+        let url = input;
+        if (!/\/videos/i.test(url)) url += (url.includes('?') ? '&' : '/') + 'videos';
+        if (!url.includes('gl=') && !url.includes('hl=')) {
+          url += (url.includes('?') ? '&' : '?') + 'gl=US&hl=en';
+        }
+        openBrowse(url);
+        return;
+      }
+
+      playVideo(input);
+    }
 
     function playVideo(input) {
       let videoId = input.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1];
       if (!videoId && input.length === 11) videoId = input;
+
       if (!videoId) {
         alert("Couldn't find a valid YouTube video ID. Try a full link.");
         return;
@@ -344,12 +203,12 @@
       setTimeout(() => { inputScreen.style.display = 'none'; }, 400);
       browseScreen.style.display = 'none';
       videoScreen.style.display = 'flex';
-
-      player.src = base + videoId + params;
+      player.src = embedBase + videoId + embedParams;
       setTimeout(() => { loading.style.display = 'none'; }, 1800);
     }
 
-    async function openBrowse() {
+    async function openBrowse(channelUrl) {
+      currentChannelUrl = channelUrl;
       inputScreen.style.display = 'none';
       videoScreen.style.display = 'none';
       browseScreen.style.display = 'flex';
@@ -359,43 +218,34 @@
       videoGrid.innerHTML = '';
       allVideos = [];
       continuationToken = null;
+      apiKey = null;
+      clientVersion = null;
+      currentProxy = null;
 
       let lastError = null;
-      
+
       for (const proxy of proxies) {
         try {
           console.log('Trying proxy:', proxy);
           const response = await fetch(proxy + encodeURIComponent(channelUrl), {
             method: 'GET',
-            headers: {
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            }
+            headers: { 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' }
           });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          
-          const html = await response.text();
-          
-          if (!html || html.length < 1000) {
-            throw new Error('Empty or invalid response');
-          }
 
-          // Extract API key and client version for continuation
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const html = await response.text();
+          if (!html || html.length < 1000) throw new Error('Empty or invalid response');
+
           apiKey = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/)?.[1];
           clientVersion = html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/)?.[1];
-          
-          const videos = parseVideos(html);
-          
-          if (videos.length === 0) {
-            throw new Error('No videos parsed from page');
-          }
 
+          const videos = parseVideos(html);
+          if (videos.length === 0) throw new Error('No videos parsed from page');
+
+          currentProxy = proxy;
           allVideos = videos;
           renderVideos();
-          
-          // If we have a continuation token, add load more button
+
           if (continuationToken && allVideos.length < 30) {
             await loadMoreVideos(proxy);
           }
@@ -403,132 +253,105 @@
           browseLoading.style.display = 'none';
           videoGrid.style.display = 'grid';
           return;
-          
+
         } catch (err) {
           console.error('Proxy failed:', proxy, err);
           lastError = err;
-          continue;
         }
       }
-      
-      console.error('All proxies failed');
+
       browseLoading.innerHTML = `
         <div class="error-msg">
           <div>Failed to load videos. All proxies failed.</div>
-          <div style="font-size: 0.8rem; margin-top: 0.5rem; color: #666;">${lastError?.message || 'Unknown error'}</div>
-          <button class="retry-btn secondary" onclick="openBrowse()">Retry</button>
-          <div style="margin-top: 1rem; font-size: 0.8rem;">
-            Or paste a video URL directly above
-          </div>
+          <div style="font-size:0.8rem; margin-top:0.5rem; color:#666;">${lastError?.message || 'Unknown error'}</div>
+          <button class="retry-btn secondary" onclick="openBrowse(currentChannelUrl)">Retry</button>
         </div>
       `;
     }
 
-    async function loadMoreVideos(currentProxy) {
-      if (!continuationToken || !apiKey) return;
-      
+    async function loadMoreVideos(proxy) {
+      if (!continuationToken || !apiKey || !proxy) return;
+
       try {
-        // YouTube's browse endpoint for continuation
         const browseUrl = 'https://www.youtube.com/youtubei/v1/browse?key=' + apiKey;
-        
         const body = {
           context: {
-            client: {
-              clientName: "WEB",
-              clientVersion: clientVersion || "2.20240304.00.00",
-              hl: "en",
-              gl: "US"
-            }
+            client: { clientName: "WEB", clientVersion: clientVersion || "2.20240729.00.00", hl: "en", gl: "US" }
           },
           continuation: continuationToken
         };
 
-        const response = await fetch(currentProxy + encodeURIComponent(browseUrl), {
+        const res = await fetch(proxy + encodeURIComponent(browseUrl), {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
 
-        if (!response.ok) return;
-        
-        const data = await response.json();
+        if (!res.ok) return;
+        const data = await res.json();
         const newVideos = parseContinuationVideos(data);
-        
+
         if (newVideos.length > 0) {
           allVideos = allVideos.concat(newVideos);
           renderVideos();
-          
-          // Check for more continuations
+
           const newToken = data?.continuationContents?.gridContinuation?.continuations?.[0]?.nextContinuationData?.continuation;
           if (newToken) {
             continuationToken = newToken;
-            if (allVideos.length < 30) {
-              await loadMoreVideos(currentProxy);
-            }
+            if (allVideos.length < 30) await loadMoreVideos(proxy);
+          } else {
+            continuationToken = null;
           }
         }
       } catch (err) {
-        console.error('Failed to load more videos:', err);
+        console.error('loadMore failed:', err);
       }
     }
 
     function parseVideos(html) {
       const videos = [];
-      
       try {
-        const dataMatch = html.match(/var ytInitialData = ({.+?});<\/script>/s);
-        if (dataMatch) {
-          const data = JSON.parse(dataMatch[1]);
-          
-          // Find the Videos tab
+        const match = html.match(/var ytInitialData = ({.+?});<\/script>/s);
+        if (match) {
+          const data = JSON.parse(match[1]);
           const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
-          
           for (const tab of tabs) {
-            if (tab?.tabRenderer?.title?.toLowerCase() === 'videos' || tabs.length === 1) {
+            if (tab?.tabRenderer?.title?.toLowerCase?.() === 'videos' || tabs.length === 1) {
               const contents = tab?.tabRenderer?.content?.richGridRenderer?.contents ||
-                              tab?.tabRenderer?.content?.sectionListRenderer?.contents;
-              
-              if (contents && Array.isArray(contents)) {
-                for (const item of contents) {
-                  let video = null;
-                  
-                  if (item.richItemRenderer?.content?.videoRenderer) {
-                    video = item.richItemRenderer.content.videoRenderer;
-                  } else if (item.gridVideoRenderer) {
-                    video = item.gridVideoRenderer;
-                  } else if (item.itemSectionRenderer?.contents) {
-                    for (const subItem of item.itemSectionRenderer.contents) {
-                      if (subItem.gridVideoRenderer) {
-                        video = subItem.gridVideoRenderer;
-                        break;
-                      } else if (subItem.videoRenderer) {
-                        video = subItem.videoRenderer;
-                        break;
-                      }
+                               tab?.tabRenderer?.content?.sectionListRenderer?.contents || [];
+
+              for (const item of contents) {
+                let vr;
+                if (item.richItemRenderer?.content?.videoRenderer) {
+                  vr = item.richItemRenderer.content.videoRenderer;
+                } else if (item.gridVideoRenderer) {
+                  vr = item.gridVideoRenderer;
+                } else if (item.itemSectionRenderer?.contents) {
+                  for (const sub of item.itemSectionRenderer.contents) {
+                    if (sub.videoRenderer || sub.gridVideoRenderer) {
+                      vr = sub.videoRenderer || sub.gridVideoRenderer;
+                      break;
                     }
                   }
-                  
-                  if (video && video.videoId) {
-                    const thumbs = video.thumbnail?.thumbnails || [];
-                    const bestThumb = thumbs[thumbs.length - 1]?.url || 
-                                     `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`;
-                    
-                    videos.push({
-                      id: video.videoId,
-                      title: video.title?.runs?.[0]?.text || video.title?.simpleText || 'Untitled',
-                      thumbnail: bestThumb
-                    });
-                  }
+                }
+
+                if (vr?.videoId) {
+                  let title = getBestTitle(vr.title);
+                  if (!title || title.trim() === '') title = 'Untitled Video';
+
+                  const thumbs = vr.thumbnail?.thumbnails || [];
+                  const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
+
+                  videos.push({
+                    id: vr.videoId,
+                    title,
+                    thumbnail: thumb
+                  });
                 }
               }
-              
-              // Get continuation token for more videos
-              const gridContinuation = tab?.tabRenderer?.content?.richGridRenderer?.continuations?.[0]?.nextContinuationData;
-              if (gridContinuation) {
-                continuationToken = gridContinuation.continuation;
-              }
+
+              const cont = tab?.tabRenderer?.content?.richGridRenderer?.continuations?.[0]?.nextContinuationData?.continuation;
+              if (cont) continuationToken = cont;
             }
           }
         }
@@ -536,33 +359,43 @@
         console.error('JSON parse error:', e);
       }
 
-      // Fallback regex
-      if (videos.length === 0) {
-        console.log('Trying regex fallback...');
-        const videoIdRegex = /"videoId":"([a-zA-Z0-9_-]{11})"/g;
-        const titleRegex = /"title":\{"runs":\[\{"text":"([^"]+)"\}\]\}|"title":\{"simpleText":"([^"]+)"\}/g;
-        
-        const ids = [];
-        let match;
-        while ((match = videoIdRegex.exec(html)) !== null) {
-          ids.push(match[1]);
+      // Improved fallback when JSON parsing gives poor results
+      if (videos.length < 5) {
+        console.log('Using fallback title matching...');
+        const idMatches = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)];
+        const titleRe = /"text":"([^"]{4,100})"/g;
+        const titleCandidates = [];
+        let m;
+        while ((m = titleRe.exec(html)) !== null) {
+          const t = m[1].trim();
+          if (t && t.length > 3 && !/^\d+$/.test(t)) titleCandidates.push(t);
         }
-        
-        const titles = [];
-        while ((match = titleRegex.exec(html)) !== null) {
-          titles.push(match[1] || match[2]);
-        }
-        
+
         const seen = new Set();
-        ids.forEach((id, index) => {
-          if (!seen.has(id) && id.length === 11) {
-            seen.add(id);
-            videos.push({
-              id: id,
-              title: titles[index] || `Video ${videos.length + 1}`,
-              thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
-            });
-          }
+        idMatches.forEach((idMatch, idx) => {
+          const id = idMatch[1];
+          if (seen.has(id)) return;
+          seen.add(id);
+
+          let bestTitle = `Video ${videos.length + 1}`;
+          let minDist = Infinity;
+          const idPos = idMatch.index;
+
+          titleCandidates.forEach(t => {
+            const tPos = html.indexOf(t);
+            if (tPos === -1) return;
+            const dist = Math.abs(tPos - idPos);
+            if (dist < minDist && dist < 4000) {
+              minDist = dist;
+              bestTitle = t;
+            }
+          });
+
+          videos.push({
+            id,
+            title: bestTitle,
+            thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+          });
         });
       }
 
@@ -570,63 +403,60 @@
       return videos;
     }
 
+    function getBestTitle(titleObj) {
+      if (!titleObj) return '';
+      if (titleObj.runs?.[0]?.text) return titleObj.runs[0].text.trim();
+      if (titleObj.simpleText) return titleObj.simpleText.trim();
+      if (titleObj.accessibility?.accessibilityData?.label) {
+        return titleObj.accessibility.accessibilityData.label.trim();
+      }
+      return '';
+    }
+
     function parseContinuationVideos(data) {
       const videos = [];
-      
       try {
-        const contents = data?.continuationContents?.gridContinuation?.items || [];
-        
-        for (const item of contents) {
-          const video = item.gridVideoRenderer || item.videoRenderer;
-          
-          if (video && video.videoId) {
-            const thumbs = video.thumbnail?.thumbnails || [];
-            const bestThumb = thumbs[thumbs.length - 1]?.url || 
-                             `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`;
-            
+        const items = data?.continuationContents?.gridContinuation?.items || [];
+        for (const item of items) {
+          const vr = item.gridVideoRenderer || item.videoRenderer || item.richItemRenderer?.content?.videoRenderer;
+          if (vr?.videoId) {
+            let title = getBestTitle(vr.title);
+            if (!title) title = 'Untitled Video';
+
+            const thumbs = vr.thumbnail?.thumbnails || [];
+            const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
+
             videos.push({
-              id: video.videoId,
-              title: video.title?.runs?.[0]?.text || video.title?.simpleText || 'Untitled',
-              thumbnail: bestThumb
+              id: vr.videoId,
+              title,
+              thumbnail: thumb
             });
           }
         }
-        
-        // Update continuation token
         const newToken = data?.continuationContents?.gridContinuation?.continuations?.[0]?.nextContinuationData?.continuation;
-        if (newToken) {
-          continuationToken = newToken;
-        } else {
-          continuationToken = null;
-        }
+        if (newToken) continuationToken = newToken;
+        else continuationToken = null;
       } catch (e) {
-        console.error('Continuation parse error:', e);
+        console.error('parseContinuation error:', e);
       }
-      
       return videos;
     }
 
     function renderVideos() {
       videoGrid.innerHTML = '';
-      
-      allVideos.forEach(video => {
-        const card = createVideoCard(video);
-        videoGrid.appendChild(card);
-      });
-      
-      // Add load more button if we have continuation and less than 50 videos
+      allVideos.forEach(v => videoGrid.appendChild(createVideoCard(v)));
+
       if (continuationToken && allVideos.length < 50) {
-        const loadMoreBtn = document.createElement('button');
-        loadMoreBtn.className = 'load-more-btn';
-        loadMoreBtn.textContent = `Load More Videos (${allVideos.length} loaded)`;
-        loadMoreBtn.onclick = async () => {
-          loadMoreBtn.disabled = true;
-          loadMoreBtn.textContent = 'Loading...';
-          const currentProxy = proxies[0]; // Use first working proxy
-          await loadMoreVideos(currentProxy);
-          loadMoreBtn.remove();
+        const btn = document.createElement('button');
+        btn.className = 'load-more-btn';
+        btn.textContent = `Load More Videos (${allVideos.length} loaded)`;
+        btn.onclick = async () => {
+          btn.disabled = true;
+          btn.textContent = 'Loading...';
+          if (currentProxy) await loadMoreVideos(currentProxy);
+          btn.remove();
         };
-        videoGrid.appendChild(loadMoreBtn);
+        videoGrid.appendChild(btn);
       }
     }
 
@@ -634,19 +464,18 @@
       const card = document.createElement('div');
       card.className = 'video-card';
       card.onclick = () => playVideo(video.id);
-      
+
       card.innerHTML = `
         <div class="video-thumb">
-          <img src="https://i.ytimg.com/vi/${video.id}/hqdefault.jpg" 
-               alt="${escapeHtml(video.title)}" 
+          <img src="https://i.ytimg.com/vi/${video.id}/hqdefault.jpg"
+               alt="${escapeHtml(video.title)}"
                loading="lazy"
-               onerror="this.onerror=null; this.src='https://i.ytimg.com/vi/${video.id}/mqdefault.jpg'; this.onerror=function(){this.src='https://via.placeholder.com/480x270/1f1f1f/ff0000?text=No+Image'}">
+               onerror="this.src='https://i.ytimg.com/vi/${video.id}/mqdefault.jpg'; this.onerror=function(){this.src='https://via.placeholder.com/480x270/1f1f1f/ff0000?text=No+Image'}">
         </div>
         <div class="video-info">
           <div class="video-title">${escapeHtml(video.title)}</div>
         </div>
       `;
-      
       return card;
     }
 
@@ -663,11 +492,9 @@
       videoGrid.innerHTML = '';
       allVideos = [];
       continuationToken = null;
+      currentChannelUrl = null;
+      currentProxy = null;
     }
-
-    urlInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') submitBtn.click();
-    });
   </script>
 </body>
 </html>
