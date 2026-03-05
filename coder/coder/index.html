@@ -30,10 +30,6 @@
     box-shadow: 0 0 80px rgba(139, 92, 246, 0.6), inset 0 0 30px rgba(255,255,255,0.2);
   }
   
-  .glow-btn:active {
-    transform: scale(0.98);
-  }
-  
   @keyframes gradientShift {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
@@ -108,7 +104,7 @@
   </div>
 
   <div class="text-center text-xs text-slate-600 max-w-md">
-    <p>GitHub repos: Download as ZIP → Import here. Auto-detects index.html or finds HTML entry points.</p>
+    <p>GitHub repos: Download as ZIP → Import here. Auto-detects index.html, handles templates & assets.</p>
   </div>
 </div>
 
@@ -128,7 +124,8 @@
   const errorToast = document.getElementById('error-toast');
   const errorText = document.getElementById('error-text');
 
-  let currentFiles = new Map(); // Store files for relative path resolution
+  let currentFiles = new Map();
+  let basePath = '';
 
   function showLoading(text = 'Processing...') {
     loadingText.textContent = text;
@@ -147,7 +144,6 @@
     }, 4000);
   }
 
-  // Drag and drop handlers
   dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
     dropZone.classList.add('dragover');
@@ -185,10 +181,9 @@
       } else if (['txt', 'js', 'css', 'json', 'md'].includes(ext)) {
         await processTextFile(file);
       } else {
-        // Try to detect if it's HTML content anyway
         const text = await readFileAsText(file);
         if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-          await runHtml(text);
+          await runHtml(text, file.name);
         } else {
           showError(`Unsupported file type: .${ext}`);
           hideLoading();
@@ -220,12 +215,11 @@
 
   async function processHtml(file) {
     const content = await readFileAsText(file);
-    await runHtml(content);
+    await runHtml(content, file.name);
   }
 
   async function processTextFile(file) {
     const content = await readFileAsText(file);
-    // Wrap in HTML for display
     const wrapped = `<!DOCTYPE html>
 <html>
 <head>
@@ -273,16 +267,35 @@
     
     currentFiles.clear();
     const files = [];
+    let rootFolder = '';
     
-    // Collect all files
+    // Detect GitHub ZIP structure (root folder like "Repo-Name-master/")
+    const filePaths = Object.keys(zip.files);
+    const firstFile = filePaths.find(p => !zip.files[p].dir);
+    
+    if (firstFile && firstFile.includes('/')) {
+      const potentialRoot = firstFile.split('/')[0];
+      // Check if all files are under this folder
+      const allInRoot = filePaths.every(p => p.startsWith(potentialRoot + '/'));
+      if (allInRoot) {
+        rootFolder = potentialRoot + '/';
+        console.log('Detected GitHub ZIP root folder:', rootFolder);
+      }
+    }
+    
+    // Collect all files, stripping root folder if present
     zip.forEach((relativePath, zipEntry) => {
       if (!zipEntry.dir) {
-        files.push({
-          path: relativePath,
-          entry: zipEntry,
-          name: zipEntry.name.split('/').pop(),
-          dir: zipEntry.name.split('/').slice(0, -1).join('/')
-        });
+        const cleanPath = rootFolder ? relativePath.replace(rootFolder, '') : relativePath;
+        if (cleanPath) { // Skip empty paths
+          files.push({
+            path: cleanPath,
+            fullPath: relativePath,
+            entry: zipEntry,
+            name: cleanPath.split('/').pop(),
+            dir: cleanPath.split('/').slice(0, -1).join('/')
+          });
+        }
       }
     });
 
@@ -290,8 +303,6 @@
 
     // Find entry point
     let entryPoint = null;
-    
-    // Priority order for entry points
     const priorities = [
       'index.html', 'Index.html', 'INDEX.HTML',
       'main.html', 'Main.html', 'main.htm',
@@ -301,19 +312,17 @@
     
     // Check root level first
     for (const priority of priorities) {
-      const found = files.find(f => f.path.toLowerCase() === priority.toLowerCase() || 
-                                   f.path.endsWith('/' + priority.toLowerCase()));
+      const found = files.find(f => f.path.toLowerCase() === priority.toLowerCase());
       if (found) {
         entryPoint = found;
         break;
       }
     }
     
-    // If no standard entry point, find any HTML file
+    // If no root level, check any level but prefer less nested
     if (!entryPoint) {
       const htmlFiles = files.filter(f => f.name.match(/\.(html|htm)$/i));
       if (htmlFiles.length > 0) {
-        // Prefer root-level or least nested
         entryPoint = htmlFiles.sort((a, b) => {
           const depthA = a.path.split('/').length;
           const depthB = b.path.split('/').length;
@@ -323,14 +332,13 @@
     }
 
     if (!entryPoint) {
-      // No HTML found, show file browser
-      await showFileBrowser(files, zip);
+      await showFileBrowser(files, zip, rootFolder);
       return;
     }
 
     showLoading(`Loading ${entryPoint.name}...`);
     
-    // Extract all files to memory for relative path resolution
+    // Extract all files to memory
     for (const file of files) {
       const content = await file.entry.async('uint8array');
       const blob = new Blob([content]);
@@ -341,14 +349,15 @@
       });
     }
 
-    // Get entry point content
+    basePath = entryPoint.dir;
     const entryContent = await entryPoint.entry.async('text');
     await runHtml(entryContent, entryPoint.path);
   }
 
-  async function showFileBrowser(files, zip) {
-    // Create a file browser UI for non-HTML zips
-    const fileList = files.map(f => `<li style="margin: 0.5rem 0; cursor: pointer; color: #6366f1;" onclick="window.viewFile('${f.path}')">📄 ${f.path}</li>`).join('');
+  async function showFileBrowser(files, zip, rootFolder) {
+    const fileList = files.map(f => 
+      `<li style="margin: 0.5rem 0; cursor: pointer; color: #6366f1;" onclick="window.viewFile('${f.fullPath}', '${rootFolder}')">📄 ${f.path}</li>`
+    ).join('');
     
     const html = `<!DOCTYPE html>
 <html>
@@ -374,29 +383,26 @@
 </body>
 </html>`;
     
-    // Store zip for later access
     window.currentZip = zip;
-    window.viewFile = async (path) => {
-      const file = files.find(f => f.path === path);
-      if (file) {
-        const content = await file.entry.async('text');
-        const wrapped = `<!DOCTYPE html>
+    window.viewFile = async (fullPath, root) => {
+      const content = await zip.file(fullPath).async('text');
+      const fileName = fullPath.replace(root, '');
+      const wrapped = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>${path}</title>
+  <title>${fileName}</title>
   <style>
     body { font-family: monospace; background: #0f172a; color: #e2e8f0; padding: 2rem; }
     pre { background: #1e293b; padding: 1rem; border-radius: 8px; overflow-x: auto; }
   </style>
 </head>
 <body>
-  <h1>${path}</h1>
+  <h1>${fileName}</h1>
   <pre>${escapeHtml(content)}</pre>
 </body>
 </html>`;
-        await runHtml(wrapped);
-      }
+      await runHtml(wrapped);
     };
     
     await runHtml(html);
@@ -405,45 +411,56 @@
   function getMimeType(filename) {
     const ext = filename.split('.').pop().toLowerCase();
     const types = {
-      'html': 'text/html',
-      'htm': 'text/html',
-      'js': 'application/javascript',
+      'html': 'text/html', 'htm': 'text/html',
+      'js': 'application/javascript', 'mjs': 'application/javascript',
       'css': 'text/css',
       'json': 'application/json',
-      'png': 'image/png',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'gif': 'image/gif',
-      'svg': 'image/svg+xml',
-      'webp': 'image/webp',
-      'woff': 'font/woff',
-      'woff2': 'font/woff2',
-      'ttf': 'font/ttf',
-      'otf': 'font/otf'
+      'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+      'gif': 'image/gif', 'svg': 'image/svg+xml', 'webp': 'image/webp',
+      'woff': 'font/woff', 'woff2': 'font/woff2', 'ttf': 'font/ttf', 'otf': 'font/otf',
+      'mp3': 'audio/mpeg', 'mp4': 'video/mp4', 'webm': 'video/webm'
     };
     return types[ext] || 'application/octet-stream';
   }
 
-  async function runHtml(htmlContent, basePath = '') {
+  async function runHtml(htmlContent, filePath = '') {
     showLoading('Rendering...');
     
+    // Check if this is a server-side template (Holy Unblocker, etc.)
+    const hasTemplates = htmlContent.includes('{{') && htmlContent.includes('}}');
+    const templatePatterns = [
+      /\{\{\s*ifSEO\s*\}\}/gi,
+      /\{\{\s*getSplash\s*\}\}/gi,
+      /\{\{\s*inline\s*\}\}/gi,
+      /\{\{\s*mask\s*\}\}/gi,
+      /\{\{\s*version\s*\}\}/gi,
+      /\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g
+    ];
+    
+    const isTemplated = templatePatterns.some(pattern => pattern.test(htmlContent));
+    
+    if (isTemplated) {
+      console.log('Detected server-side templates, stripping...');
+      htmlContent = stripTemplates(htmlContent);
+    }
+    
     // Get base directory for relative path resolution
-    const baseDir = basePath ? basePath.split('/').slice(0, -1).join('/') : '';
+    const baseDir = filePath ? filePath.split('/').slice(0, -1).join('/') : '';
     
     // Process HTML to handle relative paths
     let processedHtml = htmlContent;
     
     // Replace relative URLs with blob URLs
-    const urlPatterns = [
+    const replacements = [
       { regex: /href=["']([^"']+)["']/g, type: 'href' },
       { regex: /src=["']([^"']+)["']/g, type: 'src' },
       { regex: /url\(["']?([^"')]+)["']?\)/g, type: 'url' }
     ];
     
-    for (const pattern of urlPatterns) {
+    for (const pattern of replacements) {
       processedHtml = processedHtml.replace(pattern.regex, (match, url) => {
-        // Skip absolute URLs, data URIs, and anchors
-        if (url.match(/^(https?:|data:|javascript:|#|\/\/)/)) return match;
+        // Skip absolute URLs, data URIs, javascript, and anchors
+        if (url.match(/^(https?:|data:|javascript:|#|\/\/|mailto:|tel:)/i)) return match;
         
         // Resolve relative path
         let resolvedPath;
@@ -455,19 +472,38 @@
           resolvedPath = url;
         }
         
-        // Normalize path (handle ../ and ./)
+        // Normalize path
         resolvedPath = normalizePath(resolvedPath);
         
-        // Check if we have this file
-        const file = currentFiles.get(resolvedPath) || 
-                    currentFiles.get(resolvedPath.replace(/^\.\//, '')) ||
-                    findFileCaseInsensitive(resolvedPath);
+        // Try to find file (case insensitive)
+        const file = findFileCaseInsensitive(resolvedPath);
         
         if (file) {
           if (pattern.type === 'url') {
             return `url("${file.url}")`;
           } else {
             return `${pattern.type}="${file.url}"`;
+          }
+        }
+        
+        // If not found, try common variations
+        const variations = [
+          resolvedPath,
+          'views/' + resolvedPath,
+          'public/' + resolvedPath,
+          'assets/' + resolvedPath,
+          resolvedPath.replace(/^\.\.\//, ''),
+          resolvedPath.replace(/^\.\//, '')
+        ];
+        
+        for (const variant of variations) {
+          const varFile = findFileCaseInsensitive(variant);
+          if (varFile) {
+            if (pattern.type === 'url') {
+              return `url("${varFile.url}")`;
+            } else {
+              return `${pattern.type}="${varFile.url}"`;
+            }
           }
         }
         
@@ -490,8 +526,30 @@
     
     hideLoading();
     
-    // Cleanup blob URL after load
     setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  function stripTemplates(html) {
+    // Handle Holy Unblocker style templates
+    let stripped = html;
+    
+    // Replace {{mask}}...{{/mask}} or {{mask}}content{{/mask}} with content
+    stripped = stripped.replace(/\{\{\s*mask\s*\}\}\{\{\s*\/mask\s*\}\}/gi, '');
+    stripped = stripped.replace(/\{\{\s*mask\s*\}\}(.*?)\{\{\s*\/mask\s*\}\}/gis, '$1');
+    
+    // Replace template variables with placeholders or empty
+    stripped = stripped.replace(/\{\{\s*ifSEO\s*\}\}(.*?)\{\{\s*\/ifSEO\s*\}\}/gis, '$1');
+    stripped = stripped.replace(/\{\{\s*getSplash\s*\}\}/gi, '<div class="splash">Holy Unblocker</div>');
+    stripped = stripped.replace(/\{\{\s*inline\s*\}\}/gi, '');
+    stripped = stripped.replace(/\{\{\s*version\s*\}\}/gi, '1.0.0');
+    
+    // Generic template cleanup - remove remaining {{...}}
+    stripped = stripped.replace(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g, '');
+    
+    // Clean up empty lines
+    stripped = stripped.replace(/\n\s*\n\s*\n/g, '\n\n');
+    
+    return stripped;
   }
 
   function normalizePath(path) {
@@ -517,7 +575,6 @@
     return null;
   }
 
-  // Allow going back
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && previewContainer.style.display === 'block') {
       previewContainer.style.display = 'none';
@@ -525,6 +582,7 @@
       mainContainer.style.display = 'flex';
       mainContainer.classList.remove('fade-out');
       currentFiles.clear();
+      basePath = '';
     }
   });
 </script>
