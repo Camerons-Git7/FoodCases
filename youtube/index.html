@@ -15,17 +15,17 @@
       padding: 0;
       box-sizing: border-box;
     }
-
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
     body {
       font-family: 'Inter', system-ui, sans-serif;
       background: #0f0f0f;
       color: #e5e5e5;
-      min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
-
-    /* Initial screen (input) */
     #input-screen {
       flex: 1;
       display: flex;
@@ -35,22 +35,20 @@
       padding: 2rem;
       text-align: center;
       transition: opacity 0.4s ease;
+      overflow-y: auto;
     }
-
     h1 {
       font-size: 3rem;
       font-weight: 700;
       margin-bottom: 1.5rem;
       letter-spacing: -0.02em;
     }
-
     p.subtitle {
       font-size: 1.25rem;
       color: #a1a1aa;
       margin-bottom: 2.5rem;
       max-width: 500px;
     }
-
     .input-group {
       display: flex;
       flex-wrap: wrap;
@@ -59,7 +57,6 @@
       width: 100%;
       justify-content: center;
     }
-
     input[type="text"] {
       flex: 1;
       min-width: 300px;
@@ -72,12 +69,10 @@
       outline: none;
       transition: all 0.2s;
     }
-
     input[type="text"]:focus {
       border-color: #ff0000;
       box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.15);
     }
-
     button {
       padding: 1rem 2.5rem;
       font-size: 1.1rem;
@@ -89,17 +84,25 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-
     button:hover {
       background: #cc0000;
       transform: translateY(-2px);
     }
-
     button:active {
       transform: translateY(0);
     }
-
-    /* Video screen */
+    button.secondary {
+      background: #333;
+    }
+    button.secondary:hover {
+      background: #444;
+    }
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
     #video-screen {
       position: fixed;
       inset: 0;
@@ -110,7 +113,6 @@
       justify-content: center;
       z-index: 10;
     }
-
     .video-container {
       position: relative;
       width: 100%;
@@ -119,7 +121,6 @@
       overflow: hidden;
       background: #000;
     }
-
     .video-container iframe {
       position: absolute;
       inset: 0;
@@ -127,35 +128,150 @@
       height: 100%;
       border: none;
     }
-
-    /* Loading state */
+    #browse-screen {
+      position: fixed;
+      inset: 0;
+      background: #0f0f0f;
+      display: none;
+      flex-direction: column;
+      z-index: 20;
+      height: 100vh;
+    }
+    .browse-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background: #1f1f1f;
+      border-bottom: 1px solid #333;
+      flex-shrink: 0;
+      height: 60px;
+    }
+    .browse-header h2 {
+      font-size: 1.5rem;
+      color: #ff0000;
+    }
+    .back-btn {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.9rem;
+    }
+    .browse-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem;
+      position: relative;
+    }
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    .video-card {
+      background: #1f1f1f;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+      border: 1px solid #333;
+    }
+    .video-card:hover {
+      transform: translateY(-4px);
+      border-color: #ff0000;
+    }
+    .video-thumb {
+      width: 100%;
+      height: 0;
+      padding-bottom: 56.25%;
+      background: #000;
+      position: relative;
+      overflow: hidden;
+    }
+    .video-thumb img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .video-info {
+      padding: 1rem;
+    }
+    .video-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
     .loading {
       font-size: 1.5rem;
       color: #888;
-      margin-top: 2rem;
+      text-align: center;
+      padding: 3rem;
     }
-
+    .error-msg {
+      color: #ff4444;
+      padding: 2rem;
+      text-align: center;
+    }
+    .retry-btn {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+    .load-more-btn {
+      grid-column: 1 / -1;
+      padding: 1rem;
+      margin-top: 1rem;
+      background: #333;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+    .load-more-btn:hover {
+      background: #444;
+    }
+    .load-more-btn:disabled {
+      background: #222;
+      color: #666;
+      cursor: not-allowed;
+    }
     @media (max-width: 600px) {
       h1 { font-size: 2.4rem; }
       .input-group { flex-direction: column; align-items: stretch; }
       input, button { width: 100%; }
+      .browse-header { padding: 1rem; height: auto; }
+      .browse-header h2 { font-size: 1.2rem; }
+      .browse-content { padding: 1rem; }
+      .video-grid { grid-template-columns: 1fr; gap: 1rem; }
     }
   </style>
 </head>
 <body>
-
-  <!-- Initial input screen -->
   <div id="input-screen">
     <h1>▶︎ YouTube ▶︎</h1>
-    <p class="subtitle">Paste Your Youtube Link Below</p>
+    <p class="subtitle">Paste Your Youtube Link Below or Browse Videos</p>
     
     <div class="input-group">
-      <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." autofocus />
+      <input id="url" type="text" placeholder="https://www.youtube.com/watch?v= ..." autofocus />
+    </div>
+    
+    <div class="button-group" style="margin-top: 1rem;">
       <button id="submit">Watch</button>
+      <button id="browse-btn" class="secondary">Browse Videos</button>
     </div>
   </div>
 
-  <!-- Full-video container (hidden until watch is clicked) -->
   <div id="video-screen">
     <div class="video-container">
       <iframe 
@@ -168,48 +284,390 @@
     <div class="loading" id="loading">Loading video...</div>
   </div>
 
+  <div id="browse-screen">
+    <div class="browse-header">
+      <h2>▶︎ Joe Barts Gaming Videos</h2>
+      <button class="back-btn secondary" onclick="closeBrowse()">Back</button>
+    </div>
+    <div class="browse-content" id="browse-content">
+      <div class="loading" id="browse-loading">Loading videos...</div>
+      <div class="video-grid" id="video-grid" style="display: none;"></div>
+    </div>
+  </div>
+
   <script>
     const submitBtn = document.getElementById('submit');
+    const browseBtn = document.getElementById('browse-btn');
     const urlInput  = document.getElementById('url');
     const inputScreen = document.getElementById('input-screen');
     const videoScreen = document.getElementById('video-screen');
+    const browseScreen = document.getElementById('browse-screen');
     const player     = document.getElementById('player');
+    const browseLoading = document.getElementById('browse-loading');
+    const videoGrid = document.getElementById('video-grid');
     const loading    = document.getElementById('loading');
 
     const base = "https://www.youtube-nocookie.com/embed/";
     const params = "?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1";
+    
+    const proxies = [
+      "https://api.allorigins.win/raw?url=",
+      "https://api.codetabs.com/v1/proxy?quest=",
+      "https://thingproxy.freeboard.io/fetch/"
+    ];
+    
+    const channelUrl = "https://www.youtube.com/@JoeBartGames/videos";
+    let continuationToken = null;
+    let apiKey = null;
+    let clientVersion = null;
+    let allVideos = [];
 
     submitBtn.addEventListener('click', () => {
       const input = urlInput.value.trim();
       if (!input) return;
+      playVideo(input);
+    });
 
-      // Extract video ID (handles many formats: full url, youtu.be, embed, etc.)
+    browseBtn.addEventListener('click', () => {
+      openBrowse();
+    });
+
+    function playVideo(input) {
       let videoId = input.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1];
-      if (!videoId && input.length === 11) videoId = input; // raw ID
-
+      if (!videoId && input.length === 11) videoId = input;
       if (!videoId) {
         alert("Couldn't find a valid YouTube video ID. Try a full link.");
         return;
       }
 
-      // Hide input, show video area
       inputScreen.style.opacity = '0';
       setTimeout(() => { inputScreen.style.display = 'none'; }, 400);
-
+      browseScreen.style.display = 'none';
       videoScreen.style.display = 'flex';
 
-      // Set source with autoplay
       player.src = base + videoId + params;
-
-      // Hide loading text after ~1–2s (iframe usually loads fast enough)
       setTimeout(() => { loading.style.display = 'none'; }, 1800);
-    });
+    }
 
-    // Optional: allow pressing Enter in input field
+    async function openBrowse() {
+      inputScreen.style.display = 'none';
+      videoScreen.style.display = 'none';
+      browseScreen.style.display = 'flex';
+      browseLoading.style.display = 'block';
+      browseLoading.innerHTML = 'Loading videos...';
+      videoGrid.style.display = 'none';
+      videoGrid.innerHTML = '';
+      allVideos = [];
+      continuationToken = null;
+
+      let lastError = null;
+      
+      for (const proxy of proxies) {
+        try {
+          console.log('Trying proxy:', proxy);
+          const response = await fetch(proxy + encodeURIComponent(channelUrl), {
+            method: 'GET',
+            headers: {
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          const html = await response.text();
+          
+          if (!html || html.length < 1000) {
+            throw new Error('Empty or invalid response');
+          }
+
+          // Extract API key and client version for continuation
+          apiKey = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/)?.[1];
+          clientVersion = html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/)?.[1];
+          
+          const videos = parseVideos(html);
+          
+          if (videos.length === 0) {
+            throw new Error('No videos parsed from page');
+          }
+
+          allVideos = videos;
+          renderVideos();
+          
+          // If we have a continuation token, add load more button
+          if (continuationToken && allVideos.length < 30) {
+            await loadMoreVideos(proxy);
+          }
+
+          browseLoading.style.display = 'none';
+          videoGrid.style.display = 'grid';
+          return;
+          
+        } catch (err) {
+          console.error('Proxy failed:', proxy, err);
+          lastError = err;
+          continue;
+        }
+      }
+      
+      console.error('All proxies failed');
+      browseLoading.innerHTML = `
+        <div class="error-msg">
+          <div>Failed to load videos. All proxies failed.</div>
+          <div style="font-size: 0.8rem; margin-top: 0.5rem; color: #666;">${lastError?.message || 'Unknown error'}</div>
+          <button class="retry-btn secondary" onclick="openBrowse()">Retry</button>
+          <div style="margin-top: 1rem; font-size: 0.8rem;">
+            Or paste a video URL directly above
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadMoreVideos(currentProxy) {
+      if (!continuationToken || !apiKey) return;
+      
+      try {
+        // YouTube's browse endpoint for continuation
+        const browseUrl = 'https://www.youtube.com/youtubei/v1/browse?key=' + apiKey;
+        
+        const body = {
+          context: {
+            client: {
+              clientName: "WEB",
+              clientVersion: clientVersion || "2.20240304.00.00",
+              hl: "en",
+              gl: "US"
+            }
+          },
+          continuation: continuationToken
+        };
+
+        const response = await fetch(currentProxy + encodeURIComponent(browseUrl), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body)
+        });
+
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const newVideos = parseContinuationVideos(data);
+        
+        if (newVideos.length > 0) {
+          allVideos = allVideos.concat(newVideos);
+          renderVideos();
+          
+          // Check for more continuations
+          const newToken = data?.continuationContents?.gridContinuation?.continuations?.[0]?.nextContinuationData?.continuation;
+          if (newToken) {
+            continuationToken = newToken;
+            if (allVideos.length < 30) {
+              await loadMoreVideos(currentProxy);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load more videos:', err);
+      }
+    }
+
+    function parseVideos(html) {
+      const videos = [];
+      
+      try {
+        const dataMatch = html.match(/var ytInitialData = ({.+?});<\/script>/s);
+        if (dataMatch) {
+          const data = JSON.parse(dataMatch[1]);
+          
+          // Find the Videos tab
+          const tabs = data?.contents?.twoColumnBrowseResultsRenderer?.tabs || [];
+          
+          for (const tab of tabs) {
+            if (tab?.tabRenderer?.title?.toLowerCase() === 'videos' || tabs.length === 1) {
+              const contents = tab?.tabRenderer?.content?.richGridRenderer?.contents ||
+                              tab?.tabRenderer?.content?.sectionListRenderer?.contents;
+              
+              if (contents && Array.isArray(contents)) {
+                for (const item of contents) {
+                  let video = null;
+                  
+                  if (item.richItemRenderer?.content?.videoRenderer) {
+                    video = item.richItemRenderer.content.videoRenderer;
+                  } else if (item.gridVideoRenderer) {
+                    video = item.gridVideoRenderer;
+                  } else if (item.itemSectionRenderer?.contents) {
+                    for (const subItem of item.itemSectionRenderer.contents) {
+                      if (subItem.gridVideoRenderer) {
+                        video = subItem.gridVideoRenderer;
+                        break;
+                      } else if (subItem.videoRenderer) {
+                        video = subItem.videoRenderer;
+                        break;
+                      }
+                    }
+                  }
+                  
+                  if (video && video.videoId) {
+                    const thumbs = video.thumbnail?.thumbnails || [];
+                    const bestThumb = thumbs[thumbs.length - 1]?.url || 
+                                     `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`;
+                    
+                    videos.push({
+                      id: video.videoId,
+                      title: video.title?.runs?.[0]?.text || video.title?.simpleText || 'Untitled',
+                      thumbnail: bestThumb
+                    });
+                  }
+                }
+              }
+              
+              // Get continuation token for more videos
+              const gridContinuation = tab?.tabRenderer?.content?.richGridRenderer?.continuations?.[0]?.nextContinuationData;
+              if (gridContinuation) {
+                continuationToken = gridContinuation.continuation;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('JSON parse error:', e);
+      }
+
+      // Fallback regex
+      if (videos.length === 0) {
+        console.log('Trying regex fallback...');
+        const videoIdRegex = /"videoId":"([a-zA-Z0-9_-]{11})"/g;
+        const titleRegex = /"title":\{"runs":\[\{"text":"([^"]+)"\}\]\}|"title":\{"simpleText":"([^"]+)"\}/g;
+        
+        const ids = [];
+        let match;
+        while ((match = videoIdRegex.exec(html)) !== null) {
+          ids.push(match[1]);
+        }
+        
+        const titles = [];
+        while ((match = titleRegex.exec(html)) !== null) {
+          titles.push(match[1] || match[2]);
+        }
+        
+        const seen = new Set();
+        ids.forEach((id, index) => {
+          if (!seen.has(id) && id.length === 11) {
+            seen.add(id);
+            videos.push({
+              id: id,
+              title: titles[index] || `Video ${videos.length + 1}`,
+              thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+            });
+          }
+        });
+      }
+
+      console.log(`Parsed ${videos.length} videos`);
+      return videos;
+    }
+
+    function parseContinuationVideos(data) {
+      const videos = [];
+      
+      try {
+        const contents = data?.continuationContents?.gridContinuation?.items || [];
+        
+        for (const item of contents) {
+          const video = item.gridVideoRenderer || item.videoRenderer;
+          
+          if (video && video.videoId) {
+            const thumbs = video.thumbnail?.thumbnails || [];
+            const bestThumb = thumbs[thumbs.length - 1]?.url || 
+                             `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`;
+            
+            videos.push({
+              id: video.videoId,
+              title: video.title?.runs?.[0]?.text || video.title?.simpleText || 'Untitled',
+              thumbnail: bestThumb
+            });
+          }
+        }
+        
+        // Update continuation token
+        const newToken = data?.continuationContents?.gridContinuation?.continuations?.[0]?.nextContinuationData?.continuation;
+        if (newToken) {
+          continuationToken = newToken;
+        } else {
+          continuationToken = null;
+        }
+      } catch (e) {
+        console.error('Continuation parse error:', e);
+      }
+      
+      return videos;
+    }
+
+    function renderVideos() {
+      videoGrid.innerHTML = '';
+      
+      allVideos.forEach(video => {
+        const card = createVideoCard(video);
+        videoGrid.appendChild(card);
+      });
+      
+      // Add load more button if we have continuation and less than 50 videos
+      if (continuationToken && allVideos.length < 50) {
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.className = 'load-more-btn';
+        loadMoreBtn.textContent = `Load More Videos (${allVideos.length} loaded)`;
+        loadMoreBtn.onclick = async () => {
+          loadMoreBtn.disabled = true;
+          loadMoreBtn.textContent = 'Loading...';
+          const currentProxy = proxies[0]; // Use first working proxy
+          await loadMoreVideos(currentProxy);
+          loadMoreBtn.remove();
+        };
+        videoGrid.appendChild(loadMoreBtn);
+      }
+    }
+
+    function createVideoCard(video) {
+      const card = document.createElement('div');
+      card.className = 'video-card';
+      card.onclick = () => playVideo(video.id);
+      
+      card.innerHTML = `
+        <div class="video-thumb">
+          <img src="https://i.ytimg.com/vi/${video.id}/hqdefault.jpg" 
+               alt="${escapeHtml(video.title)}" 
+               loading="lazy"
+               onerror="this.onerror=null; this.src='https://i.ytimg.com/vi/${video.id}/mqdefault.jpg'; this.onerror=function(){this.src='https://via.placeholder.com/480x270/1f1f1f/ff0000?text=No+Image'}">
+        </div>
+        <div class="video-info">
+          <div class="video-title">${escapeHtml(video.title)}</div>
+        </div>
+      `;
+      
+      return card;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function closeBrowse() {
+      browseScreen.style.display = 'none';
+      inputScreen.style.display = 'flex';
+      inputScreen.style.opacity = '1';
+      videoGrid.innerHTML = '';
+      allVideos = [];
+      continuationToken = null;
+    }
+
     urlInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') submitBtn.click();
     });
   </script>
-
 </body>
 </html>
