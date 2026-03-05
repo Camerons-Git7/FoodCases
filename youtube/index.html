@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>▶︎ YouTube ▶︎</title>
+  <title> ▶︎ YouTube ▶︎</title>
   <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,6 +13,9 @@
   />
 
   <style>
+    /* ────────────────────────────────────────────── */
+    /*  (unchanged CSS - keeping exactly as original)  */
+    /* ────────────────────────────────────────────── */
     * {
       margin: 0;
       padding: 0;
@@ -273,8 +276,8 @@
 </head>
 <body>
   <div id="input-screen">
-    <h1>▶︎ YouTube ▶︎</h1>
-    <p class="subtitle">Paste Your Youtube Link Below or Browse Videos</p>
+    <h1>▶︎ YouTube</h1>
+    <p class="subtitle">Paste Your YouTube Link Below or Browse Videos</p>
 
     <div class="input-group">
       <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." autofocus />
@@ -300,7 +303,7 @@
 
   <div id="browse-screen">
     <div class="browse-header">
-      <h2>▶︎ Joe Bart Videos</h2>
+      <h2>Joe Bart Videos</h2>
       <button class="back-btn secondary" onclick="closeBrowse()">Back</button>
     </div>
     <div id="browse-content">
@@ -326,26 +329,26 @@
       "https://thingproxy.freeboard.io/fetch/",
     ];
 
-    // Channels to load - each with channel videos URL, id and title for headings
+    // Channels to load - updated with correct/official titles
     const channels = [
       {
         id: "joe-bart-gaming",
-        title: "Joe Bart Gaming Videos",
+        title: "Gaming Videos",
         url: "https://www.youtube.com/@JoeBartGames/videos",
       },
       {
         id: "joe-bart",
-        title: "Joe Bart General Videos",
+        title: "General Videos",
         url: "https://www.youtube.com/@JoeBartolozzi/videos",
       },
       {
         id: "joe-bart-vods",
-        title: "Joe Bart Vods",
+        title: "Vods",
         url: "https://www.youtube.com/@JoeBartVOD/videos",
       },
       {
         id: "joe-bart-philosophy",
-        title: "Joe Bart Philosophy Videos",
+        title: "Philosophy Videos",
         url: "https://www.youtube.com/@Joe-Bart-Philosophy/videos",
       },
     ];
@@ -458,6 +461,10 @@
         await loadAllChannelVideos(ch);
       }
     }
+
+    // ──────────────────────────────────────────────
+    // The rest of the script remains completely unchanged
+    // ──────────────────────────────────────────────
 
     async function loadAllChannelVideos(channel) {
       const grid = document.getElementById(`video-grid-${channel.id}`);
