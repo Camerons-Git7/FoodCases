@@ -105,10 +105,10 @@
 
 <script>
 const GAME_URL = "https://cdn.jsdelivr.net/gh/CoolDude2349/Offline-HTML-Games-Pack@master/offline/1.8.html";
+const MIN_LOADING_TIME = 2000; // 2 seconds in milliseconds
 
 function enterFullscreen() {
   const elem = document.documentElement;
-  
   if (elem.requestFullscreen) {
     elem.requestFullscreen().catch(() => {});
   } else if (elem.webkitRequestFullscreen) {
@@ -126,7 +126,9 @@ async function start() {
   const errDiv   = document.getElementById('error');
   const fsButton = document.getElementById('fs-button');
 
-  // Click → go fullscreen + remove button immediately
+  const startTime = Date.now();
+
+  // Click → go fullscreen + remove button
   fsButton.addEventListener('click', () => {
     enterFullscreen();
     fsButton.style.display = 'none';
@@ -144,26 +146,50 @@ async function start() {
     frame.src = blobUrl;
     
     frame.onload = () => {
-      // Game loaded → hide loading screen + fs button
-      loading.style.display = 'none';
-      frame.style.display = 'block';
-      fsButton.style.display = 'none';   // just in case
+      const elapsed = Date.now() - startTime;
+      const remaining = MIN_LOADING_TIME - elapsed;
 
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+      const hideLoading = () => {
+        loading.style.display = 'none';
+        frame.style.display = 'block';
+        fsButton.style.display = 'none';
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+      };
+
+      if (remaining <= 0) {
+        // Already took longer than minimum → hide immediately
+        hideLoading();
+      } else {
+        // Wait the remaining time
+        setTimeout(hideLoading, remaining);
+      }
     };
   } catch (err) {
-    loading.style.display = 'none';
-    errDiv.style.display = 'flex';
-    errDiv.innerHTML = `
-      <strong>Failed to load game</strong><br><br>
-      ${err.message}<br><br>
-      • Check internet connection<br>
-      • Antivirus / firewall may be blocking<br>
-      • Try different network<br>
-      • GitHub/jsDelivr may be slow<br><br>
-      File ~36 MB — unstable connection can fail
-    `;
-    console.error(err);
+    // Error case: still respect minimum time (but usually errors are fast)
+    const elapsed = Date.now() - startTime;
+    const remaining = MIN_LOADING_TIME - elapsed;
+
+    const showError = () => {
+      loading.style.display = 'none';
+      errDiv.style.display = 'flex';
+      errDiv.innerHTML = `
+        <strong>Failed to load game</strong><br><br>
+        ${err.message}<br><br>
+        • Check internet connection<br>
+        • Antivirus / firewall may be blocking<br>
+        • Try different network<br>
+        • GitHub/jsDelivr may be slow<br><br>
+        File ~36 MB — unstable connection can fail
+      `;
+      fsButton.style.display = 'none';
+      console.error(err);
+    };
+
+    if (remaining <= 0) {
+      showError();
+    } else {
+      setTimeout(showError, remaining);
+    }
   }
 }
 
