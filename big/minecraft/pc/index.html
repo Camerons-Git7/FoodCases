@@ -84,7 +84,7 @@
 <div id="loading">
   <div id="loading-text">
     <div>Loading Game...</div>
-    <div style="margin-top:12px; opacity:0.7; font-size:0.9rem;">Please Wait — Loading May Take Up To 1 Minute</div>
+    <div style="margin-top:12px; opacity:0.7; font-size:0.9rem;">Please Wait — Loading May Take Up To 1 Minute<br>(or type "full" anytime)</div>
   </div>
  
   <div id="download-container">
@@ -95,7 +95,7 @@
     </a>
 
     <button id="fs-button" class="btn">
-      ⛶ Enter Fullscreen (recommended)
+      ⛶ Enter Fullscreen (or type "full")
     </button>
   </div>
 </div>
@@ -105,7 +105,10 @@
 
 <script>
 const GAME_URL = "https://cdn.jsdelivr.net/gh/CoolDude2349/Offline-HTML-Games-Pack@master/offline/1.8.html";
-const MIN_LOADING_TIME = 2000; // 2 seconds in milliseconds
+const MIN_LOADING_TIME = 2000; // 2 seconds
+
+let keyBuffer = '';
+let timeoutId = null;
 
 function enterFullscreen() {
   const elem = document.documentElement;
@@ -120,6 +123,38 @@ function enterFullscreen() {
   }
 }
 
+// Listen for typing "full" (case-insensitive) anywhere on page
+document.addEventListener('keydown', (e) => {
+  // Skip if typing in input/textarea (none here, but future-proof)
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  // Only collect letter keys (ignore arrows, shift, etc.)
+  if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+    keyBuffer += e.key.toLowerCase();
+
+    // Keep only last 10 chars (no need for more)
+    if (keyBuffer.length > 10) {
+      keyBuffer = keyBuffer.slice(-10);
+    }
+
+    // Check if ends with "full"
+    if (keyBuffer.endsWith('full')) {
+      enterFullscreen();
+      keyBuffer = ''; // reset after success
+    }
+
+    // Reset buffer after ~2 seconds of no typing
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      keyBuffer = '';
+    }, 2000);
+  } else {
+    // Non-letter key → reset (prevents partial matches across pauses)
+    keyBuffer = '';
+    clearTimeout(timeoutId);
+  }
+});
+
 async function start() {
   const loading  = document.getElementById('loading');
   const frame    = document.getElementById('gameframe');
@@ -128,7 +163,7 @@ async function start() {
 
   const startTime = Date.now();
 
-  // Click → go fullscreen + remove button
+  // Fullscreen button during loading
   fsButton.addEventListener('click', () => {
     enterFullscreen();
     fsButton.style.display = 'none';
@@ -157,15 +192,12 @@ async function start() {
       };
 
       if (remaining <= 0) {
-        // Already took longer than minimum → hide immediately
         hideLoading();
       } else {
-        // Wait the remaining time
         setTimeout(hideLoading, remaining);
       }
     };
   } catch (err) {
-    // Error case: still respect minimum time (but usually errors are fast)
     const elapsed = Date.now() - startTime;
     const remaining = MIN_LOADING_TIME - elapsed;
 
