@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title> ▶︎ YouTube ▶︎</title>
-  <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico " />
-  <link rel="preconnect" href="https://fonts.googleapis.com " />
-  <link rel="preconnect" href="https://fonts.gstatic.com " crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400 ;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; overflow: hidden; }
@@ -124,19 +124,7 @@
       margin: 0;
       user-select: none;
     }
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
     .back-btn { padding: 0.5rem 1.5rem; font-size: 0.9rem; }
-    #twitch-live-btn {
-      background: #9146ff;
-      padding: 0.5rem 1.2rem;
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    #twitch-live-btn:hover { background: #772ce8; }
     .channel-section {
       max-width: 900px;
       margin: 1.5rem auto;
@@ -221,6 +209,7 @@
       color: #888;
       text-align: center;
     }
+    /* Red Loading Spinner */
     .red-spinner {
       width: 50px;
       height: 50px;
@@ -250,7 +239,7 @@
     <h1>▶︎ YouTube</h1>
     <p class="subtitle">Paste Your YouTube Link Below or Browse Videos</p>
     <div class="input-group">
-      <input id="url" type="text" placeholder="https://www.youtube.com/watch?v= ..." autofocus />
+      <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." autofocus />
     </div>
     <div class="button-group" style="margin-top: 1rem;">
       <button id="submit">Watch</button>
@@ -259,7 +248,7 @@
   </div>
 
   <div id="video-screen">
-    <div class="video-container" id="video-container">
+    <div class="video-container">
       <iframe id="player" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
     </div>
     <div class="loading" id="loading">Loading video...</div>
@@ -268,10 +257,7 @@
   <div id="browse-screen">
     <div class="browse-header">
       <h2>Joe Bart Videos</h2>
-      <div class="header-right">
-        <button id="twitch-live-btn">Twitch Live</button>
-        <button class="back-btn secondary" onclick="closeBrowse()">Back</button>
-      </div>
+      <button class="back-btn secondary" onclick="closeBrowse()">Back</button>
     </div>
     <div id="global-loading">
       <div id="global-loading-text">Loading Videos...</div>
@@ -291,20 +277,18 @@
     const globalLoading = document.getElementById("global-loading");
     const player = document.getElementById("player");
     const loading = document.getElementById("loading");
-    const twitchLiveBtn = document.getElementById("twitch-live-btn");
-    const videoContainer = document.getElementById("video-container");
 
     const proxies = [
-      "https://api.allorigins.win/raw?url= ",
-      "https://api.codetabs.com/v1/proxy?quest= ",
-      "https://thingproxy.freeboard.io/fetch/ ",
+      "https://api.allorigins.win/raw?url=",
+      "https://api.codetabs.com/v1/proxy?quest=",
+      "https://thingproxy.freeboard.io/fetch/",
     ];
 
     const channels = [
-      { id: "joe-bart-gaming", title: "Joe Bart Gaming", url: "https://www.youtube.com/@JoeBartGames/videos " },
-      { id: "joe-bart", title: "General Videos", url: "https://www.youtube.com/@JoeBartolozzi/videos " },
-      { id: "joe-bart-vods", title: "Vods", url: "https://www.youtube.com/@JoeBartVOD/videos " },
-      { id: "joe-bart-philosophy", title: "Philosophy Videos", url: "https://www.youtube.com/@Joe-Bart-Philosophy/videos " },
+      { id: "joe-bart-gaming", title: "Joe Bart Gaming", url: "https://www.youtube.com/@JoeBartGames/videos" },
+      { id: "joe-bart", title: "General Videos", url: "https://www.youtube.com/@JoeBartolozzi/videos" },
+      { id: "joe-bart-vods", title: "Vods", url: "https://www.youtube.com/@JoeBartVOD/videos" },
+      { id: "joe-bart-philosophy", title: "Philosophy Videos", url: "https://www.youtube.com/@Joe-Bart-Philosophy/videos" },
     ];
 
     let allChannelVideos = {};
@@ -314,59 +298,25 @@
     urlInput.addEventListener("keypress", e => { if (e.key === "Enter") handleSubmit(); });
     browseBtn.addEventListener("click", () => openBrowse());
 
-    // Twitch live button handler – fixed parent parameter formatting
-    twitchLiveBtn.addEventListener("click", () => {
-      inputScreen.style.display = "none";
-      browseScreen.style.display = "none";
-      videoScreen.style.display = "flex";
-      
-      // Clear existing iframe
-      videoContainer.innerHTML = "";
-      
-      // Build parent parameters correctly - DO NOT encode them
-      // Twitch expects raw domain names, not URL-encoded
-      const parents = [
-        "menist.free.nf",
-        "www.menist.free.nf",
-        "localhost",
-        "127.0.0.1"
-      ].map(p => `parent=${p}`).join("&");
-
-      // Build URL without spaces and without encoding parent values
-      const twitchUrl = `https://player.twitch.tv/?channel=joe_bartolozzi&${parents}&autoplay=true&muted=false`;
-      
-      // Create iframe the same way as reference code
-      const iframe = document.createElement("iframe");
-      iframe.id = "player";
-      iframe.src = twitchUrl;
-      iframe.setAttribute("allowfullscreen", "");
-      iframe.setAttribute("allow", "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture");
-      iframe.style.cssText = "position: absolute; inset: 0; width: 100%; height: 100%; border: none;";
-      
-      videoContainer.appendChild(iframe);
-      
-      loading.innerHTML = "Loading Joe Bart live stream...";
-      loading.style.display = "block";
-      
-      setTimeout(() => {
-        loading.style.display = "none";
-      }, 4000);
-    });
-
     function handleSubmit() {
       let input = urlInput.value.trim();
       if (!input) return;
       
+      // Check if it's a channel/profile link
       const channelMatch = input.match(/youtube\.com\/(@[^/]+|channel\/[^/]+|c\/[^/]+)/i);
       if (channelMatch) {
         let url = input;
+        // Ensure it ends with /videos
         if (!/\/videos/i.test(url)) {
+          // Remove any trailing slashes or query params before adding /videos
           url = url.replace(/\/?(\?.*)?$/, '') + "/videos";
         }
+        // Force English/US region
         if (!url.includes("gl=") && !url.includes("hl=")) {
           url += (url.includes("?") ? "&" : "?") + "gl=US&hl=en";
         }
         
+        // Create a dynamic single channel entry for the pasted URL
         const dynamicChannel = [
           { id: "dynamic-channel", title: "Channel Videos", url: url }
         ];
@@ -375,6 +325,7 @@
         return;
       }
       
+      // Otherwise treat as video
       playVideo(input);
     }
 
@@ -388,17 +339,7 @@
       setTimeout(() => inputScreen.style.display = "none", 400);
       browseScreen.style.display = "none";
       videoScreen.style.display = "flex";
-      
-      // Reset to default YouTube iframe
-      videoContainer.innerHTML = "";
-      const iframe = document.createElement("iframe");
-      iframe.id = "player";
-      iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1`;
-      iframe.setAttribute("allowfullscreen", "");
-      iframe.setAttribute("allow", "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture");
-      iframe.style.cssText = "position: absolute; inset: 0; width: 100%; height: 100%; border: none;";
-      videoContainer.appendChild(iframe);
-      
+      player.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1`;
       loading.style.display = "block";
       setTimeout(() => loading.style.display = "none", 1800);
     }
@@ -413,8 +354,10 @@
       allChannelVideos = {};
       channelStates = {};
       
+      // Use custom channels if provided (from pasted URL), otherwise use default Joe Bart channels
       const channelsToLoad = customChannels || channels;
       
+      // Update header title if custom channel
       const headerTitle = document.querySelector(".browse-header h2");
       if (customChannels) {
         headerTitle.textContent = "Channel Videos";
@@ -456,6 +399,7 @@
 
         for (const proxy of proxies) {
           try {
+            // Add hl=en&gl=US to force English titles
             let fetchUrl = channel.url;
             if (!fetchUrl.includes("hl=")) {
               fetchUrl += (fetchUrl.includes("?") ? "&" : "?") + "hl=en&gl=US";
@@ -533,6 +477,7 @@
             if (obj.videoRenderer || obj.gridVideoRenderer) {
               const vr = obj.videoRenderer || obj.gridVideoRenderer;
               if (vr?.videoId) {
+                // Prioritize runs[0].text for English titles, avoid accessibilityData which may contain localized text
                 let title = "";
                 if (vr.title?.runs?.[0]?.text) {
                   title = vr.title.runs[0].text.trim();
@@ -572,6 +517,7 @@
         console.error("JSON parse failed:", e);
       }
 
+      // Fallback: regex scan if JSON empty or failed
       if (videos.length === 0) {
         const idMatches = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)];
         const seen = new Set();
@@ -587,6 +533,7 @@
         });
       }
 
+      // Dedupe just in case
       const unique = [];
       const seenIds = new Set();
       for (const v of videos) {
@@ -654,6 +601,7 @@
         if (!obj || typeof obj !== "object") return;
         const vr = obj.gridVideoRenderer || obj.videoRenderer || obj.richItemRenderer?.content?.videoRenderer;
         if (vr?.videoId) {
+          // Prioritize runs[0].text for English titles, avoid accessibilityData
           let title = "";
           if (vr.title?.runs?.[0]?.text) {
             title = vr.title.runs[0].text.trim();
@@ -716,6 +664,7 @@
       allChannelVideos = {};
       channelStates = {};
       
+      // Reset header title
       const headerTitle = document.querySelector(".browse-header h2");
       headerTitle.textContent = "Joe Bart Videos";
     }
