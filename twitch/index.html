@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🔴 Twitch 🔴</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="https://static.twitchcdn.net/assets/favicon-32-d6025c141d00c3b0.png">
+  <style type="text/css">
+    /* Reset default browser margins and padding, hide overflow on the main page */
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    /* Style the iframe to cover the entire page using fixed positioning */
+    iframe {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <!-- 
+    Most permissive practical settings for Twitch player iframe 
+    (based on 2025–2026 working examples from dev forums & embeds)
+  -->
+  <iframe 
+    src="https://player.twitch.tv/?channel=joe_bartolozzi&parent=menist.free.nf&parent=www.menist.free.nf&parent=localhost&parent=127.0.0.1&autoplay=true&muted=false"
+    title="Joe Bart Live"
+    allowfullscreen
+    allow="autoplay; fullscreen; encrypted-media; picture-in-picture; accelerometer; gyroscope; clipboard-write; camera; microphone; payment; xr-spatial-tracking"
+    sandbox="allow-scripts allow-same-origin allow-modals allow-popups allow-popups-to-escape-sandbox allow-forms allow-pointer-lock allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+  ></iframe>
+</body>
+</html>
