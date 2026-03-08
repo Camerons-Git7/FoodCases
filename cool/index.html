@@ -2,33 +2,82 @@
 <html>
 <head>
 <title>Browser</title>
-<link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico "/>
+<link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico"/>
 <style type="text/css">
-  /* Reset default body and html margins/paddings */
   body, html {
     margin: 0;
     padding: 0;
     height: 100%;
-    overflow: hidden; /* Hide scrollbars on the main page */
+    overflow: hidden;
   }
 
-  /* Style the iframe to cover the full page */
   iframe {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    border: none; /* Remove default iframe border */
-    display: block; /* Iframes are inline by default */
+    border: none;
+    display: block;
+  }
+
+  /* Hide real cursor when in fullscreen */
+  :fullscreen, :-webkit-full-screen, :-moz-full-screen {
+    cursor: none !important;
+  }
+
+  /* Also hide on the iframe when fullscreen */
+  :fullscreen iframe, :-webkit-full-screen iframe, :-moz-full-screen iframe {
+    cursor: none !important;
+  }
+
+  /* Fake cursor */
+  #fake-cursor {
+    position: fixed;
+    width: 20px;
+    height: 20px;
+    pointer-events: none; /* Let clicks pass through */
+    z-index: 999999;
+    display: none; /* Hidden by default */
+    transform: translate(-50%, -50%); /* Center on actual position */
+  }
+
+  /* Show fake cursor when in fullscreen */
+  :fullscreen #fake-cursor, :-webkit-full-screen #fake-cursor, :-moz-full-screen #fake-cursor {
+    display: block;
   }
 </style>
 </head>
 <body>
 
-<!-- The iframe element -->
-<iframe src="https://www.watchparty.me/watch/impolite-letters-bind " title="Browser" allowfullscreen webkitallowfullscreen mozallowfullscreen>
+<!-- Fake cursor element -->
+<div id="fake-cursor">
+  <svg width="20" height="20" viewBox="0 0 20 20">
+    <path d="M0,0 L0,14 L4,10 L7,17 L10,15 L7,8 L12,8 Z" fill="black" stroke="white" stroke-width="1"/>
+  </svg>
+</div>
+
+<iframe id="browser-frame" src="https://www.watchparty.me/watch/impolite-letters-bind" title="Browser" allowfullscreen webkitallowfullscreen mozallowfullscreen>
 </iframe>
+
+<script>
+  const fakeCursor = document.getElementById('fake-cursor');
+  
+  // Track mouse movement to move fake cursor
+  document.addEventListener('mousemove', (e) => {
+    fakeCursor.style.left = e.clientX + 'px';
+    fakeCursor.style.top = e.clientY + 'px';
+  });
+
+  // Optional: Detect fullscreen changes
+  document.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement) {
+      console.log('Fullscreen active - real cursor hidden, fake cursor showing');
+    } else {
+      console.log('Fullscreen exited - normal cursor restored');
+    }
+  });
+</script>
 
 </body>
 </html>
