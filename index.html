@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>🔗 Seamless Games 🔗</title>
-  <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico " />
-  <link rel="preconnect" href="https://fonts.googleapis.com " />
-  <link rel="preconnect" href="https://fonts.gstatic.com " crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400 ;700;900&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico   " />
+  <link rel="preconnect" href="https://fonts.googleapis.com   " />
+  <link rel="preconnect" href="https://fonts.gstatic.com   " crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400   ;700;900&display=swap" rel="stylesheet" />
   <style>
     :root {
       --accent: #0f0; /* Matrix Green */
@@ -75,15 +75,15 @@
     .button-container {
       display: flex;
       justify-content: flex-start; /* Changed from center to start new rows on the left */
-      gap: 2rem;
-      /* Calculate width for exactly 6 buttons: (168px * 6) + (2rem gap * 5) */
-      width: calc((168px * 6) + (2rem * 5));
+      gap: 1rem;
+      /* Calculate width for exactly 7 buttons: (140px * 7) + (1rem gap * 6) */
+      width: calc((140px * 7) + (1rem * 6));
       max-width: 95vw; /* Prevent overflow on small screens */
       margin: 0 auto 4rem;
       flex-wrap: wrap;
     }
     .game-button {
-      --button-size: 168px; /* 280 * 0.6 */
+      --button-size: 140px; /* Middle ground between 120px and 168px */
       position: relative;
       display: flex;
       flex-direction: column;
@@ -91,7 +91,7 @@
       align-items: center;
       width: var(--button-size);
       height: var(--button-size);
-      padding: 1.2rem 0.6rem 0.9rem; /* scaled from 2rem 1rem 1.5rem */
+      padding: 1rem 0.5rem 0.75rem; /* Adjusted for medium size */
       border: 2px solid var(--accent);
       border-radius: 10px;
       background: rgba(0, 0, 0, 0.7);
@@ -101,7 +101,7 @@
       text-decoration: none;
       font-family: 'Courier New', Courier, monospace;
       font-weight: 700;
-      font-size: 0.96rem; /* 1.6 * 0.6 */
+      font-size: 0.85rem; /* Middle ground between 0.75rem and 0.96rem */
       text-transform: uppercase;
       letter-spacing: 0.1em;
       overflow: hidden;
@@ -118,7 +118,7 @@
       transform: translateX(5px);
     }
     .emoji {
-      font-size: 5.1rem; /* 8.5 * 0.6 */
+      font-size: 4.2rem; /* Middle ground between 3.6rem and 5.1rem */
       color: var(--accent);
       flex-grow: 1;
       display: flex;
@@ -129,49 +129,55 @@
       filter: drop-shadow(0 0 2px var(--accent)); /* Keeps glowing emoji */
     }
     .game-name {
-      font-size: 0.96rem; /* 1.6 * 0.6 */
+      font-size: 0.85rem; /* Middle ground between 0.75rem and 0.96rem */
       text-align: center;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       width: 100%;
       user-select: none;
-      margin-top: 0.24rem; /* 0.4 * 0.6 */
+      margin-top: 0.22rem;
       line-height: 1.2;
     }
     @media (max-width: 1200px) {
       .button-container {
-        /* Adjust for 4 buttons per row on medium screens */
-        width: calc((168px * 4) + (2rem * 3));
+        /* Adjust for 5 buttons per row on medium screens */
+        width: calc((140px * 5) + (1rem * 4));
       }
     }
-    @media (max-width: 800px) {
+    @media (max-width: 900px) {
+      .button-container {
+        /* Adjust for 4 buttons per row */
+        width: calc((140px * 4) + (1rem * 3));
+      }
+    }
+    @media (max-width: 700px) {
       .button-container {
         /* Adjust for 3 buttons per row on smaller screens */
-        width: calc((168px * 3) + (2rem * 2));
+        width: calc((140px * 3) + (1rem * 2));
       }
     }
-    @media (max-width: 600px) {
+    @media (max-width: 500px) {
       .button-container {
         /* Adjust for 2 buttons per row on mobile */
-        width: calc((168px * 2) + (2rem * 1));
+        width: calc((140px * 2) + (1rem * 1));
       }
     }
     @media (max-width: 320px) {
       .button-container {
         /* Single column on very small screens */
-        width: 168px;
+        width: 140px;
       }
       .game-button {
-        --button-size: 132px; /* 220 * 0.6 */
-        font-size: 0.78rem;
-        padding: 0.9rem 0.5rem 0.7rem;
+        --button-size: 110px;
+        font-size: 0.7rem;
+        padding: 0.7rem 0.4rem 0.6rem;
       }
       .emoji {
-        font-size: 3.6rem;
+        font-size: 3.2rem;
       }
       .game-name {
-        font-size: 0.78rem;
+        font-size: 0.7rem;
       }
     }
 
@@ -198,57 +204,57 @@
   <canvas id="matrixCanvas"></canvas>
   <h1 class="title">SEAMLESS GAMES</h1>
   <div class="button-container" role="group" aria-label="Seamless Games menu">
-    <a href="https://menist.free.nf/case-opener/ " class="game-button" aria-label="FoodCases">
+    <a href="https://menist.free.nf/case-opener/   " class="game-button" aria-label="FoodCases">
       <div class="emoji" aria-hidden="true">🍔</div>
       <div class="game-name">Food-Cases</div>
     </a>
-    <a href="https://menist.free.nf/black-jack/ " class="game-button" aria-label="Blackjack">
+    <a href="https://menist.free.nf/black-jack/   " class="game-button" aria-label="Blackjack">
       <div class="emoji" aria-hidden="true">🃏</div>
-      <div class="game-name">Blackjack</div>
+      <div class="game-name">Black-Jack</div>
     </a>
-    <a href="https://menist.free.nf/word-bomb/ " class="game-button" aria-label="WordBomb">
+    <a href="https://menist.free.nf/word-bomb/   " class="game-button" aria-label="WordBomb">
       <div class="emoji" aria-hidden="true">💣</div>
       <div class="game-name">Word-Bomb</div>
     </a>
-    <a href="https://menist.free.nf/flappy-bird/ " class="game-button" aria-label="FlappyBird">
+    <a href="https://menist.free.nf/flappy-bird/   " class="game-button" aria-label="FlappyBird">
       <div class="emoji" aria-hidden="true">🐦</div>
       <div class="game-name">Flappy-Bird</div>
     </a>
-    <a href="https://menist.free.nf/droppy-merge/ " class="game-button" aria-label="DroppyMerge">
+    <a href="https://menist.free.nf/droppy-merge/   " class="game-button" aria-label="DroppyMerge">
       <div class="emoji" aria-hidden="true">🧱</div>
       <div class="game-name">Droppy-Merge</div>
     </a>
-    <a href="https://menist.free.nf/big/1v1.lol/ " class="game-button" aria-label="1v1.lol">
+    <a href="https://menist.free.nf/big/1v1.lol/   " class="game-button" aria-label="1v1.lol">
       <div class="emoji" aria-hidden="true">🥇</div>
       <div class="game-name">1v1.lol</div>
     </a>
-    <a href="https://menist.free.nf/big/flightsim/ " class="game-button" aria-label="FlightSim">
+    <a href="https://menist.free.nf/big/flightsim/   " class="game-button" aria-label="FlightSim">
       <div class="emoji" aria-hidden="true">✈️</div>
       <div class="game-name">Flight-Sim</div>
     </a>
-    <a href="https://menist.free.nf/big/geometrydash/ " class="game-button" aria-label="Dash">
+    <a href="https://menist.free.nf/big/geometrydash/   " class="game-button" aria-label="Dash">
       <div class="emoji" aria-hidden="true">🔳</div>
-      <div class="game-name">Dash</div>
+      <div class="game-name">Geo-Dash</div>
     </a>
-    <a href="https://menist.free.nf/big/minecraft/ " class="game-button" aria-label="Minecraft">
+    <a href="https://menist.free.nf/big/minecraft/   " class="game-button" aria-label="Minecraft">
       <div class="emoji" aria-hidden="true">⚒️</div>
       <div class="game-name">Minecraft</div>
     </a>
-    <a href="https://menist.free.nf/youtube/ " class="game-button" aria-label="YouTube">
+    <a href="https://menist.free.nf/youtube/   " class="game-button" aria-label="YouTube">
       <div class="emoji" aria-hidden="true">▶︎</div>
       <div class="game-name">YouTube</div>
     </a>
-    <a href="https://menist.free.nf/big/basketball/ " class="game-button" aria-label="Basketball">
+    <a href="https://menist.free.nf/big/basketball/   " class="game-button" aria-label="Basketball">
       <div class="emoji" aria-hidden="true">🏀</div>
       <div class="game-name">Basketball</div>
     </a>
-    <a href="https://menist.free.nf/big/subway-surfers/ " class="game-button" aria-label="Basketball">
+    <a href="https://menist.free.nf/big/subway-surfers/   " class="game-button" aria-label="Basketball">
       <div class="emoji" aria-hidden="true">🚇</div>
       <div class="game-name">Subway-Surf</div>
     </a>
-    <a href="https://menist.free.nf/big/youtube-surfers/ " class="game-button" aria-label="Basketball">
+    <a href="https://menist.free.nf/big/youtube-surfers/   " class="game-button" aria-label="Basketball">
       <div class="emoji" aria-hidden="true">🚄</div>
-      <div class="game-name">YouTubeSurf</div>
+      <div class="game-name">Yt-Surf</div>
     </a>
   </div>
 
