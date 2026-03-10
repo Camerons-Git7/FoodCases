@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Calculator</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    .calculator {
+      background-color: black;
+      padding: 20px;
+      border-radius: 10px;
+      width: 320px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .display {
+      width: calc(100% - 20px);
+      margin-bottom: 10px;
+      padding: 10px;
+      font-size: 24px;
+      border: none;
+      background-color: #333;
+      color: white;
+      border-radius: 5px;
+      text-align: right;
+    }
+
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-gap: 10px;
+    }
+
+    button {
+      padding: 15px;
+      font-size: 20px;
+      border: none;
+      background-color: #666;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #444;
+    }
+
+    button:active {
+      background-color: #222;
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <input type="text" class="display" id="display" disabled>
+    <div class="keys">
+      <button class="button">AC</button>
+      <button class="button">DEL</button>
+      <button class="button">%</button>
+      <button class="button">/</button>
+      <button class="button">7</button>
+      <button class="button">8</button>
+      <button class="button">9</button>
+      <button class="button">*</button>
+      <button class="button">4</button>
+      <button class="button">5</button>
+      <button class="button">6</button>
+      <button class="button">-</button>
+      <button class="button">1</button>
+      <button class="button">2</button>
+      <button class="button">3</button>
+      <button class="button">+</button>
+      <button class="button">0</button>
+      <button class="button">00</button>
+      <button class="button">.</button>
+      <button class="button">=</button>
+    </div>
+  </div>
+
+  <script>
+    let display = document.getElementById('display');
+    let buttons = document.querySelectorAll('.button');
+
+    let string = '';
+
+    buttons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (e.target.innerHTML == 'DEL') {
+                string = string.substring(0, string.length - 1);
+                display.value = string;
+            } else if (e.target.innerHTML == 'AC') {
+                string = '';
+                display.value = string;
+            } else if (e.target.innerHTML == '=') {
+                try {
+                    string = eval(string);
+                    display.value = string;
+                } catch (error) {
+                    display.value = 'Error';
+                }
+            } else {
+                string += e.target.innerHTML;
+                display.value = string;
+            }
+        });
+    });
+  </script>
+</body>
+</html>
