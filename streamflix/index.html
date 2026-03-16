@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STREAMFLIX</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #141414;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .hero-gradient {
+            background: linear-gradient(to top, #141414 0%, transparent 60%, rgba(0,0,0,0.7) 100%);
+        }
+
+        .card-zoom {
+            transition: transform 0.3s ease, z-index 0.3s;
+        }
+        .card-zoom:hover {
+            transform: scale(1.05);
+            z-index: 50;
+        }
+
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #E50914;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .skeleton {
+            background: linear-gradient(90deg, #1f1f1f 25%, #2a2a2a 50%, #1f1f1f 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .iframe-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        #video-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .iframe-loader {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .player-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 70;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            transition: opacity 0.3s ease;
+        }
+
+        .player-header.hidden-controls {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .fullscreen-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .cursor-hidden {
+            cursor: none !important;
+        }
+
+        /* Episode/Season Selection Modal */
+        .episode-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+            display: none;
+            overflow-y: auto;
+        }
+
+        .episode-modal.active {
+            display: block;
+        }
+
+        .episode-modal-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .season-selector {
+            display: flex;
+            gap: 10px;
+            padding: 20px;
+            border-bottom: 1px solid #333;
+            overflow-x: auto;
+        }
+
+        .season-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .season-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .season-btn.active {
+            background: #E50914;
+            border-color: #E50914;
+        }
+
+        .episodes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .episode-card {
+            background: #1f1f1f;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .episode-card:hover {
+            transform: scale(1.02);
+        }
+
+        .episode-thumbnail {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #333;
+            position: relative;
+        }
+
+        .episode-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .episode-play-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .episode-card:hover .episode-play-overlay {
+            opacity: 1;
+        }
+
+        .episode-info {
+            padding: 15px;
+        }
+
+        .episode-number {
+            color: #E50914;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .episode-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .episode-overview {
+            font-size: 0.85rem;
+            color: #aaa;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .select-episodes-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .select-episodes-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Thumbnail placeholder while loading */
+        .thumbnail-placeholder {
+            background: linear-gradient(90deg, #1f1f1f 25%, #2a2a2a 50%, #1f1f1f 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            inset: 0;
+        }
+
+        .thumbnail-img {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .thumbnail-img.loaded {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="app" class="relative min-h-screen bg-[#141414]">
+        
+        <!-- MAIN BROWSE SCREEN -->
+        <div id="browse-screen" class="min-h-screen pb-20">
+            <!-- Navigation -->
+            <nav id="navbar" class="fixed top-0 w-full z-40 transition-all duration-500 bg-gradient-to-b from-black/80 to-transparent px-4 md:px-12 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-8">
+                    <div class="text-3xl font-black text-[#E50914] tracking-tighter cursor-pointer" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })">STREAMFLIX</div>
+                    <ul class="hidden md:flex gap-5 text-sm font-medium text-gray-200">
+                        <li class="hover:text-white cursor-pointer text-white font-bold">Home</li>
+                        <li class="hover:text-white cursor-pointer">TV Shows</li>
+                        <li class="hover:text-white cursor-pointer">Movies</li>
+                        <li class="hover:text-white cursor-pointer">New & Popular</li>
+                        <li class="hover:text-white cursor-pointer">My List</li>
+                    </ul>
+                </div>
+                <div class="flex items-center gap-5 text-white">
+                    <i class="fas fa-search cursor-pointer hover:text-gray-300"></i>
+                    <span class="hidden md:inline text-sm font-medium cursor-pointer">Kids</span>
+                    <i class="fas fa-bell cursor-pointer hover:text-gray-300"></i>
+                    <div class="flex items-center gap-2 cursor-pointer">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png" class="w-8 h-8 rounded bg-gray-600" alt="Profile">
+                        <i class="fas fa-caret-down text-xs"></i>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Hero Section -->
+            <header class="relative h-[85vh] w-full">
+                <div class="absolute inset-0 w-full h-full">
+                    <img id="hero-image" src="https://via.placeholder.com/1920x1080/141414/333?text=Loading..." class="w-full h-full object-cover transition-opacity duration-500" alt="Hero">
+                    <div class="absolute inset-0 hero-gradient"></div>
+                </div>
+
+                <div class="absolute bottom-0 left-0 w-full p-4 md:p-12 pb-24 md:pb-32">
+                    <div class="max-w-2xl space-y-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg" class="h-6 w-auto filter brightness-0 invert opacity-80" alt="N">
+                            <span class="text-gray-300 tracking-widest text-sm font-bold uppercase">Series</span>
+                        </div>
+                        <h1 id="hero-title" class="text-5xl md:text-7xl font-black text-white drop-shadow-lg">Loading...</h1>
+                        
+                        <div class="flex items-center gap-3 text-sm md:text-base font-medium text-gray-200">
+                            <span id="hero-rating" class="text-[#46d369] font-bold">98% Match</span>
+                            <span id="hero-year">2021</span>
+                            <span class="border border-gray-500 px-1 text-xs">TV-MA</span>
+                            <span id="hero-seasons">2 Seasons</span>
+                            <span class="border border-gray-500 px-1 text-xs">HD</span>
+                        </div>
+
+                        <p id="hero-overview" class="text-lg text-white drop-shadow-md line-clamp-3 md:line-clamp-none">
+                            Loading description...
+                        </p>
+
+                        <div class="flex flex-wrap items-center gap-4 pt-4">
+                            <button id="hero-play-btn" class="bg-white text-black px-8 py-3 rounded font-bold text-lg hover:bg-gray-200 transition flex items-center gap-2">
+                                <i class="fas fa-play"></i> Play
+                            </button>
+                            <button id="hero-episodes-btn" class="bg-gray-500/70 text-white px-8 py-3 rounded font-bold text-lg hover:bg-gray-500/50 transition flex items-center gap-2 backdrop-blur-sm hidden">
+                                <i class="fas fa-list"></i> Episodes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Rows -->
+            <main class="relative z-10 -mt-24 pl-4 md:pl-12 space-y-12 pb-20" id="content-rows">
+                <!-- Rows will be populated by JavaScript -->
+            </main>
+            
+            <!-- Footer -->
+            <footer class="max-w-5xl mx-auto px-4 py-12 text-gray-500 text-sm">
+                <div class="flex gap-4 mb-4">
+                    <i class="fab fa-facebook-f text-2xl hover:text-white cursor-pointer"></i>
+                    <i class="fab fa-instagram text-2xl hover:text-white cursor-pointer"></i>
+                    <i class="fab fa-twitter text-2xl hover:text-white cursor-pointer"></i>
+                    <i class="fab fa-youtube text-2xl hover:text-white cursor-pointer"></i>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <a href="#" class="hover:underline">Audio Description</a>
+                    <a href="#" class="hover:underline">Help Center</a>
+                    <a href="#" class="hover:underline">Gift Cards</a>
+                    <a href="#" class="hover:underline">Media Center</a>
+                    <a href="#" class="hover:underline">Investor Relations</a>
+                    <a href="#" class="hover:underline">Jobs</a>
+                    <a href="#" class="hover:underline">Terms of Use</a>
+                    <a href="#" class="hover:underline">Privacy</a>
+                </div>
+                <button class="border border-gray-500 px-4 py-1 hover:text-white mb-4">Service Code</button>
+                <p>&copy; Streamflix Inc.</p>
+                <div class="mt-4 text-xs text-gray-600">
+                    <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB" class="h-4 mt-2 opacity-50">
+                </div>
+            </footer>
+        </div>
+
+        <!-- VIDEO PLAYER OVERLAY -->
+        <div id="video-player" class="hidden fixed inset-0 z-[60] bg-black flex flex-col">
+            <!-- Player Header -->
+            <div class="player-header" id="player-header">
+                <div class="flex items-center gap-4">
+                    <button onclick="app.closePlayer()" class="text-white hover:text-gray-300 text-2xl transition w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <span id="player-title" class="text-lg font-bold text-white drop-shadow-md truncate max-w-md">Playing...</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button id="select-episodes-btn" class="select-episodes-btn hidden" onclick="app.openEpisodeSelector()">
+                        <i class="fas fa-list mr-2"></i>Episodes
+                    </button>
+                    <button class="fullscreen-btn" onclick="app.toggleIframeFullscreen()">
+                        <i class="fas fa-expand"></i>
+                        <span>Fullscreen</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Video Container -->
+            <div class="relative flex-1 w-full h-full bg-black" id="player-container">
+                <div class="iframe-wrapper" id="iframe-wrapper">
+                    <!-- Content injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- EPISODE SELECTOR MODAL -->
+        <div id="episode-modal" class="episode-modal">
+            <div class="episode-modal-header">
+                <h2 class="text-2xl font-bold" id="modal-title">Select Episode</h2>
+                <button onclick="app.closeEpisodeSelector()" class="text-white text-2xl hover:text-gray-300 w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="season-selector" id="season-selector">
+                <!-- Season buttons injected by JS -->
+            </div>
+            
+            <div class="episodes-grid" id="episodes-grid">
+                <!-- Episode cards injected by JS -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // TMDB API KEY
+        // ==========================================
+        const API_KEY = '5385979c244492186ee665cade5d3e69';
+        
+        // VidBinge is the sole provider
+        const PROVIDER = {
+            name: 'VidBinge',
+            movie: (id) => `https://vidbinge.to/movie/${id}`,
+            tv: (id, s, e) => `https://vidbinge.to/tv/${id}/${s}/${e}`
+        };
+        
+        // Curated content library - reduced to prevent API rate limits
+        const CONTENT_LIBRARY = [
+            // Featured & Trending
+            { id: 93405, type: 'tv', name: 'Squid Game', featured: true },
+            { id: 1399, type: 'tv', name: 'Game of Thrones' },
+            { id: 71446, type: 'tv', name: 'Money Heist' },
+            { id: 66732, type: 'tv', name: 'Stranger Things' },
+            { id: 82856, type: 'tv', name: 'The Mandalorian' },
+            { id: 60574, type: 'tv', name: 'Peaky Blinders' },
+            { id: 1668, type: 'tv', name: 'Friends' },
+            { id: 2316, type: 'tv', name: 'The Office' },
+            { id: 1402, type: 'tv', name: 'The Walking Dead' },
+            { id: 37680, type: 'tv', name: 'Breaking Bad' },
+            
+            // Popular TV Shows
+            { id: 63247, type: 'tv', name: 'Westworld' },
+            { id: 19885, type: 'tv', name: 'Sherlock' },
+            { id: 1396, type: 'tv', name: 'The Sopranos' },
+            { id: 1420, type: 'tv', name: 'Seinfeld' },
+            { id: 4607, type: 'tv', name: 'Lost' },
+            { id: 1418, type: 'tv', name: 'The Big Bang Theory' },
+            { id: 44217, type: 'tv', name: 'Vikings' },
+            { id: 63741, type: 'tv', name: 'Outlander' },
+            { id: 48891, type: 'tv', name: 'Brooklyn Nine-Nine' },
+            { id: 1622, type: 'tv', name: 'Supernatural' },
+            { id: 60625, type: 'tv', name: 'Rick and Morty' },
+            { id: 1434, type: 'tv', name: 'Family Guy' },
+            { id: 82856, type: 'tv', name: 'The Mandalorian' },
+            { id: 75006, type: 'tv', name: 'The Umbrella Academy' },
+            { id: 71912, type: 'tv', name: 'The Witcher' },
+            { id: 100088, type: 'tv', name: 'The Last of Us' },
+            { id: 125988, type: 'tv', name: 'Silo' },
+            { id: 135157, type: 'tv', name: 'The Bear' },
+            { id: 136283, type: 'tv', name: 'Only Murders in the Building' },
+            { id: 138501, type: 'tv', name: 'Yellowstone' },
+            
+            // Blockbuster Movies
+            { id: 238, type: 'movie', name: 'The Godfather' },
+            { id: 278, type: 'movie', name: 'The Shawshank Redemption' },
+            { id: 680, type: 'movie', name: 'Pulp Fiction' },
+            { id: 155, type: 'movie', name: 'The Dark Knight' },
+            { id: 13, type: 'movie', name: 'Forrest Gump' },
+            { id: 550, type: 'movie', name: 'Fight Club' },
+            { id: 27205, type: 'movie', name: 'Inception' },
+            { id: 157336, type: 'movie', name: 'Interstellar' },
+            { id: 19995, type: 'movie', name: 'Avatar' },
+            { id: 597, type: 'movie', name: 'Titanic' },
+            { id: 24428, type: 'movie', name: 'The Avengers' },
+            { id: 299534, type: 'movie', name: 'Avengers: Endgame' },
+            { id: 135397, type: 'movie', name: 'Jurassic World' },
+            { id: 76341, type: 'movie', name: 'Mad Max: Fury Road' },
+            { id: 293660, type: 'movie', name: 'Deadpool' },
+            { id: 118340, type: 'movie', name: 'Guardians of the Galaxy' },
+            { id: 330459, type: 'movie', name: 'Rogue One: A Star Wars Story' },
+            { id: 284054, type: 'movie', name: 'Black Panther' },
+            { id: 315635, type: 'movie', name: 'Spider-Man: Homecoming' },
+            { id: 335984, type: 'movie', name: 'Blade Runner 2049' },
+            
+            // Marvel Universe
+            { id: 299536, type: 'movie', name: 'Avengers: Infinity War' },
+            { id: 99861, type: 'movie', name: 'Avengers: Age of Ultron' },
+            { id: 1726, type: 'movie', name: 'Iron Man' },
+            { id: 10138, type: 'movie', name: 'Iron Man 2' },
+            { id: 68721, type: 'movie', name: 'Iron Man 3' },
+            { id: 1771, type: 'movie', name: 'Captain America: The First Avenger' },
+            { id: 100402, type: 'movie', name: 'Captain America: The Winter Soldier' },
+            { id: 271110, type: 'movie', name: 'Captain America: Civil War' },
+            { id: 284053, type: 'movie', name: 'Thor: Ragnarok' },
+            { id: 284052, type: 'movie', name: 'Doctor Strange' },
+            
+            // Sci-Fi & Fantasy
+            { id: 120, type: 'movie', name: 'The Lord of the Rings: The Fellowship of the Ring' },
+            { id: 121, type: 'movie', name: 'The Lord of the Rings: The Two Towers' },
+            { id: 122, type: 'movie', name: 'The Lord of the Rings: The Return of the King' },
+            { id: 603, type: 'movie', name: 'The Matrix' },
+            { id: 604, type: 'movie', name: 'The Matrix Reloaded' },
+            { id: 605, type: 'movie', name: 'The Matrix Revolutions' },
+            { id: 11, type: 'movie', name: 'Star Wars' },
+            { id: 1891, type: 'movie', name: 'The Empire Strikes Back' },
+            { id: 1892, type: 'movie', name: 'Return of the Jedi' },
+            { id: 140607, type: 'movie', name: 'Star Wars: The Force Awakens' },
+            
+            // Animation
+            { id: 129, type: 'movie', name: 'Spirited Away' },
+            { id: 8392, type: 'movie', name: 'My Neighbor Totoro' },
+            { id: 128, type: 'movie', name: 'Princess Mononoke' },
+            { id: 4935, type: 'movie', name: 'Howl\'s Moving Castle' },
+            { id: 862, type: 'movie', name: 'Toy Story' },
+            { id: 10193, type: 'movie', name: 'Toy Story 3' },
+            { id: 10681, type: 'movie', name: 'WALL·E' },
+            { id: 150540, type: 'movie', name: 'Inside Out' },
+            { id: 101, type: 'movie', name: 'The Lion King' },
+            { id: 10192, type: 'movie', name: 'Shrek' }
+        ];
+        
+        const app = {
+            state: {
+                squidGameData: null,
+                currentMedia: null,
+                isPlaying: false,
+                isMuted: false,
+                progress: 0,
+                duration: 100,
+                controlsTimeout: null,
+                isFullscreen: false,
+                volume: 100,
+                playerReady: false,
+                currentSeason: 1,
+                seasonsData: {},
+                contentCache: new Map(), // Cache for fetched content data
+                isLoading: false
+            },
+
+            init() {
+                this.setupScrollListener();
+                this.setupRedirectBlocking();
+                
+                if (API_KEY === 'YOUR_TMDB_API_KEY_HERE' || !API_KEY) {
+                    this.showError("Please add your TMDB API Key to the code.");
+                    return;
+                }
+                
+                this.fetchData();
+            },
+
+            setupScrollListener() {
+                window.addEventListener('scroll', () => {
+                    const nav = document.getElementById('navbar');
+                    if (window.scrollY > 50) {
+                        nav.classList.remove('bg-gradient-to-b');
+                        nav.classList.add('bg-[#141414]');
+                    } else {
+                        nav.classList.add('bg-gradient-to-b');
+                        nav.classList.remove('bg-[#141414]');
+                    }
+                });
+            },
+
+            setupRedirectBlocking() {
+                // Block redirects
+                const originalOpen = window.open;
+                window.open = function(url, target, features) {
+                    if (url && (url.includes('vidbinge') || url.includes('localhost'))) {
+                        return originalOpen.apply(this, arguments);
+                    }
+                    console.log('Blocked popup:', url);
+                    return null;
+                };
+            },
+
+            showError(msg) {
+                document.body.innerHTML = `
+                    <div class="flex items-center justify-center min-h-screen bg-[#141414] text-white p-8">
+                        <div class="max-w-md text-center">
+                            <i class="fas fa-exclamation-circle text-6xl text-[#E50914] mb-4"></i>
+                            <h1 class="text-2xl font-bold mb-4">Configuration Error</h1>
+                            <p class="text-gray-400 mb-6">${msg}</p>
+                        </div>
+                    </div>
+                `;
+            },
+
+            // Fetch with retry logic and rate limiting
+            async fetchWithRetry(url, retries = 3, delay = 1000) {
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        const response = await fetch(url);
+                        if (response.status === 429) {
+                            // Rate limited - wait longer
+                            await new Promise(r => setTimeout(r, delay * (i + 1)));
+                            continue;
+                        }
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return await response.json();
+                    } catch (error) {
+                        if (i === retries - 1) throw error;
+                        await new Promise(r => setTimeout(r, delay));
+                    }
+                }
+                return null;
+            },
+
+            // Fetch content data in batches with concurrency control
+            async fetchContentBatch(items, concurrency = 5) {
+                const results = [];
+                const executing = [];
+                
+                for (const item of items) {
+                    // Check cache first
+                    if (this.state.contentCache.has(item.id)) {
+                        results.push(this.state.contentCache.get(item.id));
+                        continue;
+                    }
+                    
+                    const promise = this.fetchWithRetry(
+                        `https://api.themoviedb.org/3/${item.type}/${item.id}?api_key=${API_KEY}`
+                    ).then(data => {
+                        if (data) {
+                            const enriched = { ...item, poster_path: data.poster_path, backdrop_path: data.backdrop_path };
+                            this.state.contentCache.set(item.id, enriched);
+                            return enriched;
+                        }
+                        return item;
+                    }).catch(err => {
+                        console.error(`Failed to fetch ${item.name}:`, err);
+                        return item;
+                    });
+                    
+                    results.push(promise);
+                    executing.push(promise);
+                    
+                    if (executing.length >= concurrency) {
+                        await Promise.race(executing);
+                        executing.splice(executing.indexOf(promise), 1);
+                    }
+                }
+                
+                return Promise.all(results);
+            },
+
+            async fetchData() {
+                try {
+                    // Fetch featured content (Squid Game) first
+                    const sgData = await this.fetchWithRetry(
+                        `https://api.themoviedb.org/3/tv/93405?api_key=${API_KEY}`
+                    );
+                    
+                    if (!sgData) throw new Error('Failed to fetch featured content');
+                    
+                    this.state.squidGameData = sgData;
+                    this.updateHero(sgData);
+                    
+                    // Pre-fetch all seasons for Squid Game
+                    await this.fetchAllSeasons(sgData);
+                    
+                    // Generate content rows with fetched data
+                    await this.generateContentRows();
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showError("Failed to fetch data. Please check your API key and try again.");
+                }
+            },
+
+            async fetchAllSeasons(showData) {
+                const seasons = {};
+                const fetches = [];
+                
+                for (let i = 1; i <= showData.number_of_seasons; i++) {
+                    fetches.push(
+                        this.fetchWithRetry(
+                            `https://api.themoviedb.org/3/tv/${showData.id}/season/${i}?api_key=${API_KEY}`
+                        ).then(data => {
+                            if (data) seasons[i] = data;
+                        }).catch(err => {
+                            console.error(`Error fetching season ${i}:`, err);
+                        })
+                    );
+                }
+                
+                await Promise.all(fetches);
+                this.state.seasonsData = seasons;
+            },
+
+            async generateContentRows() {
+                const container = document.getElementById('content-rows');
+                container.innerHTML = '';
+                
+                // Define categories with their item IDs
+                const categories = [
+                    { 
+                        title: 'Squid Game', 
+                        filter: i => i.id === 93405,
+                        featured: true 
+                    },
+                    { 
+                        title: 'Trending Now', 
+                        filter: i => [71446, 66732, 1399, 82856, 60574].includes(i.id)
+                    },
+                    { 
+                        title: 'Popular TV Shows', 
+                        filter: i => i.type === 'tv' && i.id !== 93405,
+                        limit: 10
+                    },
+                    { 
+                        title: 'Blockbuster Movies', 
+                        filter: i => i.type === 'movie',
+                        limit: 10
+                    },
+                    { 
+                        title: 'Marvel Universe', 
+                        filter: i => [299536, 99861, 1726, 10138, 68721, 1771, 100402, 271110, 284053, 284052].includes(i.id)
+                    },
+                    { 
+                        title: 'Sci-Fi & Fantasy', 
+                        filter: i => [120, 121, 122, 603, 604, 605, 11, 1891, 1892, 140607].includes(i.id)
+                    },
+                    { 
+                        title: 'Animation', 
+                        filter: i => [129, 8392, 128, 4935, 862, 10193, 10681, 150540, 101, 10192].includes(i.id)
+                    }
+                ];
+                
+                // Get unique items that need fetching
+                const uniqueItems = [...new Map(CONTENT_LIBRARY.map(item => [item.id, item])).values()];
+                
+                // Fetch all content data with concurrency control
+                const enrichedItems = await this.fetchContentBatch(uniqueItems, 5);
+                const enrichedMap = new Map(enrichedItems.map(i => [i.id, i]));
+                
+                // Render each category
+                for (const category of categories) {
+                    let items = enrichedItems.filter(category.filter);
+                    
+                    if (category.limit) {
+                        items = items.slice(0, category.limit);
+                    }
+                    
+                    if (items.length === 0) continue;
+                    
+                    const section = document.createElement('section');
+                    section.className = 'category-section';
+                    section.innerHTML = `
+                        <h2 class="text-xl md:text-2xl font-bold mb-4 text-gray-200 hover:text-white cursor-pointer transition-colors">
+                            ${category.title}
+                        </h2>
+                        <div class="flex gap-4 overflow-x-auto no-scrollbar pb-8 pr-12" id="row-${category.title.replace(/\s+/g, '-').toLowerCase()}">
+                            ${items.map(item => this.createCardHTML(item)).join('')}
+                        </div>
+                    `;
+                    container.appendChild(section);
+                }
+                
+                // Setup lazy loading for images
+                this.setupLazyLoading();
+            },
+
+            createCardHTML(item) {
+                const posterUrl = item.poster_path 
+                    ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+                    : null;
+                
+                const placeholderText = encodeURIComponent(item.name);
+                
+                return `
+                    <div class="flex-none w-[160px] md:w-[200px] aspect-[2/3] bg-gray-800 rounded-md overflow-hidden cursor-pointer card-zoom relative group" 
+                         onclick="app.playVideo('${item.name.replace(/'/g, "\\'")}', ${item.id}, '${item.type}', 1, 1)">
+                        ${posterUrl ? `
+                            <div class="thumbnail-placeholder" id="placeholder-${item.id}"></div>
+                            <img data-src="${posterUrl}" 
+                                 data-id="${item.id}"
+                                 class="w-full h-full object-cover thumbnail-img absolute inset-0" 
+                                 alt="${item.name}"
+                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/500x750/1f1f1f/666?text=${placeholderText}'; this.classList.add('loaded'); document.getElementById('placeholder-${item.id}')?.remove();"
+                                 onload="this.classList.add('loaded'); document.getElementById('placeholder-${item.id}')?.remove();">
+                        ` : `
+                            <img src="https://via.placeholder.com/500x750/1f1f1f/666?text=${placeholderText}" 
+                                 class="w-full h-full object-cover" 
+                                 alt="${item.name}">
+                        `}
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div class="w-16 h-16 bg-[#E50914] rounded-full flex items-center justify-center transform scale-0 group-hover:scale-100 transition-transform duration-300">
+                                <i class="fas fa-play text-white text-2xl ml-1"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            setupLazyLoading() {
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            const src = img.getAttribute('data-src');
+                            if (src) {
+                                img.src = src;
+                                img.removeAttribute('data-src');
+                            }
+                            observer.unobserve(img);
+                        }
+                    });
+                }, {
+                    rootMargin: '50px 0px',
+                    threshold: 0.01
+                });
+
+                document.querySelectorAll('img[data-src]').forEach(img => {
+                    imageObserver.observe(img);
+                });
+            },
+
+            updateHero(data) {
+                document.getElementById('hero-title').textContent = data.name || data.title;
+                document.getElementById('hero-overview').textContent = data.overview;
+                document.getElementById('hero-year').textContent = (data.first_air_date || data.release_date || '').split('-')[0] || '2024';
+                document.getElementById('hero-seasons').textContent = data.number_of_seasons 
+                    ? `${data.number_of_seasons} Season${data.number_of_seasons > 1 ? 's' : ''}`
+                    : `${Math.floor(data.runtime / 60)}h ${data.runtime % 60}m`;
+                
+                if (data.backdrop_path) {
+                    document.getElementById('hero-image').src = `https://image.tmdb.org/t/p/original${data.backdrop_path}`;
+                }
+                
+                document.getElementById('hero-play-btn').onclick = () => {
+                    this.playVideo(data.name || data.title, 93405, 'tv', 1, 1);
+                };
+                
+                document.getElementById('hero-episodes-btn').classList.remove('hidden');
+                document.getElementById('hero-episodes-btn').onclick = () => {
+                    this.openEpisodeSelector();
+                };
+            },
+
+            buildEmbedUrl(tmdbId, type, season = 1, episode = 1) {
+                if (type === 'tv') {
+                    return PROVIDER.tv(tmdbId, season, episode);
+                }
+                return PROVIDER.movie(tmdbId);
+            },
+
+            playVideo(title, tmdbId, type = 'movie', season = 1, episode = 1) {
+                const player = document.getElementById('video-player');
+                const titleEl = document.getElementById('player-title');
+                const wrapper = document.getElementById('iframe-wrapper');
+                const selectEpisodesBtn = document.getElementById('select-episodes-btn');
+                
+                titleEl.textContent = title;
+                this.state.currentMedia = { tmdbId, type, season, episode, title };
+                this.state.isPlaying = false;
+                this.state.progress = 0;
+                this.state.playerReady = false;
+                this.state.currentSeason = season;
+                
+                // Show episode selector button only for Squid Game TV show
+                if (type === 'tv' && tmdbId === 93405) {
+                    selectEpisodesBtn.classList.remove('hidden');
+                } else {
+                    selectEpisodesBtn.classList.add('hidden');
+                }
+                
+                const embedUrl = this.buildEmbedUrl(tmdbId, type, season, episode);
+                
+                wrapper.innerHTML = `
+                    <div class="iframe-loader" id="iframe-loader">
+                        <div class="loader"></div>
+                    </div>
+                    <iframe 
+                        id="video-iframe" 
+                        src="${embedUrl}" 
+                        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                        allowfullscreen
+                        sandbox="allow-scripts allow-same-origin allow-popups"
+                    ></iframe>
+                `;
+                
+                this.setupFullscreenDetection();
+                
+                const iframe = document.getElementById('video-iframe');
+                const loader = document.getElementById('iframe-loader');
+                
+                iframe.onload = () => {
+                    if (loader) loader.style.display = 'none';
+                    this.state.playerReady = true;
+                };
+                
+                player.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            },
+
+            openEpisodeSelector() {
+                const modal = document.getElementById('episode-modal');
+                const seasonSelector = document.getElementById('season-selector');
+                const modalTitle = document.getElementById('modal-title');
+                
+                modalTitle.textContent = 'Squid Game - Select Episode';
+                
+                // Build season selector
+                seasonSelector.innerHTML = '';
+                const numSeasons = this.state.squidGameData?.number_of_seasons || 2;
+                for (let i = 1; i <= numSeasons; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = `season-btn ${i === this.state.currentSeason ? 'active' : ''}`;
+                    btn.textContent = `Season ${i}`;
+                    btn.onclick = () => this.selectSeason(i);
+                    seasonSelector.appendChild(btn);
+                }
+                
+                // Build episodes grid for current season
+                this.renderEpisodesForSeason(this.state.currentSeason);
+                
+                modal.classList.add('active');
+            },
+
+            selectSeason(seasonNum) {
+                this.state.currentSeason = seasonNum;
+                
+                // Update active state on buttons
+                document.querySelectorAll('.season-btn').forEach((btn, idx) => {
+                    if (idx + 1 === seasonNum) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                
+                this.renderEpisodesForSeason(seasonNum);
+            },
+
+            renderEpisodesForSeason(seasonNum) {
+                const episodesGrid = document.getElementById('episodes-grid');
+                const seasonData = this.state.seasonsData[seasonNum];
+                
+                if (!seasonData || !seasonData.episodes) {
+                    episodesGrid.innerHTML = '<p class="text-gray-400 p-4">No episodes available</p>';
+                    return;
+                }
+                
+                episodesGrid.innerHTML = seasonData.episodes.map(ep => {
+                    const imgUrl = ep.still_path 
+                        ? `https://image.tmdb.org/t/p/w500${ep.still_path}`
+                        : null;
+                    
+                    const placeholderText = `Episode ${ep.episode_number}`;
+                    
+                    return `
+                        <div class="episode-card" onclick="app.playEpisode(${seasonNum}, ${ep.episode_number})">
+                            <div class="episode-thumbnail">
+                                ${imgUrl ? `
+                                    <img src="${imgUrl}" alt="${ep.name}" 
+                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/500x281/1f1f1f/666?text=${encodeURIComponent(placeholderText)}'"
+                                         loading="lazy">
+                                ` : `
+                                    <img src="https://via.placeholder.com/500x281/1f1f1f/666?text=${encodeURIComponent(placeholderText)}" alt="${ep.name}">
+                                `}
+                                <div class="episode-play-overlay">
+                                    <div class="w-16 h-16 bg-[#E50914] rounded-full flex items-center justify-center">
+                                        <i class="fas fa-play text-white text-2xl ml-1"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="episode-info">
+                                <div class="episode-number">Episode ${ep.episode_number}</div>
+                                <div class="episode-title">${ep.name}</div>
+                                <div class="episode-overview">${ep.overview || 'No description available.'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            playEpisode(season, episode) {
+                this.closeEpisodeSelector();
+                this.playVideo(`Squid Game S${season}:E${episode}`, 93405, 'tv', season, episode);
+            },
+
+            closeEpisodeSelector() {
+                document.getElementById('episode-modal').classList.remove('active');
+            },
+
+            toggleIframeFullscreen() {
+                const iframe = document.getElementById('video-iframe');
+                if (iframe) {
+                    if (iframe.requestFullscreen) {
+                        iframe.requestFullscreen();
+                    } else if (iframe.webkitRequestFullscreen) {
+                        iframe.webkitRequestFullscreen();
+                    } else if (iframe.mozRequestFullScreen) {
+                        iframe.mozRequestFullScreen();
+                    } else if (iframe.msRequestFullscreen) {
+                        iframe.msRequestFullscreen();
+                    }
+                }
+            },
+
+            setupFullscreenDetection() {
+                const handleFullscreenChange = () => {
+                    this.state.isFullscreen = !!document.fullscreenElement;
+                    
+                    const playerHeader = document.getElementById('player-header');
+                    const playerContainer = document.getElementById('player-container');
+                    
+                    if (this.state.isFullscreen) {
+                        if (this.state.controlsTimeout) {
+                            clearTimeout(this.state.controlsTimeout);
+                        }
+                        
+                        this.state.controlsTimeout = setTimeout(() => {
+                            if (playerHeader) playerHeader.classList.add('hidden-controls');
+                            if (playerContainer) playerContainer.classList.add('cursor-hidden');
+                        }, 5000);
+                    } else {
+                        if (playerHeader) playerHeader.classList.remove('hidden-controls');
+                        if (playerContainer) playerContainer.classList.remove('cursor-hidden');
+                        
+                        if (this.state.controlsTimeout) {
+                            clearTimeout(this.state.controlsTimeout);
+                        }
+                    }
+                };
+                
+                document.addEventListener('fullscreenchange', handleFullscreenChange);
+                document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+                document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+                document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+                
+                // Show controls on mouse move
+                const playerContainer = document.getElementById('player-container');
+                playerContainer.addEventListener('mousemove', () => {
+                    const playerHeader = document.getElementById('player-header');
+                    
+                    if (playerHeader) playerHeader.classList.remove('hidden-controls');
+                    if (playerContainer) playerContainer.classList.remove('cursor-hidden');
+                    
+                    if (this.state.isFullscreen) {
+                        if (this.state.controlsTimeout) {
+                            clearTimeout(this.state.controlsTimeout);
+                        }
+                        
+                        this.state.controlsTimeout = setTimeout(() => {
+                            if (playerHeader) playerHeader.classList.add('hidden-controls');
+                            if (playerContainer) playerContainer.classList.add('cursor-hidden');
+                        }, 5000);
+                    }
+                });
+            },
+
+            closePlayer() {
+                const player = document.getElementById('video-player');
+                const wrapper = document.getElementById('iframe-wrapper');
+                
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
+                
+                player.classList.add('hidden');
+                document.body.style.overflow = '';
+                
+                wrapper.innerHTML = '';
+                this.state.isPlaying = false;
+                this.state.isMuted = false;
+                this.state.playerReady = false;
+                
+                if (this.state.controlsTimeout) {
+                    clearTimeout(this.state.controlsTimeout);
+                }
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+</html>
