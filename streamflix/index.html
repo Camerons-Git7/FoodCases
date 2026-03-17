@@ -477,7 +477,7 @@
                     <a href="#" class="hover:underline">Privacy</a>
                 </div>
                 <button class="border border-gray-500 px-4 py-1 hover:text-white mb-4">Service Code</button>
-                <p>&copy; Streamflix Inc.</p>
+                <p>&copy; Seamless Games Inc.</p>
                 <div class="mt-4 text-xs text-gray-600">
                     <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB" class="h-4 mt-2 opacity-50">
                 </div>
@@ -1276,10 +1276,8 @@
                 
                 // Create different categories
                 const categories = [
-                    { title: 'Squid Game', items: CONTENT_LIBRARY.filter(i => i.id === 93405), featured: true },
-                    { title: 'Trending Now', items: CONTENT_LIBRARY.filter(i => [71446, 66732, 1399, 82856, 60574].includes(i.id)) },
                     { title: 'Popular TV Shows', items: CONTENT_LIBRARY.filter(i => i.type === 'tv' && i.id !== 93405).slice(0, 10) },
-                    { title: 'Blockbuster Movies', items: CONTENT_LIBRARY.filter(i => i.type === 'movie').slice(0, 10) },
+                    { title: 'Anime Series', items: CONTENT_LIBRARY.filter(i => [1429, 1433, 1435, 1436, 1437, 1439, 1447, 1448, 1449, 1450, 1454, 1455, 1456, 1457, 1458, 1459, 1460, 1461, 1462, 1463, 1464, 1465, 1426, 1427, 1425].includes(i.id)) },
                     { title: 'Marvel Universe', items: CONTENT_LIBRARY.filter(i => [24428, 299534, 299536, 1726, 10138, 68721, 1771, 100402, 271110, 99861].includes(i.id)) },
                     { title: 'Sci-Fi & Fantasy', items: CONTENT_LIBRARY.filter(i => [27205, 157336, 19995, 120, 121, 122, 603, 604, 605, 11].includes(i.id)) },
                     { title: 'Action & Adventure', items: CONTENT_LIBRARY.filter(i => [155, 76341, 293660, 353081, 562, 1573, 1572, 1571, 47971, 755].includes(i.id)) },
