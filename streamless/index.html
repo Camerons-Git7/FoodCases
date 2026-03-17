@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STREAMFLIX</title>
+    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #141414;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .hero-gradient {
+            background: linear-gradient(to top, #141414 0%, transparent 60%, rgba(0,0,0,0.7) 100%);
+        }
+
+        .card-zoom {
+            transition: transform 0.3s ease, z-index 0.3s;
+        }
+        .card-zoom:hover {
+            transform: scale(1.05);
+            z-index: 50;
+        }
+
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #E50914;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .skeleton {
+            background: linear-gradient(90deg, #1f1f1f 25%, #2a2a2a 50%, #1f1f1f 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .iframe-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        #video-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .iframe-loader {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .player-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 70;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            transition: opacity 0.3s ease;
+        }
+
+        .player-header.hidden-controls {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .fullscreen-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .cursor-hidden {
+            cursor: none !important;
+        }
+
+        /* Episode/Season Selection Modal */
+        .episode-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+            display: none;
+            overflow-y: auto;
+        }
+
+        .episode-modal.active {
+            display: block;
+        }
+
+        .episode-modal-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .season-selector {
+            display: flex;
+            gap: 10px;
+            padding: 20px;
+            border-bottom: 1px solid #333;
+            overflow-x: auto;
+        }
+
+        .season-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .season-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .season-btn.active {
+            background: #E50914;
+            border-color: #E50914;
+        }
+
+        .episodes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .episode-card {
+            background: #1f1f1f;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .episode-card:hover {
+            transform: scale(1.02);
+        }
+
+        .episode-thumbnail {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #333;
+            position: relative;
+        }
+
+        .episode-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .episode-play-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .episode-card:hover .episode-play-overlay {
+            opacity: 1;
+        }
+
+        .episode-info {
+            padding: 15px;
+        }
+
+        .episode-number {
+            color: #E50914;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .episode-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .episode-overview {
+            font-size: 0.85rem;
+            color: #aaa;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .select-episodes-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .select-episodes-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+                /* Search Styles */
+        .search-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            background: rgba(0,0,0,0.75);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 40px 8px 16px;
+            border-radius: 4px;
+            width: 0;
+            opacity: 0;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .search-input.active {
+            width: 250px;
+            opacity: 1;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: white;
+            background: rgba(0,0,0,0.9);
+        }
+
+        .search-icon-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 8px;
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+            background: rgba(20,20,20,0.98);
+            border: 1px solid #333;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+            z-index: 100;
+        }
+
+        .search-results.active {
+            display: block;
+        }
+
+        .search-result-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #333;
+        }
+
+        .search-result-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .search-result-item img {
+            width: 60px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: #333;
+        }
+
+        .search-result-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .search-result-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .search-result-meta {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .search-result-overview {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .search-loading {
+            padding: 20px;
+            text-align: center;
+            color: #aaa;
+        }
+
+        .search-no-results {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="app" class="relative min-h-screen bg-[#141414]">
+        
+        <!-- MAIN BROWSE SCREEN -->
+        <div id="browse-screen" class="min-h-screen pb-20">
+            <!-- Navigation -->
+            <nav id="navbar" class="fixed top-0 w-full z-40 transition-all duration-500 bg-gradient-to-b from-black/80 to-transparent px-4 md:px-12 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-8">
+                    <div class="text-3xl font-black text-[#E50914] tracking-tighter cursor-pointer" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })">STREAMFLIX</div>
+                    <ul class="hidden md:flex gap-5 text-sm font-medium text-gray-200">
+                        <li class="hover:text-white cursor-pointer text-white font-bold">Home</li>
+                        <li class="hover:text-white cursor-pointer">TV Shows</li>
+                        <li class="hover:text-white cursor-pointer">Movies</li>
+                        <li class="hover:text-white cursor-pointer">New & Popular</li>
+                        <li class="hover:text-white cursor-pointer">My List</li>
+                    </ul>
+                </div>
+                <div class="flex items-center gap-5 text-white">
+                    <div class="search-container">
+    <input type="text" id="search-input" class="search-input" placeholder="Titles, people, genres">
+    <button class="search-icon-btn" onclick="app.toggleSearch()">
+        <i class="fas fa-search"></i>
+    </button>
+    <div id="search-results" class="search-results"></div>
+</div>
+                    <span class="hidden md:inline text-sm font-medium cursor-pointer">Kids</span>
+                    <i class="fas fa-bell cursor-pointer hover:text-gray-300"></i>
+                    <div class="flex items-center gap-2 cursor-pointer">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png" class="w-8 h-8 rounded bg-gray-600" alt="Profile">
+                        <i class="fas fa-caret-down text-xs"></i>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Hero Section -->
+            <header class="relative h-[85vh] w-full">
+                <div class="absolute inset-0 w-full h-full">
+                    <img id="hero-image" src="https://via.placeholder.com/1920x1080/141414/333?text=Loading..." class="w-full h-full object-cover transition-opacity duration-500" alt="Hero">
+                    <div class="absolute inset-0 hero-gradient"></div>
+                </div>
+
+                <div class="absolute bottom-0 left-0 w-full p-4 md:p-12 pb-24 md:pb-32">
+                    <div class="max-w-2xl space-y-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg" class="h-6 w-auto filter brightness-0 invert opacity-80" alt="N">
+                            <span class="text-gray-300 tracking-widest text-sm font-bold uppercase">Series</span>
+                        </div>
+                        <h1 id="hero-title" class="text-5xl md:text-7xl font-black text-white drop-shadow-lg">Loading...</h1>
+                        
+                        <div class="flex items-center gap-3 text-sm md:text-base font-medium text-gray-200">
+                            <span id="hero-rating" class="text-[#46d369] font-bold">98% Match</span>
+                            <span id="hero-year">2021</span>
+                            <span class="border border-gray-500 px-1 text-xs">TV-MA</span>
+                            <span id="hero-seasons">2 Seasons</span>
+                            <span class="border border-gray-500 px-1 text-xs">HD</span>
+                        </div>
+
+                        <p id="hero-overview" class="text-lg text-white drop-shadow-md line-clamp-3 md:line-clamp-none">
+                            Loading description...
+                        </p>
+
+                        <div class="flex flex-wrap items-center gap-4 pt-4">
+                            <button id="hero-play-btn" class="bg-white text-black px-8 py-3 rounded font-bold text-lg hover:bg-gray-200 transition flex items-center gap-2">
+                                <i class="fas fa-play"></i> Play
+                            </button>
+                            <button id="hero-episodes-btn" class="bg-gray-500/70 text-white px-8 py-3 rounded font-bold text-lg hover:bg-gray-500/50 transition flex items-center gap-2 backdrop-blur-sm hidden">
+                                <i class="fas fa-list"></i> Episodes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Rows -->
+            <main class="relative z-10 -mt-24 pl-4 md:pl-12 space-y-12 pb-20" id="content-rows">
+                <!-- Rows will be populated by JavaScript -->
+            </main>
+            
+            <!-- Footer -->
+            <footer class="max-w-5xl mx-auto px-4 py-12 text-gray-500 text-sm">
+                <div class="flex gap-4 mb-4">
+                    <i class="fab fa-facebook-f text-2xl hover:text-white cursor-pointer"></i>
+                    <i class="fab fa-instagram text-2xl hover:text-white cursor-pointer"></i>
+                    <i class="fab fa-twitter text-2xl hover:text-white cursor-pointer"></i>
+                    <i class="fab fa-youtube text-2xl hover:text-white cursor-pointer"></i>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <a href="#" class="hover:underline">Audio Description</a>
+                    <a href="#" class="hover:underline">Help Center</a>
+                    <a href="#" class="hover:underline">Gift Cards</a>
+                    <a href="#" class="hover:underline">Media Center</a>
+                    <a href="#" class="hover:underline">Investor Relations</a>
+                    <a href="#" class="hover:underline">Jobs</a>
+                    <a href="#" class="hover:underline">Terms of Use</a>
+                    <a href="#" class="hover:underline">Privacy</a>
+                </div>
+                <button class="border border-gray-500 px-4 py-1 hover:text-white mb-4">Service Code</button>
+                <p>&copy; Seamless Games Inc.</p>
+                <div class="mt-4 text-xs text-gray-600">
+                    <img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB" class="h-4 mt-2 opacity-50">
+                </div>
+            </footer>
+        </div>
+
+        <!-- VIDEO PLAYER OVERLAY -->
+        <div id="video-player" class="hidden fixed inset-0 z-[60] bg-black flex flex-col">
+            <!-- Player Header -->
+            <div class="player-header" id="player-header">
+                <div class="flex items-center gap-4">
+                    <button onclick="app.closePlayer()" class="text-white hover:text-gray-300 text-2xl transition w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <span id="player-title" class="text-lg font-bold text-white drop-shadow-md truncate max-w-md">Playing...</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button id="select-episodes-btn" class="select-episodes-btn hidden" onclick="app.openEpisodeSelector()">
+                        <i class="fas fa-list mr-2"></i>Episodes
+                    </button>
+                    <button class="fullscreen-btn" onclick="app.toggleIframeFullscreen()">
+                        <i class="fas fa-expand"></i>
+                        <span>Fullscreen</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Video Container -->
+            <div class="relative flex-1 w-full h-full bg-black" id="player-container">
+                <div class="iframe-wrapper" id="iframe-wrapper">
+                    <!-- Content injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- EPISODE SELECTOR MODAL -->
+        <div id="episode-modal" class="episode-modal">
+            <div class="episode-modal-header">
+                <h2 class="text-2xl font-bold" id="modal-title">Select Episode</h2>
+                <button onclick="app.closeEpisodeSelector()" class="text-white text-2xl hover:text-gray-300 w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="season-selector" id="season-selector">
+                <!-- Season buttons injected by JS -->
+            </div>
+            
+            <div class="episodes-grid" id="episodes-grid">
+                <!-- Episode cards injected by JS -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // TMDB API KEY
+        // ==========================================
+        const API_KEY = '5385979c244492186ee665cade5d3e69';
+        
+        // VidBinge is the sole provider
+        const PROVIDER = {
+            name: 'Mixed',
+            movie: (id) => `https://vidbinge.to/movie/${id}`,
+            tv: (id, s, e) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`
+        };
+        
+        // Large content library - mix of movies and shows
+        const CONTENT_LIBRARY = [
+            // TV Shows
+            { id: 93405, type: 'tv', name: 'Squid Game', featured: true },
+            { id: 1399, type: 'tv', name: 'Game of Thrones' },
+            { id: 71446, type: 'tv', name: 'Money Heist' },
+            { id: 66732, type: 'tv', name: 'Stranger Things' },
+            { id: 82856, type: 'tv', name: 'The Mandalorian' },
+            { id: 60574, type: 'tv', name: 'Peaky Blinders' },
+            { id: 1668, type: 'tv', name: 'Friends' },
+            { id: 2316, type: 'tv', name: 'The Office' },
+            { id: 1402, type: 'tv', name: 'The Walking Dead' },
+            { id: 63247, type: 'tv', name: 'Westworld' },
+            { id: 19885, type: 'tv', name: 'Sherlock' },
+            { id: 1396, type: 'tv', name: 'The Sopranos' },
+            { id: 1420, type: 'tv', name: 'Seinfeld' },
+            { id: 4607, type: 'tv', name: 'Lost' },
+            { id: 1418, type: 'tv', name: 'The Big Bang Theory' },
+            { id: 44217, type: 'tv', name: 'Vikings' },
+            { id: 63741, type: 'tv', name: 'Outlander' },
+            { id: 48891, type: 'tv', name: 'Brooklyn Nine-Nine' },
+            { id: 1622, type: 'tv', name: 'Supernatural' },
+            { id: 60625, type: 'tv', name: 'Rick and Morty' },
+            { id: 1434, type: 'tv', name: 'Family Guy' },
+            { id: 456, type: 'tv', name: 'The Simpsons' },
+            { id: 2734, type: 'tv', name: 'Law & Order: Special Victims Unit' },
+            { id: 1620, type: 'tv', name: 'CSI: Crime Scene Investigation' },
+            { id: 4614, type: 'tv', name: 'NCIS' },
+            { id: 46952, type: 'tv', name: 'The Blacklist' },
+            { id: 60735, type: 'tv', name: 'The Flash' },
+            { id: 57243, type: 'tv', name: 'Doctor Who' },
+            { id: 32798, type: 'tv', name: 'Hawaii Five-0' },
+            { id: 46948, type: 'tv', name: 'Manifest' },
+            { id: 75006, type: 'tv', name: 'The Umbrella Academy' },
+            { id: 71912, type: 'tv', name: 'The Witcher' },
+            { id: 88396, type: 'tv', name: 'The Falcon and the Winter Soldier' },
+            { id: 84958, type: 'tv', name: 'Loki' },
+            { id: 85271, type: 'tv', name: 'WandaVision' },
+            { id: 91363, type: 'tv', name: 'What If...?' },
+            { id: 92782, type: 'tv', name: 'Ms. Marvel' },
+            { id: 92783, type: 'tv', name: 'Hawkeye' },
+            { id: 92749, type: 'tv', name: 'Moon Knight' },
+            { id: 114695, type: 'tv', name: 'She-Hulk: Attorney at Law' },
+            { id: 114472, type: 'tv', name: 'Secret Invasion' },
+            { id: 100088, type: 'tv', name: 'The Last of Us' },
+            { id: 125988, type: 'tv', name: 'Silo' },
+            { id: 128095, type: 'tv', name: 'The Night Agent' },
+            { id: 128098, type: 'tv', name: 'The Diplomat' },
+            { id: 135157, type: 'tv', name: 'The Bear' },
+            { id: 136283, type: 'tv', name: 'Only Murders in the Building' },
+            { id: 137437, type: 'tv', name: 'Abbott Elementary' },
+            { id: 138501, type: 'tv', name: 'Yellowstone' },
+            { id: 1408, type: 'tv', name: 'House' },
+            { id: 1416, type: 'tv', name: 'Grey\'s Anatomy' },
+            { id: 1417, type: 'tv', name: 'Glee' },
+            { id: 1421, type: 'tv', name: 'Modern Family' },
+            { id: 1425, type: 'tv', name: 'The Vampire Diaries' },
+            { id: 1426, type: 'tv', name: 'Dexter' },
+            { id: 1427, type: 'tv', name: 'True Blood' },
+            { id: 1429, type: 'tv', name: 'Attack on Titan' },
+            { id: 13916, type: 'tv', name: 'Death Note' },
+            { id: 37854, type: 'tv', name: 'One Piece' },
+            { id: 46260, type: 'tv', name: 'Naruto' },
+            { id: 12971, type: 'tv', name: 'Dragon Ball Z' },
+            { id: 30984, type: 'tv', name: 'Bleach' },
+            { id: 31911, type: 'tv', name: 'Fullmetal Alchemist: Brotherhood' },
+            { id: 30983, type: 'tv', name: 'Cowboy Bebop' },
+            { id: 890, type: 'tv', name: 'Neon Genesis Evangelion' },
+            { id: 37585, type: 'tv', name: 'Code Geass' },
+            { id: 46298, type: 'tv', name: 'Hunter x Hunter' },
+            { id: 65930, type: 'tv', name: 'My Hero Academia' },
+            { id: 85937, type: 'tv', name: 'Demon Slayer' },
+            { id: 95479, type: 'tv', name: 'Jujutsu Kaisen' },
+            { id: 114410, type: 'tv', name: 'Chainsaw Man' },
+            { id: 120089, type: 'tv', name: 'Spy x Family' },
+            { id: 85991, type: 'tv', name: 'Kaguya-sama: Love is War' },
+            { id: 65294, type: 'tv', name: 'Re:Zero' },
+            { id: 42509, type: 'tv', name: 'Steins;Gate' },
+            { id: 24890, type: 'tv', name: 'Clannad' },
+            { id: 34106, type: 'tv', name: 'Toradora!' },
+            { id: 61663, type: 'tv', name: 'Your Lie in April' },
+            { id: 75214, type: 'tv', name: 'Violet Evergarden' },
+            { id: 14667, type: 'tv', name: 'A Silent Voice' },
+            { id: 129, type: 'movie', name: 'Spirited Away' },
+            { id: 8392, type: 'movie', name: 'My Neighbor Totoro' },
+            { id: 128, type: 'movie', name: 'Princess Mononoke' },
+            { id: 4935, type: 'movie', name: 'Howl\'s Moving Castle' },
+            { id: 16859, type: 'movie', name: 'Kiki\'s Delivery Service' },
+            { id: 11621, type: 'movie', name: 'Porco Rosso' },
+            { id: 10515, type: 'movie', name: 'Castle in the Sky' },
+            { id: 16672, type: 'movie', name: 'Nausicaä of the Valley of the Wind' },
+            { id: 149, type: 'movie', name: 'Akira' },
+            { id: 372058, type: 'movie', name: 'Your Name' },
+            { id: 354912, type: 'movie', name: 'A Silent Voice' },
+            { id: 10681, type: 'movie', name: 'WALL·E' },
+            { id: 862, type: 'movie', name: 'Toy Story' },
+            { id: 10193, type: 'movie', name: 'Toy Story 3' },
+            { id: 354857, type: 'movie', name: 'Toy Story 4' },
+            { id: 585, type: 'movie', name: 'Monsters, Inc.' },
+            { id: 62211, type: 'movie', name: 'Monsters University' },
+            { id: 12, type: 'movie', name: 'Finding Nemo' },
+            { id: 13, type: 'movie', name: 'Finding Dory' },
+            { id: 150540, type: 'movie', name: 'Inside Out' },
+            { id: 269149, type: 'movie', name: 'Zootopia' },
+            { id: 127380, type: 'movie', name: 'Big Hero 6' },
+            { id: 109445, type: 'movie', name: 'Frozen' },
+            { id: 10192, type: 'movie', name: 'Shrek' },
+            { id: 809, type: 'movie', name: 'Shrek 2' },
+            { id: 810, type: 'movie', name: 'Shrek the Third' },
+            { id: 10198, type: 'movie', name: 'Shrek Forever After' },
+            { id: 803796, type: 'movie', name: 'KPop Demon Hunters' },
+            { id: 101, type: 'movie', name: 'The Lion King' },
+            { id: 10020, type: 'movie', name: 'Beauty and the Beast' },
+            { id: 10040, type: 'movie', name: 'Aladdin' },
+            { id: 10062, type: 'movie', name: 'The Nightmare Before Christmas' },
+            { id: 10069, type: 'movie', name: 'Coraline' },
+            { id: 10137, type: 'movie', name: 'The Prince of Egypt' },
+            { id: 10191, type: 'movie', name: 'How to Train Your Dragon' },
+            { id: 49444, type: 'movie', name: 'Kung Fu Panda' },
+            { id: 8355, type: 'movie', name: 'Ice Age' },
+            { id: 8356, type: 'movie', name: 'Ice Age: The Meltdown' },
+            { id: 8358, type: 'movie', name: 'Ice Age: Dawn of the Dinosaurs' },
+            { id: 8359, type: 'movie', name: 'Ice Age: Continental Drift' },
+            { id: 8360, type: 'movie', name: 'Ice Age: Collision Course' },
+            { id: 10201, type: 'movie', name: 'The Terminator' },
+            { id: 280, type: 'movie', name: 'Terminator 2: Judgment Day' },
+            { id: 296, type: 'movie', name: 'Terminator 3: Rise of the Machines' },
+            { id: 534, type: 'movie', name: 'Terminator Salvation' },
+            { id: 87101, type: 'movie', name: 'Terminator Genisys' },
+            { id: 290859, type: 'movie', name: 'Terminator: Dark Fate' },
+            { id: 562, type: 'movie', name: 'Die Hard' },
+            { id: 1573, type: 'movie', name: 'Die Hard 2' },
+            { id: 1572, type: 'movie', name: 'Die Hard with a Vengeance' },
+            { id: 1571, type: 'movie', name: 'Live Free or Die Hard' },
+            { id: 47971, type: 'movie', name: 'A Good Day to Die Hard' },
+            { id: 755, type: 'movie', name: 'Speed' },
+            { id: 1639, type: 'movie', name: 'Speed 2: Cruise Control' },
+            { id: 954, type: 'movie', name: 'Mission: Impossible 2' },
+            { id: 955, type: 'movie', name: 'Mission: Impossible III' },
+            { id: 177677, type: 'movie', name: 'Mission: Impossible - Rogue Nation' },
+            { id: 575264, type: 'movie', name: 'Mission: Impossible - Dead Reckoning Part One' },
+            { id: 56292, type: 'movie', name: 'Mission: Impossible' },
+            { id: 56296, type: 'movie', name: 'Mission: Impossible - Ghost Protocol' },
+            { id: 238, type: 'movie', name: 'The Godfather' },
+            { id: 278, type: 'movie', name: 'The Shawshank Redemption' },
+            { id: 680, type: 'movie', name: 'Pulp Fiction' },
+            { id: 155, type: 'movie', name: 'The Dark Knight' },
+            { id: 13, type: 'movie', name: 'Forrest Gump' },
+            { id: 550, type: 'movie', name: 'Fight Club' },
+            { id: 27205, type: 'movie', name: 'Inception' },
+            { id: 157336, type: 'movie', name: 'Interstellar' },
+            { id: 19995, type: 'movie', name: 'Avatar' },
+            { id: 597, type: 'movie', name: 'Titanic' },
+            { id: 24428, type: 'movie', name: 'The Avengers' },
+            { id: 299534, type: 'movie', name: 'Avengers: Endgame' },
+            { id: 135397, type: 'movie', name: 'Jurassic World' },
+            { id: 76341, type: 'movie', name: 'Mad Max: Fury Road' },
+            { id: 293660, type: 'movie', name: 'Deadpool' },
+            { id: 118340, type: 'movie', name: 'Guardians of the Galaxy' },
+            { id: 330459, type: 'movie', name: 'Rogue One: A Star Wars Story' },
+            { id: 284054, type: 'movie', name: 'Black Panther' },
+            { id: 315635, type: 'movie', name: 'Spider-Man: Homecoming' },
+            { id: 335984, type: 'movie', name: 'Blade Runner 2049' },
+            { id: 346364, type: 'movie', name: 'It' },
+            { id: 353081, type: 'movie', name: 'Mission: Impossible - Fallout' },
+            { id: 383498, type: 'movie', name: 'Deadpool 2' },
+            { id: 424694, type: 'movie', name: 'Bohemian Rhapsody' },
+            { id: 475557, type: 'movie', name: 'Joker' },
+            { id: 496243, type: 'movie', name: 'Parasite' },
+            { id: 497698, type: 'movie', name: 'Black Widow' },
+            { id: 508442, type: 'movie', name: 'Soul' },
+            { id: 530915, type: 'movie', name: '1917' },
+            { id: 531499, type: 'movie', name: 'Knives Out' },
+            { id: 550988, type: 'movie', name: 'Free Guy' },
+            { id: 566525, type: 'movie', name: 'Shang-Chi' },
+            { id: 580489, type: 'movie', name: 'Venom: Let There Be Carnage' },
+            { id: 588228, type: 'movie', name: 'The Tomorrow War' },
+            { id: 590706, type: 'movie', name: 'Jungle Cruise' },
+            { id: 615904, type: 'movie', name: 'Mortal Kombat' },
+            { id: 634649, type: 'movie', name: 'Spider-Man: No Way Home' },
+            { id: 637649, type: 'movie', name: 'Wrath of Man' },
+            { id: 638507, type: 'movie', name: 'Nobody' },
+            { id: 823464, type: 'movie', name: 'Godzilla x Kong: The New Empire' },
+            { id: 872585, type: 'movie', name: 'Oppenheimer' },
+            { id: 912649, type: 'movie', name: 'Venom: The Last Dance' },
+            { id: 1001311, type: 'movie', name: 'Furiosa: A Mad Max Saga' },
+            { id: 653346, type: 'movie', name: 'Kingdom of the Planet of the Apes' },
+            { id: 945961, type: 'movie', name: 'Alien: Romulus' },
+            { id: 1022789, type: 'movie', name: 'Inside Out 2' },
+            { id: 1047373, type: 'movie', name: 'A Quiet Place: Day One' },
+            { id: 1094319, type: 'movie', name: 'The Fall Guy' },
+            { id: 1117873, type: 'movie', name: 'Challengers' },
+            { id: 1127007, type: 'movie', name: 'It Ends with Us' },
+            { id: 1142518, type: 'movie', name: 'The Substance' },
+            { id: 1156593, type: 'movie', name: 'Civil War' },
+            { id: 1160018, type: 'movie', name: 'Hit Man' },
+            { id: 1184918, type: 'movie', name: 'The Union' },
+            { id: 533535, type: 'movie', name: 'Deadpool & Wolverine' },
+            { id: 1022796, type: 'movie', name: 'Twisters' },
+            { id: 748783, type: 'movie', name: 'The Garfield Movie' },
+            { id: 519182, type: 'movie', name: 'Despicable Me 4' },
+            { id: 573435, type: 'movie', name: 'Bad Boys: Ride or Die' },
+            { id: 718821, type: 'movie', name: 'Twisters' },
+            { id: 831815, type: 'movie', name: 'Saving Bikini Bottom: The Sandy Cheeks Movie' },
+            { id: 917496, type: 'movie', name: 'Beetlejuice Beetlejuice' },
+            { id: 929590, type: 'movie', name: 'Civil War' },
+            { id: 955916, type: 'movie', name: 'Lift' },
+            { id: 970347, type: 'movie', name: 'The Tiger\'s Apprentice' },
+            { id: 1010581, type: 'movie', name: 'Murder Mystery 2' },
+            { id: 1011985, type: 'movie', name: 'Kung Fu Panda 4' },
+            { id: 1012804, type: 'movie', name: 'Art of Love' },
+            { id: 1014505, type: 'movie', name: 'Trigger Warning' },
+            { id: 1017333, type: 'movie', name: 'Thelma' },
+            { id: 1022206, type: 'movie', name: 'Carry-On' },
+            { id: 1022956, type: 'movie', name: 'Cult Killer' },
+            { id: 1025444, type: 'movie', name: 'No Way Up' },
+            { id: 1026999, type: 'movie', name: 'Damsel' },
+            { id: 1028703, type: 'movie', name: 'Rebel Moon - Part Two: The Scargiver' },
+            { id: 1034541, type: 'movie', name: 'Terrifier 3' },
+            { id: 1041613, type: 'movie', name: 'Immaculate' },
+            { id: 1048241, type: 'movie', name: 'The Idea of You' },
+            { id: 1050031, type: 'movie', name: 'Atlas' },
+            { id: 1051560, type: 'movie', name: 'Marvel Studios Assembled: The Making of X-Men \'97' },
+            { id: 1058648, type: 'movie', name: 'The Deliverance' },
+            { id: 1064028, type: 'movie', name: 'Winnie-the-Pooh: Blood and Honey 2' },
+            { id: 1064213, type: 'movie', name: 'Anora' },
+            { id: 106646, type: 'movie', name: 'The Whale' },
+            { id: 1071215, type: 'movie', name: 'Badland Hunters' },
+            { id: 1074086, type: 'movie', name: 'Theater Camp' },
+            { id: 1076197, type: 'movie', name: 'Talk to Me' },
+            { id: 1076487, type: 'movie', name: 'The Iron Claw' },
+            { id: 1077265, type: 'movie', name: 'Wonka' },
+            { id: 1084736, type: 'movie', name: 'The Color Purple' },
+            { id: 1085328, type: 'movie', name: 'Godzilla x Kong: The New Empire' },
+            { id: 1094189, type: 'movie', name: 'Guntur Kaaram' },
+            { id: 1094457, type: 'movie', name: 'The Idea of You' },
+            { id: 1105409, type: 'movie', name: 'Imaginary' },
+            { id: 1110419, type: 'movie', name: 'The Beekeeper' },
+            { id: 1124629, type: 'movie', name: 'Breathe' },
+            { id: 1131755, type: 'movie', name: 'A Family Affair' },
+            { id: 1136406, type: 'movie', name: 'Tom & Jerry' },
+            { id: 1139755, type: 'movie', name: 'Rebel Ridge' },
+            { id: 1142419, type: 'movie', name: 'Thelma' },
+            { id: 1143185, type: 'movie', name: 'Tarot' },
+            { id: 1147413, type: 'movie', name: 'MaXXXine' },
+            { id: 1147548, type: 'movie', name: 'The Ministry of Ungentlemanly Warfare' },
+            { id: 1161045, type: 'movie', name: 'Trigger Warning' },
+            { id: 1167459, type: 'movie', name: 'The Convert' },
+            { id: 1171640, type: 'movie', name: 'Miller\'s Girl' },
+            { id: 1174219, type: 'movie', name: 'Boy Kills World' },
+            { id: 1197306, type: 'movie', name: 'A Quiet Place: Day One' },
+            { id: 1204316, type: 'movie', name: 'One Fast Move' },
+            { id: 1207898, type: 'movie', name: 'Thelma' },
+            { id: 1211480, type: 'movie', name: 'The Mouse Trap' },
+            { id: 1212142, type: 'movie', name: 'The Deliverance' },
+            { id: 1216313, type: 'movie', name: 'The Crow' },
+            { id: 1221393, type: 'movie', name: 'Warfare' },
+            { id: 1226578, type: 'movie', name: 'Longlegs' },
+            { id: 1230498, type: 'movie', name: 'The Brutalist' },
+            { id: 1233642, type: 'movie', name: 'Kraven the Hunter' },
+            { id: 1233950, type: 'movie', name: 'Trap' },
+            { id: 1241320, type: 'movie', name: 'Arcadian' },
+            { id: 1242211, type: 'movie', name: 'The Inheritance' },
+            { id: 1245636, type: 'movie', name: 'The Substance' },
+            { id: 1246699, type: 'movie', name: 'Blink Twice' },
+            { id: 1250890, type: 'movie', name: 'Carry-On' },
+            { id: 1254786, type: 'movie', name: 'Babygirl' },
+            { id: 1255208, type: 'movie', name: 'Megalopolis' },
+            { id: 1260950, type: 'movie', name: 'Saturday Night' },
+            { id: 1263313, type: 'movie', name: 'Holland' },
+            { id: 1272149, type: 'movie', name: 'Companion' },
+            { id: 1276945, type: 'movie', name: 'The Last Showgirl' },
+            { id: 1281826, type: 'movie', name: 'A Complete Unknown' },
+            { id: 1299652, type: 'movie', name: 'The Electric State' },
+            { id: 1300607, type: 'movie', name: 'A Working Man' },
+            { id: 1305333, type: 'movie', name: 'Drop' },
+            { id: 1316340, type: 'movie', name: 'The Life of Chuck' },
+            { id: 1317997, type: 'movie', name: 'Novocaine' },
+            { id: 1323454, type: 'movie', name: 'The Amateur' },
+            { id: 1330947, type: 'movie', name: 'Last Breath' },
+            { id: 1337006, type: 'movie', name: 'In the Lost Lands' },
+            { id: 1343753, type: 'movie', name: 'The Surfer' },
+            { id: 1353979, type: 'movie', name: 'The Woman in the Yard' },
+            { id: 671, type: 'movie', name: 'Harry Potter and the Philosopher\'s Stone' },
+            { id: 672, type: 'movie', name: 'Harry Potter and the Chamber of Secrets' },
+            { id: 673, type: 'movie', name: 'Harry Potter and the Prisoner of Azkaban' },
+            { id: 674, type: 'movie', name: 'Harry Potter and the Goblet of Fire' },
+            { id: 675, type: 'movie', name: 'Harry Potter and the Order of the Phoenix' },
+            { id: 767, type: 'movie', name: 'Harry Potter and the Half-Blood Prince' },
+            { id: 12444, type: 'movie', name: 'Harry Potter and the Deathly Hallows – Part 1' },
+            { id: 12445, type: 'movie', name: 'Harry Potter and the Deathly Hallows – Part 2' },
+            { id: 120, type: 'movie', name: 'The Lord of the Rings: The Fellowship of the Ring' },
+            { id: 121, type: 'movie', name: 'The Lord of the Rings: The Two Towers' },
+            { id: 122, type: 'movie', name: 'The Lord of the Rings: The Return of the King' },
+            { id: 603, type: 'movie', name: 'The Matrix' },
+            { id: 604, type: 'movie', name: 'The Matrix Reloaded' },
+            { id: 605, type: 'movie', name: 'The Matrix Revolutions' },
+            { id: 140607, type: 'movie', name: 'Star Wars: The Force Awakens' },
+            { id: 181808, type: 'movie', name: 'Star Wars: The Last Jedi' },
+            { id: 181812, type: 'movie', name: 'Star Wars: The Rise of Skywalker' },
+            { id: 11, type: 'movie', name: 'Star Wars' },
+            { id: 1891, type: 'movie', name: 'The Empire Strikes Back' },
+            { id: 1892, type: 'movie', name: 'Return of the Jedi' },
+            { id: 1893, type: 'movie', name: 'The Phantom Menace' },
+            { id: 1894, type: 'movie', name: 'Attack of the Clones' },
+            { id: 1895, type: 'movie', name: 'Revenge of the Sith' },
+            { id: 557, type: 'movie', name: 'Spider-Man' },
+            { id: 558, type: 'movie', name: 'Spider-Man 2' },
+            { id: 559, type: 'movie', name: 'Spider-Man 3' },
+            { id: 429617, type: 'movie', name: 'Spider-Man: Far From Home' },
+            { id: 1930, type: 'movie', name: 'The Amazing Spider-Man' },
+            { id: 102382, type: 'movie', name: 'The Amazing Spider-Man 2' },
+            { id: 36657, type: 'movie', name: 'X-Men' },
+            { id: 36658, type: 'movie', name: 'X2: X-Men United' },
+            { id: 36668, type: 'movie', name: 'X-Men: The Last Stand' },
+            { id: 2080, type: 'movie', name: 'X-Men Origins: Wolverine' },
+            { id: 49538, type: 'movie', name: 'X-Men: First Class' },
+            { id: 127585, type: 'movie', name: 'X-Men: Days of Future Past' },
+            { id: 246655, type: 'movie', name: 'X-Men: Apocalypse' },
+            { id: 320288, type: 'movie', name: 'X-Men: Dark Phoenix' },
+            { id: 263115, type: 'movie', name: 'Logan' },
+            { id: 1771, type: 'movie', name: 'Captain America: The First Avenger' },
+            { id: 100402, type: 'movie', name: 'Captain America: The Winter Soldier' },
+            { id: 271110, type: 'movie', name: 'Captain America: Civil War' },
+            { id: 299536, type: 'movie', name: 'Avengers: Infinity War' },
+            { id: 99861, type: 'movie', name: 'Avengers: Age of Ultron' },
+            { id: 1726, type: 'movie', name: 'Iron Man' },
+            { id: 10138, type: 'movie', name: 'Iron Man 2' },
+            { id: 68721, type: 'movie', name: 'Iron Man 3' },
+            { id: 10195, type: 'movie', name: 'Thor' },
+            { id: 76338, type: 'movie', name: 'Thor: The Dark World' },
+            { id: 284053, type: 'movie', name: 'Thor: Ragnarok' },
+            { id: 616037, type: 'movie', name: 'Thor: Love and Thunder' },
+            { id: 284052, type: 'movie', name: 'Doctor Strange' },
+            { id: 453395, type: 'movie', name: 'Doctor Strange in the Multiverse of Madness' },
+            { id: 102899, type: 'movie', name: 'Ant-Man' },
+            { id: 283366, type: 'movie', name: 'Ant-Man and the Wasp' },
+            { id: 640146, type: 'movie', name: 'Ant-Man and the Wasp: Quantumania' },
+            { id: 505642, type: 'movie', name: 'Black Panther: Wakanda Forever' },
+            { id: 447365, type: 'movie', name: 'Guardians of the Galaxy Vol. 3' },
+            { id: 609681, type: 'movie', name: 'The Marvels' },
+            { id: 438631, type: 'movie', name: 'Dune' },
+            { id: 693134, type: 'movie', name: 'Dune: Part Two' },
+            { id: 335983, type: 'movie', name: 'The Batman' }
+        ];
+        
+        const app = {
+            state: {
+                squidGameData: null,
+                currentMedia: null,
+                isPlaying: false,
+                isMuted: false,
+                progress: 0,
+                duration: 100,
+                controlsTimeout: null,
+                isFullscreen: false,
+                volume: 100,
+                playerReady: false,
+                currentSeason: 1,
+                seasonsData: {},
+                currentShowId: null,
+                currentShowTitle: null,
+                currentShowSeasons: null,
+                currentShowNumSeasons: 0,
+                searchQuery: '',
+                searchResults: [],
+                isSearchOpen: false
+            },
+
+            init() {
+                this.setupScrollListener();
+                this.setupRedirectBlocking();
+                this.setupSearchListener();
+                
+                if (API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+                    this.showError("Please add your TMDB API Key to the code.");
+                    return;
+                }
+                
+                this.fetchData();
+            },
+
+            setupScrollListener() {
+                window.addEventListener('scroll', () => {
+                    const nav = document.getElementById('navbar');
+                    if (window.scrollY > 50) {
+                        nav.classList.remove('bg-gradient-to-b');
+                        nav.classList.add('bg-[#141414]');
+                    } else {
+                        nav.classList.add('bg-gradient-to-b');
+                        nav.classList.remove('bg-[#141414]');
+                    }
+                });
+            },
+
+            setupRedirectBlocking() {
+                window.open = function(url, target, features) {
+                    console.log('Blocked popup:', url);
+                    return null;
+                };
+
+                window.location.assign = function(url) {
+                    console.log('Blocked assign:', url);
+                    return null;
+                };
+                
+                window.location.replace = function(url) {
+                    console.log('Blocked replace:', url);
+                    return null;
+                };
+            },
+
+            setupSearchListener() {
+                const searchInput = document.getElementById('search-input');
+                const searchResults = document.getElementById('search-results');
+                
+                let debounceTimer;
+                
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(debounceTimer);
+                    const query = e.target.value.trim();
+                    
+                    if (query.length < 2) {
+                        this.hideSearchResults();
+                        return;
+                    }
+                    
+                    debounceTimer = setTimeout(() => {
+                        this.performSearch(query);
+                    }, 500);
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.search-container')) {
+                        this.hideSearchResults();
+                        if (!searchInput.value.trim()) {
+                            searchInput.classList.remove('active');
+                        }
+                    }
+                });
+            },
+
+            toggleSearch() {
+                const searchInput = document.getElementById('search-input');
+                searchInput.classList.toggle('active');
+                if (searchInput.classList.contains('active')) {
+                    searchInput.focus();
+                } else {
+                    searchInput.value = '';
+                    this.hideSearchResults();
+                }
+            },
+
+            async performSearch(query) {
+                const searchResults = document.getElementById('search-results');
+                searchResults.innerHTML = '<div class="search-loading"><div class="loader" style="width: 30px; height: 30px; margin: 0 auto;"></div></div>';
+                searchResults.classList.add('active');
+                
+                try {
+                    const [movieRes, tvRes] = await Promise.all([
+                        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}&page=1`),
+                        fetch(`https://api.themoviedb.org/3/search/tv?api_key=${API_KEY}&query=${encodeURIComponent(query)}&page=1`)
+                    ]);
+                    
+                    const movieData = await movieRes.json();
+                    const tvData = await tvRes.json();
+                    
+                    const movies = (movieData.results || []).map(m => ({
+                        ...m,
+                        media_type: 'movie',
+                        title: m.title,
+                        date: m.release_date
+                    }));
+                    
+                    const shows = (tvData.results || []).map(s => ({
+                        ...s,
+                        media_type: 'tv',
+                        title: s.name,
+                        date: s.first_air_date
+                    }));
+                    
+                    const combined = [...movies, ...shows]
+                        .sort((a, b) => b.popularity - a.popularity)
+                        .slice(0, 10);
+                    
+                    this.renderSearchResults(combined);
+                    
+                } catch (error) {
+                    console.error('Search error:', error);
+                    searchResults.innerHTML = '<div class="search-no-results">Search failed. Please try again.</div>';
+                }
+            },
+
+            renderSearchResults(results) {
+                const searchResults = document.getElementById('search-results');
+                
+                if (results.length === 0) {
+                    searchResults.innerHTML = '<div class="search-no-results">No results found</div>';
+                    return;
+                }
+                
+                searchResults.innerHTML = results.map(item => {
+                    const posterUrl = item.poster_path 
+                        ? `https://image.tmdb.org/t/p/w200${item.poster_path}`
+                        : 'https://via.placeholder.com/60x90/1f1f1f/666?text=No+Image';
+                    
+                    const year = item.date ? item.date.split('-')[0] : 'N/A';
+                    const type = item.media_type === 'movie' ? 'Movie' : 'TV Show';
+                    
+                    return `
+                        <div class="search-result-item" onclick="app.playFromSearch(${item.id}, '${item.media_type}', '${item.title.replace(/'/g, "\\'")}')">
+                            <img src="${posterUrl}" alt="${item.title}" onerror="this.src='https://via.placeholder.com/60x90/1f1f1f/666?text=No+Image'">
+                            <div class="search-result-info">
+                                <div class="search-result-title">${item.title}</div>
+                                <div class="search-result-meta">${year} • ${type}</div>
+                                <div class="search-result-overview">${item.overview || ''}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            hideSearchResults() {
+                const searchResults = document.getElementById('search-results');
+                searchResults.classList.remove('active');
+            },
+
+            playFromSearch(id, type, title) {
+                this.hideSearchResults();
+                document.getElementById('search-input').value = '';
+                document.getElementById('search-input').classList.remove('active');
+                
+                if (type === 'movie') {
+                    this.playVideo(title, id, 'movie');
+                } else {
+                    this.playVideo(title, id, 'tv', 1, 1);
+                }
+            },
+
+            showError(msg) {
+                document.body.innerHTML = `
+                    <div class="flex items-center justify-center min-h-screen bg-[#141414] text-white p-8">
+                        <div class="max-w-md text-center">
+                            <i class="fas fa-exclamation-circle text-6xl text-[#E50914] mb-4"></i>
+                            <h1 class="text-2xl font-bold mb-4">API Key Required</h1>
+                            <p class="text-gray-400 mb-6">${msg}</p>
+                        </div>
+                    </div>
+                `;
+            },
+
+            async fetchData() {
+                try {
+                    // Fetch featured content (Squid Game)
+                    const sgResponse = await fetch(`https://api.themoviedb.org/3/tv/93405?api_key=${API_KEY}`);
+                    if (!sgResponse.ok) throw new Error('Invalid API Key');
+                    const sgData = await sgResponse.json();
+                    this.state.squidGameData = sgData;
+                    this.updateHero(sgData);
+                    
+                    // Pre-fetch all seasons for Squid Game
+                    await this.fetchAllSeasons(sgData);
+                    
+                    // Generate content rows
+                    await this.generateContentRows();
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showError("Failed to fetch data. Check API key.");
+                }
+            },
+
+            async fetchAllSeasons(showData) {
+                const seasons = {};
+                for (let i = 1; i <= showData.number_of_seasons; i++) {
+                    try {
+                        const response = await fetch(`https://api.themoviedb.org/3/tv/${showData.id}/season/${i}?api_key=${API_KEY}`);
+                        const data = await response.json();
+                        seasons[i] = data;
+                    } catch (e) {
+                        console.error(`Error fetching season ${i}:`, e);
+                    }
+                }
+                this.state.seasonsData = seasons;
+            },
+
+            async generateContentRows() {
+                const container = document.getElementById('content-rows');
+                container.innerHTML = '';
+                
+                // Create different categories
+                const categories = [
+                    { title: 'Popular TV Shows', items: CONTENT_LIBRARY.filter(i => i.type === 'tv' && i.id !== 93405).slice(0, 10) },
+                    { title: 'Anime (anime is terrible)', items: CONTENT_LIBRARY.filter(i => [37854, 65930, 85937, 95479, 46260, 12971, 1429, 1433, 1435, 1455].includes(i.id)) },                    { title: 'Marvel Universe', items: CONTENT_LIBRARY.filter(i => [24428, 299534, 299536, 1726, 10138, 68721, 1771, 100402, 271110, 99861].includes(i.id)) },
+                    { title: 'Sci-Fi & Fantasy', items: CONTENT_LIBRARY.filter(i => [27205, 157336, 19995, 120, 121, 122, 603, 604, 605, 11].includes(i.id)) },
+                    { title: 'Action & Adventure', items: CONTENT_LIBRARY.filter(i => [155, 76341, 293660, 353081, 562, 1573, 1572, 1571, 47971, 755].includes(i.id)) },
+                    { title: 'Animation', items: CONTENT_LIBRARY.filter(i => [129, 8392, 128, 4935, 16859, 11621, 10515, 16672, 862, 10193, 803796].includes(i.id)) },
+                    { title: 'More TV Shows', items: CONTENT_LIBRARY.filter(i => i.type === 'tv').slice(10, 20) },
+                    { title: 'More Movies', items: CONTENT_LIBRARY.filter(i => i.type === 'movie').slice(10, 20) }
+                ];
+                
+                for (const category of categories) {
+                    if (category.items.length === 0) continue;
+                    
+                    // Fetch poster data for all items in this category
+                    const itemsWithPosters = await Promise.all(
+                        category.items.map(async (item) => {
+                            try {
+                                const response = await fetch(
+                                    `https://api.themoviedb.org/3/${item.type}/${item.id}?api_key=${API_KEY}`
+                                );
+                                const data = await response.json();
+                                return {
+                                    ...item,
+                                    poster_path: data.poster_path,
+                                    backdrop_path: data.backdrop_path
+                                };
+                            } catch (e) {
+                                return item;
+                            }
+                        })
+                    );
+                    
+                    const section = document.createElement('section');
+                    section.innerHTML = `
+                        <h2 class="text-xl md:text-2xl font-bold mb-4 text-gray-200 hover:text-white cursor-pointer">${category.title}</h2>
+                        <div class="flex gap-4 overflow-x-auto no-scrollbar pb-8 pr-12" id="row-${category.title.replace(/\s+/g, '-').toLowerCase()}">
+                            ${itemsWithPosters.map(item => {
+                                const posterUrl = item.poster_path 
+                                    ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+                                    : `https://via.placeholder.com/500x750/1f1f1f/666?text=${encodeURIComponent(item.name)}`;
+                                
+                                return `
+                                <div class="flex-none w-[160px] md:w-[200px] aspect-[2/3] bg-gray-800 rounded-md overflow-hidden cursor-pointer card-zoom relative group" 
+                                     onclick="app.playVideo('${item.name.replace(/'/g, "\\'")}', ${item.id}, '${item.type}', 1, 1)">
+                                    <img src="${posterUrl}" 
+                                         class="w-full h-full object-cover" 
+                                         alt="${item.name}"
+                                         onerror="this.src='https://via.placeholder.com/500x750/1f1f1f/666?text=${encodeURIComponent(item.name)}'">
+                                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                        <div class="w-16 h-16 bg-[#E50914] rounded-full flex items-center justify-center">
+                                            <i class="fas fa-play text-white text-2xl ml-1"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                    container.appendChild(section);
+                }
+            },
+
+            updateHero(data) {
+                document.getElementById('hero-title').textContent = data.name;
+                document.getElementById('hero-overview').textContent = data.overview;
+                document.getElementById('hero-year').textContent = data.first_air_date.split('-')[0];
+                document.getElementById('hero-seasons').textContent = `${data.number_of_seasons} Season${data.number_of_seasons > 1 ? 's' : ''}`;
+                
+                if (data.backdrop_path) {
+                    document.getElementById('hero-image').src = `https://image.tmdb.org/t/p/original${data.backdrop_path}`;
+                }
+                
+                document.getElementById('hero-play-btn').onclick = () => {
+                    this.playVideo(data.name, 93405, 'tv', 1, 1);
+                };
+                
+                document.getElementById('hero-episodes-btn').classList.remove('hidden');
+                document.getElementById('hero-episodes-btn').onclick = () => {
+                    this.openEpisodeSelector();
+                };
+            },
+
+            buildEmbedUrl(tmdbId, type, season = 1, episode = 1) {
+                if (type === 'tv') {
+                    return PROVIDER.tv(tmdbId, season, episode);
+                }
+                return PROVIDER.movie(tmdbId);
+            },
+
+            playVideo(title, tmdbId, type = 'movie', season = 1, episode = 1) {
+                const player = document.getElementById('video-player');
+                const titleEl = document.getElementById('player-title');
+                const wrapper = document.getElementById('iframe-wrapper');
+                const selectEpisodesBtn = document.getElementById('select-episodes-btn');
+                
+                titleEl.textContent = title;
+                this.state.currentMedia = { tmdbId, type, season, episode, title };
+                this.state.isPlaying = false;
+                this.state.progress = 0;
+                this.state.playerReady = false;
+                this.state.currentSeason = season;
+                
+                // Show episode selector button for ALL TV shows
+                if (type === 'tv') {
+                    selectEpisodesBtn.classList.remove('hidden');
+                    // Store current TV show data for episode selector
+                    this.state.currentShowId = tmdbId;
+                    this.state.currentShowTitle = title;
+                } else {
+                    selectEpisodesBtn.classList.add('hidden');
+                }
+                
+                const embedUrl = this.buildEmbedUrl(tmdbId, type, season, episode);
+                
+                wrapper.innerHTML = `
+                    <div class="iframe-loader" id="iframe-loader">
+                        <div class="loader"></div>
+                    </div>
+                    
+                    <iframe 
+                        id="video-iframe" 
+                        src="${embedUrl}" 
+                        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                        allowfullscreen
+                    ></iframe>
+                `;
+                
+                this.setupFullscreenDetection();
+                
+                const iframe = document.getElementById('video-iframe');
+                const loader = document.getElementById('iframe-loader');
+
+                // Hide loader after a timeout since onload is unreliable for embeds
+                setTimeout(() => {
+                    if (loader) loader.style.display = 'none';
+                    this.state.playerReady = true;
+                }, 3000); // 3 seconds, adjust as needed
+
+                // Fallback: also try onload in case it does work
+                iframe.onload = () => {
+                    if (loader) loader.style.display = 'none';
+                    this. state.playerReady = true;
+                };
+                
+                player.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            },
+
+            async openEpisodeSelector() {
+                const modal = document.getElementById('episode-modal');
+                const seasonSelector = document.getElementById('season-selector');
+                const episodesGrid = document.getElementById('episodes-grid');
+                const modalTitle = document.getElementById('modal-title');
+                
+                const showId = this.state.currentShowId || 93405;
+                const showTitle = this.state.currentShowTitle || 'Squid Game';
+                
+                modalTitle.textContent = `${showTitle} - Select Episode`;
+                
+                // Fetch show data if not cached
+                if (!this.state.seasonsData[showId]) {
+                    episodesGrid.innerHTML = '<div class="search-loading"><div class="loader" style="width: 40px; height: 40px; margin: 20px auto;"></div></div>';
+                    modal.classList.add('active');
+                    
+                    try {
+                        const response = await fetch(`https://api.themoviedb.org/3/tv/${showId}?api_key=${API_KEY}`);
+                        const showData = await response.json();
+                        
+                        // Fetch all seasons
+                        const seasons = {};
+                        for (let i = 1; i <= showData.number_of_seasons; i++) {
+                            try {
+                                const seasonRes = await fetch(`https://api.themoviedb.org/3/tv/${showId}/season/${i}?api_key=${API_KEY}`);
+                                seasons[i] = await seasonRes.json();
+                            } catch (e) {
+                                console.error(`Error fetching season ${i}:`, e);
+                            }
+                        }
+                        this.state.seasonsData[showId] = seasons;
+                        this.state.currentShowSeasons = seasons;
+                        this.state.currentShowNumSeasons = showData.number_of_seasons;
+                    } catch (error) {
+                        episodesGrid.innerHTML = '<p class="text-gray-400 p-4">Failed to load episodes</p>';
+                        return;
+                    }
+                }
+                
+                const numSeasons = this.state.currentShowNumSeasons || this.state.squidGameData?.number_of_seasons || 1;
+                const seasonsData = this.state.currentShowSeasons || this.state.seasonsData;
+                
+                // Build season selector
+                seasonSelector.innerHTML = '';
+                for (let i = 1; i <= numSeasons; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = `season-btn ${i === this.state.currentSeason ? 'active' : ''}`;
+                    btn.textContent = `Season ${i}`;
+                    btn.onclick = () => this.selectSeason(i);
+                    seasonSelector.appendChild(btn);
+                }
+                
+                // Build episodes grid for current season
+                this.renderEpisodesForSeason(this.state.currentSeason);
+                
+                modal.classList.add('active');
+            },
+
+            selectSeason(seasonNum) {
+                this.state.currentSeason = seasonNum;
+                
+                // Update active state on buttons
+                document.querySelectorAll('.season-btn').forEach((btn, idx) => {
+                    if (idx + 1 === seasonNum) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                
+                this.renderEpisodesForSeason(seasonNum);
+            },
+
+            renderEpisodesForSeason(seasonNum) {
+                const episodesGrid = document.getElementById('episodes-grid');
+                const showId = this.state.currentShowId || 93405;
+                const seasonsData = this.state.currentShowSeasons || this.state.seasonsData[showId] || this.state.seasonsData;
+                const seasonData = seasonsData[seasonNum];
+                
+                if (!seasonData || !seasonData.episodes) {
+                    episodesGrid.innerHTML = '<p class="text-gray-400 p-4">No episodes available</p>';
+                    return;
+                }
+                
+                episodesGrid.innerHTML = seasonData.episodes.map(ep => {
+                    const imgUrl = ep.still_path 
+                        ? `https://image.tmdb.org/t/p/w500${ep.still_path}`
+                        : `https://via.placeholder.com/500x281/1f1f1f/666?text=Episode+${ep.episode_number}`;
+                    
+                    return `
+                        <div class="episode-card" onclick="app.playEpisode(${seasonNum}, ${ep.episode_number})">
+                            <div class="episode-thumbnail">
+                                <img src="${imgUrl}" alt="${ep.name}" onerror="this.src='https://via.placeholder.com/500x281/1f1f1f/666?text=Episode+${ep.episode_number}'">
+                                <div class="episode-play-overlay">
+                                    <div class="w-16 h-16 bg-[#E50914] rounded-full flex items-center justify-center">
+                                        <i class="fas fa-play text-white text-2xl ml-1"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="episode-info">
+                                <div class="episode-number">Episode ${ep.episode_number}</div>
+                                <div class="episode-title">${ep.name}</div>
+                                <div class="episode-overview">${ep.overview || 'No description available.'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            playEpisode(season, episode) {
+                this.closeEpisodeSelector();
+                const showId = this.state.currentShowId || 93405;
+                const showTitle = this.state.currentShowTitle || 'Squid Game';
+                this.playVideo(`${showTitle} S${season}:E${episode}`, showId, 'tv', season, episode);
+            },
+
+            closeEpisodeSelector() {
+                document.getElementById('episode-modal').classList.remove('active');
+            },
+
+            toggleIframeFullscreen() {
+                const iframe = document.getElementById('video-iframe');
+                if (iframe) {
+                    if (iframe.requestFullscreen) {
+                        iframe.requestFullscreen();
+                    } else if (iframe.webkitRequestFullscreen) {
+                        iframe.webkitRequestFullscreen();
+                    } else if (iframe.mozRequestFullScreen) {
+                        iframe.mozRequestFullScreen();
+                    } else if (iframe.msRequestFullscreen) {
+                        iframe.msRequestFullscreen();
+                    }
+                }
+            },
+
+            setupFullscreenDetection() {
+                const handleFullscreenChange = () => {
+                    this.state.isFullscreen = !!document.fullscreenElement;
+                    
+                    const playerHeader = document.getElementById('player-header');
+                    const playerContainer = document.getElementById('player-container');
+                    
+                    if (this.state.isFullscreen) {
+                        if (this.state.controlsTimeout) {
+                            clearTimeout(this.state.controlsTimeout);
+                        }
+                        
+                        this.state.controlsTimeout = setTimeout(() => {
+                            if (playerHeader) playerHeader.classList.add('hidden-controls');
+                            if (playerContainer) playerContainer.classList.add('cursor-hidden');
+                        }, 5000);
+                    } else {
+                        if (playerHeader) playerHeader.classList.remove('hidden-controls');
+                        if (playerContainer) playerContainer.classList.remove('cursor-hidden');
+                        
+                        if (this.state.controlsTimeout) {
+                            clearTimeout(this.state.controlsTimeout);
+                        }
+                    }
+                };
+                
+                document.addEventListener('fullscreenchange', handleFullscreenChange);
+                document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+                document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+                document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+                
+                // Show controls on mouse move
+                const playerContainer = document.getElementById('player-container');
+                playerContainer.addEventListener('mousemove', () => {
+                    const playerHeader = document.getElementById('player-header');
+                    
+                    if (playerHeader) playerHeader.classList.remove('hidden-controls');
+                    if (playerContainer) playerContainer.classList.remove('cursor-hidden');
+                    
+                    if (this.state.isFullscreen) {
+                        if (this.state.controlsTimeout) {
+                            clearTimeout(this.state.controlsTimeout);
+                        }
+                        
+                        this.state.controlsTimeout = setTimeout(() => {
+                            if (playerHeader) playerHeader.classList.add('hidden-controls');
+                            if (playerContainer) playerContainer.classList.add('cursor-hidden');
+                        }, 5000);
+                    }
+                });
+            },
+
+            closePlayer() {
+                const player = document.getElementById('video-player');
+                const wrapper = document.getElementById('iframe-wrapper');
+                
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
+                
+                player.classList.add('hidden');
+                document.body.style.overflow = '';
+                
+                wrapper.innerHTML = '';
+                this.state.isPlaying = false;
+                this.state.isMuted = false;
+                this.state.playerReady = false;
+                
+                if (this.state.controlsTimeout) {
+                    clearTimeout(this.state.controlsTimeout);
+                }
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+</html>
