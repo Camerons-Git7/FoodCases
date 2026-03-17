@@ -1268,10 +1268,17 @@
                 
                 const iframe = document.getElementById('video-iframe');
                 const loader = document.getElementById('iframe-loader');
-                
-                iframe.onload = () => {
+
+                // Hide loader after a timeout since onload is unreliable for embeds
+                setTimeout(() => {
                     if (loader) loader.style.display = 'none';
                     this.state.playerReady = true;
+                }, 3000); // 3 seconds, adjust as needed
+
+                // Fallback: also try onload in case it does work
+                iframe.onload = () => {
+                    if (loader) loader.style.display = 'none';
+                    this. state.playerReady = true;
                 };
                 
                 player.classList.remove('hidden');
