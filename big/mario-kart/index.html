@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🏎️ Mario Kart 64 🏁</title>
+  <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico"/>
+  <style>
+    * { margin:0; padding:0; border:0; }
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #000;
+      color: #eee;
+      font-family: system-ui, sans-serif;
+    }
+    #loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      z-index: 999;
+      cursor: pointer;
+    }
+    #progress {
+      width: 300px;
+      height: 4px;
+      background: #333;
+      margin-top: 20px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    #progress-bar {
+      width: 0%;
+      height: 100%;
+      background: #e60012;
+      transition: width 0.3s;
+    }
+    #status {
+      margin-top: 15px;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+    #error {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #111;
+      padding: 20px;
+      text-align: center;
+      z-index: 1000;
+    }
+    #game-container {
+      width: 100%;
+      height: 100%;
+      display: none;
+    }
+    #click-hint {
+      margin-top: 20px;
+      font-size: 0.8rem;
+      opacity: 0;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading" onclick="startGame()">
+  <div>Loading Mario Kart 64...</div>
+  <div id="progress"><div id="progress-bar"></div></div>
+  <div id="status">Initializing...</div>
+  <div id="click-hint">Click anywhere to start</div>
+</div>
+
+<div id="error">
+  <strong>Failed to load game</strong>
+  <div style="margin-top:15px; opacity:0.8;" id="error-msg"></div>
+</div>
+
+<div id="game-container">
+  <div id="game" style="width: 100%; height: 100%;"></div>
+</div>
+
+<script>
+const ROM_URL = "https://n64emulate.github.io/n64emulate/examples/roms/zips/Mario%20Kart%2064%20(E)%20(V1.1)%20[!].zip";
+const loading = document.getElementById('loading');
+const progressBar = document.getElementById('progress-bar');
+const status = document.getElementById('status');
+const clickHint = document.getElementById('click-hint');
+const errorDiv = document.getElementById('error');
+const errorMsg = document.getElementById('error-msg');
+const container = document.getElementById('game-container');
+
+let gameStarted = false;
+let emulatorReady = false;
+
+function showError(msg) {
+  loading.style.display = 'none';
+  errorDiv.style.display = 'flex';
+  errorMsg.textContent = msg;
+}
+
+function updateProgress(percent, text) {
+  progressBar.style.width = percent + '%';
+  status.textContent = text;
+}
+
+// Set up EmulatorJS config
+window.EJS_player = "#game";
+window.EJS_core = "n64";
+window.EJS_gameUrl = ROM_URL;
+window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+window.EJS_gameName = "Mario Kart 64";
+window.EJS_color = "#e60012";
+
+function loadEmulator() {
+  updateProgress(30, 'Fetching game file...');
+  
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
+    script.async = true;
+    
+    script.onload = () => {
+      emulatorReady = true;
+      updateProgress(100, 'Ready!');
+      clickHint.style.opacity = '0.7';
+      resolve();
+    };
+    
+    script.onerror = () => reject(new Error('Failed to load emulator'));
+    document.head.appendChild(script);
+  });
+}
+
+// Progress animation
+let progress = 30;
+const progressInterval = setInterval(() => {
+  if (progress < 80 && !emulatorReady) {
+    progress += 2;
+    updateProgress(progress, 'Downloading...');
+  }
+}, 150);
+
+async function init() {
+  try {
+    await loadEmulator();
+    clearInterval(progressInterval);
+  } catch (err) {
+    clearInterval(progressInterval);
+    showError(err.message);
+  }
+}
+
+function startGame() {
+  if (gameStarted || !emulatorReady) return;
+  gameStarted = true;
+  
+  clickHint.style.display = 'none';
+  status.textContent = 'Starting game...';
+  
+  container.style.display = 'block';
+  
+  setTimeout(() => {
+    loading.style.display = 'none';
+  }, 500);
+}
+
+init();
+</script>
+
+</body>
+</html>
