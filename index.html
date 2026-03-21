@@ -13,6 +13,18 @@
       --accent: #0f0; /* Matrix Green */
       --bg: #000;
       --surface: #050505;
+      /* CHANGE THIS VALUE TO ADJUST BUTTON SIZE */
+      /* Smaller value = smaller buttons = more buttons per row */
+      /* Larger value = larger buttons = fewer buttons per row */
+      /* Original was 140px */
+      --button-size: 140px;
+      /* These scale proportionally with button size */
+      --emoji-size: calc(var(--button-size) * 0.48);
+      --text-size: calc(var(--button-size) * 0.097);
+      --padding-top: calc(var(--button-size) * 0.114);
+      --padding-sides: calc(var(--button-size) * 0.057);
+      --padding-bottom: calc(var(--button-size) * 0.086);
+      --name-margin: calc(var(--button-size) * 0.025);
     }
     * {
       margin: 0;
@@ -74,16 +86,13 @@
     }
     .button-container {
       display: flex;
-      justify-content: flex-start; /* Changed from center to start new rows on the left */
+      justify-content: center;
       gap: 1rem;
-      /* Calculate width for exactly 7 buttons: (140px * 7) + (1rem gap * 6) */
-      width: calc((140px * 7) + (1rem * 6));
-      max-width: 95vw; /* Prevent overflow on small screens */
+      width: 95vw;
       margin: 0 auto 4rem;
       flex-wrap: wrap;
     }
     .game-button {
-      --button-size: 140px; /* Middle ground between 120px and 168px */
       position: relative;
       display: flex;
       flex-direction: column;
@@ -91,7 +100,7 @@
       align-items: center;
       width: var(--button-size);
       height: var(--button-size);
-      padding: 1rem 0.5rem 0.75rem; /* Adjusted for medium size */
+      padding: var(--padding-top) var(--padding-sides) var(--padding-bottom);
       border: 2px solid var(--accent);
       border-radius: 10px;
       background: rgba(0, 0, 0, 0.7);
@@ -101,13 +110,13 @@
       text-decoration: none;
       font-family: 'Courier New', Courier, monospace;
       font-weight: 700;
-      font-size: 0.85rem; /* Middle ground between 0.75rem and 0.96rem */
+      font-size: var(--text-size);
       text-transform: uppercase;
       letter-spacing: 0.1em;
       overflow: hidden;
       transition: all 0.3s ease;
       user-select: none;
-      text-shadow: none; /* Remove glow from button text */
+      text-shadow: none;
     }
     .game-button:hover {
       transform: translateX(10px);
@@ -118,7 +127,7 @@
       transform: translateX(5px);
     }
     .emoji {
-      font-size: 4.2rem; /* Middle ground between 3.6rem and 5.1rem */
+      font-size: var(--emoji-size);
       color: var(--accent);
       flex-grow: 1;
       display: flex;
@@ -126,59 +135,18 @@
       justify-content: center;
       user-select: none;
       line-height: 1;
-      filter: drop-shadow(0 0 2px var(--accent)); /* Keeps glowing emoji */
+      filter: drop-shadow(0 0 2px var(--accent));
     }
     .game-name {
-      font-size: 0.85rem; /* Middle ground between 0.75rem and 0.96rem */
+      font-size: var(--text-size);
       text-align: center;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       width: 100%;
       user-select: none;
-      margin-top: 0.22rem;
+      margin-top: var(--name-margin);
       line-height: 1.2;
-    }
-    @media (max-width: 1200px) {
-      .button-container {
-        /* Adjust for 5 buttons per row on medium screens */
-        width: calc((140px * 5) + (1rem * 4));
-      }
-    }
-    @media (max-width: 900px) {
-      .button-container {
-        /* Adjust for 4 buttons per row */
-        width: calc((140px * 4) + (1rem * 3));
-      }
-    }
-    @media (max-width: 700px) {
-      .button-container {
-        /* Adjust for 3 buttons per row on smaller screens */
-        width: calc((140px * 3) + (1rem * 2));
-      }
-    }
-    @media (max-width: 500px) {
-      .button-container {
-        /* Adjust for 2 buttons per row on mobile */
-        width: calc((140px * 2) + (1rem * 1));
-      }
-    }
-    @media (max-width: 320px) {
-      .button-container {
-        /* Single column on very small screens */
-        width: 140px;
-      }
-      .game-button {
-        --button-size: 110px;
-        font-size: 0.7rem;
-        padding: 0.7rem 0.4rem 0.6rem;
-      }
-      .emoji {
-        font-size: 3.2rem;
-      }
-      .game-name {
-        font-size: 0.7rem;
-      }
     }
 
     /* Bottom note styling */
@@ -341,25 +309,21 @@
       button.addEventListener('click', event => {
         event.preventDefault();
         const url = button.getAttribute('href');
-        document.body.classList.remove('fade-in'); // Remove fade-in before fade-out
+        document.body.classList.remove('fade-in');
         document.body.classList.add('fade-out');
-        // Redirect after duration matches CSS transition (1s)
         setTimeout(() => {
           window.location.href = url;
         }, 1000);
       });
     });
 
-    // On page load, trigger fade-in
     window.onload = () => {
       document.body.classList.add('fade-in');
     };
 
-    // Remove fade classes when page is shown (including back navigation)
     window.addEventListener('pageshow', () => {
       document.body.classList.remove('fade-out', 'fade-in');
-      // Immediately add fade-in to trigger fade effect on bfcache navigation
-      void document.body.offsetWidth; // Trigger reflow
+      void document.body.offsetWidth;
       document.body.classList.add('fade-in');
     });
   </script>
