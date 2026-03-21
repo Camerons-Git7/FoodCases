@@ -261,7 +261,7 @@
       <div class="emoji" aria-hidden="true">🏀</div>
       <div class="game-name">Basketball</div>
     </a>
-    <a href="https://menist.free.nf/big/subway-surfers/" class="game-button" aria-label="Basketball">
+    <a href="https://menist.free.nf/big/subway-surfers/" class="game-button" aria-label="SubwaySurfers">
       <div class="emoji" aria-hidden="true">🚇</div>
       <div class="game-name">Subway-Surf</div>
     </a>
@@ -318,7 +318,7 @@
   <div class="bottom-note">ⓘ Don't Forget to Refresh Before Gameplay To Ensure You're Playing The Latest Update ⓘ</div>
 
   <!-- Mute/Unmute Button -->
-  <button class="mute-button" id="muteBtn" aria-label="Toggle mute">🔊</button>
+  <button class="mute-button" id="muteBtn" aria-label="Toggle mute">🔈</button>
 
   <!-- Hidden YouTube Audio Player container -->
   <div id="youtube-audio">
@@ -326,32 +326,15 @@
   </div>
 
   <script>
-    // Global player variable
-    var ytPlayer;
-    var playerReady = false;
-    var isMuted = false;
-    var volumeFadeInterval = null;
-
-    // Load saved mute state from localStorage
-    function loadMuteState() {
-      var savedMute = localStorage.getItem('seamlessGamesMuted');
-      if (savedMute !== null) {
-        isMuted = savedMute === 'true';
-      } else {
-        // Default to unmuted (false) on first visit
-        isMuted = false;
-      }
-      updateMuteButton();
-    }
-
-    // Save mute state to localStorage
-    function saveMuteState() {
-      localStorage.setItem('seamlessGamesMuted', isMuted);
-    }
+    let ytPlayer;
+    let playerReady = false;
+    let isMuted = true; // Always start muted as requested
+    let volumeFadeInterval = null;
+    let hasStartedPlaying = false; // To track if playVideo called after unmute
 
     // Update mute button icon
     function updateMuteButton() {
-      var btn = document.getElementById('muteBtn');
+      const btn = document.getElementById('muteBtn');
       if (btn) {
         btn.textContent = isMuted ? '🔈' : '🔊';
       }
@@ -363,33 +346,25 @@
         if (callback) callback();
         return;
       }
-
-      // Clear any existing fade
       if (volumeFadeInterval) {
         clearInterval(volumeFadeInterval);
       }
+      const startVolume = ytPlayer.getVolume() || 0;
+      const steps = 30;
+      const stepDuration = duration / steps;
+      const volumeDiff = targetVolume - startVolume;
+      let currentStep = 0;
 
-      var startVolume = ytPlayer.getVolume() || 0;
-      var steps = 30; // More steps for smoother animation
-      var stepDuration = duration / steps;
-      var volumeDiff = targetVolume - startVolume;
-      var currentStep = 0;
-
-      // Disable button during fade
-      var btn = document.getElementById('muteBtn');
+      const btn = document.getElementById('muteBtn');
       if (btn) btn.classList.add('fading');
 
-      volumeFadeInterval = setInterval(function() {
+      volumeFadeInterval = setInterval(() => {
         currentStep++;
-        var progress = currentStep / steps;
-        // Use ease-out curve for smoother feel
-        var easeProgress = 1 - Math.pow(1 - progress, 2);
-        var newVolume = Math.round(startVolume + (volumeDiff * easeProgress));
-        
-        // Clamp between 0-100
+        const progress = currentStep / steps;
+        const easeProgress = 1 - Math.pow(1 - progress, 2);
+        let newVolume = Math.round(startVolume + (volumeDiff * easeProgress));
         newVolume = Math.max(0, Math.min(100, newVolume));
         ytPlayer.setVolume(newVolume);
-
         if (currentStep >= steps) {
           clearInterval(volumeFadeInterval);
           volumeFadeInterval = null;
@@ -400,40 +375,42 @@
       }, stepDuration);
     }
 
-    // Toggle mute with smooth fade
+    // Toggle mute with smooth fade, and start video playing on first unmute
     function toggleMute() {
       if (!playerReady) return;
-      
       isMuted = !isMuted;
-      saveMuteState();
       updateMuteButton();
 
       if (isMuted) {
-        // Fade down to 0 over 0.5 seconds
+        ytPlayer.mute();
         fadeVolume(0, 500);
       } else {
-        // Fade up to 100 over 0.5 seconds
+        ytPlayer.unMute();
+        // On first unmute, play video if not started yet
+        if (!hasStartedPlaying) {
+          ytPlayer.playVideo();
+          hasStartedPlaying = true;
+        }
         fadeVolume(100, 500);
       }
     }
 
     // Load YouTube IFrame API asynchronously after page renders
     function loadYouTubeAPI() {
-      var tag = document.createElement('script');
+      const tag = document.createElement('script');
       tag.src = "https://www.youtube.com/iframe_api";
       tag.async = true;
-      var firstScriptTag = document.getElementsByTagName('script')[0];
+      const firstScriptTag = document.getElementsByTagName('script')[0];
       firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
     }
 
-    // YouTube API callback - called when API is ready
     function onYouTubeIframeAPIReady() {
       ytPlayer = new YT.Player('yt-player', {
         width: 1,
         height: 1,
         videoId: 'F0A_R2XV_os',
         playerVars: {
-          autoplay: 1,
+          autoplay: 0,  // do not autoplay immediately
           loop: 1,
           playlist: 'F0A_R2XV_os',
           controls: 0,
@@ -452,47 +429,37 @@
 
     function onPlayerReady(event) {
       playerReady = true;
-      
-      // Apply saved mute state - if muted, start at 0 volume
-      if (isMuted) {
-        ytPlayer.setVolume(0);
-      } else {
-        ytPlayer.setVolume(100);
-      }
-      
-      event.target.playVideo();
+      ytPlayer.mute();
+      ytPlayer.setVolume(0);
+      // Do NOT call playVideo here, wait for user to unmute
     }
 
     function onPlayerStateChange(event) {
+      // Loop video if ended
       if (event.data === YT.PlayerState.ENDED) {
         ytPlayer.playVideo();
       }
     }
 
-    // Function to fade out audio smoothly (for page transitions)
+    // Fade out audio smoothly before page transitions
     function fadeOutAudio(duration, callback) {
       if (!playerReady || !ytPlayer || !ytPlayer.setVolume) {
         if (callback) callback();
         return;
       }
-
-      // Clear any existing volume fade
       if (volumeFadeInterval) {
         clearInterval(volumeFadeInterval);
       }
+      let startVolume = ytPlayer.getVolume() || 100;
+      const steps = 20;
+      const stepDuration = duration / steps;
+      const volumeStep = startVolume / steps;
+      let currentStep = 0;
 
-      var startVolume = ytPlayer.getVolume() || 100;
-      var steps = 20;
-      var stepDuration = duration / steps;
-      var volumeStep = startVolume / steps;
-      var currentStep = 0;
-
-      var fadeInterval = setInterval(function() {
+      const fadeInterval = setInterval(() => {
         currentStep++;
-        var newVolume = Math.max(0, startVolume - (volumeStep * currentStep));
-        
+        const newVolume = Math.max(0, startVolume - volumeStep * currentStep);
         ytPlayer.setVolume(Math.round(newVolume));
-        
         if (currentStep >= steps || newVolume <= 0) {
           clearInterval(fadeInterval);
           ytPlayer.setVolume(0);
@@ -501,7 +468,7 @@
       }, stepDuration);
     }
 
-    // Matrix Digital Rain Effect
+    // Matrix Digital Rain Effect (unchanged)
     const canvas = document.getElementById('matrixCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -509,7 +476,6 @@
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     }
-
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
@@ -519,23 +485,17 @@
     const alphabet = katakana + latin + nums;
     const fontSize = 16;
     const columns = Math.floor(canvas.width / fontSize);
-    const rainDrops = [];
-
-    for (let x = 0; x < columns; x++) {
-      rainDrops[x] = 1;
-    }
+    const rainDrops = new Array(columns).fill(1);
 
     function draw() {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
       ctx.fillStyle = '#0F0';
       ctx.font = fontSize + 'px monospace';
 
       for (let i = 0; i < rainDrops.length; i++) {
         const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
         ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
-
         if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
           rainDrops[i] = 0;
         }
@@ -544,7 +504,7 @@
     }
     setInterval(draw, 30);
 
-    // Mute button event listener
+    // Mute button event handler
     document.getElementById('muteBtn').addEventListener('click', toggleMute);
 
     // Fade-out animation before redirect with audio fade
@@ -552,36 +512,39 @@
       button.addEventListener('click', event => {
         event.preventDefault();
         const url = button.getAttribute('href');
-        
+
         document.body.classList.remove('fade-in');
         document.body.classList.add('fade-out');
-        
-        fadeOutAudio(1000, function() {
+
+        fadeOutAudio(1000, () => {
           window.location.href = url;
         });
       });
     });
 
-    // Show page immediately on load
     window.onload = () => {
-      loadMuteState(); // Load saved mute preference
+      updateMuteButton();
       document.body.classList.add('fade-in');
-      // Load YouTube API after page is visible
       loadYouTubeAPI();
     };
 
-    // Handle back/forward navigation
     window.addEventListener('pageshow', () => {
       document.body.classList.remove('fade-out', 'fade-in');
       void document.body.offsetWidth;
       document.body.classList.add('fade-in');
-      
-      // Reset volume when coming back to page (respect saved mute state)
+
       if (playerReady && ytPlayer && ytPlayer.setVolume) {
         if (isMuted) {
           ytPlayer.setVolume(0);
+          ytPlayer.mute();
+          hasStartedPlaying = false;
         } else {
           ytPlayer.setVolume(100);
+          ytPlayer.unMute();
+          if (!hasStartedPlaying) {
+            ytPlayer.playVideo();
+            hasStartedPlaying = true;
+          }
         }
       }
     });
