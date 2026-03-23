@@ -209,6 +209,40 @@
       pointer-events: none;
       opacity: 0.7;
     }
+
+    /* Request button styling - bottom right */
+    .request-button {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      color: var(--accent);
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+      transition: all 0.3s ease;
+      user-select: none;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 80px;
+      min-height: 50px;
+      text-decoration: none;
+    }
+    .request-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 25px var(--accent);
+      background: rgba(0, 50, 0, 0.9);
+    }
+    .request-button:active {
+      transform: scale(0.95);
+    }
   </style>
 </head>
 <body>
@@ -318,6 +352,9 @@
 
   <!-- Mute/Unmute Button -->
   <button class="mute-button" id="muteBtn" aria-label="Toggle mute">🔈</button>
+
+  <!-- Request Button -->
+  <a class="request-button" href="https://forms.gle/tcMZUPfym8Y7zPsm8" target="_blank" rel="noopener noreferrer" aria-label="Request a game">↗ Request ↗</a>
 
   <!-- Hidden YouTube Audio Player container -->
   <div id="youtube-audio">
