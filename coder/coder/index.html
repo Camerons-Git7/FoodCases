@@ -69,18 +69,41 @@
     0%, 100% { transform: translateY(0px); }
     50% { transform: translateY(-10px); }
   }
+  
+  .clipboard-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.4);
+  }
+  
+  .clipboard-btn:hover {
+    box-shadow: 0 0 60px rgba(16, 185, 129, 0.6);
+  }
+  
+  .auto-run-toggle {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+  }
+  
+  .toggle-checkbox:checked {
+    background-color: #6366f1;
+  }
+  
+  .code-preview {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+  }
 </style>
 </head>
 <body class="flex items-center justify-center relative">
 
-<div id="main-container" class="w-full max-w-2xl p-8 flex flex-col items-center gap-8 z-10 transition-all duration-500">
+<div id="main-container" class="w-full max-w-2xl p-8 flex flex-col items-center gap-6 z-10 transition-all duration-500">
   
   <div class="text-center space-y-4">
     <h1 class="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
       Universal Runner
     </h1>
     <p class="text-slate-400 text-lg">
-      Drop or click to run HTML, ZIP, GitHub repos & more
+      Drop, paste, or click to run HTML, ZIP, GitHub repos & more
     </p>
   </div>
 
@@ -104,8 +127,33 @@
     </div>
   </div>
 
+  <!-- Clipboard Section -->
+  <div class="w-full max-w-md space-y-3">
+    <div class="flex items-center justify-between gap-4">
+      <button id="clipboard-btn" class="clipboard-btn text-white font-bold py-3 px-6 rounded-xl shadow-lg flex-1 transition-all duration-300 flex items-center justify-center gap-2">
+        <span>📋</span>
+        <span>Run from Clipboard</span>
+      </button>
+      
+      <div class="auto-run-toggle rounded-xl px-4 py-3 flex items-center gap-2">
+        <input type="checkbox" id="auto-run-checkbox" class="toggle-checkbox w-5 h-5 rounded cursor-pointer accent-indigo-500">
+        <label for="auto-run-checkbox" class="text-sm text-slate-300 cursor-pointer select-none">Auto-run</label>
+      </div>
+    </div>
+    
+    <div id="clipboard-preview" class="code-preview rounded-xl p-4 hidden max-h-32 overflow-hidden relative">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs text-slate-400">Clipboard Preview</span>
+        <span id="clipboard-status" class="text-xs text-emerald-400 hidden">Auto-running...</span>
+      </div>
+      <pre id="clipboard-code" class="text-xs text-slate-300 overflow-hidden whitespace-pre-wrap break-all line-clamp-3"></pre>
+      <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-slate-900/95 to-transparent"></div>
+    </div>
+  </div>
+
   <div class="text-center text-xs text-slate-600 max-w-md">
     <p>GitHub repos: Download as ZIP → Import here. Auto-detects index.html, handles templates & assets.</p>
+    <p class="mt-1 text-slate-500">Tip: Enable Auto-run to instantly execute clipboard content</p>
   </div>
 </div>
 
@@ -124,9 +172,16 @@
   const loadingText = document.getElementById('loading-text');
   const errorToast = document.getElementById('error-toast');
   const errorText = document.getElementById('error-text');
+  const clipboardBtn = document.getElementById('clipboard-btn');
+  const clipboardPreview = document.getElementById('clipboard-preview');
+  const clipboardCode = document.getElementById('clipboard-code');
+  const autoRunCheckbox = document.getElementById('auto-run-checkbox');
+  const clipboardStatus = document.getElementById('clipboard-status');
 
   let currentFiles = new Map();
   let basePath = '';
+  let clipboardCheckInterval = null;
+  let lastClipboardContent = '';
 
   function showLoading(text = 'Processing...') {
     loadingText.textContent = text;
@@ -143,6 +198,18 @@
     setTimeout(() => {
       errorToast.classList.add('opacity-0', 'pointer-events-none');
     }, 4000);
+  }
+
+  function showSuccess(msg) {
+    errorText.textContent = msg;
+    errorToast.classList.remove('bg-red-500/90');
+    errorToast.classList.add('bg-emerald-500/90');
+    errorToast.classList.remove('opacity-0', 'pointer-events-none');
+    setTimeout(() => {
+      errorToast.classList.add('opacity-0', 'pointer-events-none');
+      errorToast.classList.remove('bg-emerald-500/90');
+      errorToast.classList.add('bg-red-500/90');
+    }, 3000);
   }
 
   dropZone.addEventListener('dragover', (e) => {
@@ -166,6 +233,148 @@
   fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
       handleFile(e.target.files[0]);
+    }
+  });
+
+  // Clipboard functionality
+  clipboardBtn.addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) {
+        processClipboardContent(text, true);
+      } else {
+        showError('Clipboard is empty');
+      }
+    } catch (err) {
+      showError('Failed to read clipboard. Ensure clipboard permissions are granted.');
+      console.error('Clipboard error:', err);
+    }
+  });
+
+  function processClipboardContent(text, manual = false) {
+    const trimmed = text.trim();
+    
+    // Show preview
+    clipboardPreview.classList.remove('hidden');
+    clipboardCode.textContent = trimmed.substring(0, 500) + (trimmed.length > 500 ? '...' : '');
+    
+    // Detect if it's HTML
+    const isHtml = trimmed.match(/^<!DOCTYPE/i) || 
+                   trimmed.match(/^<html/i) || 
+                   trimmed.match(/^<[a-z][\s\S]*>/i) ||
+                   (trimmed.includes('<') && trimmed.includes('>') && trimmed.includes('</'));
+    
+    const isCode = ['js', 'css', 'json', 'md'].some(ext => {
+      return trimmed.startsWith('function') || 
+             trimmed.startsWith('const') || 
+             trimmed.startsWith('let') || 
+             trimmed.startsWith('var') ||
+             trimmed.startsWith('.') ||
+             trimmed.startsWith('#') ||
+             trimmed.startsWith('{') ||
+             trimmed.startsWith('[');
+    });
+
+    if (isHtml) {
+      if (manual || autoRunCheckbox.checked) {
+        clipboardStatus.classList.remove('hidden');
+        // Small delay to show the preview before running
+        setTimeout(() => {
+          runHtml(trimmed, 'clipboard.html');
+          clipboardStatus.classList.add('hidden');
+        }, manual ? 100 : 300);
+      }
+    } else if (trimmed) {
+      // Wrap non-HTML content
+      if (manual || autoRunCheckbox.checked) {
+        const wrapped = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Clipboard Content</title>
+  <style>
+    body { 
+      font-family: 'JetBrains Mono', monospace; 
+      background: #0f172a; 
+      color: #e2e8f0; 
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    pre { 
+      background: #1e293b; 
+      padding: 1rem; 
+      border-radius: 8px; 
+      overflow-x: auto;
+      border: 1px solid #334155;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    h1 { color: #6366f1; border-bottom: 2px solid #334155; padding-bottom: 0.5rem; }
+    .meta { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>📋 Clipboard Content</h1>
+  <div class="meta">Auto-rendered</div>
+  <pre><code>${escapeHtml(trimmed)}</code></pre>
+</body>
+</html>`;
+        clipboardStatus.classList.remove('hidden');
+        setTimeout(() => {
+          runHtml(wrapped, 'clipboard.txt');
+          clipboardStatus.classList.add('hidden');
+        }, manual ? 100 : 300);
+      }
+    }
+  }
+
+  // Auto-run clipboard monitoring
+  autoRunCheckbox.addEventListener('change', () => {
+    if (autoRunCheckbox.checked) {
+      startClipboardMonitoring();
+      showSuccess('Auto-run enabled: Monitoring clipboard...');
+    } else {
+      stopClipboardMonitoring();
+      clipboardStatus.classList.add('hidden');
+    }
+  });
+
+  function startClipboardMonitoring() {
+    // Check clipboard immediately
+    checkClipboard();
+    
+    // Set up interval checking
+    clipboardCheckInterval = setInterval(checkClipboard, 1000);
+  }
+
+  function stopClipboardMonitoring() {
+    if (clipboardCheckInterval) {
+      clearInterval(clipboardCheckInterval);
+      clipboardCheckInterval = null;
+    }
+  }
+
+  async function checkClipboard() {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text !== lastClipboardContent && text.trim()) {
+        lastClipboardContent = text;
+        processClipboardContent(text, false);
+      }
+    } catch (err) {
+      // Silently fail - permissions might not be granted yet
+    }
+  }
+
+  // Handle paste events for immediate response
+  document.addEventListener('paste', (e) => {
+    if (!autoRunCheckbox.checked) return;
+    
+    const text = e.clipboardData.getData('text');
+    if (text && text.trim()) {
+      e.preventDefault();
+      lastClipboardContent = text;
+      processClipboardContent(text, false);
     }
   });
 
@@ -576,7 +785,15 @@
       mainContainer.classList.remove('fade-out');
       currentFiles.clear();
       basePath = '';
+      // Reset clipboard preview
+      clipboardPreview.classList.add('hidden');
+      clipboardStatus.classList.add('hidden');
     }
+  });
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    stopClipboardMonitoring();
   });
 </script>
 </body>
