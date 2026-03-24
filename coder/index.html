@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>👨🏻‍💻 Code Runner 👨🏻‍💻</title>
-    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" id="dynamic-favicon">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
@@ -108,6 +108,8 @@
     const codeInput = document.getElementById('code-input');
     const runBtn = document.getElementById('run-btn');
     const previewContainer = document.getElementById('preview-container');
+    const dynamicFavicon = document.getElementById('dynamic-favicon');
+    const defaultFavicon = "https://math.hws.edu/favicon.ico";
 
     function isValidUrl(string) {
         try {
@@ -145,6 +147,38 @@
         return input;
     }
 
+    function extractFaviconFromHTML(html) {
+        // Create a DOM parser to parse the HTML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        // Look for favicon in various formats
+        const selectors = [
+            'link[rel="icon"]',
+            'link[rel="shortcut icon"]',
+            'link[rel="apple-touch-icon"]',
+            'link[rel="apple-touch-icon-precomposed"]'
+        ];
+        
+        for (const selector of selectors) {
+            const link = doc.querySelector(selector);
+            if (link && link.href) {
+                return link.href;
+            }
+        }
+        
+        return null;
+    }
+
+    function updateFavicon(faviconUrl) {
+        if (faviconUrl) {
+            dynamicFavicon.href = faviconUrl;
+        } else {
+            // Reset to default if no favicon found
+            dynamicFavicon.href = defaultFavicon;
+        }
+    }
+
     function runCode() {
         let code = codeInput.value.trim();
         if (!code) {
@@ -172,6 +206,8 @@
                         `<iframe id="preview-iframe" src="${proxyUrl}" ` +
                         `sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation" ` +
                         `allow="camera; microphone; local-network-access"></iframe>`;
+                    // Reset favicon for proxy URLs
+                    updateFavicon(null);
                     return;
                 }
             }
@@ -183,8 +219,13 @@
                     `<iframe id="preview-iframe" src="${possibleUrl}" ` +
                     `sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation" ` +
                     `allow="camera; microphone; local-network-access"></iframe>`;
+                // Reset favicon for external URLs
+                updateFavicon(null);
             } else {
-                // Treat as raw HTML
+                // Treat as raw HTML - extract favicon if present
+                const faviconUrl = extractFaviconFromHTML(code);
+                updateFavicon(faviconUrl);
+                
                 document.open();
                 document.write(code);
                 document.close();
