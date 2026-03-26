@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal File Inliner - Smash Karts Edition</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #1b70f0 0%, #2196f3 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 1.1em; }
+        
+        .upload-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px dashed #dee2e6;
+        }
+        .drop-zone {
+            border: 3px dashed #1b70f0;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            transform: scale(1.02);
+        }
+        .drop-zone input { display: none; }
+        .file-list {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        .file-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #1b70f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .file-icon { font-size: 1.5em; }
+        .file-info { flex: 1; }
+        .file-name { font-weight: bold; color: #333; word-break: break-all; }
+        .file-size { color: #666; font-size: 0.85em; }
+        
+        .controls {
+            padding: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #1b70f0 0%, #2196f3 100%);
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(27, 112, 240, 0.3);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .output-section {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1b70f0 0%, #2196f3 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .code-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            max-height: 500px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            display: none;
+            position: relative;
+        }
+        .code-output.show { display: block; }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #1b70f0;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #28a745;
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        .toast.show { transform: translateX(0); }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Smash Karts File Inliner</h1>
+            <p>Upload all your files (HTML, JS, CSS, Images, JSON) and get a single self-contained HTML file</p>
+        </div>
+        
+        <div class="upload-section">
+            <div class="drop-zone" id="dropZone">
+                <input type="file" id="fileInput" multiple accept="*/*">
+                <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
+                <h3>Drop files here or click to upload</h3>
+                <p style="color: #666; margin-top: 10px;">Supports: HTML, JS, CSS, PNG, JPG, JPEG, GIF, SVG, JSON, ICO</p>
+            </div>
+            <div class="file-list" id="fileList"></div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn-primary" id="processBtn" onclick="processFiles()" disabled>
+                🚀 Process & Inline Everything
+            </button>
+            <button class="btn-secondary" onclick="clearFiles()">Clear All</button>
+            <button class="btn-success" id="downloadBtn" onclick="downloadResult()" style="display:none;">
+                💾 Download Single HTML File
+            </button>
+            <button class="btn-success" id="copyBtn" onclick="copyToClipboard()" style="display:none;">
+                📋 Copy to Clipboard
+            </button>
+        </div>
+        
+        <div class="output-section">
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            
+            <div class="stats" id="stats" style="display:none;">
+                <div class="stat-card">
+                    <div class="stat-value" id="statFiles">0</div>
+                    <div class="stat-label">Files Processed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statImages">0</div>
+                    <div class="stat-label">Images Inlined</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statSize">0</div>
+                    <div class="stat-label">Final Size (KB)</div>
+                </div>
+            </div>
+            
+            <pre class="code-output" id="codeOutput"></pre>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast">Copied to clipboard!</div>
+
+    <script>
+        const files = new Map();
+        let processedHTML = '';
+        
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const processBtn = document.getElementById('processBtn');
+        
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        
+        function handleFiles(fileList) {
+            Array.from(fileList).forEach(file => {
+                files.set(file.name, file);
+            });
+            updateFileList();
+        }
+        
+        function updateFileList() {
+            fileList.innerHTML = '';
+            files.forEach((file, name) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <span class="file-icon">${getFileIcon(file.name)}</span>
+                    <div class="file-info">
+                        <div class="file-name">${name}</div>
+                        <div class="file-size">${formatSize(file.size)}</div>
+                    </div>
+                    <button onclick="removeFile('${name}')" style="background:none;border:none;cursor:pointer;font-size:1.2em;">❌</button>
+                `;
+                fileList.appendChild(item);
+            });
+            processBtn.disabled = files.size === 0;
+        }
+        
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                html: '🌐', js: '📜', css: '🎨', json: '📋',
+                png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️', svg: '🎭', ico: '🎯'
+            };
+            return icons[ext] || '📄';
+        }
+        
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function removeFile(name) {
+            files.delete(name);
+            updateFileList();
+        }
+        
+        function clearFiles() {
+            files.clear();
+            updateFileList();
+            document.getElementById('codeOutput').classList.remove('show');
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('downloadBtn').style.display = 'none';
+            document.getElementById('copyBtn').style.display = 'none';
+        }
+        
+        async function processFiles() {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            const codeOutput = document.getElementById('codeOutput');
+            
+            progressBar.style.display = 'block';
+            codeOutput.classList.remove('show');
+            
+            // Find main HTML file
+            let mainHTML = null;
+            const images = new Map();
+            const scripts = new Map();
+            const styles = new Map();
+            const jsons = new Map();
+            
+            files.forEach((file, name) => {
+                const ext = name.split('.').pop().toLowerCase();
+                if (ext === 'html' && !mainHTML) mainHTML = file;
+                else if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'ico'].includes(ext)) images.set(name, file);
+                else if (ext === 'js') scripts.set(name, file);
+                else if (ext === 'css') styles.set(name, file);
+                else if (ext === 'json') jsons.set(name, file);
+            });
+            
+            if (!mainHTML) {
+                alert('No HTML file found! Please upload an index.html file.');
+                progressBar.style.display = 'none';
+                return;
+            }
+            
+            // Read main HTML
+            let htmlContent = await readFile(mainHTML);
+            let processedCount = 0;
+            const totalFiles = files.size;
+            
+            // Process images (convert to base64)
+            for (const [name, file] of images) {
+                const base64 = await fileToBase64(file);
+                const mime = file.type || 'image/png';
+                const dataUrl = `data:${mime};base64,${base64}`;
+                
+                // Replace all references to this image
+                const patterns = [
+                    new RegExp(`src=["']${escapeRegex(name)}["']`, 'gi'),
+                    new RegExp(`src=["'][^"']*${escapeRegex(name)}["']`, 'gi'),
+                    new RegExp(`url\\(["']?${escapeRegex(name)}["']?\\)`, 'gi'),
+                    new RegExp(`url\\(["']?[^"']*${escapeRegex(name)}["']?\\)`, 'gi')
+                ];
+                
+                patterns.forEach(pattern => {
+                    htmlContent = htmlContent.replace(pattern, (match) => {
+                        if (match.includes('src=')) return `src="${dataUrl}"`;
+                        return `url("${dataUrl}")`;
+                    });
+                });
+                
+                processedCount++;
+                updateProgress((processedCount / totalFiles) * 100);
+            }
+            
+            // Process CSS files (inline)
+            for (const [name, file] of styles) {
+                const cssContent = await readFile(file);
+                const styleId = 'style-' + name.replace(/[^a-zA-Z0-9]/g, '-');
+                
+                // Check if already linked
+                const linkPattern = new RegExp(`<link[^>]*href=["'][^"']*${escapeRegex(name)}["'][^>]*>`, 'gi');
+                if (linkPattern.test(htmlContent)) {
+                    htmlContent = htmlContent.replace(linkPattern, `<style id="${styleId}">${cssContent}</style>`);
+                } else {
+                    // Add to head
+                    htmlContent = htmlContent.replace('</head>', `<style id="${styleId}">${cssContent}</style></head>`);
+                }
+                
+                processedCount++;
+                updateProgress((processedCount / totalFiles) * 100);
+            }
+            
+            // Process JS files (inline)
+            for (const [name, file] of scripts) {
+                const jsContent = await readFile(file);
+                const scriptId = 'script-' + name.replace(/[^a-zA-Z0-9]/g, '-');
+                
+                // Check if already linked
+                const scriptPattern = new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*>`, 'gi');
+                if (scriptPattern.test(htmlContent)) {
+                    htmlContent = htmlContent.replace(scriptPattern, `<script id="${scriptId}">${jsContent}`);
+                } else {
+                    // Add before closing body
+                    htmlContent = htmlContent.replace('</body>', `<script id="${scriptId}">${jsContent}</script></body>`);
+                }
+                
+                processedCount++;
+                updateProgress((processedCount / totalFiles) * 100);
+            }
+            
+            // Process JSON files (inline as JS variables)
+            for (const [name, file] of jsons) {
+                const jsonContent = await readFile(file);
+                const varName = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
+                
+                // Add as JS variable before closing body
+                const jsonScript = `<script>window.${varName} = ${jsonContent};</script>`;
+                htmlContent = htmlContent.replace('</body>', `${jsonScript}</body>`);
+                
+                processedCount++;
+                updateProgress((processedCount / totalFiles) * 100);
+            }
+            
+            // Remove any remaining external references that weren't found
+            htmlContent = htmlContent.replace(/<link[^>]*rel=["']stylesheet["'][^>]*href=["'][^"']*["'][^>]*>/gi, '');
+            htmlContent = htmlContent.replace(/<script[^>]*src=["'][^"']*["'][^>]*><\/script>/gi, '');
+            
+            // Update stats
+            processedHTML = htmlContent;
+            document.getElementById('statFiles').textContent = files.size;
+            document.getElementById('statImages').textContent = images.size;
+            document.getElementById('statSize').textContent = Math.round(htmlContent.length / 1024);
+            document.getElementById('stats').style.display = 'grid';
+            
+            // Show output
+            codeOutput.textContent = htmlContent.substring(0, 5000) + (htmlContent.length > 5000 ? '\n\n... (truncated, download for full file)' : '');
+            codeOutput.classList.add('show');
+            
+            // Show download button
+            document.getElementById('downloadBtn').style.display = 'inline-block';
+            document.getElementById('copyBtn').style.display = 'inline-block';
+            
+            progressBar.style.display = 'none';
+            showToast('Processing complete! Ready to download.');
+        }
+        
+        function updateProgress(percent) {
+            const fill = document.getElementById('progressFill');
+            fill.style.width = percent + '%';
+            fill.textContent = Math.round(percent) + '%';
+        }
+        
+        function readFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                if (file.name.endsWith('.json') || file.name.endsWith('.js') || file.name.endsWith('.css') || file.name.endsWith('.html')) {
+                    reader.readAsText(file);
+                } else {
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+        
+        function fileToBase64(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64 = e.target.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        
+        function downloadResult() {
+            const blob = new Blob([processedHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'smashkarts-inlined.html';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Downloaded smashkarts-inlined.html!');
+        }
+        
+        function copyToClipboard() {
+            navigator.clipboard.writeText(processedHTML).then(() => {
+                showToast('Copied to clipboard!');
+            });
+        }
+        
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+    </script>
+</body>
+</html>
