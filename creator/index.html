@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal File Inliner - Smash Karts Edition</title>
+    <title>Universal File Inliner - Unity WebGL Edition</title>
+    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -203,13 +204,28 @@
             animation: spin 1s ease-in-out infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .unity-warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .unity-warning.show { display: block; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎮 Smash Karts File Inliner</h1>
-            <p>Upload all your files (HTML, JS, CSS, Images, JSON) and get a single self-contained HTML file</p>
+            <h1>🎮 Unity WebGL File Inliner</h1>
+            <p>Upload all your files (HTML, JS, CSS, Images, JSON, Data, Wasm) and get a single self-contained HTML file</p>
+        </div>
+        
+        <div class="unity-warning" id="unityWarning">
+            <strong>⚠️ Unity WebGL Detected:</strong> Make sure to include all build files: .data.br, .wasm.br, .js.br (or .gz versions), loader.js, and all icon files!
         </div>
         
         <div class="upload-section">
@@ -217,7 +233,7 @@
                 <input type="file" id="fileInput" multiple accept="*/*">
                 <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
                 <h3>Drop files here or click to upload</h3>
-                <p style="color: #666; margin-top: 10px;">Supports: HTML, JS, CSS, PNG, JPG, JPEG, GIF, SVG, JSON, ICO</p>
+                <p style="color: #666; margin-top: 10px;">Supports: HTML, JS, CSS, PNG, JPG, JPEG, GIF, SVG, JSON, ICO, BR, GZ, WASM, DATA</p>
             </div>
             <div class="file-list" id="fileList"></div>
         </div>
@@ -251,7 +267,7 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="statSize">0</div>
-                    <div class="stat-label">Final Size (KB)</div>
+                    <div class="stat-label">Final Size (MB)</div>
                 </div>
             </div>
             
@@ -264,11 +280,13 @@
     <script>
         const files = new Map();
         let processedHTML = '';
+        let isUnityBuild = false;
         
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const fileList = document.getElementById('fileList');
         const processBtn = document.getElementById('processBtn');
+        const unityWarning = document.getElementById('unityWarning');
         
         dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', (e) => {
@@ -288,6 +306,21 @@
                 files.set(file.name, file);
             });
             updateFileList();
+            detectUnityBuild();
+        }
+        
+        function detectUnityBuild() {
+            // Check for Unity-specific files
+            const unityIndicators = ['.data.br', '.wasm.br', '.framework.js.br', '.loader.js'];
+            isUnityBuild = Array.from(files.keys()).some(name => 
+                unityIndicators.some(ind => name.includes(ind))
+            );
+            
+            if (isUnityBuild) {
+                unityWarning.classList.add('show');
+            } else {
+                unityWarning.classList.remove('show');
+            }
         }
         
         function updateFileList() {
@@ -312,7 +345,8 @@
             const ext = filename.split('.').pop().toLowerCase();
             const icons = {
                 html: '🌐', js: '📜', css: '🎨', json: '📋',
-                png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️', svg: '🎭', ico: '🎯'
+                png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️', svg: '🎭', ico: '🎯',
+                br: '📦', gz: '📦', wasm: '⚙️', data: '💾'
             };
             return icons[ext] || '📄';
         }
@@ -320,7 +354,7 @@
         function formatSize(bytes) {
             if (bytes === 0) return '0 Bytes';
             const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB'];
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
@@ -328,11 +362,13 @@
         function removeFile(name) {
             files.delete(name);
             updateFileList();
+            detectUnityBuild();
         }
         
         function clearFiles() {
             files.clear();
             updateFileList();
+            unityWarning.classList.remove('show');
             document.getElementById('codeOutput').classList.remove('show');
             document.getElementById('stats').style.display = 'none';
             document.getElementById('downloadBtn').style.display = 'none';
@@ -353,14 +389,20 @@
             const scripts = new Map();
             const styles = new Map();
             const jsons = new Map();
+            const binaries = new Map(); // For Unity .br files
             
             files.forEach((file, name) => {
                 const ext = name.split('.').pop().toLowerCase();
+                const lowerName = name.toLowerCase();
+                
                 if (ext === 'html' && !mainHTML) mainHTML = file;
                 else if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'ico'].includes(ext)) images.set(name, file);
                 else if (ext === 'js') scripts.set(name, file);
                 else if (ext === 'css') styles.set(name, file);
                 else if (ext === 'json') jsons.set(name, file);
+                else if (['br', 'gz', 'wasm', 'data'].includes(ext) || lowerName.includes('.data.') || lowerName.includes('.wasm.') || lowerName.includes('.framework.')) {
+                    binaries.set(name, file);
+                }
             });
             
             if (!mainHTML) {
@@ -380,17 +422,21 @@
                 const mime = file.type || 'image/png';
                 const dataUrl = `data:${mime};base64,${base64}`;
                 
-                // Replace all references to this image
+                // Replace all references to this image - handle various path formats
                 const patterns = [
                     new RegExp(`src=["']${escapeRegex(name)}["']`, 'gi'),
                     new RegExp(`src=["'][^"']*${escapeRegex(name)}["']`, 'gi'),
                     new RegExp(`url\\(["']?${escapeRegex(name)}["']?\\)`, 'gi'),
-                    new RegExp(`url\\(["']?[^"']*${escapeRegex(name)}["']?\\)`, 'gi')
+                    new RegExp(`url\\(["']?[^"']*${escapeRegex(name)}["']?\\)`, 'gi'),
+                    new RegExp(`href=["']${escapeRegex(name)}["']`, 'gi'),
+                    new RegExp(`content=["']${escapeRegex(name)}["']`, 'gi')
                 ];
                 
                 patterns.forEach(pattern => {
                     htmlContent = htmlContent.replace(pattern, (match) => {
                         if (match.includes('src=')) return `src="${dataUrl}"`;
+                        if (match.includes('href=')) return `href="${dataUrl}"`;
+                        if (match.includes('content=')) return `content="${dataUrl}"`;
                         return `url("${dataUrl}")`;
                     });
                 });
@@ -410,25 +456,38 @@
                     htmlContent = htmlContent.replace(linkPattern, `<style id="${styleId}">${cssContent}</style>`);
                 } else {
                     // Add to head
-                    htmlContent = htmlContent.replace('<\/head>', `<style id="${styleId}">${cssContent}</style><\/head>`);
+                    htmlContent = htmlContent.replace('</head>', `<style id="${styleId}">${cssContent}</style></head>`);
                 }
                 
                 processedCount++;
                 updateProgress((processedCount / totalFiles) * 100);
             }
             
-            // Process JS files (inline)
+            // Process JS files (inline) - CRITICAL FIX for Unity
             for (const [name, file] of scripts) {
                 const jsContent = await readFile(file);
-                const scriptId = 'script-' + name.replace(/[^a-zA-Z0-9]/g, '-');
+                
+                // SPECIAL HANDLING: Don't add IDs to Unity loader or main scripts
+                // Unity expects specific script execution order and global variables
+                const isUnityLoader = name.includes('loader') || jsContent.includes('createUnityInstance');
+                const isUnityMain = jsContent.includes('unityFirebaseGameOjbectName') || jsContent.includes('window.unityGame');
+                
+                let scriptTag;
+                if (isUnityLoader || isUnityMain) {
+                    // For Unity scripts, preserve them exactly without IDs that might break references
+                    scriptTag = `<script>${jsContent}</script>`;
+                } else {
+                    const scriptId = 'script-' + name.replace(/[^a-zA-Z0-9]/g, '-');
+                    scriptTag = `<script id="${scriptId}">${jsContent}</script>`;
+                }
                 
                 // Check if already linked
                 const scriptPattern = new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*>`, 'gi');
                 if (scriptPattern.test(htmlContent)) {
-                    htmlContent = htmlContent.replace(scriptPattern, `<script id="${scriptId}">${jsContent}`);
+                    htmlContent = htmlContent.replace(scriptPattern, scriptTag);
                 } else {
                     // Add before closing body
-                    htmlContent = htmlContent.replace('<\/body>', `<script id="${scriptId}">${jsContent}<\/script><\/body>`);
+                    htmlContent = htmlContent.replace('</body>', `${scriptTag}</body>`);
                 }
                 
                 processedCount++;
@@ -440,23 +499,99 @@
                 const jsonContent = await readFile(file);
                 const varName = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
                 
-                // Add as JS variable before closing body
-                const jsonScript = `<script>window.${varName} = ${jsonContent};<\/script>`;
-                htmlContent = htmlContent.replace('<\/body>', `${jsonScript}<\/body>`);
+                // Special handling for manifest.json - Unity WebGL manifest
+                if (name.toLowerCase().includes('manifest')) {
+                    // Store manifest in a way Unity can access if needed
+                    const manifestScript = `<script>window.unityManifest = ${jsonContent};</script>`;
+                    htmlContent = htmlContent.replace('</body>', `${manifestScript}</body>`);
+                } else {
+                    // Add as JS variable before closing body
+                    const jsonScript = `<script>window.${varName} = ${jsonContent};</script>`;
+                    htmlContent = htmlContent.replace('</body>', `${jsonScript}</body>`);
+                }
                 
                 processedCount++;
                 updateProgress((processedCount / totalFiles) * 100);
+            }
+            
+            // Process binary files (Unity .br, .gz, .wasm, .data files) - CRITICAL
+            for (const [name, file] of binaries) {
+                const base64 = await fileToBase64(file);
+                const mime = getMimeType(name);
+                const dataUrl = `data:${mime};base64,${base64}`;
+                
+                // Store in a global object for Unity to access
+                const varName = 'unityBinary_' + name.replace(/[^a-zA-Z0-9]/g, '_');
+                
+                // Replace CDN/build URLs with data URLs in the config
+                // Unity WebGL config pattern: dataUrl, frameworkUrl, codeUrl, etc.
+                const urlPatterns = [
+                    new RegExp(`(dataUrl|frameworkUrl|codeUrl|memoryUrl|symbolsUrl)\\s*:\\s*["'][^"']*${escapeRegex(name)}["']`, 'gi'),
+                    new RegExp(`["'][^"']*${escapeRegex(name)}["']`, 'gi')
+                ];
+                
+                let replaced = false;
+                urlPatterns.forEach(pattern => {
+                    if (pattern.test(htmlContent)) {
+                        htmlContent = htmlContent.replace(pattern, (match, p1) => {
+                            if (p1) {
+                                return `${p1}: "${dataUrl}"`;
+                            }
+                            return `"${dataUrl}"`;
+                        });
+                        replaced = true;
+                    }
+                });
+                
+                // Also inject the binary data for potential dynamic loading
+                if (!replaced || name.includes('.data.') || name.includes('.wasm.')) {
+                    const binaryScript = `<script>window.${varName} = "${dataUrl}";</script>`;
+                    htmlContent = htmlContent.replace('</head>', `${binaryScript}</head>`);
+                }
+                
+                processedCount++;
+                updateProgress((processedCount / totalFiles) * 100);
+            }
+            
+            // CRITICAL FIX: Ensure unityFirebaseGameOjbectName is defined before any script uses it
+            if (htmlContent.includes('unityFirebaseGameOjbectName') && !htmlContent.includes('var unityFirebaseGameOjbectName')) {
+                const unityObjectDef = `<script>var unityFirebaseGameOjbectName = 'JavascriptMessageReceiver';</script>`;
+                htmlContent = htmlContent.replace('</head>', `${unityObjectDef}</head>`);
+            }
+            
+            // Fix: Ensure service worker doesn't break if file not present
+            if (htmlContent.includes('service-worker') && !files.has('service-worker2.js')) {
+                // Comment out or provide dummy service worker
+                htmlContent = htmlContent.replace(
+                    /navigator\.serviceWorker\.register\(['"][^'"]*['"]\)/g,
+                    `// Service worker registration skipped in inlined version\n    // navigator.serviceWorker.register('service-worker2.js')`
+                );
             }
             
             // Remove any remaining external references that weren't found
             htmlContent = htmlContent.replace(/<link[^>]*rel=["']stylesheet["'][^>]*href=["'][^"']*["'][^>]*>/gi, '');
             htmlContent = htmlContent.replace(/<script[^>]*src=["'][^"']*["'][^>]*><\/script>/gi, '');
             
+            // Final Unity-specific fixes
+            if (isUnityBuild) {
+                // Ensure window.unityGame is checked before use
+                htmlContent = htmlContent.replace(
+                    /if\(window\.unityGame\)/g,
+                    `if(typeof window !== 'undefined' && window.unityGame && window.unityGame !== null)`
+                );
+                
+                // Fix potential null reference in SendMessage
+                htmlContent = htmlContent.replace(
+                    /window\.unityGame\.SendMessage\(/g,
+                    `(window.unityGame && window.unityGame.SendMessage ? window.unityGame.SendMessage.bind(window.unityGame) : function(){console.warn('Unity not ready');})(`
+                );
+            }
+            
             // Update stats
             processedHTML = htmlContent;
             document.getElementById('statFiles').textContent = files.size;
             document.getElementById('statImages').textContent = images.size;
-            document.getElementById('statSize').textContent = Math.round(htmlContent.length / 1024);
+            document.getElementById('statSize').textContent = (htmlContent.length / (1024 * 1024)).toFixed(2);
             document.getElementById('stats').style.display = 'grid';
             
             // Show output
@@ -469,6 +604,19 @@
             
             progressBar.style.display = 'none';
             showToast('Processing complete! Ready to download.');
+        }
+        
+        function getMimeType(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const mimes = {
+                'br': 'application/octet-stream',
+                'gz': 'application/gzip',
+                'wasm': 'application/wasm',
+                'data': 'application/octet-stream',
+                'js': 'application/javascript',
+                'json': 'application/json'
+            };
+            return mimes[ext] || 'application/octet-stream';
         }
         
         function updateProgress(percent) {
@@ -509,10 +657,10 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'smashkarts-inlined.html';
+            a.download = isUnityBuild ? 'unity-game-inlined.html' : 'smashkarts-inlined.html';
             a.click();
             URL.revokeObjectURL(url);
-            showToast('Downloaded smashkarts-inlined.html!');
+            showToast(`Downloaded ${isUnityBuild ? 'unity-game-inlined.html' : 'smashkarts-inlined.html'}!`);
         }
         
         function copyToClipboard() {
