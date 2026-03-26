@@ -410,7 +410,7 @@
                     htmlContent = htmlContent.replace(linkPattern, `<style id="${styleId}">${cssContent}</style>`);
                 } else {
                     // Add to head
-                    htmlContent = htmlContent.replace('</head>', `<style id="${styleId}">${cssContent}</style></head>`);
+                    htmlContent = htmlContent.replace('<\/head>', `<style id="${styleId}">${cssContent}</style><\/head>`);
                 }
                 
                 processedCount++;
@@ -428,7 +428,7 @@
                     htmlContent = htmlContent.replace(scriptPattern, `<script id="${scriptId}">${jsContent}`);
                 } else {
                     // Add before closing body
-                    htmlContent = htmlContent.replace('</body>', `<script id="${scriptId}">${jsContent}</script></body>`);
+                    htmlContent = htmlContent.replace('<\/body>', `<script id="${scriptId}">${jsContent}<\/script><\/body>`);
                 }
                 
                 processedCount++;
@@ -441,8 +441,8 @@
                 const varName = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
                 
                 // Add as JS variable before closing body
-                const jsonScript = `<script>window.${varName} = ${jsonContent};</script>`;
-                htmlContent = htmlContent.replace('</body>', `${jsonScript}</body>`);
+                const jsonScript = `<script>window.${varName} = ${jsonContent};<\/script>`;
+                htmlContent = htmlContent.replace('<\/body>', `${jsonScript}<\/body>`);
                 
                 processedCount++;
                 updateProgress((processedCount / totalFiles) * 100);
