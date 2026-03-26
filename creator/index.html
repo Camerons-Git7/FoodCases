@@ -35,7 +35,23 @@
             border-bottom: 2px dashed #dee2e6;
         }
         
-        /* FIXED: Simple approach - file input is hidden but accessible via label */
+        /* Simple approach: label styled as button, input hidden with opacity */
+        .upload-wrapper {
+            position: relative;
+            text-align: center;
+        }
+        
+        #fileInput {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
         .drop-zone {
             border: 3px dashed #1b70f0;
             border-radius: 15px;
@@ -43,18 +59,13 @@
             text-align: center;
             background: white;
             transition: all 0.3s ease;
-            cursor: pointer;
+            position: relative;
         }
+        
         .drop-zone:hover, .drop-zone.dragover {
             background: #e3f2fd;
             border-color: #2196f3;
             transform: scale(1.02);
-        }
-        
-        /* Hide file input but keep it accessible */
-        #fileInput {
-            position: absolute;
-            left: -9999px;
         }
         
         .file-list {
@@ -257,14 +268,15 @@
         </div>
         
         <div class="upload-section">
-            <!-- FIXED: Use label with for attribute pointing to file input -->
-            <input type="file" id="fileInput" multiple accept="*/*">
-            <label for="fileInput" class="drop-zone" id="dropZone">
-                <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
-                <h3>Drop files/folder here or click to browse</h3>
-                <p class="upload-hint">Supports: HTML, JS, CSS, PNG, JPG, JPEG, GIF, SVG, JSON, ICO, BR, GZ, WASM, DATA</p>
-                <p style="color: #1b70f0; margin-top: 5px; font-weight: bold;">💡 Tip: Drag & drop your entire Unity WebGL build folder!</p>
-            </label>
+            <div class="upload-wrapper">
+                <div class="drop-zone" id="dropZone">
+                    <input type="file" id="fileInput" multiple accept="*/*">
+                    <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
+                    <h3>Drop files/folder here or click to browse</h3>
+                    <p class="upload-hint">Supports: HTML, JS, CSS, PNG, JPG, JPEG, GIF, SVG, JSON, ICO, BR, GZ, WASM, DATA</p>
+                    <p style="color: #1b70f0; margin-top: 5px; font-weight: bold;">💡 Tip: Drag & drop your entire Unity WebGL build folder!</p>
+                </div>
+            </div>
             <div class="file-list" id="fileList"></div>
         </div>
         
@@ -323,11 +335,15 @@
         const unityWarning = document.getElementById('unityWarning');
         const criticalWarning = document.getElementById('criticalWarning');
         
-        // FIXED: Reset input value before click to ensure change event fires
-        dropZone.addEventListener('click', function(e) {
-            // Only reset if clicking the label itself (not the file input)
-            if (e.target !== fileInput) {
-                fileInput.value = '';
+        // CRITICAL FIX: Reset value on click so change event always fires
+        fileInput.addEventListener('click', function() {
+            this.value = null;
+        });
+        
+        // File input change event
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files.length > 0) {
+                handleFiles(e.target.files);
             }
         });
         
@@ -365,16 +381,6 @@
                 }
             } else {
                 handleFiles(e.dataTransfer.files);
-            }
-        });
-        
-        // FIXED: File input change event with debugging
-        fileInput.addEventListener('change', (e) => {
-            console.log('File input change event fired!', e.target.files);
-            if (e.target.files && e.target.files.length > 0) {
-                handleFiles(e.target.files);
-            } else {
-                console.log('No files selected');
             }
         });
         
@@ -435,11 +441,9 @@
         }
         
         function handleFiles(fileList) {
-            console.log('Handling files:', fileList.length);
             Array.from(fileList).forEach(file => {
                 if (file.name && !file.name.startsWith('.')) {
                     files.set(file.name, file);
-                    console.log('Added file:', file.name);
                 }
             });
             updateFileList();
@@ -491,7 +495,6 @@
                 fileList.appendChild(item);
             });
             processBtn.disabled = files.size === 0;
-            console.log('Updated file list, total files:', files.size);
         }
         
         function getFileIcon(filename) {
