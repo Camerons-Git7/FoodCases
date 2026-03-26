@@ -225,6 +225,12 @@
             display: none;
         }
         .critical-warning.show { display: block; }
+        
+        .upload-hint {
+            color: #666;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -244,11 +250,11 @@
         
         <div class="upload-section">
             <div class="drop-zone" id="dropZone">
-                <input type="file" id="fileInput" multiple accept="*/*" webkitdirectory directory>
+                <input type="file" id="fileInput" multiple accept="*/*">
                 <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
                 <h3>Drop files/folder here or click to upload</h3>
-                <p style="color: #666; margin-top: 10px;">Supports: HTML, JS, CSS, PNG, JPG, JPEG, GIF, SVG, JSON, ICO, BR, GZ, WASM, DATA</p>
-                <p style="color: #1b70f0; margin-top: 5px; font-weight: bold;">💡 Tip: Select your entire Unity WebGL build folder!</p>
+                <p class="upload-hint">Supports: HTML, JS, CSS, PNG, JPG, JPEG, GIF, SVG, JSON, ICO, BR, GZ, WASM, DATA</p>
+                <p style="color: #1b70f0; margin-top: 5px; font-weight: bold;">💡 Tip: Drag & drop your entire Unity WebGL build folder!</p>
             </div>
             <div class="file-list" id="fileList"></div>
         </div>
@@ -308,18 +314,117 @@
         const unityWarning = document.getElementById('unityWarning');
         const criticalWarning = document.getElementById('criticalWarning');
         
-        dropZone.addEventListener('click', () => fileInput.click());
+        // Click to open file picker
+        dropZone.addEventListener('click', (e) => {
+            // Prevent triggering if clicking on the input itself
+            if (e.target !== fileInput) {
+                fileInput.click();
+            }
+        });
+        
+        // Drag and drop events
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             dropZone.classList.add('dragover');
         });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('dragover');
+        });
+        
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             dropZone.classList.remove('dragover');
-            handleFiles(e.dataTransfer.files);
+            
+            const items = e.dataTransfer.items;
+            if (items && items.length > 0) {
+                // Use DataTransferItemList for directory support
+                const entries = [];
+                for (let i = 0; i < items.length; i++) {
+                    const entry = items[i].webkitGetAsEntry();
+                    if (entry) {
+                        entries.push(entry);
+                    }
+                }
+                if (entries.length > 0) {
+                    processEntries(entries);
+                } else {
+                    // Fallback to files
+                    handleFiles(e.dataTransfer.files);
+                }
+            } else {
+                // Fallback for browsers without webkitGetAsEntry
+                handleFiles(e.dataTransfer.files);
+            }
         });
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+        });
+        
+        // Process file system entries (for directory drag & drop)
+        async function processEntries(entries) {
+            const filePromises = [];
+            
+            for (const entry of entries) {
+                if (entry.isFile) {
+                    filePromises.push(getFileFromEntry(entry));
+                } else if (entry.isDirectory) {
+                    filePromises.push(...await readDirectory(entry));
+                }
+            }
+            
+            const fileResults = await Promise.all(filePromises);
+            fileResults.forEach(file => {
+                if (file && file.name && !file.name.startsWith('.')) {
+                    files.set(file.name, file);
+                }
+            });
+            
+            updateFileList();
+            detectUnityBuild();
+            checkCriticalFiles();
+        }
+        
+        function getFileFromEntry(entry) {
+            return new Promise((resolve) => {
+                entry.file(resolve, () => resolve(null));
+            });
+        }
+        
+        async function readDirectory(dirEntry) {
+            const files = [];
+            const reader = dirEntry.createReader();
+            
+            return new Promise((resolve) => {
+                const readEntries = () => {
+                    reader.readEntries(async (entries) => {
+                        if (entries.length === 0) {
+                            resolve(files);
+                            return;
+                        }
+                        
+                        for (const entry of entries) {
+                            if (entry.isFile) {
+                                const file = await getFileFromEntry(entry);
+                                if (file) files.push(file);
+                            } else if (entry.isDirectory) {
+                                files.push(...await readDirectory(entry));
+                            }
+                        }
+                        readEntries(); // Continue reading if more entries
+                    }, () => resolve(files));
+                };
+                readEntries();
+            });
+        }
         
         function handleFiles(fileList) {
             Array.from(fileList).forEach(file => {
@@ -408,6 +513,7 @@
             document.getElementById('stats').style.display = 'none';
             document.getElementById('downloadBtn').style.display = 'none';
             document.getElementById('copyBtn').style.display = 'none';
+            fileInput.value = ''; // Reset file input
         }
         
         function readFileAsArrayBuffer(file) {
