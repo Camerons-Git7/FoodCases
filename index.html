@@ -10,27 +10,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --accent: #0f0; /* Matrix Green */
+      --accent: #0f0;
       --bg: #000;
       --surface: #050505;
-      /* CHANGE THIS VALUE TO ADJUST BUTTON SIZE */
-      /* Smaller value = smaller buttons = more buttons per row */
-      /* Larger value = larger buttons = fewer buttons per row */
-      /* Original was 140px */
       --button-size: 110px;
-      /* These scale proportionally with button size */
       --emoji-size: calc(var(--button-size) * 0.48);
-      --text-size: calc(var(--button-size) * 0.097);
+      --text-size: calc(var(--button-size) * 0.18);
       --padding-top: calc(var(--button-size) * 0.114);
       --padding-sides: calc(var(--button-size) * 0.057);
-      --padding-bottom: calc(var(--button-size) * 0.086);
-      --name-margin: calc(var(--button-size) * 0.025);
+      --padding-bottom: calc(var(--button-size) * 0.04);
+      --name-margin: calc(var(--button-size) * 0.015);
     }
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       min-height: 100vh;
       background: var(--bg);
@@ -43,19 +34,11 @@
       color: #fff;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      
-      /* Start transparent for fade-in on load */
       opacity: 0;
       transition: opacity 1s ease;
     }
-    /* Fade-in to full opacity - happens immediately */
-    body.fade-in {
-      opacity: 1;
-    }
-    /* Fade-out animation */
-    body.fade-out {
-      opacity: 0;
-    }
+    body.fade-in { opacity: 1; }
+    body.fade-out { opacity: 0; }
     #matrixCanvas {
       position: fixed;
       top: 0;
@@ -65,7 +48,6 @@
       z-index: -1;
       opacity: 0.6;
     }
-    /* Hidden YouTube audio player container */
     #youtube-audio {
       position: absolute;
       width: 1px;
@@ -86,12 +68,8 @@
       user-select: none;
     }
     @keyframes textPulse {
-      from {
-        text-shadow: 0 0 10px var(--accent);
-      }
-      to {
-        text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0;
-      }
+      from { text-shadow: 0 0 10px var(--accent); }
+      to { text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0; }
     }
     .button-container {
       display: flex;
@@ -120,7 +98,7 @@
       font-weight: 700;
       font-size: var(--text-size);
       text-transform: uppercase;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.05em;
       overflow: hidden;
       transition: all 0.3s ease;
       user-select: none;
@@ -131,9 +109,7 @@
       box-shadow: 0 0 40px var(--accent);
       background: rgba(0, 50, 0, 0.9);
     }
-    .game-button:active {
-      transform: translateX(5px);
-    }
+    .game-button:active { transform: translateX(5px); }
     .emoji {
       font-size: var(--emoji-size);
       color: var(--accent);
@@ -149,15 +125,13 @@
       font-size: var(--text-size);
       text-align: center;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
       width: 100%;
       user-select: none;
       margin-top: var(--name-margin);
-      line-height: 1.2;
+      line-height: 1.1;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-
-    /* Bottom note styling */
     .bottom-note {
       position: fixed;
       bottom: 1rem;
@@ -174,8 +148,6 @@
       white-space: nowrap;
       z-index: 10;
     }
-
-    /* Mute button styling - bottom left */
     .mute-button {
       position: fixed;
       bottom: 1rem;
@@ -202,15 +174,8 @@
       box-shadow: 0 0 25px var(--accent);
       background: rgba(0, 50, 0, 0.9);
     }
-    .mute-button:active {
-      transform: scale(0.95);
-    }
-    .mute-button.fading {
-      pointer-events: none;
-      opacity: 0.7;
-    }
-
-    /* Request button styling - bottom right */
+    .mute-button:active { transform: scale(0.95); }
+    .mute-button.fading { pointer-events: none; opacity: 0.7; }
     .request-button {
       position: fixed;
       bottom: 1rem;
@@ -240,387 +205,152 @@
       box-shadow: 0 0 25px var(--accent);
       background: rgba(0, 50, 0, 0.9);
     }
-    .request-button:active {
-      transform: scale(0.95);
-    }
+    .request-button:active { transform: scale(0.95); }
   </style>
 </head>
 <body>
   <canvas id="matrixCanvas"></canvas>
-  
   <h1 class="title">SEAMLESS GAMES</h1>
   <div class="button-container" role="group" aria-label="Seamless Games menu">
-    <button class="game-button" data-url="https://menist.free.nf/case-opener/" aria-label="FoodCases">
-      <div class="emoji" aria-hidden="true">🍔</div>
-      <div class="game-name">Food-Cases</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/black-jack/" aria-label="Blackjack">
-      <div class="emoji" aria-hidden="true">🃏</div>
-      <div class="game-name">Black-Jack</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/word-bomb/" aria-label="WordBomb">
-      <div class="emoji" aria-hidden="true">💣</div>
-      <div class="game-name">Word-Bomb</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/flappy-bird/" aria-label="FlappyBird">
-      <div class="emoji" aria-hidden="true">🐦</div>
-      <div class="game-name">Flappy-Bird</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/droppy-merge/" aria-label="DroppyMerge">
-      <div class="emoji" aria-hidden="true">🧱</div>
-      <div class="game-name">Droppy-Merge</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/1v1.lol/" aria-label="1v1.lol">
-      <div class="emoji" aria-hidden="true">🥇</div>
-      <div class="game-name">1v1.lol</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/geometrydash/" aria-label="Geometry Dash">
-      <div class="emoji" aria-hidden="true">🔳</div>
-      <div class="game-name">Geo Dash</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/minecraft/" aria-label="Minecraft">
-      <div class="emoji" aria-hidden="true">⚒️</div>
-      <div class="game-name">Minecraft</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/youtube/" aria-label="YouTube">
-      <div class="emoji" aria-hidden="true">▶︎</div>
-      <div class="game-name">YouTube</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/basketball/" aria-label="Basketball">
-      <div class="emoji" aria-hidden="true">🌟</div>
-      <div class="game-name">Basketball</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/subway-surfers/" aria-label="Subway Surfers">
-      <div class="emoji" aria-hidden="true">🚇</div>
-      <div class="game-name">Subway Surf</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/volley-random/" aria-label="Basket Random">
-      <div class="emoji" aria-hidden="true">🏀</div>
-      <div class="game-name">Basketball 2</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/house-of-hazards/" aria-label="House of Hazards">
-      <div class="emoji" aria-hidden="true">🏠</div>
-      <div class="game-name">Hazard House</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/ragdoll-archers/" aria-label="Ragdoll Archers">
-      <div class="emoji" aria-hidden="true">🍎</div>
-      <div class="game-name">Raggy Arch</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/slope/" aria-label="Slope">
-      <div class="emoji" aria-hidden="true">🕹️</div>
-      <div class="game-name">Slope</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/plants-zombies/" aria-label="Plants Vs. Zombies">
-      <div class="emoji" aria-hidden="true">🧟</div>
-      <div class="game-name">Plan Vs Zomb</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/mario-kart/" aria-label="Mario Kart">
-      <div class="emoji" aria-hidden="true">🏎️</div>
-      <div class="game-name">Mario Kart</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/candy-crush/" aria-label="Candy Crush">
-      <div class="emoji" aria-hidden="true">🍬</div>
-      <div class="game-name">Candy Crush</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/drift-boss/" aria-label="Drift Boss">
-      <div class="emoji" aria-hidden="true">🚗</div>
-      <div class="game-name">Drift Boss</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/crossy-road/" aria-label="Crossy Road">
-      <div class="emoji" aria-hidden="true">🐔</div>
-      <div class="game-name">Crossy Road</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/level-devil/" aria-label="Level Devil">
-      <div class="emoji" aria-hidden="true">😈</div>
-      <div class="game-name">Level Devil</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/tap-road/" aria-label="Tap Road">
-      <div class="emoji" aria-hidden="true">🛣️</div>
-      <div class="game-name">Tap Road</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/angry-birds/" aria-label="Angry Birds">
-      <div class="emoji" aria-hidden="true">🐦‍⬛</div>
-      <div class="game-name">Angry Birds</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/tunnel-rush/" aria-label="Tunnel Rush">
-      <div class="emoji" aria-hidden="true">👾</div>
-      <div class="game-name">Tunnel Rush</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/bloonstd5/" aria-label="BloonsTD 5">
-      <div class="emoji" aria-hidden="true">🎈</div>
-      <div class="game-name">BloonsTD 5</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/awesome-tanks/" aria-label="Awesome Tanks">
-      <div class="emoji" aria-hidden="true">🪖</div>
-      <div class="game-name">Cool Tanks</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/happy-wheels/" aria-label="Happy Wheels">
-      <div class="emoji" aria-hidden="true">🛞</div>
-      <div class="game-name">Happy Wheels</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/granny/" aria-label="Granny">
-      <div class="emoji" aria-hidden="true">👵🏻</div>
-      <div class="game-name">Granny</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/two-player/" aria-label="Two Player">
-      <div class="emoji" aria-hidden="true">⚔️</div>
-      <div class="game-name">Two Player</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/hole-io/" aria-label="Hole.io">
-      <div class="emoji" aria-hidden="true">🕳️</div>
-      <div class="game-name">Hole.io</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/bowmasters/" aria-label="Bowmasters">
-      <div class="emoji" aria-hidden="true">🏹</div>
-      <div class="game-name">Bowmasters</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/duck-life/" aria-label="Duck Life">
-      <div class="emoji" aria-hidden="true">🦆</div>
-      <div class="game-name">Duck Life</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/jetpack-joyride/" aria-label="Jetpack Joyride">
-      <div class="emoji" aria-hidden="true">🚀</div>
-      <div class="game-name">Jetpack Joy</div>
-    </button>
-    <button class="game-button" data-url="https://menist.free.nf/big/retro-bowl/" aria-label="Retro Bowl">
-      <div class="emoji" aria-hidden="true">🏈</div>
-      <div class="game-name">Retro Bowl</div>
-    </button>
+    <button class="game-button" data-url="https://menist.free.nf/case-opener/" aria-label="FoodCases"><div class="emoji">🍔</div><div class="game-name">Food-Cases</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/black-jack/" aria-label="Blackjack"><div class="emoji">🃏</div><div class="game-name">Black-Jack</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/word-bomb/" aria-label="WordBomb"><div class="emoji">💣</div><div class="game-name">Word-Bomb</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/flappy-bird/" aria-label="FlappyBird"><div class="emoji">🐦</div><div class="game-name">Flappy-Bird</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/droppy-merge/" aria-label="DroppyMerge"><div class="emoji">🧱</div><div class="game-name">Droppy-Merge</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/1v1.lol/" aria-label="1v1.lol"><div class="emoji">🥇</div><div class="game-name">1v1.lol</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/geometrydash/" aria-label="Geometry Dash"><div class="emoji">🔳</div><div class="game-name">Geo Dash</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/minecraft/" aria-label="Minecraft"><div class="emoji">⚒️</div><div class="game-name">Minecraft</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/youtube/" aria-label="YouTube"><div class="emoji">▶︎</div><div class="game-name">YouTube</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/basketball/" aria-label="Basketball"><div class="emoji">🌟</div><div class="game-name">Basketball</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/subway-surfers/" aria-label="Subway Surfers"><div class="emoji">🚇</div><div class="game-name">Subway Surf</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/volley-random/" aria-label="Basket Random"><div class="emoji">🏀</div><div class="game-name">Basketball 2</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/house-of-hazards/" aria-label="House of Hazards"><div class="emoji">🏠</div><div class="game-name">Hazard House</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/ragdoll-archers/" aria-label="Ragdoll Archers"><div class="emoji">🍎</div><div class="game-name">Raggy Arch</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/slope/" aria-label="Slope"><div class="emoji">🕹️</div><div class="game-name">Slope</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/plants-zombies/" aria-label="Plants Vs. Zombies"><div class="emoji">🧟</div><div class="game-name">Plan Vs Zomb</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/mario-kart/" aria-label="Mario Kart"><div class="emoji">🏎️</div><div class="game-name">Mario Kart</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/candy-crush/" aria-label="Candy Crush"><div class="emoji">🍬</div><div class="game-name">Candy Crush</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/drift-boss/" aria-label="Drift Boss"><div class="emoji">🚗</div><div class="game-name">Drift Boss</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/crossy-road/" aria-label="Crossy Road"><div class="emoji">🐔</div><div class="game-name">Crossy Road</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/level-devil/" aria-label="Level Devil"><div class="emoji">😈</div><div class="game-name">Level Devil</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/tap-road/" aria-label="Tap Road"><div class="emoji">🛣️</div><div class="game-name">Tap Road</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/angry-birds/" aria-label="Angry Birds"><div class="emoji">🐦‍⬛</div><div class="game-name">Angry Birds</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/tunnel-rush/" aria-label="Tunnel Rush"><div class="emoji">👾</div><div class="game-name">Tunnel Rush</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/bloonstd5/" aria-label="BloonsTD 5"><div class="emoji">🎈</div><div class="game-name">BloonsTD 5</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/awesome-tanks/" aria-label="Awesome Tanks"><div class="emoji">🪖</div><div class="game-name">Cool Tanks</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/happy-wheels/" aria-label="Happy Wheels"><div class="emoji">🛞</div><div class="game-name">Happy Wheels</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/granny/" aria-label="Granny"><div class="emoji">👵🏻</div><div class="game-name">Granny</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/two-player/" aria-label="Two Player"><div class="emoji">⚔️</div><div class="game-name">Two Player</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/hole-io/" aria-label="Hole.io"><div class="emoji">🕳️</div><div class="game-name">Hole.io</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/bowmasters/" aria-label="Bowmasters"><div class="emoji">🏹</div><div class="game-name">Bowmasters</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/duck-life/" aria-label="Duck Life"><div class="emoji">🦆</div><div class="game-name">Duck Life</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/jetpack-joyride/" aria-label="Jetpack Joyride"><div class="emoji">🚀</div><div class="game-name">Jetpack Joy</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/retro-bowl/" aria-label="Retro Bowl"><div class="emoji">🏈</div><div class="game-name">Retro Bowl</div></button>
   </div>
-
   <div class="bottom-note">ⓘ Don't Forget to Refresh Before Gameplay To Ensure You're Playing Latest Updates ⓘ</div>
-
-  <!-- Mute/Unmute Button -->
   <button class="mute-button" id="muteBtn" aria-label="Toggle mute">🔈</button>
-
-  <!-- Request Button -->
   <a class="request-button" href="https://forms.gle/tcMZUPfym8Y7zPsm8" target="_blank" rel="noopener noreferrer" aria-label="Request a game">↗ Request ↗</a>
-
-  <!-- Hidden YouTube Audio Player container -->
-  <div id="youtube-audio">
-    <div id="yt-player"></div>
-  </div>
-
+  <div id="youtube-audio"><div id="yt-player"></div></div>
   <script>
-    let ytPlayer;
-    let playerReady = false;
-    let isMuted = true; // Always start muted as requested
-    let volumeFadeInterval = null;
-    let hasStartedPlaying = false; // To track if playVideo called after unmute
-
-    // Update mute button icon
-    function updateMuteButton() {
-      const btn = document.getElementById('muteBtn');
-      if (btn) {
-        btn.textContent = isMuted ? '🔈' : '🔊';
-      }
-    }
-
-    // Smooth volume transition function
+    let ytPlayer, playerReady = false, isMuted = true, volumeFadeInterval = null, hasStartedPlaying = false;
+    function updateMuteButton() { const btn = document.getElementById('muteBtn'); if (btn) btn.textContent = isMuted ? '🔈' : '🔊'; }
     function fadeVolume(targetVolume, duration, callback) {
-      if (!playerReady || !ytPlayer || !ytPlayer.setVolume) {
-        if (callback) callback();
-        return;
-      }
-      if (volumeFadeInterval) {
-        clearInterval(volumeFadeInterval);
-      }
-      const startVolume = ytPlayer.getVolume() || 0;
-      const steps = 30;
-      const stepDuration = duration / steps;
-      const volumeDiff = targetVolume - startVolume;
+      if (!playerReady || !ytPlayer || !ytPlayer.setVolume) { if (callback) callback(); return; }
+      if (volumeFadeInterval) clearInterval(volumeFadeInterval);
+      const startVolume = ytPlayer.getVolume() || 0, steps = 30, stepDuration = duration / steps, volumeDiff = targetVolume - startVolume;
       let currentStep = 0;
-
-      const btn = document.getElementById('muteBtn');
-      if (btn) btn.classList.add('fading');
-
+      const btn = document.getElementById('muteBtn'); if (btn) btn.classList.add('fading');
       volumeFadeInterval = setInterval(() => {
         currentStep++;
-        const progress = currentStep / steps;
-        const easeProgress = 1 - Math.pow(1 - progress, 2);
+        const easeProgress = 1 - Math.pow(1 - (currentStep / steps), 2);
         let newVolume = Math.round(startVolume + (volumeDiff * easeProgress));
         newVolume = Math.max(0, Math.min(100, newVolume));
         ytPlayer.setVolume(newVolume);
-        if (currentStep >= steps) {
-          clearInterval(volumeFadeInterval);
-          volumeFadeInterval = null;
-          ytPlayer.setVolume(targetVolume);
-          if (btn) btn.classList.remove('fading');
-          if (callback) callback();
-        }
+        if (currentStep >= steps) { clearInterval(volumeFadeInterval); volumeFadeInterval = null; ytPlayer.setVolume(targetVolume); if (btn) btn.classList.remove('fading'); if (callback) callback(); }
       }, stepDuration);
     }
-
-    // Toggle mute with smooth fade, and start video playing on first unmute
     function toggleMute() {
       if (!playerReady) return;
-      isMuted = !isMuted;
-      updateMuteButton();
-
-      if (isMuted) {
-        ytPlayer.mute();
-        fadeVolume(0, 500);
-      } else {
-        ytPlayer.unMute();
-        // On first unmute, play video if not started yet
-        if (!hasStartedPlaying) {
-          ytPlayer.playVideo();
-          hasStartedPlaying = true;
-        }
-        fadeVolume(100, 500);
-      }
+      isMuted = !isMuted; updateMuteButton();
+      if (isMuted) { ytPlayer.mute(); fadeVolume(0, 500); }
+      else { ytPlayer.unMute(); if (!hasStartedPlaying) { ytPlayer.playVideo(); hasStartedPlaying = true; } fadeVolume(100, 500); }
     }
-
-    // Load YouTube IFrame API asynchronously after page renders
-    function loadYouTubeAPI() {
-      const tag = document.createElement('script');
-      tag.src = "https://www.youtube.com/iframe_api";
-      tag.async = true;
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    }
-
+    function loadYouTubeAPI() { const tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api"; tag.async = true; const firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag); }
     function onYouTubeIframeAPIReady() {
-      ytPlayer = new YT.Player('yt-player', {
-        width: 1,
-        height: 1,
-        videoId: 'F0A_R2XV_os',
-        playerVars: {
-          autoplay: 0,  // do not autoplay immediately
-          loop: 1,
-          playlist: 'F0A_R2XV_os',
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          rel: 0,
-          showinfo: 0
-        },
-        events: {
-          'onReady': onPlayerReady,
-          'onStateChange': onPlayerStateChange
-        }
-      });
+      ytPlayer = new YT.Player('yt-player', { width: 1, height: 1, videoId: 'F0A_R2XV_os', playerVars: { autoplay: 0, loop: 1, playlist: 'F0A_R2XV_os', controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, showinfo: 0 }, events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange } });
     }
-
-    function onPlayerReady(event) {
-      playerReady = true;
-      ytPlayer.mute();
-      ytPlayer.setVolume(0);
-      // Do NOT call playVideo here, wait for user to unmute
-    }
-
-    function onPlayerStateChange(event) {
-      // Loop video if ended
-      if (event.data === YT.PlayerState.ENDED) {
-        ytPlayer.playVideo();
-      }
-    }
-
-    // Fade out audio smoothly before page transitions
+    function onPlayerReady(event) { playerReady = true; ytPlayer.mute(); ytPlayer.setVolume(0); }
+    function onPlayerStateChange(event) { if (event.data === YT.PlayerState.ENDED) ytPlayer.playVideo(); }
     function fadeOutAudio(duration, callback) {
-      if (!playerReady || !ytPlayer || !ytPlayer.setVolume) {
-        if (callback) callback();
-        return;
-      }
-      if (volumeFadeInterval) {
-        clearInterval(volumeFadeInterval);
-      }
-      let startVolume = ytPlayer.getVolume() || 100;
-      const steps = 20;
-      const stepDuration = duration / steps;
-      const volumeStep = startVolume / steps;
-      let currentStep = 0;
-
+      if (!playerReady || !ytPlayer || !ytPlayer.setVolume) { if (callback) callback(); return; }
+      if (volumeFadeInterval) clearInterval(volumeFadeInterval);
+      let startVolume = ytPlayer.getVolume() || 100, steps = 20, stepDuration = duration / steps, volumeStep = startVolume / steps, currentStep = 0;
       const fadeInterval = setInterval(() => {
         currentStep++;
         const newVolume = Math.max(0, startVolume - volumeStep * currentStep);
         ytPlayer.setVolume(Math.round(newVolume));
-        if (currentStep >= steps || newVolume <= 0) {
-          clearInterval(fadeInterval);
-          ytPlayer.setVolume(0);
-          if (callback) callback();
-        }
+        if (currentStep >= steps || newVolume <= 0) { clearInterval(fadeInterval); ytPlayer.setVolume(0); if (callback) callback(); }
       }, stepDuration);
     }
-
-    // Matrix Digital Rain Effect (unchanged)
-    const canvas = document.getElementById('matrixCanvas');
-    const ctx = canvas.getContext('2d');
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    const katakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
-    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const nums = '0123456789';
-    const alphabet = katakana + latin + nums;
-    const fontSize = 16;
-    const columns = Math.floor(canvas.width / fontSize);
-    const rainDrops = new Array(columns).fill(1);
-
+    const canvas = document.getElementById('matrixCanvas'), ctx = canvas.getContext('2d');
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+    const katakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ', latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', nums = '0123456789', alphabet = katakana + latin + nums, fontSize = 16, columns = Math.floor(canvas.width / fontSize), rainDrops = new Array(columns).fill(1);
     function draw() {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#0F0';
-      ctx.font = fontSize + 'px monospace';
-
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0F0'; ctx.font = fontSize + 'px monospace';
       for (let i = 0; i < rainDrops.length; i++) {
-        const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-        ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
-        if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-          rainDrops[i] = 0;
-        }
+        ctx.fillText(alphabet.charAt(Math.floor(Math.random() * alphabet.length)), i * fontSize, rainDrops[i] * fontSize);
+        if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) rainDrops[i] = 0;
         rainDrops[i]++;
       }
     }
     setInterval(draw, 30);
-
-    // Mute button event handler
+    
+    // AUTO-RESIZE TEXT TO FIT ON ONE LINE
+    function fitTextToButton() {
+      const buttons = document.querySelectorAll('.game-button');
+      const baseSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--button-size'));
+      const maxFontSize = baseSize * 0.18; // ~20px max
+      const minFontSize = baseSize * 0.09; // ~10px min
+      
+      buttons.forEach(button => {
+        const textEl = button.querySelector('.game-name');
+        const buttonWidth = button.clientWidth - (baseSize * 0.114); // account for padding
+        let fontSize = maxFontSize;
+        textEl.style.fontSize = fontSize + 'px';
+        
+        // Shrink font until text fits or hits minimum
+        while (textEl.scrollWidth > buttonWidth && fontSize > minFontSize) {
+          fontSize -= 0.5;
+          textEl.style.fontSize = fontSize + 'px';
+        }
+      });
+    }
+    
     document.getElementById('muteBtn').addEventListener('click', toggleMute);
-
-    // Fade-out animation before redirect with audio fade
     document.querySelectorAll('.game-button').forEach(button => {
       button.addEventListener('click', event => {
         const url = button.getAttribute('data-url');
-
         document.body.classList.remove('fade-in');
         document.body.classList.add('fade-out');
-
-        fadeOutAudio(1000, () => {
-          window.location.href = url;
-        });
+        fadeOutAudio(1000, () => { window.location.href = url; });
       });
     });
-
     window.onload = () => {
       updateMuteButton();
       document.body.classList.add('fade-in');
       loadYouTubeAPI();
+      fitTextToButton(); // Run text fitting after load
     };
-
+    window.addEventListener('resize', fitTextToButton); // Re-fit on resize
     window.addEventListener('pageshow', () => {
       document.body.classList.remove('fade-out', 'fade-in');
       void document.body.offsetWidth;
       document.body.classList.add('fade-in');
-
       if (playerReady && ytPlayer && ytPlayer.setVolume) {
-        if (isMuted) {
-          ytPlayer.setVolume(0);
-          ytPlayer.mute();
-          hasStartedPlaying = false;
-        } else {
-          ytPlayer.setVolume(100);
-          ytPlayer.unMute();
-          if (!hasStartedPlaying) {
-            ytPlayer.playVideo();
-            hasStartedPlaying = true;
-          }
-        }
+        if (isMuted) { ytPlayer.setVolume(0); ytPlayer.mute(); hasStartedPlaying = false; }
+        else { ytPlayer.setVolume(100); ytPlayer.unMute(); if (!hasStartedPlaying) { ytPlayer.playVideo(); hasStartedPlaying = true; } }
       }
     });
   </script>
