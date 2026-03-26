@@ -310,7 +310,6 @@
         }
         
         function detectUnityBuild() {
-            // Check for Unity-specific files
             const unityIndicators = ['.data.br', '.wasm.br', '.framework.js.br', '.loader.js'];
             isUnityBuild = Array.from(files.keys()).some(name => 
                 unityIndicators.some(ind => name.includes(ind))
@@ -383,13 +382,12 @@
             progressBar.style.display = 'block';
             codeOutput.classList.remove('show');
             
-            // Find main HTML file
             let mainHTML = null;
             const images = new Map();
             const scripts = new Map();
             const styles = new Map();
             const jsons = new Map();
-            const binaries = new Map(); // For Unity .br files
+            const binaries = new Map();
             
             files.forEach((file, name) => {
                 const ext = name.split('.').pop().toLowerCase();
@@ -411,18 +409,16 @@
                 return;
             }
             
-            // Read main HTML
             let htmlContent = await readFile(mainHTML);
             let processedCount = 0;
             const totalFiles = files.size;
             
-            // Process images (convert to base64)
+            // Process images
             for (const [name, file] of images) {
                 const base64 = await fileToBase64(file);
                 const mime = file.type || 'image/png';
                 const dataUrl = `data:${mime};base64,${base64}`;
                 
-                // Replace all references to this image - handle various path formats
                 const patterns = [
                     new RegExp(`src=["']${escapeRegex(name)}["']`, 'gi'),
                     new RegExp(`src=["'][^"']*${escapeRegex(name)}["']`, 'gi'),
@@ -445,17 +441,15 @@
                 updateProgress((processedCount / totalFiles) * 100);
             }
             
-            // Process CSS files (inline)
+            // Process CSS files
             for (const [name, file] of styles) {
                 const cssContent = await readFile(file);
                 const styleId = 'style-' + name.replace(/[^a-zA-Z0-9]/g, '-');
                 
-                // Check if already linked
                 const linkPattern = new RegExp(`<link[^>]*href=["'][^"']*${escapeRegex(name)}["'][^>]*>`, 'gi');
                 if (linkPattern.test(htmlContent)) {
                     htmlContent = htmlContent.replace(linkPattern, `<style id="${styleId}">${cssContent}</style>`);
                 } else {
-                    // Add to head
                     htmlContent = htmlContent.replace('</head>', `<style id="${styleId}">${cssContent}</style></head>`);
                 }
                 
@@ -463,30 +457,25 @@
                 updateProgress((processedCount / totalFiles) * 100);
             }
             
-            // Process JS files (inline) - CRITICAL FIX for Unity
+            // Process JS files - SPECIAL HANDLING FOR UNITY
             for (const [name, file] of scripts) {
                 const jsContent = await readFile(file);
                 
-                // SPECIAL HANDLING: Don't add IDs to Unity loader or main scripts
-                // Unity expects specific script execution order and global variables
                 const isUnityLoader = name.includes('loader') || jsContent.includes('createUnityInstance');
                 const isUnityMain = jsContent.includes('unityFirebaseGameOjbectName') || jsContent.includes('window.unityGame');
                 
                 let scriptTag;
                 if (isUnityLoader || isUnityMain) {
-                    // For Unity scripts, preserve them exactly without IDs that might break references
-                    scriptTag = `<script>${jsContent}</script>`;
+                    scriptTag = `<script>${jsContent}<\/script>`;
                 } else {
                     const scriptId = 'script-' + name.replace(/[^a-zA-Z0-9]/g, '-');
-                    scriptTag = `<script id="${scriptId}">${jsContent}</script>`;
+                    scriptTag = `<script id="${scriptId}">${jsContent}<\/script>`;
                 }
                 
-                // Check if already linked
                 const scriptPattern = new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*>`, 'gi');
                 if (scriptPattern.test(htmlContent)) {
                     htmlContent = htmlContent.replace(scriptPattern, scriptTag);
                 } else {
-                    // Add before closing body
                     htmlContent = htmlContent.replace('</body>', `${scriptTag}</body>`);
                 }
                 
@@ -494,19 +483,16 @@
                 updateProgress((processedCount / totalFiles) * 100);
             }
             
-            // Process JSON files (inline as JS variables)
+            // Process JSON files
             for (const [name, file] of jsons) {
                 const jsonContent = await readFile(file);
                 const varName = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
                 
-                // Special handling for manifest.json - Unity WebGL manifest
                 if (name.toLowerCase().includes('manifest')) {
-                    // Store manifest in a way Unity can access if needed
-                    const manifestScript = `<script>window.unityManifest = ${jsonContent};</script>`;
+                    const manifestScript = `<script>window.unityManifest = ${jsonContent};<\/script>`;
                     htmlContent = htmlContent.replace('</body>', `${manifestScript}</body>`);
                 } else {
-                    // Add as JS variable before closing body
-                    const jsonScript = `<script>window.${varName} = ${jsonContent};</script>`;
+                    const jsonScript = `<script>window.${varName} = ${jsonContent};<\/script>`;
                     htmlContent = htmlContent.replace('</body>', `${jsonScript}</body>`);
                 }
                 
@@ -514,17 +500,14 @@
                 updateProgress((processedCount / totalFiles) * 100);
             }
             
-            // Process binary files (Unity .br, .gz, .wasm, .data files) - CRITICAL
+            // Process binary files - CRITICAL FOR UNITY
             for (const [name, file] of binaries) {
                 const base64 = await fileToBase64(file);
                 const mime = getMimeType(name);
                 const dataUrl = `data:${mime};base64,${base64}`;
                 
-                // Store in a global object for Unity to access
                 const varName = 'unityBinary_' + name.replace(/[^a-zA-Z0-9]/g, '_');
                 
-                // Replace CDN/build URLs with data URLs in the config
-                // Unity WebGL config pattern: dataUrl, frameworkUrl, codeUrl, etc.
                 const urlPatterns = [
                     new RegExp(`(dataUrl|frameworkUrl|codeUrl|memoryUrl|symbolsUrl)\\s*:\\s*["'][^"']*${escapeRegex(name)}["']`, 'gi'),
                     new RegExp(`["'][^"']*${escapeRegex(name)}["']`, 'gi')
@@ -543,9 +526,8 @@
                     }
                 });
                 
-                // Also inject the binary data for potential dynamic loading
                 if (!replaced || name.includes('.data.') || name.includes('.wasm.')) {
-                    const binaryScript = `<script>window.${varName} = "${dataUrl}";</script>`;
+                    const binaryScript = `<script>window.${varName} = "${dataUrl}";<\/script>`;
                     htmlContent = htmlContent.replace('</head>', `${binaryScript}</head>`);
                 }
                 
@@ -553,52 +535,46 @@
                 updateProgress((processedCount / totalFiles) * 100);
             }
             
-            // CRITICAL FIX: Ensure unityFirebaseGameOjbectName is defined before any script uses it
+            // CRITICAL FIX: Ensure unityFirebaseGameOjbectName is defined
             if (htmlContent.includes('unityFirebaseGameOjbectName') && !htmlContent.includes('var unityFirebaseGameOjbectName')) {
-                const unityObjectDef = `<script>var unityFirebaseGameOjbectName = 'JavascriptMessageReceiver';</script>`;
+                const unityObjectDef = `<script>var unityFirebaseGameOjbectName = 'JavascriptMessageReceiver';<\/script>`;
                 htmlContent = htmlContent.replace('</head>', `${unityObjectDef}</head>`);
             }
             
-            // Fix: Ensure service worker doesn't break if file not present
+            // Fix service worker
             if (htmlContent.includes('service-worker') && !files.has('service-worker2.js')) {
-                // Comment out or provide dummy service worker
                 htmlContent = htmlContent.replace(
                     /navigator\.serviceWorker\.register\(['"][^'"]*['"]\)/g,
                     `// Service worker registration skipped in inlined version\n    // navigator.serviceWorker.register('service-worker2.js')`
                 );
             }
             
-            // Remove any remaining external references that weren't found
+            // Remove remaining external references
             htmlContent = htmlContent.replace(/<link[^>]*rel=["']stylesheet["'][^>]*href=["'][^"']*["'][^>]*>/gi, '');
             htmlContent = htmlContent.replace(/<script[^>]*src=["'][^"']*["'][^>]*><\/script>/gi, '');
             
             // Final Unity-specific fixes
             if (isUnityBuild) {
-                // Ensure window.unityGame is checked before use
                 htmlContent = htmlContent.replace(
                     /if\(window\.unityGame\)/g,
                     `if(typeof window !== 'undefined' && window.unityGame && window.unityGame !== null)`
                 );
                 
-                // Fix potential null reference in SendMessage
                 htmlContent = htmlContent.replace(
                     /window\.unityGame\.SendMessage\(/g,
                     `(window.unityGame && window.unityGame.SendMessage ? window.unityGame.SendMessage.bind(window.unityGame) : function(){console.warn('Unity not ready');})(`
                 );
             }
             
-            // Update stats
             processedHTML = htmlContent;
             document.getElementById('statFiles').textContent = files.size;
             document.getElementById('statImages').textContent = images.size;
             document.getElementById('statSize').textContent = (htmlContent.length / (1024 * 1024)).toFixed(2);
             document.getElementById('stats').style.display = 'grid';
             
-            // Show output
             codeOutput.textContent = htmlContent.substring(0, 5000) + (htmlContent.length > 5000 ? '\n\n... (truncated, download for full file)' : '');
             codeOutput.classList.add('show');
             
-            // Show download button
             document.getElementById('downloadBtn').style.display = 'inline-block';
             document.getElementById('copyBtn').style.display = 'inline-block';
             
