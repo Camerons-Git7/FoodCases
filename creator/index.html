@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal File Inliner - Unity WebGL Edition (FIXED)</title>
-    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
+    <title>Universal File Inliner - Unity WebGL Edition</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -231,7 +230,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎮 Unity WebGL File Inliner (FIXED)</h1>
+            <h1>🎮 Unity WebGL File Inliner</h1>
             <p>Upload all your files and get a TRULY self-contained HTML file - ALL assets inlined including Unity build files!</p>
         </div>
         
@@ -488,6 +487,7 @@
             const totalFiles = files.size;
             const binaryDataUrls = new Map();
             
+            // Process binary files FIRST
             for (const [name, file] of binaries) {
                 try {
                     const arrayBuffer = await readFileAsArrayBuffer(file);
@@ -496,20 +496,21 @@
                     const dataUrl = `data:${mime};base64,${base64}`;
                     binaryDataUrls.set(name, dataUrl);
                     const varName = 'unityBinary_' + name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
-                    const binaryScript = `<script>window.${varName} = "${dataUrl}";</script>`;
+                    const binaryScript = `<script>window.${varName} = "${dataUrl}";<\/script>`;
                     if (htmlContent.includes('</head>')) htmlContent = htmlContent.replace('</head>', `${binaryScript}</head>`);
                     processedCount++;
                     updateProgress((processedCount / totalFiles) * 100);
                 } catch (err) { console.error(`Error processing binary ${name}:`, err); }
             }
             
+            // Process Unity loader with modification
             let loaderContent = '';
             for (const [name, file] of loader) {
                 try {
                     loaderContent = await readFileAsText(file);
                     loaderContent = modifyUnityLoader(loaderContent, binaryDataUrls);
-                    const loaderScript = `<script>${loaderContent}</script>`;
-                    htmlContent = htmlContent.replace(new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*></script>`, 'gi'), '');
+                    const loaderScript = `<script>${loaderContent}<\/script>`;
+                    htmlContent = htmlContent.replace(new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*><\/script>`, 'gi'), '');
                     if (htmlContent.includes('</body>')) htmlContent = htmlContent.replace('</body>', `${loaderScript}</body>`);
                     else htmlContent += loaderScript;
                     processedCount++;
@@ -517,6 +518,7 @@
                 } catch (err) { console.error(`Error processing loader ${name}:`, err); }
             }
             
+            // Process images
             for (const [name, file] of images) {
                 try {
                     const arrayBuffer = await readFileAsArrayBuffer(file);
@@ -545,6 +547,7 @@
                 } catch (err) { console.error(`Error processing image ${name}:`, err); }
             }
             
+            // Process CSS
             for (const [name, file] of styles) {
                 try {
                     const cssContent = await readFileAsText(file);
@@ -557,12 +560,13 @@
                 } catch (err) { console.error(`Error processing CSS ${name}:`, err); }
             }
             
+            // Process JS
             for (const [name, file] of scripts) {
                 try {
                     const jsContent = await readFileAsText(file);
                     const scriptId = 'script-' + name.replace(/[^a-zA-Z0-9]/g, '-');
-                    const scriptTag = `<script id="${scriptId}">${jsContent}</script>`;
-                    htmlContent = htmlContent.replace(new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*></script>`, 'gi'), '');
+                    const scriptTag = `<script id="${scriptId}">${jsContent}<\/script>`;
+                    htmlContent = htmlContent.replace(new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*><\/script>`, 'gi'), '');
                     if (htmlContent.includes('</body>')) htmlContent = htmlContent.replace('</body>', `${scriptTag}</body>`);
                     else htmlContent += scriptTag;
                     processedCount++;
@@ -570,15 +574,16 @@
                 } catch (err) { console.error(`Error processing JS ${name}:`, err); }
             }
             
+            // Process JSON
             for (const [name, file] of jsons) {
                 try {
                     const jsonContent = await readFileAsText(file);
                     const varName = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
                     if (name.toLowerCase().includes('manifest')) {
-                        const manifestScript = `<script>window.unityManifest = ${jsonContent};</script>`;
+                        const manifestScript = `<script>window.unityManifest = ${jsonContent};<\/script>`;
                         htmlContent = htmlContent.replace('</head>', `${manifestScript}</head>`);
                     } else {
-                        const jsonScript = `<script>window.${varName} = ${jsonContent};</script>`;
+                        const jsonScript = `<script>window.${varName} = ${jsonContent};<\/script>`;
                         htmlContent = htmlContent.replace('</body>', `${jsonScript}</body>`);
                     }
                     processedCount++;
@@ -586,6 +591,7 @@
                 } catch (err) { console.error(`Error processing JSON ${name}:`, err); }
             }
             
+            // Replace Unity config URLs
             htmlContent = replaceUnityConfigUrls(htmlContent, binaryDataUrls);
             htmlContent = removeExternalCdnReferences(htmlContent);
             htmlContent = htmlContent.replace(/<link[^>]*rel=["']stylesheet["'][^>]*href=["'][^"']*["'][^>]*>/gi, '');
@@ -638,7 +644,6 @@ function fetchDataUrl(url) {
             return dataUrlHelper + modified;
         }
         
-        // FIXED: Added 'match' parameter to the callback function
         function replaceUnityConfigUrls(htmlContent, binaryDataUrls) {
             let modified = htmlContent;
             modified = modified.replace(/dataUrl\s*:\s*["'][^"']+["']/g, (match) => {
@@ -670,7 +675,7 @@ function fetchDataUrl(url) {
         
         function removeExternalCdnReferences(htmlContent) {
             let modified = htmlContent;
-            modified = modified.replace(/<script[^>]*src=["']https:\/\/www\.gstatic\.com\/firebasejs[^"']*["'][^>]*><\/script>/gi, '<script>console.warn("Firebase CDN removed - offline mode"); window.firebase = { analytics: () => ({ logEvent: () => {}, setCurrentScreen: () => {} }), initializeApp: () => {}, auth: () => ({ onAuthStateChanged: () => {}, signInAnonymously: () => Promise.resolve() }), database: () => ({ ref: () => ({ once: () => Promise.resolve({ exists: () => false }) }) }), performance: () => ({ trace: () => ({ start: () => {}, stop: () => {} }) }) };</script>');
+            modified = modified.replace(/<script[^>]*src=["']https:\/\/www\.gstatic\.com\/firebasejs[^"']*["'][^>]*><\/script>/gi, '<script>console.warn("Firebase CDN removed - offline mode"); window.firebase = { analytics: () => ({ logEvent: () => {}, setCurrentScreen: () => {} }), initializeApp: () => {}, auth: () => ({ onAuthStateChanged: () => {}, signInAnonymously: () => Promise.resolve() }), database: () => ({ ref: () => ({ once: () => Promise.resolve({ exists: () => false }) }) }), performance: () => ({ trace: () => ({ start: () => {}, stop: () => {} }) }) };<\/script>');
             modified = modified.replace(/<script[^>]*src=["']https:\/\/pagead2\.googlesyndication\.com[^"']*["'][^>]*><\/script>/gi, '');
             modified = modified.replace(/<script[^>]*src=["']https?:\/\/[^"']*["'][^>]*><\/script>/gi, '');
             modified = modified.replace(/<link[^>]*href=["']https?:\/\/[^"']*["'][^>]*>/gi, '');
@@ -680,10 +685,10 @@ function fetchDataUrl(url) {
         function applyUnityFinalFixes(htmlContent) {
             let modified = htmlContent;
             if (modified.includes('unityFirebaseGameOjbectName') && !modified.includes('var unityFirebaseGameOjbectName')) {
-                modified = modified.replace('</head>', `<script>var unityFirebaseGameOjbectName = 'JavascriptMessageReceiver';</script></head>`);
+                modified = modified.replace('</head>', `<script>var unityFirebaseGameOjbectName = 'JavascriptMessageReceiver';<\/script></head>`);
             }
             modified = modified.replace(/navigator\.serviceWorker\.register\(['"][^'"]*['"]\)/g, `// Service worker disabled in inlined version\n    // navigator.serviceWorker.register('service-worker.js')`);
-            modified = modified.replace('</head>', `<script>console.log('Unity WebGL running in OFFLINE inlined mode'); window.unityOfflineMode = true;</script></head>`);
+            modified = modified.replace('</head>', `<script>console.log('Unity WebGL running in OFFLINE inlined mode'); window.unityOfflineMode = true;<\/script></head>`);
             return modified;
         }
         
@@ -718,6 +723,6 @@ function fetchDataUrl(url) {
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
-    </script>
+    <\/script>
 </body>
 </html>
