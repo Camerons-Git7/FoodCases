@@ -411,7 +411,6 @@
             document.getElementById('copyBtn').style.display = 'none';
         }
         
-        // FIXED: Proper binary file reading with ArrayBuffer
         function readFileAsArrayBuffer(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -430,7 +429,6 @@
             });
         }
         
-        // FIXED: Convert ArrayBuffer to base64 properly
         function arrayBufferToBase64(buffer) {
             const bytes = new Uint8Array(buffer);
             let binary = '';
@@ -490,7 +488,6 @@
             const totalFiles = files.size;
             const binaryDataUrls = new Map();
             
-            // Process binary files FIRST
             for (const [name, file] of binaries) {
                 try {
                     const arrayBuffer = await readFileAsArrayBuffer(file);
@@ -506,7 +503,6 @@
                 } catch (err) { console.error(`Error processing binary ${name}:`, err); }
             }
             
-            // Process Unity loader with modification
             let loaderContent = '';
             for (const [name, file] of loader) {
                 try {
@@ -521,7 +517,6 @@
                 } catch (err) { console.error(`Error processing loader ${name}:`, err); }
             }
             
-            // Process images
             for (const [name, file] of images) {
                 try {
                     const arrayBuffer = await readFileAsArrayBuffer(file);
@@ -550,7 +545,6 @@
                 } catch (err) { console.error(`Error processing image ${name}:`, err); }
             }
             
-            // Process CSS
             for (const [name, file] of styles) {
                 try {
                     const cssContent = await readFileAsText(file);
@@ -563,7 +557,6 @@
                 } catch (err) { console.error(`Error processing CSS ${name}:`, err); }
             }
             
-            // Process JS
             for (const [name, file] of scripts) {
                 try {
                     const jsContent = await readFileAsText(file);
@@ -577,7 +570,6 @@
                 } catch (err) { console.error(`Error processing JS ${name}:`, err); }
             }
             
-            // Process JSON
             for (const [name, file] of jsons) {
                 try {
                     const jsonContent = await readFileAsText(file);
@@ -594,7 +586,6 @@
                 } catch (err) { console.error(`Error processing JSON ${name}:`, err); }
             }
             
-            // Replace Unity config URLs
             htmlContent = replaceUnityConfigUrls(htmlContent, binaryDataUrls);
             htmlContent = removeExternalCdnReferences(htmlContent);
             htmlContent = htmlContent.replace(/<link[^>]*rel=["']stylesheet["'][^>]*href=["'][^"']*["'][^>]*>/gi, '');
@@ -615,7 +606,6 @@
             showToast('Processing complete! Ready to download.');
         }
         
-        // CRITICAL FIX: Modify Unity loader to use data URLs
         function modifyUnityLoader(loaderCode, binaryDataUrls) {
             let modified = loaderCode;
             modified = modified.replace(/fetch\s*\(\s*([^)]+)\s*\)/g, 'fetchDataUrl($1)');
@@ -648,17 +638,18 @@ function fetchDataUrl(url) {
             return dataUrlHelper + modified;
         }
         
+        // FIXED: Added 'match' parameter to the callback function
         function replaceUnityConfigUrls(htmlContent, binaryDataUrls) {
             let modified = htmlContent;
-            modified = modified.replace(/dataUrl\s*:\s*["'][^"']+["']/g, () => {
+            modified = modified.replace(/dataUrl\s*:\s*["'][^"']+["']/g, (match) => {
                 const dataUrl = findMatchingDataUrl('data', binaryDataUrls);
                 return dataUrl ? `dataUrl: "${dataUrl}"` : match;
             });
-            modified = modified.replace(/frameworkUrl\s*:\s*["'][^"']+["']/g, () => {
+            modified = modified.replace(/frameworkUrl\s*:\s*["'][^"']+["']/g, (match) => {
                 const dataUrl = findMatchingDataUrl('framework', binaryDataUrls);
                 return dataUrl ? `frameworkUrl: "${dataUrl}"` : match;
             });
-            modified = modified.replace(/codeUrl\s*:\s*["'][^"']+["']/g, () => {
+            modified = modified.replace(/codeUrl\s*:\s*["'][^"']+["']/g, (match) => {
                 const dataUrl = findMatchingDataUrl('wasm', binaryDataUrls);
                 return dataUrl ? `codeUrl: "${dataUrl}"` : match;
             });
