@@ -34,6 +34,8 @@
             background: #f8f9fa;
             border-bottom: 2px dashed #dee2e6;
         }
+        
+        /* FIXED: Use label as drop zone instead of div */
         .drop-zone {
             border: 3px dashed #1b70f0;
             border-radius: 15px;
@@ -42,13 +44,27 @@
             background: white;
             transition: all 0.3s ease;
             cursor: pointer;
+            display: block; /* Make label behave like div */
         }
         .drop-zone:hover, .drop-zone.dragover {
             background: #e3f2fd;
             border-color: #2196f3;
             transform: scale(1.02);
         }
-        .drop-zone input { display: none; }
+        
+        /* FIXED: Visually hidden instead of display:none */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
         .file-list {
             margin-top: 20px;
             display: grid;
@@ -249,13 +265,14 @@
         </div>
         
         <div class="upload-section">
-            <div class="drop-zone" id="dropZone">
-                <input type="file" id="fileInput" multiple accept="*/*">
+            <!-- FIXED: Use label with for attribute instead of div -->
+            <input type="file" id="fileInput" multiple accept="*/*" class="visually-hidden">
+            <label for="fileInput" class="drop-zone" id="dropZone">
                 <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
-                <h3>Drop files/folder here or click to upload</h3>
+                <h3>Drop files/folder here or click to browse</h3>
                 <p class="upload-hint">Supports: HTML, JS, CSS, PNG, JPG, JPEG, GIF, SVG, JSON, ICO, BR, GZ, WASM, DATA</p>
                 <p style="color: #1b70f0; margin-top: 5px; font-weight: bold;">💡 Tip: Drag & drop your entire Unity WebGL build folder!</p>
-            </div>
+            </label>
             <div class="file-list" id="fileList"></div>
         </div>
         
@@ -314,15 +331,9 @@
         const unityWarning = document.getElementById('unityWarning');
         const criticalWarning = document.getElementById('criticalWarning');
         
-        // Click to open file picker
-        dropZone.addEventListener('click', (e) => {
-            // Prevent triggering if clicking on the input itself
-            if (e.target !== fileInput) {
-                fileInput.click();
-            }
-        });
+        // FIXED: Removed manual click handler - label's for attribute handles this automatically
         
-        // Drag and drop events
+        // Drag and drop events - need to prevent default to allow drop
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -362,10 +373,12 @@
             }
         });
         
-        // File input change
+        // File input change - works for both click and drop
         fileInput.addEventListener('change', (e) => {
             if (e.target.files && e.target.files.length > 0) {
                 handleFiles(e.target.files);
+                // Reset input so same files can be selected again if cleared
+                fileInput.value = '';
             }
         });
         
@@ -513,7 +526,6 @@
             document.getElementById('stats').style.display = 'none';
             document.getElementById('downloadBtn').style.display = 'none';
             document.getElementById('copyBtn').style.display = 'none';
-            fileInput.value = ''; // Reset file input
         }
         
         function readFileAsArrayBuffer(file) {
