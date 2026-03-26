@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal File Inliner - Unity WebGL Edition</title>
+    <title>Universal File Inliner - Unity WebGL Edition (FIXED)</title>
     <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -215,25 +215,41 @@
             display: none;
         }
         .unity-warning.show { display: block; }
+        
+        .critical-warning {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .critical-warning.show { display: block; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎮 Unity WebGL File Inliner</h1>
-            <p>Upload all your files (HTML, JS, CSS, Images, JSON, Data, Wasm) and get a single self-contained HTML file</p>
+            <h1>🎮 Unity WebGL File Inliner (FIXED)</h1>
+            <p>Upload all your files and get a TRULY self-contained HTML file - ALL assets inlined including Unity build files!</p>
         </div>
         
         <div class="unity-warning" id="unityWarning">
-            <strong>⚠️ Unity WebGL Detected:</strong> Make sure to include all build files: .data.br, .wasm.br, .js.br (or .gz versions), loader.js, and all icon files!
+            <strong>⚠️ Unity WebGL Detected:</strong> Make sure to include all build files: .data.br/.data.gz, .wasm.br/.wasm.gz, .framework.js.br/.framework.js.gz, loader.js, and all icon files!
+        </div>
+        
+        <div class="critical-warning" id="criticalWarning">
+            <strong>🔴 Critical Files Missing:</strong> The following Unity files are required but not found: <span id="missingFiles"></span>
         </div>
         
         <div class="upload-section">
             <div class="drop-zone" id="dropZone">
-                <input type="file" id="fileInput" multiple accept="*/*">
+                <input type="file" id="fileInput" multiple accept="*/*" webkitdirectory directory>
                 <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
-                <h3>Drop files here or click to upload</h3>
+                <h3>Drop files/folder here or click to upload</h3>
                 <p style="color: #666; margin-top: 10px;">Supports: HTML, JS, CSS, PNG, JPG, JPEG, GIF, SVG, JSON, ICO, BR, GZ, WASM, DATA</p>
+                <p style="color: #1b70f0; margin-top: 5px; font-weight: bold;">💡 Tip: Select your entire Unity WebGL build folder!</p>
             </div>
             <div class="file-list" id="fileList"></div>
         </div>
@@ -266,6 +282,10 @@
                     <div class="stat-label">Images Inlined</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-value" id="statBinaries">0</div>
+                    <div class="stat-label">Unity Binaries Inlined</div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-value" id="statSize">0</div>
                     <div class="stat-label">Final Size (MB)</div>
                 </div>
@@ -287,6 +307,7 @@
         const fileList = document.getElementById('fileList');
         const processBtn = document.getElementById('processBtn');
         const unityWarning = document.getElementById('unityWarning');
+        const criticalWarning = document.getElementById('criticalWarning');
         
         dropZone.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', (e) => {
@@ -303,23 +324,41 @@
         
         function handleFiles(fileList) {
             Array.from(fileList).forEach(file => {
-                files.set(file.name, file);
+                if (file.name && !file.name.startsWith('.')) {
+                    files.set(file.name, file);
+                }
             });
             updateFileList();
             detectUnityBuild();
+            checkCriticalFiles();
         }
         
         function detectUnityBuild() {
-            const unityIndicators = ['.data.br', '.wasm.br', '.framework.js.br', '.loader.js'];
+            const unityIndicators = ['.data.br', '.wasm.br', '.framework.js.br', '.loader.js', '.data.gz', '.wasm.gz'];
             isUnityBuild = Array.from(files.keys()).some(name => 
-                unityIndicators.some(ind => name.includes(ind))
+                unityIndicators.some(ind => name.toLowerCase().includes(ind.toLowerCase()))
             );
-            
-            if (isUnityBuild) {
-                unityWarning.classList.add('show');
-            } else {
-                unityWarning.classList.remove('show');
-            }
+            if (isUnityBuild) unityWarning.classList.add('show');
+            else unityWarning.classList.remove('show');
+        }
+        
+        function checkCriticalFiles() {
+            if (!isUnityBuild) return;
+            const criticalPatterns = [
+                { pattern: /loader\.js$/i, name: 'loader.js' },
+                { pattern: /\.data\.(br|gz)$/i, name: '.data.br/.data.gz' },
+                { pattern: /\.wasm\.(br|gz)$/i, name: '.wasm.br/.wasm.gz' },
+                { pattern: /framework.*\.js\.(br|gz)$/i, name: '.framework.js.br/.framework.js.gz' }
+            ];
+            const missing = [];
+            criticalPatterns.forEach(({ pattern, name }) => {
+                const found = Array.from(files.keys()).some(n => pattern.test(n));
+                if (!found) missing.push(name);
+            });
+            if (missing.length > 0) {
+                document.getElementById('missingFiles').textContent = missing.join(', ');
+                criticalWarning.classList.add('show');
+            } else criticalWarning.classList.remove('show');
         }
         
         function updateFileList() {
@@ -342,11 +381,7 @@
         
         function getFileIcon(filename) {
             const ext = filename.split('.').pop().toLowerCase();
-            const icons = {
-                html: '🌐', js: '📜', css: '🎨', json: '📋',
-                png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️', svg: '🎭', ico: '🎯',
-                br: '📦', gz: '📦', wasm: '⚙️', data: '💾'
-            };
+            const icons = { html: '🌐', js: '📜', css: '🎨', json: '📋', png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️', svg: '🎭', ico: '🎯', br: '📦', gz: '📦', wasm: '⚙️', data: '💾' };
             return icons[ext] || '📄';
         }
         
@@ -362,45 +397,86 @@
             files.delete(name);
             updateFileList();
             detectUnityBuild();
+            checkCriticalFiles();
         }
         
         function clearFiles() {
             files.clear();
             updateFileList();
             unityWarning.classList.remove('show');
+            criticalWarning.classList.remove('show');
             document.getElementById('codeOutput').classList.remove('show');
             document.getElementById('stats').style.display = 'none';
             document.getElementById('downloadBtn').style.display = 'none';
             document.getElementById('copyBtn').style.display = 'none';
         }
         
+        // FIXED: Proper binary file reading with ArrayBuffer
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsText(file);
+            });
+        }
+        
+        // FIXED: Convert ArrayBuffer to base64 properly
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+            return btoa(binary);
+        }
+        
+        function getMimeType(filename) {
+            const lowerName = filename.toLowerCase();
+            if (lowerName.endsWith('.br')) return 'application/octet-stream';
+            if (lowerName.endsWith('.gz')) return 'application/gzip';
+            if (lowerName.endsWith('.wasm') || lowerName.includes('.wasm.')) return 'application/wasm';
+            if (lowerName.endsWith('.data') || lowerName.includes('.data.')) return 'application/octet-stream';
+            if (lowerName.endsWith('.js')) return 'application/javascript';
+            if (lowerName.endsWith('.json')) return 'application/json';
+            if (lowerName.endsWith('.png')) return 'image/png';
+            if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) return 'image/jpeg';
+            if (lowerName.endsWith('.gif')) return 'image/gif';
+            if (lowerName.endsWith('.svg')) return 'image/svg+xml';
+            if (lowerName.endsWith('.ico')) return 'image/x-icon';
+            if (lowerName.endsWith('.css')) return 'text/css';
+            if (lowerName.endsWith('.html')) return 'text/html';
+            return 'application/octet-stream';
+        }
+        
         async function processFiles() {
             const progressBar = document.getElementById('progressBar');
             const progressFill = document.getElementById('progressFill');
             const codeOutput = document.getElementById('codeOutput');
-            
             progressBar.style.display = 'block';
             codeOutput.classList.remove('show');
             
             let mainHTML = null;
-            const images = new Map();
-            const scripts = new Map();
-            const styles = new Map();
-            const jsons = new Map();
-            const binaries = new Map();
+            const images = new Map(), scripts = new Map(), styles = new Map();
+            const jsons = new Map(), binaries = new Map(), loader = new Map();
             
             files.forEach((file, name) => {
-                const ext = name.split('.').pop().toLowerCase();
                 const lowerName = name.toLowerCase();
-                
-                if (ext === 'html' && !mainHTML) mainHTML = file;
-                else if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'ico'].includes(ext)) images.set(name, file);
-                else if (ext === 'js') scripts.set(name, file);
-                else if (ext === 'css') styles.set(name, file);
-                else if (ext === 'json') jsons.set(name, file);
-                else if (['br', 'gz', 'wasm', 'data'].includes(ext) || lowerName.includes('.data.') || lowerName.includes('.wasm.') || lowerName.includes('.framework.')) {
-                    binaries.set(name, file);
-                }
+                if (lowerName.endsWith('.html') && !mainHTML) mainHTML = file;
+                else if (['png','jpg','jpeg','gif','svg','ico'].some(ext => lowerName.endsWith('.' + ext))) images.set(name, file);
+                else if (lowerName.endsWith('.css')) styles.set(name, file);
+                else if (lowerName.endsWith('.json')) jsons.set(name, file);
+                else if (lowerName === 'loader.js' || (lowerName.includes('loader') && lowerName.endsWith('.js'))) loader.set(name, file);
+                else if (lowerName.endsWith('.js') && !lowerName.includes('loader')) scripts.set(name, file);
+                else if (lowerName.match(/\.(br|gz|wasm|data)$/) || lowerName.match(/\.data\.(br|gz)$/) || lowerName.match(/\.wasm\.(br|gz)$/) || lowerName.match(/framework.*\.js\.(br|gz)$/)) binaries.set(name, file);
             });
             
             if (!mainHTML) {
@@ -409,219 +485,221 @@
                 return;
             }
             
-            let htmlContent = await readFile(mainHTML);
+            let htmlContent = await readFileAsText(mainHTML);
             let processedCount = 0;
             const totalFiles = files.size;
+            const binaryDataUrls = new Map();
+            
+            // Process binary files FIRST
+            for (const [name, file] of binaries) {
+                try {
+                    const arrayBuffer = await readFileAsArrayBuffer(file);
+                    const base64 = arrayBufferToBase64(arrayBuffer);
+                    const mime = getMimeType(name);
+                    const dataUrl = `data:${mime};base64,${base64}`;
+                    binaryDataUrls.set(name, dataUrl);
+                    const varName = 'unityBinary_' + name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
+                    const binaryScript = `<script>window.${varName} = "${dataUrl}";</script>`;
+                    if (htmlContent.includes('</head>')) htmlContent = htmlContent.replace('</head>', `${binaryScript}</head>`);
+                    processedCount++;
+                    updateProgress((processedCount / totalFiles) * 100);
+                } catch (err) { console.error(`Error processing binary ${name}:`, err); }
+            }
+            
+            // Process Unity loader with modification
+            let loaderContent = '';
+            for (const [name, file] of loader) {
+                try {
+                    loaderContent = await readFileAsText(file);
+                    loaderContent = modifyUnityLoader(loaderContent, binaryDataUrls);
+                    const loaderScript = `<script>${loaderContent}</script>`;
+                    htmlContent = htmlContent.replace(new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*></script>`, 'gi'), '');
+                    if (htmlContent.includes('</body>')) htmlContent = htmlContent.replace('</body>', `${loaderScript}</body>`);
+                    else htmlContent += loaderScript;
+                    processedCount++;
+                    updateProgress((processedCount / totalFiles) * 100);
+                } catch (err) { console.error(`Error processing loader ${name}:`, err); }
+            }
             
             // Process images
             for (const [name, file] of images) {
-                const base64 = await fileToBase64(file);
-                const mime = file.type || 'image/png';
-                const dataUrl = `data:${mime};base64,${base64}`;
-                
-                const patterns = [
-                    new RegExp(`src=["']${escapeRegex(name)}["']`, 'gi'),
-                    new RegExp(`src=["'][^"']*${escapeRegex(name)}["']`, 'gi'),
-                    new RegExp(`url\\(["']?${escapeRegex(name)}["']?\\)`, 'gi'),
-                    new RegExp(`url\\(["']?[^"']*${escapeRegex(name)}["']?\\)`, 'gi'),
-                    new RegExp(`href=["']${escapeRegex(name)}["']`, 'gi'),
-                    new RegExp(`content=["']${escapeRegex(name)}["']`, 'gi')
-                ];
-                
-                patterns.forEach(pattern => {
-                    htmlContent = htmlContent.replace(pattern, (match) => {
-                        if (match.includes('src=')) return `src="${dataUrl}"`;
-                        if (match.includes('href=')) return `href="${dataUrl}"`;
-                        if (match.includes('content=')) return `content="${dataUrl}"`;
-                        return `url("${dataUrl}")`;
-                    });
-                });
-                
-                processedCount++;
-                updateProgress((processedCount / totalFiles) * 100);
-            }
-            
-            // Process CSS files
-            for (const [name, file] of styles) {
-                const cssContent = await readFile(file);
-                const styleId = 'style-' + name.replace(/[^a-zA-Z0-9]/g, '-');
-                
-                const linkPattern = new RegExp(`<link[^>]*href=["'][^"']*${escapeRegex(name)}["'][^>]*>`, 'gi');
-                if (linkPattern.test(htmlContent)) {
-                    htmlContent = htmlContent.replace(linkPattern, `<style id="${styleId}">${cssContent}</style>`);
-                } else {
-                    htmlContent = htmlContent.replace('</head>', `<style id="${styleId}">${cssContent}</style></head>`);
-                }
-                
-                processedCount++;
-                updateProgress((processedCount / totalFiles) * 100);
-            }
-            
-            // Process JS files - SPECIAL HANDLING FOR UNITY
-            for (const [name, file] of scripts) {
-                const jsContent = await readFile(file);
-                
-                const isUnityLoader = name.includes('loader') || jsContent.includes('createUnityInstance');
-                const isUnityMain = jsContent.includes('unityFirebaseGameOjbectName') || jsContent.includes('window.unityGame');
-                
-                let scriptTag;
-                if (isUnityLoader || isUnityMain) {
-                    scriptTag = `<script>${jsContent}<\/script>`;
-                } else {
-                    const scriptId = 'script-' + name.replace(/[^a-zA-Z0-9]/g, '-');
-                    scriptTag = `<script id="${scriptId}">${jsContent}<\/script>`;
-                }
-                
-                const scriptPattern = new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*>`, 'gi');
-                if (scriptPattern.test(htmlContent)) {
-                    htmlContent = htmlContent.replace(scriptPattern, scriptTag);
-                } else {
-                    htmlContent = htmlContent.replace('</body>', `${scriptTag}</body>`);
-                }
-                
-                processedCount++;
-                updateProgress((processedCount / totalFiles) * 100);
-            }
-            
-            // Process JSON files
-            for (const [name, file] of jsons) {
-                const jsonContent = await readFile(file);
-                const varName = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
-                
-                if (name.toLowerCase().includes('manifest')) {
-                    const manifestScript = `<script>window.unityManifest = ${jsonContent};<\/script>`;
-                    htmlContent = htmlContent.replace('</body>', `${manifestScript}</body>`);
-                } else {
-                    const jsonScript = `<script>window.${varName} = ${jsonContent};<\/script>`;
-                    htmlContent = htmlContent.replace('</body>', `${jsonScript}</body>`);
-                }
-                
-                processedCount++;
-                updateProgress((processedCount / totalFiles) * 100);
-            }
-            
-            // Process binary files - CRITICAL FOR UNITY
-            for (const [name, file] of binaries) {
-                const base64 = await fileToBase64(file);
-                const mime = getMimeType(name);
-                const dataUrl = `data:${mime};base64,${base64}`;
-                
-                const varName = 'unityBinary_' + name.replace(/[^a-zA-Z0-9]/g, '_');
-                
-                const urlPatterns = [
-                    new RegExp(`(dataUrl|frameworkUrl|codeUrl|memoryUrl|symbolsUrl)\\s*:\\s*["'][^"']*${escapeRegex(name)}["']`, 'gi'),
-                    new RegExp(`["'][^"']*${escapeRegex(name)}["']`, 'gi')
-                ];
-                
-                let replaced = false;
-                urlPatterns.forEach(pattern => {
-                    if (pattern.test(htmlContent)) {
-                        htmlContent = htmlContent.replace(pattern, (match, p1) => {
-                            if (p1) {
-                                return `${p1}: "${dataUrl}"`;
-                            }
+                try {
+                    const arrayBuffer = await readFileAsArrayBuffer(file);
+                    const base64 = arrayBufferToBase64(arrayBuffer);
+                    const mime = file.type || getMimeType(name);
+                    const dataUrl = `data:${mime};base64,${base64}`;
+                    const patterns = [
+                        new RegExp(`src=["']${escapeRegex(name)}["']`, 'gi'),
+                        new RegExp(`src=["'][^"']*${escapeRegex(name)}["']`, 'gi'),
+                        new RegExp(`url\\(["']?${escapeRegex(name)}["']?\\)`, 'gi'),
+                        new RegExp(`href=["']${escapeRegex(name)}["']`, 'gi'),
+                        new RegExp(`content=["']${escapeRegex(name)}["']`, 'gi'),
+                        new RegExp(`["']${escapeRegex(name)}["']`, 'gi')
+                    ];
+                    patterns.forEach(pattern => {
+                        htmlContent = htmlContent.replace(pattern, (match) => {
+                            if (match.includes('src=')) return `src="${dataUrl}"`;
+                            if (match.includes('href=')) return `href="${dataUrl}"`;
+                            if (match.includes('content=')) return `content="${dataUrl}"`;
+                            if (match.includes('url(')) return `url("${dataUrl}")`;
                             return `"${dataUrl}"`;
                         });
-                        replaced = true;
+                    });
+                    processedCount++;
+                    updateProgress((processedCount / totalFiles) * 100);
+                } catch (err) { console.error(`Error processing image ${name}:`, err); }
+            }
+            
+            // Process CSS
+            for (const [name, file] of styles) {
+                try {
+                    const cssContent = await readFileAsText(file);
+                    const styleId = 'style-' + name.replace(/[^a-zA-Z0-9]/g, '-');
+                    const linkPattern = new RegExp(`<link[^>]*href=["'][^"']*${escapeRegex(name)}["'][^>]*>`, 'gi');
+                    if (linkPattern.test(htmlContent)) htmlContent = htmlContent.replace(linkPattern, `<style id="${styleId}">${cssContent}</style>`);
+                    else htmlContent = htmlContent.replace('</head>', `<style id="${styleId}">${cssContent}</style></head>`);
+                    processedCount++;
+                    updateProgress((processedCount / totalFiles) * 100);
+                } catch (err) { console.error(`Error processing CSS ${name}:`, err); }
+            }
+            
+            // Process JS
+            for (const [name, file] of scripts) {
+                try {
+                    const jsContent = await readFileAsText(file);
+                    const scriptId = 'script-' + name.replace(/[^a-zA-Z0-9]/g, '-');
+                    const scriptTag = `<script id="${scriptId}">${jsContent}</script>`;
+                    htmlContent = htmlContent.replace(new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*></script>`, 'gi'), '');
+                    if (htmlContent.includes('</body>')) htmlContent = htmlContent.replace('</body>', `${scriptTag}</body>`);
+                    else htmlContent += scriptTag;
+                    processedCount++;
+                    updateProgress((processedCount / totalFiles) * 100);
+                } catch (err) { console.error(`Error processing JS ${name}:`, err); }
+            }
+            
+            // Process JSON
+            for (const [name, file] of jsons) {
+                try {
+                    const jsonContent = await readFileAsText(file);
+                    const varName = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
+                    if (name.toLowerCase().includes('manifest')) {
+                        const manifestScript = `<script>window.unityManifest = ${jsonContent};</script>`;
+                        htmlContent = htmlContent.replace('</head>', `${manifestScript}</head>`);
+                    } else {
+                        const jsonScript = `<script>window.${varName} = ${jsonContent};</script>`;
+                        htmlContent = htmlContent.replace('</body>', `${jsonScript}</body>`);
                     }
-                });
-                
-                if (!replaced || name.includes('.data.') || name.includes('.wasm.')) {
-                    const binaryScript = `<script>window.${varName} = "${dataUrl}";<\/script>`;
-                    htmlContent = htmlContent.replace('</head>', `${binaryScript}</head>`);
-                }
-                
-                processedCount++;
-                updateProgress((processedCount / totalFiles) * 100);
+                    processedCount++;
+                    updateProgress((processedCount / totalFiles) * 100);
+                } catch (err) { console.error(`Error processing JSON ${name}:`, err); }
             }
             
-            // CRITICAL FIX: Ensure unityFirebaseGameOjbectName is defined
-            if (htmlContent.includes('unityFirebaseGameOjbectName') && !htmlContent.includes('var unityFirebaseGameOjbectName')) {
-                const unityObjectDef = `<script>var unityFirebaseGameOjbectName = 'JavascriptMessageReceiver';<\/script>`;
-                htmlContent = htmlContent.replace('</head>', `${unityObjectDef}</head>`);
-            }
-            
-            // Fix service worker
-            if (htmlContent.includes('service-worker') && !files.has('service-worker2.js')) {
-                htmlContent = htmlContent.replace(
-                    /navigator\.serviceWorker\.register\(['"][^'"]*['"]\)/g,
-                    `// Service worker registration skipped in inlined version\n    // navigator.serviceWorker.register('service-worker2.js')`
-                );
-            }
-            
-            // Remove remaining external references
+            // Replace Unity config URLs
+            htmlContent = replaceUnityConfigUrls(htmlContent, binaryDataUrls);
+            htmlContent = removeExternalCdnReferences(htmlContent);
             htmlContent = htmlContent.replace(/<link[^>]*rel=["']stylesheet["'][^>]*href=["'][^"']*["'][^>]*>/gi, '');
             htmlContent = htmlContent.replace(/<script[^>]*src=["'][^"']*["'][^>]*><\/script>/gi, '');
-            
-            // Final Unity-specific fixes
-            if (isUnityBuild) {
-                htmlContent = htmlContent.replace(
-                    /if\(window\.unityGame\)/g,
-                    `if(typeof window !== 'undefined' && window.unityGame && window.unityGame !== null)`
-                );
-                
-                htmlContent = htmlContent.replace(
-                    /window\.unityGame\.SendMessage\(/g,
-                    `(window.unityGame && window.unityGame.SendMessage ? window.unityGame.SendMessage.bind(window.unityGame) : function(){console.warn('Unity not ready');})(`
-                );
-            }
+            if (isUnityBuild) htmlContent = applyUnityFinalFixes(htmlContent);
             
             processedHTML = htmlContent;
             document.getElementById('statFiles').textContent = files.size;
             document.getElementById('statImages').textContent = images.size;
+            document.getElementById('statBinaries').textContent = binaries.size;
             document.getElementById('statSize').textContent = (htmlContent.length / (1024 * 1024)).toFixed(2);
             document.getElementById('stats').style.display = 'grid';
-            
             codeOutput.textContent = htmlContent.substring(0, 5000) + (htmlContent.length > 5000 ? '\n\n... (truncated, download for full file)' : '');
             codeOutput.classList.add('show');
-            
             document.getElementById('downloadBtn').style.display = 'inline-block';
             document.getElementById('copyBtn').style.display = 'inline-block';
-            
             progressBar.style.display = 'none';
             showToast('Processing complete! Ready to download.');
         }
         
-        function getMimeType(filename) {
-            const ext = filename.split('.').pop().toLowerCase();
-            const mimes = {
-                'br': 'application/octet-stream',
-                'gz': 'application/gzip',
-                'wasm': 'application/wasm',
-                'data': 'application/octet-stream',
-                'js': 'application/javascript',
-                'json': 'application/json'
-            };
-            return mimes[ext] || 'application/octet-stream';
+        // CRITICAL FIX: Modify Unity loader to use data URLs
+        function modifyUnityLoader(loaderCode, binaryDataUrls) {
+            let modified = loaderCode;
+            modified = modified.replace(/fetch\s*\(\s*([^)]+)\s*\)/g, 'fetchDataUrl($1)');
+            const dataUrlHelper = `
+// Data URL fetch helper for inlined Unity build
+function fetchDataUrl(url) {
+    if (url.startsWith('data:')) {
+        const base64 = url.split(',')[1];
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return Promise.resolve(new Response(bytes.buffer));
+    }
+    const urlName = url.split('/').pop();
+    for (let key in window) {
+        if (key.startsWith('unityBinary_') && window[key]) {
+            const dataUrl = window[key];
+            if (dataUrl && urlName && (key.includes(urlName.replace(/[^a-zA-Z0-9]/g, '_')) || url.includes(key.replace('unityBinary_', '').replace(/_/g, '.')))) {
+                const base64 = dataUrl.split(',')[1];
+                const binary = atob(base64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                return Promise.resolve(new Response(bytes.buffer));
+            }
+        }
+    }
+    return fetch(url);
+}
+`;
+            return dataUrlHelper + modified;
+        }
+        
+        function replaceUnityConfigUrls(htmlContent, binaryDataUrls) {
+            let modified = htmlContent;
+            modified = modified.replace(/dataUrl\s*:\s*["'][^"']+["']/g, () => {
+                const dataUrl = findMatchingDataUrl('data', binaryDataUrls);
+                return dataUrl ? `dataUrl: "${dataUrl}"` : match;
+            });
+            modified = modified.replace(/frameworkUrl\s*:\s*["'][^"']+["']/g, () => {
+                const dataUrl = findMatchingDataUrl('framework', binaryDataUrls);
+                return dataUrl ? `frameworkUrl: "${dataUrl}"` : match;
+            });
+            modified = modified.replace(/codeUrl\s*:\s*["'][^"']+["']/g, () => {
+                const dataUrl = findMatchingDataUrl('wasm', binaryDataUrls);
+                return dataUrl ? `codeUrl: "${dataUrl}"` : match;
+            });
+            modified = modified.replace(/const buildUrl\s*=\s*["'][^"']+["']/g, 'const buildUrl = ""');
+            modified = modified.replace(/const loaderUrl\s*=\s*["'][^"']+["']/g, 'const loaderUrl = ""');
+            return modified;
+        }
+        
+        function findMatchingDataUrl(type, binaryDataUrls) {
+            for (const [name, url] of binaryDataUrls) {
+                const lowerName = name.toLowerCase();
+                if (type === 'data' && (lowerName.includes('.data.') || lowerName.endsWith('.data'))) return url;
+                if (type === 'framework' && lowerName.includes('framework')) return url;
+                if (type === 'wasm' && (lowerName.includes('.wasm.') || lowerName.endsWith('.wasm'))) return url;
+            }
+            return null;
+        }
+        
+        function removeExternalCdnReferences(htmlContent) {
+            let modified = htmlContent;
+            modified = modified.replace(/<script[^>]*src=["']https:\/\/www\.gstatic\.com\/firebasejs[^"']*["'][^>]*><\/script>/gi, '<script>console.warn("Firebase CDN removed - offline mode"); window.firebase = { analytics: () => ({ logEvent: () => {}, setCurrentScreen: () => {} }), initializeApp: () => {}, auth: () => ({ onAuthStateChanged: () => {}, signInAnonymously: () => Promise.resolve() }), database: () => ({ ref: () => ({ once: () => Promise.resolve({ exists: () => false }) }) }), performance: () => ({ trace: () => ({ start: () => {}, stop: () => {} }) }) };</script>');
+            modified = modified.replace(/<script[^>]*src=["']https:\/\/pagead2\.googlesyndication\.com[^"']*["'][^>]*><\/script>/gi, '');
+            modified = modified.replace(/<script[^>]*src=["']https?:\/\/[^"']*["'][^>]*><\/script>/gi, '');
+            modified = modified.replace(/<link[^>]*href=["']https?:\/\/[^"']*["'][^>]*>/gi, '');
+            return modified;
+        }
+        
+        function applyUnityFinalFixes(htmlContent) {
+            let modified = htmlContent;
+            if (modified.includes('unityFirebaseGameOjbectName') && !modified.includes('var unityFirebaseGameOjbectName')) {
+                modified = modified.replace('</head>', `<script>var unityFirebaseGameOjbectName = 'JavascriptMessageReceiver';</script></head>`);
+            }
+            modified = modified.replace(/navigator\.serviceWorker\.register\(['"][^'"]*['"]\)/g, `// Service worker disabled in inlined version\n    // navigator.serviceWorker.register('service-worker.js')`);
+            modified = modified.replace('</head>', `<script>console.log('Unity WebGL running in OFFLINE inlined mode'); window.unityOfflineMode = true;</script></head>`);
+            return modified;
         }
         
         function updateProgress(percent) {
             const fill = document.getElementById('progressFill');
             fill.style.width = percent + '%';
             fill.textContent = Math.round(percent) + '%';
-        }
-        
-        function readFile(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                if (file.name.endsWith('.json') || file.name.endsWith('.js') || file.name.endsWith('.css') || file.name.endsWith('.html')) {
-                    reader.readAsText(file);
-                } else {
-                    reader.readAsDataURL(file);
-                }
-            });
-        }
-        
-        function fileToBase64(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const base64 = e.target.result.split(',')[1];
-                    resolve(base64);
-                };
-                reader.readAsDataURL(file);
-            });
         }
         
         function escapeRegex(string) {
@@ -633,16 +711,14 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = isUnityBuild ? 'unity-game-inlined.html' : 'smashkarts-inlined.html';
+            a.download = isUnityBuild ? 'unity-game-inlined-OFFLINE.html' : 'game-inlined.html';
             a.click();
             URL.revokeObjectURL(url);
-            showToast(`Downloaded ${isUnityBuild ? 'unity-game-inlined.html' : 'smashkarts-inlined.html'}!`);
+            showToast(`Downloaded ${isUnityBuild ? 'unity-game-inlined-OFFLINE.html' : 'game-inlined.html'}!`);
         }
         
         function copyToClipboard() {
-            navigator.clipboard.writeText(processedHTML).then(() => {
-                showToast('Copied to clipboard!');
-            });
+            navigator.clipboard.writeText(processedHTML).then(() => showToast('Copied to clipboard!'));
         }
         
         function showToast(message) {
