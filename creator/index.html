@@ -331,7 +331,10 @@
         const unityWarning = document.getElementById('unityWarning');
         const criticalWarning = document.getElementById('criticalWarning');
         
-        // FIXED: Removed manual click handler - label's for attribute handles this automatically
+        // FIXED: Add click event to reset file input value so change event always fires
+        fileInput.addEventListener('click', function() {
+            this.value = null;
+        });
         
         // Drag and drop events - need to prevent default to allow drop
         dropZone.addEventListener('dragover', (e) => {
@@ -377,8 +380,6 @@
         fileInput.addEventListener('change', (e) => {
             if (e.target.files && e.target.files.length > 0) {
                 handleFiles(e.target.files);
-                // Reset input so same files can be selected again if cleared
-                fileInput.value = '';
             }
         });
         
