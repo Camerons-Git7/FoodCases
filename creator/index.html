@@ -35,7 +35,7 @@
             border-bottom: 2px dashed #dee2e6;
         }
         
-        /* Simple approach: label styled as button, input hidden with opacity */
+        /* FIXED: Better approach - visible input that covers the zone */
         .upload-wrapper {
             position: relative;
             text-align: center;
@@ -60,6 +60,12 @@
             background: white;
             transition: all 0.3s ease;
             position: relative;
+            pointer-events: none; /* Let clicks pass through to the input */
+        }
+        
+        /* Enable pointer events for children so they don't block input */
+        .drop-zone * {
+            pointer-events: none;
         }
         
         .drop-zone:hover, .drop-zone.dragover {
@@ -335,15 +341,19 @@
         const unityWarning = document.getElementById('unityWarning');
         const criticalWarning = document.getElementById('criticalWarning');
         
-        // CRITICAL FIX: Reset value on click so change event always fires
+        // FIXED: Better file input handling - reset value BEFORE click opens dialog
+        // This ensures the change event fires even when selecting the same file twice
         fileInput.addEventListener('click', function() {
-            this.value = null;
+            this.value = '';
         });
         
-        // File input change event
+        // File input change event - with debugging
         fileInput.addEventListener('change', function(e) {
+            console.log('File input changed, files count:', e.target.files ? e.target.files.length : 0);
             if (e.target.files && e.target.files.length > 0) {
                 handleFiles(e.target.files);
+            } else {
+                console.log('No files selected or empty file list');
             }
         });
         
@@ -441,8 +451,10 @@
         }
         
         function handleFiles(fileList) {
+            console.log('Handling files:', fileList.length);
             Array.from(fileList).forEach(file => {
                 if (file.name && !file.name.startsWith('.')) {
+                    console.log('Adding file:', file.name, file.size);
                     files.set(file.name, file);
                 }
             });
@@ -495,6 +507,7 @@
                 fileList.appendChild(item);
             });
             processBtn.disabled = files.size === 0;
+            console.log('File list updated, total files:', files.size);
         }
         
         function getFileIcon(filename) {
@@ -614,7 +627,7 @@
                     const dataUrl = `data:${mime};base64,${base64}`;
                     binaryDataUrls.set(name, dataUrl);
                     const varName = 'unityBinary_' + name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
-                    const binaryScript = `<script>window.${varName} = "${dataUrl}";<\/script>`;
+                    const binaryScript = `<script>window.${varName} = "${dataUrl}";</script>`;
                     if (htmlContent.includes('</head>')) htmlContent = htmlContent.replace('</head>', `${binaryScript}</head>`);
                     processedCount++;
                     updateProgress((processedCount / totalFiles) * 100);
@@ -626,8 +639,8 @@
                 try {
                     loaderContent = await readFileAsText(file);
                     loaderContent = modifyUnityLoader(loaderContent, binaryDataUrls);
-                    const loaderScript = `<script>${loaderContent}<\/script>`;
-                    htmlContent = htmlContent.replace(new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*><\/script>`, 'gi'), '');
+                    const loaderScript = `<script>${loaderContent}</script>`;
+                    htmlContent = htmlContent.replace(new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*></script>`, 'gi'), '');
                     if (htmlContent.includes('</body>')) htmlContent = htmlContent.replace('</body>', `${loaderScript}</body>`);
                     else htmlContent += loaderScript;
                     processedCount++;
@@ -679,8 +692,8 @@
                 try {
                     const jsContent = await readFileAsText(file);
                     const scriptId = 'script-' + name.replace(/[^a-zA-Z0-9]/g, '-');
-                    const scriptTag = `<script id="${scriptId}">${jsContent}<\/script>`;
-                    htmlContent = htmlContent.replace(new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*><\/script>`, 'gi'), '');
+                    const scriptTag = `<script id="${scriptId}">${jsContent}</script>`;
+                    htmlContent = htmlContent.replace(new RegExp(`<script[^>]*src=["'][^"']*${escapeRegex(name)}["'][^>]*></script>`, 'gi'), '');
                     if (htmlContent.includes('</body>')) htmlContent = htmlContent.replace('</body>', `${scriptTag}</body>`);
                     else htmlContent += scriptTag;
                     processedCount++;
@@ -693,10 +706,10 @@
                     const jsonContent = await readFileAsText(file);
                     const varName = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
                     if (name.toLowerCase().includes('manifest')) {
-                        const manifestScript = `<script>window.unityManifest = ${jsonContent};<\/script>`;
+                        const manifestScript = `<script>window.unityManifest = ${jsonContent};</script>`;
                         htmlContent = htmlContent.replace('</head>', `${manifestScript}</head>`);
                     } else {
-                        const jsonScript = `<script>window.${varName} = ${jsonContent};<\/script>`;
+                        const jsonScript = `<script>window.${varName} = ${jsonContent};</script>`;
                         htmlContent = htmlContent.replace('</body>', `${jsonScript}</body>`);
                     }
                     processedCount++;
@@ -787,7 +800,7 @@ function fetchDataUrl(url) {
         
         function removeExternalCdnReferences(htmlContent) {
             let modified = htmlContent;
-            modified = modified.replace(/<script[^>]*src=["']https:\/\/www\.gstatic\.com\/firebasejs[^"']*["'][^>]*><\/script>/gi, '<script>console.warn("Firebase CDN removed - offline mode"); window.firebase = { analytics: () => ({ logEvent: () => {}, setCurrentScreen: () => {} }), initializeApp: () => {}, auth: () => ({ onAuthStateChanged: () => {}, signInAnonymously: () => Promise.resolve() }), database: () => ({ ref: () => ({ once: () => Promise.resolve({ exists: () => false }) }) }), performance: () => ({ trace: () => ({ start: () => {}, stop: () => {} }) }) };<\/script>');
+            modified = modified.replace(/<script[^>]*src=["']https:\/\/www\.gstatic\.com\/firebasejs[^"']*["'][^>]*><\/script>/gi, '<script>console.warn("Firebase CDN removed - offline mode"); window.firebase = { analytics: () => ({ logEvent: () => {}, setCurrentScreen: () => {} }), initializeApp: () => {}, auth: () => ({ onAuthStateChanged: () => {}, signInAnonymously: () => Promise.resolve() }), database: () => ({ ref: () => ({ once: () => Promise.resolve({ exists: () => false }) }) }), performance: () => ({ trace: () => ({ start: () => {}, stop: () => {} }) }) };</script>');
             modified = modified.replace(/<script[^>]*src=["']https:\/\/pagead2\.googlesyndication\.com[^"']*["'][^>]*><\/script>/gi, '');
             modified = modified.replace(/<script[^>]*src=["']https?:\/\/[^"']*["'][^>]*><\/script>/gi, '');
             modified = modified.replace(/<link[^>]*href=["']https?:\/\/[^"']*["'][^>]*>/gi, '');
@@ -797,10 +810,10 @@ function fetchDataUrl(url) {
         function applyUnityFinalFixes(htmlContent) {
             let modified = htmlContent;
             if (modified.includes('unityFirebaseGameOjbectName') && !modified.includes('var unityFirebaseGameOjbectName')) {
-                modified = modified.replace('</head>', `<script>var unityFirebaseGameOjbectName = 'JavascriptMessageReceiver';<\/script></head>`);
+                modified = modified.replace('</head>', `<script>var unityFirebaseGameOjbectName = 'JavascriptMessageReceiver';</script></head>`);
             }
             modified = modified.replace(/navigator\.serviceWorker\.register\(['"][^'"]*['"]\)/g, `// Service worker disabled in inlined version\n    // navigator.serviceWorker.register('service-worker.js')`);
-            modified = modified.replace('</head>', `<script>console.log('Unity WebGL running in OFFLINE inlined mode'); window.unityOfflineMode = true;<\/script></head>`);
+            modified = modified.replace('</head>', `<script>console.log('Unity WebGL running in OFFLINE inlined mode'); window.unityOfflineMode = true;</script></head>`);
             return modified;
         }
         
@@ -835,6 +848,6 @@ function fetchDataUrl(url) {
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
-    <\/script>
+    </script>
 </body>
 </html>
