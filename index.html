@@ -176,6 +176,13 @@
     }
     .mute-button:active { transform: scale(0.95); }
     .mute-button.fading { pointer-events: none; opacity: 0.7; }
+    .mute-button.holding {
+      animation: holdPulse 0.5s infinite alternate;
+    }
+    @keyframes holdPulse {
+      from { box-shadow: 0 0 15px rgba(0, 255, 0, 0.5); }
+      to { box-shadow: 0 0 35px var(--accent), 0 0 50px var(--accent); }
+    }
     .request-button {
       position: fixed;
       bottom: 1rem;
@@ -253,45 +260,209 @@
   <div id="youtube-audio"><div id="yt-player"></div></div>
   <script>
     let ytPlayer, playerReady = false, isMuted = true, volumeFadeInterval = null, hasStartedPlaying = false;
-    function updateMuteButton() { const btn = document.getElementById('muteBtn'); if (btn) btn.textContent = isMuted ? '🔈' : '🔊'; }
+    let isSecretTrack = false;
+    let holdTimer = null;
+    let isHolding = false;
+    const HOLD_DURATION = 5000; // 5 seconds
+    
+    // Video IDs
+    const DEFAULT_VIDEO_ID = 'F0A_R2XV_os';
+    const SECRET_VIDEO_ID = 'y-Q15Ul-9ww';
+    
+    function updateMuteButton() { 
+      const btn = document.getElementById('muteBtn'); 
+      if (btn) btn.textContent = isMuted ? '🔈' : '🔊'; 
+    }
+    
     function fadeVolume(targetVolume, duration, callback) {
-      if (!playerReady || !ytPlayer || !ytPlayer.setVolume) { if (callback) callback(); return; }
+      if (!playerReady || !ytPlayer || !ytPlayer.setVolume) { 
+        if (callback) callback(); 
+        return; 
+      }
       if (volumeFadeInterval) clearInterval(volumeFadeInterval);
       const startVolume = ytPlayer.getVolume() || 0, steps = 30, stepDuration = duration / steps, volumeDiff = targetVolume - startVolume;
       let currentStep = 0;
-      const btn = document.getElementById('muteBtn'); if (btn) btn.classList.add('fading');
+      const btn = document.getElementById('muteBtn'); 
+      if (btn) btn.classList.add('fading');
       volumeFadeInterval = setInterval(() => {
         currentStep++;
         const easeProgress = 1 - Math.pow(1 - (currentStep / steps), 2);
         let newVolume = Math.round(startVolume + (volumeDiff * easeProgress));
         newVolume = Math.max(0, Math.min(100, newVolume));
         ytPlayer.setVolume(newVolume);
-        if (currentStep >= steps) { clearInterval(volumeFadeInterval); volumeFadeInterval = null; ytPlayer.setVolume(targetVolume); if (btn) btn.classList.remove('fading'); if (callback) callback(); }
+        if (currentStep >= steps) { 
+          clearInterval(volumeFadeInterval); 
+          volumeFadeInterval = null; 
+          ytPlayer.setVolume(targetVolume); 
+          if (btn) btn.classList.remove('fading'); 
+          if (callback) callback(); 
+        }
       }, stepDuration);
     }
+    
+    function switchToSecretTrack() {
+      if (!playerReady || !ytPlayer) return;
+      
+      isSecretTrack = true;
+      
+      // Fade out current audio
+      fadeVolume(0, 300, () => {
+        // Load new video - instantly start and loop
+        ytPlayer.loadVideoById({
+          videoId: SECRET_VIDEO_ID,
+          startSeconds: 0,
+          suggestedQuality: 'small'
+        });
+        
+        // Unmute and play immediately
+        ytPlayer.unMute();
+        ytPlayer.setVolume(100);
+        isMuted = false;
+        hasStartedPlaying = true;
+        updateMuteButton();
+      });
+    }
+    
+    function resetToDefaultTrack() {
+      if (!playerReady || !ytPlayer) return;
+      
+      isSecretTrack = false;
+      
+      // Fade out current audio
+      fadeVolume(0, 300, () => {
+        // Load original video
+        ytPlayer.loadVideoById({
+          videoId: DEFAULT_VIDEO_ID,
+          startSeconds: 0,
+          suggestedQuality: 'small'
+        });
+        
+        // Keep muted initially (original behavior)
+        ytPlayer.mute();
+        ytPlayer.setVolume(0);
+        isMuted = true;
+        hasStartedPlaying = false;
+        updateMuteButton();
+      });
+    }
+    
     function toggleMute() {
       if (!playerReady) return;
-      isMuted = !isMuted; updateMuteButton();
-      if (isMuted) { ytPlayer.mute(); fadeVolume(0, 500); }
-      else { ytPlayer.unMute(); if (!hasStartedPlaying) { ytPlayer.playVideo(); hasStartedPlaying = true; } fadeVolume(100, 500); }
+      
+      // If holding, don't toggle - let the hold handler work
+      if (isHolding) return;
+      
+      isMuted = !isMuted; 
+      updateMuteButton();
+      
+      if (isMuted) { 
+        ytPlayer.mute(); 
+        fadeVolume(0, 500); 
+      } else { 
+        ytPlayer.unMute(); 
+        if (!hasStartedPlaying) { 
+          ytPlayer.playVideo(); 
+          hasStartedPlaying = true; 
+        } 
+        fadeVolume(100, 500); 
+      }
     }
-    function loadYouTubeAPI() { const tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api"; tag.async = true; const firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag); }
+    
+    function startHoldTimer() {
+      isHolding = true;
+      const btn = document.getElementById('muteBtn');
+      if (btn) btn.classList.add('holding');
+      
+      holdTimer = setTimeout(() => {
+        // 5 seconds elapsed - switch to secret track
+        if (isSecretTrack) {
+          resetToDefaultTrack();
+        } else {
+          switchToSecretTrack();
+        }
+        isHolding = false;
+        if (btn) btn.classList.remove('holding');
+      }, HOLD_DURATION);
+    }
+    
+    function cancelHoldTimer() {
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+      isHolding = false;
+      const btn = document.getElementById('muteBtn');
+      if (btn) btn.classList.remove('holding');
+    }
+    
+    function loadYouTubeAPI() { 
+      const tag = document.createElement('script'); 
+      tag.src = "https://www.youtube.com/iframe_api"; 
+      tag.async = true; 
+      const firstScriptTag = document.getElementsByTagName('script')[0]; 
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag); 
+    }
+    
     function onYouTubeIframeAPIReady() {
-      ytPlayer = new YT.Player('yt-player', { width: 1, height: 1, videoId: 'F0A_R2XV_os', playerVars: { autoplay: 0, loop: 1, playlist: 'F0A_R2XV_os', controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, showinfo: 0 }, events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange } });
+      ytPlayer = new YT.Player('yt-player', { 
+        width: 1, 
+        height: 1, 
+        videoId: DEFAULT_VIDEO_ID, 
+        playerVars: { 
+          autoplay: 0, 
+          loop: 1, 
+          playlist: DEFAULT_VIDEO_ID, 
+          controls: 0, 
+          disablekb: 1, 
+          fs: 0, 
+          modestbranding: 1, 
+          rel: 0, 
+          showinfo: 0 
+        }, 
+        events: { 
+          'onReady': onPlayerReady, 
+          'onStateChange': onPlayerStateChange 
+        } 
+      });
     }
-    function onPlayerReady(event) { playerReady = true; ytPlayer.mute(); ytPlayer.setVolume(0); }
-    function onPlayerStateChange(event) { if (event.data === YT.PlayerState.ENDED) ytPlayer.playVideo(); }
+    
+    function onPlayerReady(event) { 
+      playerReady = true; 
+      ytPlayer.mute(); 
+      ytPlayer.setVolume(0); 
+    }
+    
+    function onPlayerStateChange(event) { 
+      // For secret track: instantly restart when ended (loop behavior)
+      if (event.data === YT.PlayerState.ENDED) {
+        if (isSecretTrack) {
+          ytPlayer.seekTo(0);
+          ytPlayer.playVideo();
+        } else {
+          ytPlayer.playVideo();
+        }
+      }
+    }
+    
     function fadeOutAudio(duration, callback) {
-      if (!playerReady || !ytPlayer || !ytPlayer.setVolume) { if (callback) callback(); return; }
+      if (!playerReady || !ytPlayer || !ytPlayer.setVolume) { 
+        if (callback) callback(); 
+        return; 
+      }
       if (volumeFadeInterval) clearInterval(volumeFadeInterval);
       let startVolume = ytPlayer.getVolume() || 100, steps = 20, stepDuration = duration / steps, volumeStep = startVolume / steps, currentStep = 0;
       const fadeInterval = setInterval(() => {
         currentStep++;
         const newVolume = Math.max(0, startVolume - volumeStep * currentStep);
         ytPlayer.setVolume(Math.round(newVolume));
-        if (currentStep >= steps || newVolume <= 0) { clearInterval(fadeInterval); ytPlayer.setVolume(0); if (callback) callback(); }
+        if (currentStep >= steps || newVolume <= 0) { 
+          clearInterval(fadeInterval); 
+          ytPlayer.setVolume(0); 
+          if (callback) callback(); 
+        }
       }, stepDuration);
     }
+    
     const canvas = document.getElementById('matrixCanvas'), ctx = canvas.getContext('2d');
     function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     resizeCanvas(); window.addEventListener('resize', resizeCanvas);
@@ -328,7 +499,49 @@
       });
     }
     
-    document.getElementById('muteBtn').addEventListener('click', toggleMute);
+    // Mute button event handlers
+    const muteBtn = document.getElementById('muteBtn');
+    
+    muteBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startHoldTimer();
+    });
+    
+    muteBtn.addEventListener('mouseup', (e) => {
+      e.preventDefault();
+      if (isHolding && !holdTimer) {
+        // Timer already fired (secret track activated), do nothing
+      } else if (isHolding) {
+        // Released before 5 seconds - treat as normal click
+        cancelHoldTimer();
+        toggleMute();
+      }
+    });
+    
+    muteBtn.addEventListener('mouseleave', () => {
+      cancelHoldTimer();
+    });
+    
+    // Touch support for mobile
+    muteBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      startHoldTimer();
+    });
+    
+    muteBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (isHolding && !holdTimer) {
+        // Timer already fired
+      } else if (isHolding) {
+        cancelHoldTimer();
+        toggleMute();
+      }
+    });
+    
+    muteBtn.addEventListener('touchcancel', () => {
+      cancelHoldTimer();
+    });
+    
     document.querySelectorAll('.game-button').forEach(button => {
       button.addEventListener('click', event => {
         const url = button.getAttribute('data-url');
@@ -337,20 +550,33 @@
         fadeOutAudio(1000, () => { window.location.href = url; });
       });
     });
+    
     window.onload = () => {
       updateMuteButton();
       document.body.classList.add('fade-in');
       loadYouTubeAPI();
       fitTextToButton(); // Run text fitting after load
     };
+    
     window.addEventListener('resize', fitTextToButton); // Re-fit on resize
+    
     window.addEventListener('pageshow', () => {
       document.body.classList.remove('fade-out', 'fade-in');
       void document.body.offsetWidth;
       document.body.classList.add('fade-in');
       if (playerReady && ytPlayer && ytPlayer.setVolume) {
-        if (isMuted) { ytPlayer.setVolume(0); ytPlayer.mute(); hasStartedPlaying = false; }
-        else { ytPlayer.setVolume(100); ytPlayer.unMute(); if (!hasStartedPlaying) { ytPlayer.playVideo(); hasStartedPlaying = true; } }
+        if (isMuted) { 
+          ytPlayer.setVolume(0); 
+          ytPlayer.mute(); 
+          hasStartedPlaying = false; 
+        } else { 
+          ytPlayer.setVolume(100); 
+          ytPlayer.unMute(); 
+          if (!hasStartedPlaying) { 
+            ytPlayer.playVideo(); 
+            hasStartedPlaying = true; 
+          } 
+        }
       }
     });
   </script>
