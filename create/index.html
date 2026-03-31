@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+
+html_code = '''<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -39,15 +40,15 @@
             justify-content: center;
             min-height: 200px;
         }
-        .drop-zone:hover, .drop-zone.dragover {
+        .drop-zone.dragover {
             border-color: #ff6b6b;
-            background: rgba(233, 69, 96, 0.1);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(233, 69, 96, 0.2);
+            background: rgba(233, 69, 96, 0.2);
+            transform: scale(1.02);
+            box-shadow: 0 10px 40px rgba(233, 69, 96, 0.3);
         }
-        .drop-zone-icon { font-size: 3em; margin-bottom: 15px; display: block; }
-        .drop-zone-text { font-size: 1.2em; margin-bottom: 10px; color: #fff; font-weight: 600; }
-        .drop-zone-hint { color: #888; font-size: 0.85em; line-height: 1.4; }
+        .drop-zone-icon { font-size: 3em; margin-bottom: 15px; display: block; pointer-events: none; }
+        .drop-zone-text { font-size: 1.2em; margin-bottom: 10px; color: #fff; font-weight: 600; pointer-events: none; }
+        .drop-zone-hint { color: #888; font-size: 0.85em; line-height: 1.4; pointer-events: none; }
         .file-input-hidden { display: none !important; }
         .browse-btn {
             background: rgba(233, 69, 96, 0.2);
@@ -58,6 +59,7 @@
             cursor: pointer;
             margin-top: 15px;
             font-weight: 600;
+            pointer-events: auto;
         }
         .browse-btn:hover { background: #e94560; }
         .file-list { background: rgba(0, 0, 0, 0.3); border-radius: 15px; padding: 20px; margin-bottom: 30px; max-height: 400px; overflow-y: auto; }
@@ -116,17 +118,17 @@
         </div>
         
         <div class="upload-section">
-            <div class="drop-zone" id="dropZoneFiles">
+            <div class="drop-zone" id="dropZoneFiles" data-counter="0">
                 <span class="drop-zone-icon">📄</span>
                 <div class="drop-zone-text">Drop Files Here</div>
                 <div class="drop-zone-hint">Drop individual files or multiple files</div>
-                <button class="browse-btn" onclick="document.getElementById('fileInput').click()">Browse Files</button>
+                <button class="browse-btn" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">Browse Files</button>
             </div>
-            <div class="drop-zone" id="dropZoneFolder">
+            <div class="drop-zone" id="dropZoneFolder" data-counter="0">
                 <span class="drop-zone-icon">📁</span>
                 <div class="drop-zone-text">Drop Folder Here</div>
                 <div class="drop-zone-hint">Drop entire folder with subfolders</div>
-                <button class="browse-btn" onclick="document.getElementById('folderInput').click()">Browse Folder</button>
+                <button class="browse-btn" onclick="event.stopPropagation(); document.getElementById('folderInput').click()">Browse Folder</button>
             </div>
         </div>
         
@@ -222,27 +224,19 @@
                 return;
             }
             const sorted = Array.from(files.values()).sort((a, b) => a.path.localeCompare(b.path));
-            fileList.innerHTML = '<h3>📁 Files (' + files.size + ')</h3>' + sorted.map(f => `
-                <div class="file-item">
-                    <div class="file-info">
-                        <span class="file-icon">${f.name.match(/\\.png|\\.jpg|\\.jpeg|\\.gif/i) ? '🖼️' : f.name.match(/\\.js$/i) ? '📜' : f.name.match(/\\.css$/i) ? '🎨' : f.name.match(/\\.html?$/i) ? '🌐' : f.name.match(/\\.json$/i) ? '📋' : f.name.match(/\\.wasm$/i) ? '⚡' : f.name.match(/\\.unityweb$/i) ? '🎮' : '📄'}</span>
-                        <div style="min-width:0;"><div class="file-name">${f.name}</div><div class="file-path">${f.path}</div></div>
-                    </div>
-                    <span class="file-size">${formatSize(f.size)}</span>
-                    <div class="file-actions">
-                        <button class="btn-icon" onclick="removeFile('${f.path}')">🗑️</button>
-                    </div>
-                </div>
-            `).join('');
+            fileList.innerHTML = '<h3>📁 Files (' + files.size + ')</h3>' + sorted.map(f => {
+                const ext = f.name.split('.').pop().toLowerCase();
+                const icon = ext.match(/png|jpg|jpeg|gif/) ? '🖼️' : ext === 'js' ? '📜' : ext === 'css' ? '🎨' : ext.match(/html?/) ? '🌐' : ext === 'json' ? '📋' : ext === 'wasm' ? '⚡' : ext === 'unityweb' ? '🎮' : '📄';
+                return `<div class="file-item"><div class="file-info"><span class="file-icon">${icon}</span><div style="min-width:0;"><div class="file-name">${f.name}</div><div class="file-path">${f.path}</div></div></div><span class="file-size">${formatSize(f.size)}</span><div class="file-actions"><button class="btn-icon" onclick="window.removeFile('${f.path}')">🗑️</button></div></div>`;
+            }).join('');
         }
         
-        function removeFile(path) {
+        window.removeFile = function(path) {
             files.delete(path);
             updateStats();
             renderFileList();
             log('Removed: ' + path, 'warn');
-        }
-        window.removeFile = removeFile;
+        };
         
         async function addFile(file, path) {
             path = path.replace(/^\\//, '');
@@ -258,54 +252,111 @@
                     entry.file(async (file) => {
                         await addFile(file, path + file.name);
                         resolve();
-                    });
+                    }, (err) => { log('File error: ' + err, 'error'); resolve(); });
                 });
             } else if (entry.isDirectory) {
                 const reader = entry.createReader();
                 return new Promise((resolve) => {
-                    const readAll = () => {
-                        reader.readEntries(async (entries) => {
-                            if (entries.length === 0) { resolve(); return; }
-                            for (const e of entries) await processEntry(e, path + entry.name + '/');
-                            readAll();
-                        });
+                    const entries = [];
+                    const readEntries = () => {
+                        reader.readEntries((results) => {
+                            if (results.length === 0) {
+                                Promise.all(entries.map(e => processEntry(e, path + entry.name + '/'))).then(resolve);
+                            } else {
+                                entries.push(...results);
+                                readEntries();
+                            }
+                        }, (err) => { log('Dir error: ' + err, 'error'); resolve(); });
                     };
-                    readAll();
+                    readEntries();
                 });
             }
         }
         
-        function setupDropZone(zone, isFolder) {
-            zone.addEventListener('dragenter', (e) => { e.preventDefault(); e.stopPropagation(); zone.classList.add('dragover'); });
-            zone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); zone.classList.add('dragover'); });
-            zone.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); if (!zone.contains(e.relatedTarget)) zone.classList.remove('dragover'); });
+        function setupDropZone(zone) {
+            let counter = 0;
+            
+            zone.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                counter++;
+                if (counter === 1) zone.classList.add('dragover');
+            });
+            
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
+            zone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                counter--;
+                if (counter === 0) zone.classList.remove('dragover');
+            });
+            
             zone.addEventListener('drop', async (e) => {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
+                counter = 0;
                 zone.classList.remove('dragover');
-                log('Drop detected...', 'info');
                 
-                const items = e.dataTransfer.items;
-                if (items && items.length > 0) {
-                    for (let i = 0; i < items.length; i++) {
-                        const entry = items[i].webkitGetAsEntry ? items[i].webkitGetAsEntry() : items[i].getAsEntry();
-                        if (entry) await processEntry(entry);
+                log('DROP EVENT FIRED!', 'success');
+                
+                const dt = e.dataTransfer;
+                log('Drop types: ' + (dt.types ? dt.types.join(', ') : 'none'));
+                
+                // Try items first (for folders)
+                if (dt.items && dt.items.length > 0) {
+                    log('Processing ' + dt.items.length + ' items...', 'info');
+                    for (let i = 0; i < dt.items.length; i++) {
+                        const item = dt.items[i];
+                        log('Item ' + i + ': kind=' + item.kind + ', type=' + item.type, 'info');
+                        
+                        if (item.kind === 'file') {
+                            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry();
+                            if (entry) {
+                                log('Got entry: ' + entry.name + (entry.isDirectory ? ' [DIR]' : ' [FILE]'), 'info');
+                                await processEntry(entry);
+                            } else {
+                                // Fallback to getAsFile
+                                const file = item.getAsFile();
+                                if (file) {
+                                    await addFile(file, file.name);
+                                }
+                            }
+                        }
+                    }
+                } else if (dt.files && dt.files.length > 0) {
+                    // Fallback to files
+                    log('Processing ' + dt.files.length + ' files...', 'info');
+                    for (let i = 0; i < dt.files.length; i++) {
+                        const file = dt.files[i];
+                        const path = file.webkitRelativePath || file.name;
+                        await addFile(file, path);
                     }
                 } else {
-                    const fileList = e.dataTransfer.files;
-                    for (let i = 0; i < fileList.length; i++) {
-                        const file = fileList[i];
-                        await addFile(file, file.webkitRelativePath || file.name);
-                    }
+                    log('No items or files found in drop', 'error');
                 }
+                
                 updateStats();
                 renderFileList();
             });
         }
         
-        setupDropZone(dropZoneFiles, false);
-        setupDropZone(dropZoneFolder, true);
+        // Prevent default drag behaviors on document
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.body.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+        
+        setupDropZone(dropZoneFiles);
+        setupDropZone(dropZoneFolder);
         
         fileInput.addEventListener('change', async (e) => {
+            log('File input changed: ' + e.target.files.length + ' files', 'info');
             for (let i = 0; i < e.target.files.length; i++) {
                 await addFile(e.target.files[i], e.target.files[i].name);
             }
@@ -315,6 +366,7 @@
         });
         
         folderInput.addEventListener('change', async (e) => {
+            log('Folder input changed: ' + e.target.files.length + ' files', 'info');
             for (let i = 0; i < e.target.files.length; i++) {
                 const f = e.target.files[i];
                 await addFile(f, f.webkitRelativePath || f.name);
@@ -352,7 +404,7 @@
             updateStats();
             progressContainer.classList.add('active');
             logConsole.innerHTML = '';
-            log('Starting...', 'info');
+            log('Starting bundle...', 'info');
             
             const fileArray = Array.from(files.values());
             const resources = {};
@@ -361,32 +413,32 @@
             for (let i = 0; i < fileArray.length; i++) {
                 const file = fileArray[i];
                 progressFill.style.width = ((i + 1) / fileArray.length * 100) + '%';
-                progressText.textContent = `Processing ${file.name}...`;
+                progressText.textContent = 'Processing ' + file.name + '...';
                 
                 const ext = file.name.split('.').pop().toLowerCase();
                 const isBinary = !['js', 'json', 'html', 'htm', 'css', 'txt', 'xml'].includes(ext);
                 
                 try {
                     if (isBinary) {
-                        resources[file.path] = `data:${getMimeType(ext)};base64,${await readFileAsBase64(file.file)}`;
+                        resources[file.path] = 'data:' + getMimeType(ext) + ';base64,' + await readFileAsBase64(file.file);
                     } else {
                         const content = await readFileAsText(file.file);
-                        if (ext === 'css') css += content + '\n';
-                        else if (ext === 'js') js += content + '\n';
+                        if (ext === 'css') css += content + '\\n';
+                        else if (ext === 'js') js += content + '\\n';
                         else if ((ext === 'html' || ext === 'htm') && !html) html = content;
                         else resources[file.path] = content;
                     }
                 } catch (err) { log('Error: ' + err.message, 'error'); }
             }
             
-            const loaderScript = `<script>(function(){const R=${JSON.stringify(resources)};const oF=window.fetch;window.fetch=function(u,o){const c=u.toString().replace(window.location.origin+'/','').replace(/^\\\\//,'');if(R[c])return Promise.resolve(new Response(R[c],{status:200}));return oF.apply(this,arguments)};const oX=window.XMLHttpRequest;window.XMLHttpRequest=function(){const x=new oX();const oO=x.open;x.open=function(m,u,a,us,p){const c=u.toString().replace(window.location.origin+'/','').replace(/^\\\\//,'');if(R[c]){Object.defineProperty(x,'response',{get:function(){const d=R[c];if(this.responseType==='arraybuffer'){const b=atob(d.split(',')[1]);const n=new Uint8Array(b.length);for(let i=0;i<b.length;i++)n[i]=b.charCodeAt(i);return n.buffer}return d}});Object.defineProperty(x,'status',{value:200});Object.defineProperty(x,'readyState',{value:4});setTimeout(()=>{if(x.onreadystatechange)x.onreadystatechange();if(x.onload)x.onload()},0);return}return oO.apply(this,arguments)};return x}})();<\\/script>`;
+            const loaderScript = '<script>(function(){const R=' + JSON.stringify(resources) + ';const oF=window.fetch;window.fetch=function(u,o){const c=u.toString().replace(window.location.origin+\'/\',\'\').replace(/^\\//,\'\');if(R[c])return Promise.resolve(new Response(R[c],{status:200}));return oF.apply(this,arguments)};const oX=window.XMLHttpRequest;window.XMLHttpRequest=function(){const x=new oX();const oO=x.open;x.open=function(m,u,a,us,p){const c=u.toString().replace(window.location.origin+\'/\',\'\').replace(/^\\//,\'\');if(R[c]){Object.defineProperty(x,\'response\',{get:function(){const d=R[c];if(this.responseType===\'arraybuffer\'){const b=atob(d.split(\',\')[1]);const n=new Uint8Array(b.length);for(let i=0;i<b.length;i++)n[i]=b.charCodeAt(i);return n.buffer}return d}});Object.defineProperty(x,\'status\',{value:200});Object.defineProperty(x,\'readyState\',{value:4});setTimeout(()=>{if(x.onreadystatechange)x.onreadystatechange();if(x.onload)x.onload()},0);return}return oO.apply(this,arguments)};return x}})();<\\/script>';
             
             let finalHtml = html || '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>App</title></head><body></body></html>';
-            if (css) finalHtml = finalHtml.replace('</head>', `<style>${css}</style></head>`);
+            if (css) finalHtml = finalHtml.replace('</head>', '<style>' + css + '</style></head>');
             finalHtml = finalHtml.replace('</body>', loaderScript + '<script>' + js + '<\\/script></body>');
             
             if (document.getElementById('minifyCode').checked) {
-                finalHtml = finalHtml.replace(/>\\\\s+</g, '><').replace(/\\\\s{2,}/g, ' ').replace(/<!--[\\\\s\\\\S]*?-->/g, '');
+                finalHtml = finalHtml.replace(/>\\s+</g, '><').replace(/\\s{2,}/g, ' ').replace(/<!--[\\s\\S]*?-->/g, '');
             }
             
             const blob = new Blob([finalHtml], { type: 'text/html' });
@@ -407,11 +459,18 @@
         });
         
         previewBtn.addEventListener('click', () => {
-            document.getElementById('previewBody').innerHTML = '<pre style="background:#0d1117;padding:20px;border-radius:8px;color:#c9d1d9;max-height:70vh;overflow:auto;">Files: ' + Array.from(files.keys()).join('\\\\n') + '</pre>';
+            document.getElementById('previewBody').innerHTML = '<pre style="background:#0d1117;padding:20px;border-radius:8px;color:#c9d1d9;max-height:70vh;overflow:auto;">' + Array.from(files.keys()).join('\\n') + '</pre>';
             document.getElementById('previewModal').classList.add('active');
         });
         
-        log('Ready. Drag files or click browse buttons.', 'info');
+        log('Ready. Drag & drop or use browse buttons.', 'info');
     </script>
 </body>
-</html>
+</html>'''
+
+# Save to file
+with open('/mnt/kimi/output/bundler_windows_fixed.html', 'w', encoding='utf-8') as f:
+    f.write(html_code)
+
+print("Windows drag-drop fixed version saved!")
+print(f"File size: {len(html_code):,} characters")
