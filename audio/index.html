@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+   <meta name="apple-mobile-web-app-capable" content="yes">
+   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+   <meta name="apple-mobile-web-app-title" content="Reverser">
+   <title>Reverse Recorder</title>
+   <style>
+       * {
+           margin: 0;
+           padding: 0;
+           box-sizing: border-box;
+           -webkit-tap-highlight-color: transparent;
+       }
+
+       :root {
+           --bg-dark: #0a0a0f;
+           --bg-card: #16161d;
+           --accent: #00d4ff;
+           --accent-glow: rgba(0, 212, 255, 0.3);
+           --danger: #ff3366;
+           --danger-glow: rgba(255, 51, 102, 0.3);
+           --success: #00ff88;
+           --text: #ffffff;
+           --text-dim: #8888a0;
+       }
+
+       body {
+           font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+           background: var(--bg-dark);
+           color: var(--text);
+           min-height: 100vh;
+           min-height: 100dvh;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           justify-content: center;
+           padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+           overflow: hidden;
+           position: relative;
+       }
+
+       /* Animated background */
+       .bg-gradient {
+           position: fixed;
+           top: 0;
+           left: 0;
+           width: 100%;
+           height: 100%;
+           background: radial-gradient(ellipse at 30% 20%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
+                       radial-gradient(ellipse at 70% 80%, rgba(255, 51, 102, 0.1) 0%, transparent 50%);
+           pointer-events: none;
+           z-index: 0;
+       }
+
+       .container {
+           position: relative;
+           z-index: 1;
+           width: 100%;
+           max-width: 400px;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           gap: 30px;
+       }
+
+       header {
+           text-align: center;
+           margin-bottom: 10px;
+       }
+
+       h1 {
+           font-size: 28px;
+           font-weight: 700;
+           letter-spacing: -0.5px;
+           background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+           -webkit-background-clip: text;
+           -webkit-text-fill-color: transparent;
+           margin-bottom: 8px;
+       }
+
+       .subtitle {
+           color: var(--text-dim);
+           font-size: 14px;
+           font-weight: 500;
+       }
+
+       /* Waveform visualization */
+       .waveform-container {
+           width: 100%;
+           height: 120px;
+           background: var(--bg-card);
+           border-radius: 24px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           position: relative;
+           overflow: hidden;
+           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+       }
+
+       canvas {
+           width: 100%;
+           height: 100%;
+       }
+
+       .recording-indicator {
+           position: absolute;
+           top: 16px;
+           right: 16px;
+           width: 8px;
+           height: 8px;
+           background: var(--danger);
+           border-radius: 50%;
+           opacity: 0;
+           transition: opacity 0.3s;
+       }
+
+       .recording-indicator.active {
+           opacity: 1;
+           animation: pulse 1s ease-in-out infinite;
+       }
+
+       @keyframes pulse {
+           0%, 100% { transform: scale(1); opacity: 1; }
+           50% { transform: scale(1.5); opacity: 0.5; }
+       }
+
+       /* Timer display */
+       .timer {
+           font-size: 48px;
+           font-weight: 200;
+           font-variant-numeric: tabular-nums;
+           color: var(--text);
+           text-shadow: 0 0 30px var(--accent-glow);
+           transition: all 0.3s;
+       }
+
+       .timer.recording {
+           color: var(--danger);
+           text-shadow: 0 0 30px var(--danger-glow);
+       }
+
+       /* Controls */
+       .controls {
+           display: flex;
+           flex-direction: column;
+           gap: 16px;
+           width: 100%;
+       }
+
+       .btn {
+           width: 100%;
+           padding: 20px 32px;
+           border: none;
+           border-radius: 16px;
+           font-size: 17px;
+           font-weight: 600;
+           cursor: pointer;
+           transition: all 0.2s;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           gap: 12px;
+           position: relative;
+           overflow: hidden;
+       }
+
+       .btn:active {
+           transform: scale(0.96);
+       }
+
+       .btn-record {
+           background: var(--danger);
+           color: white;
+           box-shadow: 0 4px 20px var(--danger-glow);
+       }
+
+       .btn-record.recording {
+           background: #ff1144;
+           box-shadow: 0 0 40px var(--danger-glow);
+       }
+
+       .btn-play {
+           background: var(--bg-card);
+           color: var(--text);
+           border: 1px solid rgba(255, 255, 255, 0.1);
+       }
+
+       .btn-play:not(:disabled):hover {
+           background: rgba(255, 255, 255, 0.05);
+           border-color: var(--accent);
+       }
+
+       .btn-reverse {
+           background: linear-gradient(135deg, var(--accent) 0%, #0099cc 100%);
+           color: white;
+           box-shadow: 0 4px 20px var(--accent-glow);
+       }
+
+       .btn:disabled {
+           opacity: 0.4;
+           cursor #00ff88;
+           --text: #ffffff;
+           --text-dim: #8888a0;
+       }
+
+       body {
+           font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+           background: var(--bg-dark);
+           color: var(--text);
+           min-height: 100vh;
+           min-height: 100dvh;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           justify-content: center;
+           padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+           overflow: hidden;
+           position: relative;
+       }
+
+       /* Animated background */
+       .bg-gradient {
+           position: fixed;
+           top: 0;
+           left: 0;
+           width: 100%;
+           height: 100%;
+           background: radial-gradient(ellipse at 30% 20%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
+                       radial-gradient(ellipse at 70% 80%, rgba(255, 51, 102, 0.1) 0%, transparent 50%);
+           pointer-events: none;
+           z-index: 0;
+       }
+
+       .container {
+           position: relative;
+           z-index: 1;
+           width: 100%;
+           max-width: 400px;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           gap: 30px;
+       }
+
+       header {
+           text-align: center;
+           margin-bottom: 10px;
+       }
+
+       h1 {
+           font-size: 28px;
+           font-weight: 700;
+           letter-spacing: -0.5px;
+           background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+           -webkit-background-clip: text;
+           -webkit-text-fill-color: transparent;
+           margin-bottom: 8px;
+       }
+
+       .subtitle {
+           color: var(--text-dim);
+           font-size: 14px;
+           font-weight: 500;
+       }
+
+       /* Waveform visualization */
+       .waveform-container {
+           width: 100%;
+           height: 120px;
+           background: var(--bg-card);
+           border-radius: 24px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           position: relative;
+           overflow: hidden;
+           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+       }
+
+       canvas {
+           width: 100%;
+           height: 100%;
+       }
+
+       .recording-indicator {
+           position: absolute;
+           top: 16px;
+           right: 16px;
+           width: 8px;
+           height: 8px;
+           background: var(--danger);
+           border-radius: 50%;
+           opacity: 0;
+           transition: opacity 0.3s;
+       }
+
+       .recording-indicator.active {
+           opacity: 1;
+           animation: pulse 1s ease-in-out infinite;
+       }
+
+       @keyframes pulse {
+           0%, 100% { transform: scale(1); opacity: 1; }
+           50% { transform: scale(1.5); opacity: 0.5; }
+       }
+
+       /* Timer display */
+       .timer {
+           font-size: 48px;
+           font-weight: 200;
+           font-variant-numeric: tabular-nums;
+           color: var(--text);
+           text-shadow: 0 0 30px var(--accent-glow);
+           transition: all 0.3s;
+       }
+
+       .timer.recording {
+           color: var(--danger);
+           text-shadow: 0 0 30px var(--danger-glow);
+       }
+
+       /* Controls */
+       .controls {
+           display: flex;
+           flex-direction: column;
+           gap: 16px;
+           width: 100%;
+       }
+
+       .btn {
+           width: 100%;
+           padding: 20px 32px;
+           border: none;
+           border-radius: 16px;
+           font-size: 17px;
+           font-weight: 600;
+           cursor: pointer;
+           transition: all 0.2s;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           gap: 12px;
+           position: relative;
+           overflow: hidden;
+       }
+
+       .btn:active {
+           transform: scale(0.96);
+       }
+
+       .btn-record {
+           background: var(--danger);
+           color: white;
+           box-shadow: 0 4px 20px var(--danger-glow);
+       }
+
+       .btn-record.recording {
+           background: #ff1144;
+           box-shadow: 0 0 40px var(--danger-glow);
+       }
+
+       .btn-play {
+           background: var(--bg-card);
+           color: var(--text);
+           border: 1px solid rgba(255, 255, 255, 0.1);
+       }
+
+       .btn-play:not(:disabled):hover {
+           background: rgba(255, 255, 255, 0.05);
+           border-color: var(--accent);
+       }
+
+       .btn-reverse {
+           background: linear-gradient(135deg, var(--accent) 0%, #0099cc 100%);
+           color: white;
+           box-shadow: 0 4px 20px var(--accent-glow);
+       }
+
+       .btn:disabled {
+           opacity: 0.4;
+           cursor: not-allowed;
+       }
+
+       .btn:disabled:active {
+           transform: none;
+       }
+
+       /* Icons */
+       .icon {
+           width: 24px;
+           height: 24px;
+           fill: currentColor;
+       }
+
+       /* Status text */
+       .status {
+           text-align: center;
+           color: var(--text-dim);
+           font-size: 13px;
+           min-height: 20px;
+           font-weight: 500;
+       }
+
+       /* Visualizer bars for idle state */
+       .idle-bars {
+           display: flex;
+           gap: 4px;
+           align-items: center;
+           height: 40px;
+       }
+
+       .bar {
+           width: 4px;
+           background: var(--accent);
+           border-radius: 2px;
+           opacity: 0.3;
+           animation: idle-wave 2s ease-in-out infinite;
+       }
+
+       .bar:nth-child(1) { height: 20%; animation-delay: 0s; }
+       .bar:nth-child(2) { height: 40%; animation-delay: 0.1s; }
+       .bar:nth-child(3) { height: 60%; animation-delay: 0.2s; }
+       .bar:nth-child(4) { height: 80%; animation-delay: 0.3s; }
+       .bar:nth-child(5) { height: 60%; animation-delay: 0.4s; }
+       .bar:nth-child(6) { height: 40%; animation-delay: 0.5s; }
+       .bar:nth-child(7) { height: 20%; animation-delay: 0.6s; }
+
+       @keyframes idle-wave {
+           0%, 100% { transform: scaleY(0.5); opacity: 0.3; }
+           50% { transform: scaleY(1); opacity: 0.8; }
+       }
+
+       /* Playing animation */
+       .playing .bar {
+           animation: play-wave 0.5s ease-in-out infinite;
+       }
+
+       @keyframes play-wave {
+           0%, 100% { transform: scaleY(1); }
+           50% { transform: scaleY(1.5); }
+       }
+   </style>
+</head>
+<body>
+   <div class="bg-gradient"></div>
+   
+   <div class="container">
+       <header>
+           <h1>Reverse Recorder</h1>
+           <p class="subtitle">Record, Play, Reverse</p>
+       </header>
+
+       <div class="waveform-container">
+           <div class="recording-indicator" id="recIndicator"></div>
+           <canvas id="visualizer"></canvas>
+           <div class="idle-bars" id="idleBars" style="display: none;">
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+           </div>
+       </div>
+
+       <div class="timer" id="timer">00:00</div>
+
+       <div class="controls">
+           <button class="btn btn-record" id="recordBtn">
+               <svg class="icon" viewBox="0 0 24 24">
+                   <circle cx="12" cy="12" r="6"/>
+               </svg>
+               <span id="recordText">Record</span>
+           </button>
+
+           <button class="btn btn-play" id="playBtn" disabled>
+               <svg class="icon" viewBox="0 0 24 24">
+                   <path d="M8 5v14l11-7z"/>
+               </svg>
+               Play Recording
+           </button>
+
+           <button class="btn btn-reverse" id="reverseBtn" disabled>
+               <svg class="icon" viewBox="0 0 24 24">
+#00ff88;
+           --text: #ffffff;
+           --text-dim: #8888a0;
+       }
+
+       body {
+           font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+           background: var(--bg-dark);
+           color: var(--text);
+           min-height: 100vh;
+           min-height: 100dvh;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           justify-content: center;
+           padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+           overflow: hidden;
+           position: relative;
+       }
+
+       /* Animated background */
+       .bg-gradient {
+           position: fixed;
+           top: 0;
+           left: 0;
+           width: 100%;
+           height: 100%;
+           background: radial-gradient(ellipse at 30% 20%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
+                       radial-gradient(ellipse at 70% 80%, rgba(255, 51, 102, 0.1) 0%, transparent 50%);
+           pointer-events: none;
+           z-index: 0;
+       }
+
+       .container {
+           position: relative;
+           z-index: 1;
+           width: 100%;
+           max-width: 400px;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           gap: 30px;
+       }
+
+       header {
+           text-align: center;
+           margin-bottom: 10px;
+       }
+
+       h1 {
+           font-size: 28px;
+           font-weight: 700;
+           letter-spacing: -0.5px;
+           background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+           -webkit-background-clip: text;
+           -webkit-text-fill-color: transparent;
+           margin-bottom: 8px;
+       }
+
+       .subtitle {
+           color: var(--text-dim);
+           font-size: 14px;
+           font-weight: 500;
+       }
+
+       /* Waveform visualization */
+       .waveform-container {
+           width: 100%;
+           height: 120px;
+           background: var(--bg-card);
+           border-radius: 24px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           position: relative;
+           overflow: hidden;
+           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+       }
+
+       canvas {
+           width: 100%;
+           height: 100%;
+       }
+
+       .recording-indicator {
+           position: absolute;
+           top: 16px;
+           right: 16px;
+           width: 8px;
+           height: 8px;
+           background: var(--danger);
+           border-radius: 50%;
+           opacity: 0;
+           transition: opacity 0.3s;
+       }
+
+       .recording-indicator.active {
+           opacity: 1;
+           animation: pulse 1s ease-in-out infinite;
+       }
+
+       @keyframes pulse {
+           0%, 100% { transform: scale(1); opacity: 1; }
+           50% { transform: scale(1.5); opacity: 0.5; }
+       }
+
+       /* Timer display */
+       .timer {
+           font-size: 48px;
+           font-weight: 200;
+           font-variant-numeric: tabular-nums;
+           color: var(--text);
+           text-shadow: 0 0 30px var(--accent-glow);
+           transition: all 0.3s;
+       }
+
+       .timer.recording {
+           color: var(--danger);
+           text-shadow: 0 0 30px var(--danger-glow);
+       }
+
+       /* Controls */
+       .controls {
+           display: flex;
+           flex-direction: column;
+           gap: 16px;
+           width: 100%;
+       }
+
+       .btn {
+           width: 100%;
+           padding: 20px 32px;
+           border: none;
+           border-radius: 16px;
+           font-size: 17px;
+           font-weight: 600;
+           cursor: pointer;
+           transition: all 0.2s;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           gap: 12px;
+           position: relative;
+           overflow: hidden;
+       }
+
+       .btn:active {
+           transform: scale(0.96);
+       }
+
+       .btn-record {
+           background: var(--danger);
+           color: white;
+           box-shadow: 0 4px 20px var(--danger-glow);
+       }
+
+       .btn-record.recording {
+           background: #ff1144;
+           box-shadow: 0 0 40px var(--danger-glow);
+       }
+
+       .btn-play {
+           background: var(--bg-card);
+           color: var(--text);
+           border: 1px solid rgba(255, 255, 255, 0.1);
+       }
+
+       .btn-play:not(:disabled):hover {
+           background: rgba(255, 255, 255, 0.05);
+           border-color: var(--accent);
+       }
+
+       .btn-reverse {
+           background: linear-gradient(135deg, var(--accent) 0%, #0099cc 100%);
+           color: white;
+           box-shadow: 0 4px 20px var(--accent-glow);
+       }
+
+       .btn:disabled {
+           opacity: 0.4;
+           cursor: not-allowed;
+       }
+
+       .btn:disabled:active {
+           transform: none;
+       }
+
+       /* Icons */
+       .icon {
+           width: 24px;
+           height: 24px;
+           fill: currentColor;
+       }
+
+       /* Status text */
+       .status {
+           text-align: center;
+           color: var(--text-dim);
+           font-size: 13px;
+           min-height: 20px;
+           font-weight: 500;
+       }
+
+       /* Visualizer bars for idle state */
+       .idle-bars {
+           display: flex;
+           gap: 4px;
+           align-items: center;
+           height: 40px;
+       }
+
+       .bar {
+           width: 4px;
+           background: var(--accent);
+           border-radius: 2px;
+           opacity: 0.3;
+           animation: idle-wave 2s ease-in-out infinite;
+       }
+
+       .bar:nth-child(1) { height: 20%; animation-delay: 0s; }
+       .bar:nth-child(2) { height: 40%; animation-delay: 0.1s; }
+       .bar:nth-child(3) { height: 60%; animation-delay: 0.2s; }
+       .bar:nth-child(4) { height: 80%; animation-delay: 0.3s; }
+       .bar:nth-child(5) { height: 60%; animation-delay: 0.4s; }
+       .bar:nth-child(6) { height: 40%; animation-delay: 0.5s; }
+       .bar:nth-child(7) { height: 20%; animation-delay: 0.6s; }
+
+       @keyframes idle-wave {
+           0%, 100% { transform: scaleY(0.5); opacity: 0.3; }
+           50% { transform: scaleY(1); opacity: 0.8; }
+       }
+
+       /* Playing animation */
+       .playing .bar {
+           animation: play-wave 0.5s ease-in-out infinite;
+       }
+
+       @keyframes play-wave {
+           0%, 100% { transform: scaleY(1); }
+           50% { transform: scaleY(1.5); }
+       }
+   </style>
+</head>
+<body>
+   <div class="bg-gradient"></div>
+   
+   <div class="container">
+       <header>
+           <h1>Reverse Recorder</h1>
+           <p class="subtitle">Record, Play, Reverse</p>
+       </header>
+
+       <div class="waveform-container">
+           <div class="recording-indicator" id="recIndicator"></div>
+           <canvas id="visualizer"></canvas>
+           <div class="idle-bars" id="idleBars" style="display: none;">
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+           </div>
+       </div>
+
+       <div class="timer" id="timer">00:00</div>
+
+       <div class="controls">
+           <button class="btn btn-record" id="recordBtn">
+               <svg class="icon" viewBox="0 0 24 24">
+                   <circle cx="12" cy="12" r="6"/>
+               </svg>
+               <span id="recordText">Record</span>
+           </button>
+
+           <button class="btn btn-play" id="playBtn" disabled>
+               <svg class="icon" viewBox="0 0 24 24">
+                   <path d="M8 5v14l11-7z"/>
+               </svg>
+               Play Recording
+           </button>
+
+           <button class="btn btn-reverse" id="reverseBtn" disabled>
+               <svg class="icon" viewBox="0 0 24 24">
+                   <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+               </svg>
+               Play Reversed
+           </button>
+       </div>
+
+       <div class="status" id="status">Tap record to start</div>
+   </div>
+
+   <script>
+       // Audio context and variables
+       let audioContext = null;
+       let mediaRecorder = null;
+       let audioStream = null;
+       let recordedChunks = [];
+       let audioBuffer = null;
+       let reversedBuffer = null;
+       let sourceNode = null;
+       let analyser = null;
+       let animationId = null;
+       let startTime = null;
+       let timerInterval = null;
+       let isRecording = false;
+       let isPlaying = false;
+
+       // DOM elements
+       const recordBtn = document.getElementById('recordBtn');
+       const playBtn = document.getElementById('playBtn');
+       const reverseBtn = document.getElementById('reverseBtn');
+       const recordText = document.getElementById('recordText');
+       const timer = document.getElementById('timer');
+       const status = document.getElementById('status');
+       const recIndicator = document.getElementById('recIndicator');
+       const canvas = document.getElementById('visualizer');
+       const ctx = canvas.getContext('2d');
+       const idleBars = document.getElementById('idleBars');
+
+       // Set canvas size
+       function resizeCanvas() {
+           canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+           canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+           ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+       }
+       resizeCanvas();
+       window.addEventListener('resize', resizeCanvas);
+
+       // Initialize audio context
+       function initAudioContext() {
+           if (!audioContext) {
+               audioContext = new (window.AudioContext || window.webkitAudioContext)();
+           }
+           if (audioContext.state === 'suspended') {
+               audioContext.resume();
+           }
+       }
+
+       // Timer functions
+       function startTimer() {
+           startTime = Date.now();
+           timerInterval = setInterval(() => {
+               const elapsed = Math.floor((Date.now() - startTime) / 1000);
+               const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+               const secs = (elapsed % 60).toString().padStart(2, '0');
+               timer.textContent = `${mins}:${secs}`;
+           }, 100);
+       }
+
+       function stopTimer() {
+           clearInterval(timerInterval);
+       }
+
+       function resetTimer() {
+           stopTimer();
+           timer.textContent = '00:00';
+       }
+
+       // Visualizer
+       function drawVisualizer() {
+           if (!analyser) return;
+           
+           const bufferLength = analyser.frequencyBinCount;
+           const dataArray = new Uint8Array(bufferLength);
+           analyser.getByteFrequencyData(dataArray);
+           
+           const width = canvas.offsetWidth;
+           const height = canvas.offsetHeight;
+           
+           ctx.clearRect(0, 0, width, height);
+           
+           const barWidth = (width / bufferLength) * 2.5;
+           let barHeight;
+           let x = 0;
+           
+           for (let i = 0; i < bufferLength; i++) {
+               barHeight = (dataArray[i] / 255) * height * 0.8;
+               
+               const gradient = ctx.createLinearGradient(0, height - barHeight, 0, height);
+               if (isRecording) {
+                   gradient.addColorStop(0, '#ff3366');
+                   gradient.addColorStop(1 #00ff88;
+           --text: #ffffff;
+           --text-dim: #8888a0;
+       }
+
+       body {
+           font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+           background: var(--bg-dark);
+           color: var(--text);
+           min-height: 100vh;
+           min-height: 100dvh;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           justify-content: center;
+           padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+           overflow: hidden;
+           position: relative;
+       }
+
+       /* Animated background */
+       .bg-gradient {
+           position: fixed;
+           top: 0;
+           left: 0;
+           width: 100%;
+           height: 100%;
+           background: radial-gradient(ellipse at 30% 20%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
+                       radial-gradient(ellipse at 70% 80%, rgba(255, 51, 102, 0.1) 0%, transparent 50%);
+           pointer-events: none;
+           z-index: 0;
+       }
+
+       .container {
+           position: relative;
+           z-index: 1;
+           width: 100%;
+           max-width: 400px;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+           gap: 30px;
+       }
+
+       header {
+           text-align: center;
+           margin-bottom: 10px;
+       }
+
+       h1 {
+           font-size: 28px;
+           font-weight: 700;
+           letter-spacing: -0.5px;
+           background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+           -webkit-background-clip: text;
+           -webkit-text-fill-color: transparent;
+           margin-bottom: 8px;
+       }
+
+       .subtitle {
+           color: var(--text-dim);
+           font-size: 14px;
+           font-weight: 500;
+       }
+
+       /* Waveform visualization */
+       .waveform-container {
+           width: 100%;
+           height: 120px;
+           background: var(--bg-card);
+           border-radius: 24px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           position: relative;
+           overflow: hidden;
+           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+       }
+
+       canvas {
+           width: 100%;
+           height: 100%;
+       }
+
+       .recording-indicator {
+           position: absolute;
+           top: 16px;
+           right: 16px;
+           width: 8px;
+           height: 8px;
+           background: var(--danger);
+           border-radius: 50%;
+           opacity: 0;
+           transition: opacity 0.3s;
+       }
+
+       .recording-indicator.active {
+           opacity: 1;
+           animation: pulse 1s ease-in-out infinite;
+       }
+
+       @keyframes pulse {
+           0%, 100% { transform: scale(1); opacity: 1; }
+           50% { transform: scale(1.5); opacity: 0.5; }
+       }
+
+       /* Timer display */
+       .timer {
+           font-size: 48px;
+           font-weight: 200;
+           font-variant-numeric: tabular-nums;
+           color: var(--text);
+           text-shadow: 0 0 30px var(--accent-glow);
+           transition: all 0.3s;
+       }
+
+       .timer.recording {
+           color: var(--danger);
+           text-shadow: 0 0 30px var(--danger-glow);
+       }
+
+       /* Controls */
+       .controls {
+           display: flex;
+           flex-direction: column;
+           gap: 16px;
+           width: 100%;
+       }
+
+       .btn {
+           width: 100%;
+           padding: 20px 32px;
+           border: none;
+           border-radius: 16px;
+           font-size: 17px;
+           font-weight: 600;
+           cursor: pointer;
+           transition: all 0.2s;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           gap: 12px;
+           position: relative;
+           overflow: hidden;
+       }
+
+       .btn:active {
+           transform: scale(0.96);
+       }
+
+       .btn-record {
+           background: var(--danger);
+           color: white;
+           box-shadow: 0 4px 20px var(--danger-glow);
+       }
+
+       .btn-record.recording {
+           background: #ff1144;
+           box-shadow: 0 0 40px var(--danger-glow);
+       }
+
+       .btn-play {
+           background: var(--bg-card);
+           color: var(--text);
+           border: 1px solid rgba(255, 255, 255, 0.1);
+       }
+
+       .btn-play:not(:disabled):hover {
+           background: rgba(255, 255, 255, 0.05);
+           border-color: var(--accent);
+       }
+
+       .btn-reverse {
+           background: linear-gradient(135deg, var(--accent) 0%, #0099cc 100%);
+           color: white;
+           box-shadow: 0 4px 20px var(--accent-glow);
+       }
+
+       .btn:disabled {
+           opacity: 0.4;
+           cursor: not-allowed;
+       }
+
+       .btn:disabled:active {
+           transform: none;
+       }
+
+       /* Icons */
+       .icon {
+           width: 24px;
+           height: 24px;
+           fill: currentColor;
+       }
+
+       /* Status text */
+       .status {
+           text-align: center;
+           color: var(--text-dim);
+           font-size: 13px;
+           min-height: 20px;
+           font-weight: 500;
+       }
+
+       /* Visualizer bars for idle state */
+       .idle-bars {
+           display: flex;
+           gap: 4px;
+           align-items: center;
+           height: 40px;
+       }
+
+       .bar {
+           width: 4px;
+           background: var(--accent);
+           border-radius: 2px;
+           opacity: 0.3;
+           animation: idle-wave 2s ease-in-out infinite;
+       }
+
+       .bar:nth-child(1) { height: 20%; animation-delay: 0s; }
+       .bar:nth-child(2) { height: 40%; animation-delay: 0.1s; }
+       .bar:nth-child(3) { height: 60%; animation-delay: 0.2s; }
+       .bar:nth-child(4) { height: 80%; animation-delay: 0.3s; }
+       .bar:nth-child(5) { height: 60%; animation-delay: 0.4s; }
+       .bar:nth-child(6) { height: 40%; animation-delay: 0.5s; }
+       .bar:nth-child(7) { height: 20%; animation-delay: 0.6s; }
+
+       @keyframes idle-wave {
+           0%, 100% { transform: scaleY(0.5); opacity: 0.3; }
+           50% { transform: scaleY(1); opacity: 0.8; }
+       }
+
+       /* Playing animation */
+       .playing .bar {
+           animation: play-wave 0.5s ease-in-out infinite;
+       }
+
+       @keyframes play-wave {
+           0%, 100% { transform: scaleY(1); }
+           50% { transform: scaleY(1.5); }
+       }
+   </style>
+</head>
+<body>
+   <div class="bg-gradient"></div>
+   
+   <div class="container">
+       <header>
+           <h1>Reverse Recorder</h1>
+           <p class="subtitle">Record, Play, Reverse</p>
+       </header>
+
+       <div class="waveform-container">
+           <div class="recording-indicator" id="recIndicator"></div>
+           <canvas id="visualizer"></canvas>
+           <div class="idle-bars" id="idleBars" style="display: none;">
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+               <div class="bar"></div>
+           </div>
+       </div>
+
+       <div class="timer" id="timer">00:00</div>
+
+       <div class="controls">
+           <button class="btn btn-record" id="recordBtn">
+               <svg class="icon" viewBox="0 0 24 24">
+                   <circle cx="12" cy="12" r="6"/>
+               </svg>
+               <span id="recordText">Record</span>
+           </button>
+
+           <button class="btn btn-play" id="playBtn" disabled>
+               <svg class="icon" viewBox="0 0 24 24">
+                   <path d="M8 5v14l11-7z"/>
+               </svg>
+               Play Recording
+           </button>
+
+           <button class="btn btn-reverse" id="reverseBtn" disabled>
+               <svg class="icon" viewBox="0 0 24 24">
+                   <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+               </svg>
+               Play Reversed
+           </button>
+       </div>
+
+       <div class="status" id="status">Tap record to start</div>
+   </div>
+
+   <script>
+       // Audio context and variables
+       let audioContext = null;
+       let mediaRecorder = null;
+       let audioStream = null;
+       let recordedChunks = [];
+       let audioBuffer = null;
+       let reversedBuffer = null;
+       let sourceNode = null;
+       let analyser = null;
+       let animationId = null;
+       let startTime = null;
+       let timerInterval = null;
+       let isRecording = false;
+       let isPlaying = false;
+
+       // DOM elements
+       const recordBtn = document.getElementById('recordBtn');
+       const playBtn = document.getElementById('playBtn');
+       const reverseBtn = document.getElementById('reverseBtn');
+       const recordText = document.getElementById('recordText');
+       const timer = document.getElementById('timer');
+       const status = document.getElementById('status');
+       const recIndicator = document.getElementById('recIndicator');
+       const canvas = document.getElementById('visualizer');
+       const ctx = canvas.getContext('2d');
+       const idleBars = document.getElementById('idleBars');
+
+       // Set canvas size
+       function resizeCanvas() {
+           canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+           canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+           ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+       }
+       resizeCanvas();
+       window.addEventListener('resize', resizeCanvas);
+
+       // Initialize audio context
+       function initAudioContext() {
+           if (!audioContext) {
+               audioContext = new (window.AudioContext || window.webkitAudioContext)();
+           }
+           if (audioContext.state === 'suspended') {
+               audioContext.resume();
+           }
+       }
+
+       // Timer functions
+       function startTimer() {
+           startTime = Date.now();
+           timerInterval = setInterval(() => {
+               const elapsed = Math.floor((Date.now() - startTime) / 1000);
+               const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+               const secs = (elapsed % 60).toString().padStart(2, '0');
+               timer.textContent = `${mins}:${secs}`;
+           }, 100);
+       }
+
+       function stopTimer() {
+           clearInterval(timerInterval);
+       }
+
+       function resetTimer() {
+           stopTimer();
+           timer.textContent = '00:00';
+       }
+
+       // Visualizer
+       function drawVisualizer() {
+           if (!analyser) return;
+           
+           const bufferLength = analyser.frequencyBinCount;
+           const dataArray = new Uint8Array(bufferLength);
+           analyser.getByteFrequencyData(dataArray);
+           
+           const width = canvas.offsetWidth;
+           const height = canvas.offsetHeight;
+           
+           ctx.clearRect(0, 0, width, height);
+           
+           const barWidth = (width / bufferLength) * 2.5;
+           let barHeight;
+           let x = 0;
+           
+           for (let i = 0; i < bufferLength; i++) {
+               barHeight = (dataArray[i] / 255) * height * 0.8;
+               
+               const gradient = ctx.createLinearGradient(0, height - barHeight, 0, height);
+               if (isRecording) {
+                   gradient.addColorStop(0, '#ff3366');
+                   gradient.addColorStop(1, '#ff1144');
+               } else {
+                   gradient.addColorStop(0, '#00d4ff');
+                   gradient.addColorStop(1, '#0099cc');
+               }
+               
+               ctx.fillStyle = gradient;
+               ctx.roundRect(x, height - barHeight, barWidth, barHeight, 2);
+               ctx.fill();
+               
+               x += barWidth + 1;
+           }
+           
+           animationId = requestAnimationFrame(drawVisualizer);
+       }
+
+       // Start recording
+       async function startRecording() {
+           try {
+               initAudioContext();
+               
+               audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+               
+               // Create analyser for visualization
+               analyser = audioContext.createAnalyser();
+               analyser.fftSize = 256;
+               const source = audioContext.createMediaStreamSource(audioStream);
+               source.connect(analyser);
+               
+               // Setup media recorder
+               mediaRecorder = new MediaRecorder(audioStream);
+               recordedChunks = [];
+               
+               mediaRecorder.ondataavailable = (e) => {
+                   if (e.data.size > 0) {
+                       recordedChunks.push(e.data);
+                   }
+               };
+               
+               mediaRecorder.onstop = async () => {
+                   const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                   const arrayBuffer = await blob.arrayBuffer();
+                   audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                   
+                   // Create reversed buffer
+                   reversedBuffer = audioContext.createBuffer(
+                       audioBuffer.numberOfChannels,
+                       audioBuffer.length,
+                       audioBuffer.sampleRate
+                   );
+                   
+                   for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+                       const originalData = audioBuffer.getChannelData(channel);
+                       const reversedData = reversedBuffer.getChannelData(channel);
+                       for (let i = 0; i < originalData.length; i++) {
+                           reversedData[i] = originalData[originalData.length - 1 - i];
+                       }
+                   }
+                   
+                   playBtn.disabled = false;
+                   reverseBtn.disabled = false;
+                   status.textContent = 'Recording saved. Ready to play!';
+               };
+               
+               mediaRecorder.start();
+               isRecording = true;
+               
+               // Update UI
+               recordBtn.classList.add('recording');
+               recordText.textContent = 'Stop';
+               timer.classList.add('recording');
+               recIndicator.classList.add('active');
+               status.textContent = 'Recording...';
+               
+               startTimer();
+               drawVisualizer();
+               
+           } catch (err) {
+               console.error('Error accessing microphone:', err);
+               status.textContent = 'Microphone access denied';
+           }
+       }
+
+       // Stop recording
+       function stopRecording() {
+           if (mediaRecorder && isRecording) {
+               mediaRecorder.stop();
+               audioStream.getTracks().forEach(track => track.stop());
+               isRecording = false;
+               
+               // Update UI
+               recordBtn.classList.remove('recording');
+               recordText.textContent = 'Record';
+               timer.classList.remove('recording');
+               recIndicator.classList.remove('active');
+               
+               stopTimer();
+               cancelAnimationFrame(animationId);
+               ctx.clearRect(0, 0, canvas.width, canvas.height);
+           }
+       }
+
+       // Play audio
+       function playAudio(buffer, label) {
+           if (isPlaying) {
+               sourceNode.stop();
+           }
+           
+           initAudioContext();
+           
+           sourceNode = audioContext.createBufferSource();
+           sourceNode.buffer = buffer;
+           
+           // Connect to analyser for visualization
+           analyser = audioContext.createAnalyser();
+           analyser.fftSize = 256;
+           sourceNode.connect(analyser);
+           analyser.connect(audioContext.destination);
+           
+           sourceNode.start(0);
+           isPlaying = true;
+           
+           // Update UI
+           status.textContent = `Playing ${label}...`;
+           idleBars.style.display = 'flex';
+           idleBars.classList.add('playing');
+           
+           sourceNode.onended = () => {
+               isPlaying = false;
+               status.textContent = 'Playback finished';
+               idleBars.classList.remove('playing');
+               cancelAnimationFrame(animationId);
+           };
+           
+           drawVisualizer();
+       }
+
+       // Event listeners
+       recordBtn.addEventListener('click', () => {
+           if (isRecording) {
+               stopRecording();
+           } else {
+               resetTimer();
+               startRecording();
+           }
+       });
+
+       playBtn.addEventListener('click', () => {
+           if (audioBuffer) {
+               playAudio(audioBuffer, 'normal');
+           }
+       });
+
+       reverseBtn.addEventListener('click', () => {
+           if (reversedBuffer) {
+               playAudio(reversedBuffer, 'reversed');
+           }
+       });
+
+       // Prevent zoom on double tap
+       let lastTouchEnd = 0;
+       document.addEventListener('touchend', (e) => {
+           const now = Date.now();
+           if (now - lastTouchEnd <= 300) {
+               e.preventDefault();
+           }
+           lastTouchEnd = now;
+       }, false);
+
+       // Prevent pull-to-refresh
+       document.body.addEventListener('touchmove', (e) => {
+           if (e.target === document.body) {
+               e.preventDefault();
+           }
+       }, { passive: false });
+   </script>
+</body>
+</html>
