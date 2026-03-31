@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal File Bundler - Unity WebGL & All Files</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #eaeaea;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(90deg, #e94560, #ff6b6b, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { text-align: center; color: #a0a0a0; margin-bottom: 30px; font-size: 1.1em; }
+        .upload-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        @media (max-width: 768px) { .upload-section { grid-template-columns: 1fr; } }
+        .drop-zone {
+            border: 3px dashed #e94560;
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            background: rgba(233, 69, 96, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 200px;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #ff6b6b;
+            background: rgba(233, 69, 96, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(233, 69, 96, 0.2);
+        }
+        .drop-zone-icon { font-size: 3em; margin-bottom: 15px; display: block; }
+        .drop-zone-text { font-size: 1.2em; margin-bottom: 10px; color: #fff; font-weight: 600; }
+        .drop-zone-hint { color: #888; font-size: 0.85em; line-height: 1.4; }
+        .file-input-hidden { display: none !important; }
+        .browse-btn {
+            background: rgba(233, 69, 96, 0.2);
+            border: 2px solid #e94560;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+        .browse-btn:hover { background: #e94560; }
+        .file-list { background: rgba(0, 0, 0, 0.3); border-radius: 15px; padding: 20px; margin-bottom: 30px; max-height: 400px; overflow-y: auto; }
+        .file-list h3 { margin-bottom: 15px; color: #e94560; }
+        .file-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: rgba(255, 255, 255, 0.05); border-radius: 10px; margin-bottom: 8px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .file-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+        .file-icon { font-size: 1.5em; width: 40px; text-align: center; }
+        .file-name { font-weight: 500; color: #fff; word-break: break-all; }
+        .file-path { font-size: 0.8em; color: #888; margin-top: 2px; }
+        .file-size { color: #a0a0a0; font-size: 0.9em; margin-right: 15px; }
+        .file-actions { display: flex; gap: 8px; }
+        .btn-icon { background: rgba(233, 69, 96, 0.2); border: none; color: #e94560; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; }
+        .btn-icon:hover { background: #e94560; color: white; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .control-group { background: rgba(0, 0, 0, 0.3); padding: 20px; border-radius: 15px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .control-group h4 { margin-bottom: 15px; color: #feca57; }
+        .option { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .option label { color: #ccc; font-size: 0.95em; }
+        input[type="text"] { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; padding: 8px 12px; border-radius: 8px; width: 50%; }
+        input[type="checkbox"] { width: 20px; height: 20px; accent-color: #e94560; }
+        .progress-container { background: rgba(0, 0, 0, 0.5); border-radius: 15px; padding: 25px; margin-bottom: 30px; display: none; }
+        .progress-container.active { display: block; }
+        .progress-bar { width: 100%; height: 30px; background: rgba(255, 255, 255, 0.1); border-radius: 15px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #e94560, #ff6b6b, #feca57); width: 0%; transition: width 0.3s ease; }
+        .progress-text { text-align: center; margin-top: 10px; color: #feca57; font-weight: 500; }
+        .action-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .btn { padding: 15px 30px; border: none; border-radius: 12px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; }
+        .btn-primary { background: linear-gradient(135deg, #e94560, #ff6b6b); color: white; }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(233, 69, 96, 0.6); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background: rgba(255, 255, 255, 0.1); color: #fff; border: 2px solid rgba(255, 255, 255, 0.2); }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .stat-card { background: rgba(0, 0, 0, 0.3); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .stat-value { font-size: 2em; font-weight: bold; color: #e94560; }
+        .stat-label { color: #888; font-size: 0.9em; margin-top: 5px; }
+        .empty-state { text-align: center; padding: 40px; color: #666; }
+        .log-console { background: #0d1117; border-radius: 12px; padding: 15px; font-family: monospace; font-size: 0.85em; max-height: 200px; overflow-y: auto; margin-top: 20px; color: #c9d1d9; }
+        .log-entry { margin-bottom: 5px; padding: 3px 0; border-bottom: 1px solid #21262d; }
+        .log-entry.success { color: #3fb950; }
+        .log-entry.error { color: #f85149; }
+        .preview-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1000; justify-content: center; align-items: center; padding: 20px; }
+        .preview-modal.active { display: flex; }
+        .preview-content { background: #1a1a2e; border-radius: 15px; max-width: 90%; max-height: 90%; overflow: auto; padding: 20px; position: relative; width: 100%; }
+        .preview-close { position: absolute; top: 10px; right: 15px; font-size: 1.5em; cursor: pointer; color: #fff; background: none; border: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 Universal File Bundler</h1>
+        <p class="subtitle">Bundle Unity WebGL builds & all file types into one self-contained HTML file</p>
+        
+        <div class="stats">
+            <div class="stat-card"><span class="stat-value" id="statFiles">0</span><div class="stat-label">Files</div></div>
+            <div class="stat-card"><span class="stat-value" id="statSize">0 MB</span><div class="stat-label">Total Size</div></div>
+            <div class="stat-card"><span class="stat-value" id="statTypes">0</span><div class="stat-label">File Types</div></div>
+        </div>
+        
+        <div class="upload-section">
+            <div class="drop-zone" id="dropZoneFiles">
+                <span class="drop-zone-icon">📄</span>
+                <div class="drop-zone-text">Drop Files Here</div>
+                <div class="drop-zone-hint">Drop individual files or multiple files</div>
+                <button class="browse-btn" onclick="document.getElementById('fileInput').click()">Browse Files</button>
+            </div>
+            <div class="drop-zone" id="dropZoneFolder">
+                <span class="drop-zone-icon">📁</span>
+                <div class="drop-zone-text">Drop Folder Here</div>
+                <div class="drop-zone-hint">Drop entire folder with subfolders</div>
+                <button class="browse-btn" onclick="document.getElementById('folderInput').click()">Browse Folder</button>
+            </div>
+        </div>
+        
+        <input type="file" id="fileInput" class="file-input-hidden" multiple>
+        <input type="file" id="folderInput" class="file-input-hidden" webkitdirectory directory multiple>
+        
+        <div class="file-list" id="fileList">
+            <div class="empty-state">
+                <div style="font-size: 3em; margin-bottom: 15px;">📂</div>
+                <div>No files uploaded yet</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h4>⚙️ General Options</h4>
+                <div class="option"><label>Output Filename</label><input type="text" id="outputName" value="bundled-app"></div>
+                <div class="option"><label>Minify HTML/JS/CSS</label><input type="checkbox" id="minifyCode" checked></div>
+            </div>
+            <div class="control-group">
+                <h4>🎮 Unity WebGL Options</h4>
+                <div class="option"><label>Canvas Width</label><input type="text" id="canvasWidth" value="960"></div>
+                <div class="option"><label>Canvas Height</label><input type="text" id="canvasHeight" value="600"></div>
+                <div class="option"><label>WebGL 2.0</label><input type="checkbox" id="webgl2" checked></div>
+            </div>
+        </div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-text" id="progressText">Processing...</div>
+            <div class="log-console" id="logConsole"></div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn btn-primary" id="bundleBtn" disabled>Create Bundle</button>
+            <button class="btn btn-secondary" id="clearBtn">Clear All</button>
+            <button class="btn btn-secondary" id="previewBtn" disabled>Preview</button>
+        </div>
+    </div>
+    
+    <div class="preview-modal" id="previewModal">
+        <div class="preview-content">
+            <button class="preview-close" onclick="document.getElementById('previewModal').classList.remove('active')">&times;</button>
+            <div id="previewBody"></div>
+        </div>
+    </div>
+
+    <script>
+        let files = new Map();
+        let isProcessing = false;
+        
+        const dropZoneFiles = document.getElementById('dropZoneFiles');
+        const dropZoneFolder = document.getElementById('dropZoneFolder');
+        const fileInput = document.getElementById('fileInput');
+        const folderInput = document.getElementById('folderInput');
+        const fileList = document.getElementById('fileList');
+        const bundleBtn = document.getElementById('bundleBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const previewBtn = document.getElementById('previewBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const logConsole = document.getElementById('logConsole');
+        
+        function log(msg, type='info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logConsole.appendChild(entry);
+            logConsole.scrollTop = logConsole.scrollHeight;
+        }
+        
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function updateStats() {
+            const arr = Array.from(files.values());
+            document.getElementById('statFiles').textContent = arr.length;
+            document.getElementById('statSize').textContent = formatSize(arr.reduce((s, f) => s + f.size, 0));
+            document.getElementById('statTypes').textContent = new Set(arr.map(f => f.name.split('.').pop())).size;
+            bundleBtn.disabled = arr.length === 0 || isProcessing;
+            previewBtn.disabled = arr.length === 0 || isProcessing;
+        }
+        
+        function renderFileList() {
+            if (files.size === 0) {
+                fileList.innerHTML = '<div class="empty-state"><div style="font-size:3em;margin-bottom:15px;">📂</div>No files uploaded yet</div>';
+                return;
+            }
+            const sorted = Array.from(files.values()).sort((a, b) => a.path.localeCompare(b.path));
+            fileList.innerHTML = '<h3>📁 Files (' + files.size + ')</h3>' + sorted.map(f => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <span class="file-icon">${f.name.match(/\\.png|\\.jpg|\\.jpeg|\\.gif/i) ? '🖼️' : f.name.match(/\\.js$/i) ? '📜' : f.name.match(/\\.css$/i) ? '🎨' : f.name.match(/\\.html?$/i) ? '🌐' : f.name.match(/\\.json$/i) ? '📋' : f.name.match(/\\.wasm$/i) ? '⚡' : f.name.match(/\\.unityweb$/i) ? '🎮' : '📄'}</span>
+                        <div style="min-width:0;"><div class="file-name">${f.name}</div><div class="file-path">${f.path}</div></div>
+                    </div>
+                    <span class="file-size">${formatSize(f.size)}</span>
+                    <div class="file-actions">
+                        <button class="btn-icon" onclick="removeFile('${f.path}')">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function removeFile(path) {
+            files.delete(path);
+            updateStats();
+            renderFileList();
+            log('Removed: ' + path, 'warn');
+        }
+        window.removeFile = removeFile;
+        
+        async function addFile(file, path) {
+            path = path.replace(/^\\//, '');
+            if (files.has(path)) log('Replacing: ' + path, 'warn');
+            files.set(path, { name: file.name, path: path, size: file.size, type: file.type, file: file });
+            log('Added: ' + path + ' (' + formatSize(file.size) + ')', 'success');
+        }
+        
+        async function processEntry(entry, path='') {
+            if (!entry) return;
+            if (entry.isFile) {
+                return new Promise((resolve) => {
+                    entry.file(async (file) => {
+                        await addFile(file, path + file.name);
+                        resolve();
+                    });
+                });
+            } else if (entry.isDirectory) {
+                const reader = entry.createReader();
+                return new Promise((resolve) => {
+                    const readAll = () => {
+                        reader.readEntries(async (entries) => {
+                            if (entries.length === 0) { resolve(); return; }
+                            for (const e of entries) await processEntry(e, path + entry.name + '/');
+                            readAll();
+                        });
+                    };
+                    readAll();
+                });
+            }
+        }
+        
+        function setupDropZone(zone, isFolder) {
+            zone.addEventListener('dragenter', (e) => { e.preventDefault(); e.stopPropagation(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); if (!zone.contains(e.relatedTarget)) zone.classList.remove('dragover'); });
+            zone.addEventListener('drop', async (e) => {
+                e.preventDefault(); e.stopPropagation();
+                zone.classList.remove('dragover');
+                log('Drop detected...', 'info');
+                
+                const items = e.dataTransfer.items;
+                if (items && items.length > 0) {
+                    for (let i = 0; i < items.length; i++) {
+                        const entry = items[i].webkitGetAsEntry ? items[i].webkitGetAsEntry() : items[i].getAsEntry();
+                        if (entry) await processEntry(entry);
+                    }
+                } else {
+                    const fileList = e.dataTransfer.files;
+                    for (let i = 0; i < fileList.length; i++) {
+                        const file = fileList[i];
+                        await addFile(file, file.webkitRelativePath || file.name);
+                    }
+                }
+                updateStats();
+                renderFileList();
+            });
+        }
+        
+        setupDropZone(dropZoneFiles, false);
+        setupDropZone(dropZoneFolder, true);
+        
+        fileInput.addEventListener('change', async (e) => {
+            for (let i = 0; i < e.target.files.length; i++) {
+                await addFile(e.target.files[i], e.target.files[i].name);
+            }
+            updateStats();
+            renderFileList();
+            e.target.value = '';
+        });
+        
+        folderInput.addEventListener('change', async (e) => {
+            for (let i = 0; i < e.target.files.length; i++) {
+                const f = e.target.files[i];
+                await addFile(f, f.webkitRelativePath || f.name);
+            }
+            updateStats();
+            renderFileList();
+            e.target.value = '';
+        });
+        
+        clearBtn.addEventListener('click', () => { files.clear(); updateStats(); renderFileList(); log('Cleared', 'warn'); });
+        
+        async function readFileAsBase64(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        async function readFileAsText(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.readAsText(file);
+            });
+        }
+        
+        function getMimeType(ext) {
+            const map = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', wasm: 'application/wasm', unityweb: 'application/octet-stream', mp3: 'audio/mpeg', mp4: 'video/mp4' };
+            return map[ext] || 'application/octet-stream';
+        }
+        
+        bundleBtn.addEventListener('click', async () => {
+            isProcessing = true;
+            updateStats();
+            progressContainer.classList.add('active');
+            logConsole.innerHTML = '';
+            log('Starting...', 'info');
+            
+            const fileArray = Array.from(files.values());
+            const resources = {};
+            let css = '', js = '', html = '';
+            
+            for (let i = 0; i < fileArray.length; i++) {
+                const file = fileArray[i];
+                progressFill.style.width = ((i + 1) / fileArray.length * 100) + '%';
+                progressText.textContent = `Processing ${file.name}...`;
+                
+                const ext = file.name.split('.').pop().toLowerCase();
+                const isBinary = !['js', 'json', 'html', 'htm', 'css', 'txt', 'xml'].includes(ext);
+                
+                try {
+                    if (isBinary) {
+                        resources[file.path] = `data:${getMimeType(ext)};base64,${await readFileAsBase64(file.file)}`;
+                    } else {
+                        const content = await readFileAsText(file.file);
+                        if (ext === 'css') css += content + '\n';
+                        else if (ext === 'js') js += content + '\n';
+                        else if ((ext === 'html' || ext === 'htm') && !html) html = content;
+                        else resources[file.path] = content;
+                    }
+                } catch (err) { log('Error: ' + err.message, 'error'); }
+            }
+            
+            const loaderScript = `<script>(function(){const R=${JSON.stringify(resources)};const oF=window.fetch;window.fetch=function(u,o){const c=u.toString().replace(window.location.origin+'/','').replace(/^\\\\//,'');if(R[c])return Promise.resolve(new Response(R[c],{status:200}));return oF.apply(this,arguments)};const oX=window.XMLHttpRequest;window.XMLHttpRequest=function(){const x=new oX();const oO=x.open;x.open=function(m,u,a,us,p){const c=u.toString().replace(window.location.origin+'/','').replace(/^\\\\//,'');if(R[c]){Object.defineProperty(x,'response',{get:function(){const d=R[c];if(this.responseType==='arraybuffer'){const b=atob(d.split(',')[1]);const n=new Uint8Array(b.length);for(let i=0;i<b.length;i++)n[i]=b.charCodeAt(i);return n.buffer}return d}});Object.defineProperty(x,'status',{value:200});Object.defineProperty(x,'readyState',{value:4});setTimeout(()=>{if(x.onreadystatechange)x.onreadystatechange();if(x.onload)x.onload()},0);return}return oO.apply(this,arguments)};return x}})();<\\/script>`;
+            
+            let finalHtml = html || '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>App</title></head><body></body></html>';
+            if (css) finalHtml = finalHtml.replace('</head>', `<style>${css}</style></head>`);
+            finalHtml = finalHtml.replace('</body>', loaderScript + '<script>' + js + '<\\/script></body>');
+            
+            if (document.getElementById('minifyCode').checked) {
+                finalHtml = finalHtml.replace(/>\\\\s+</g, '><').replace(/\\\\s{2,}/g, ' ').replace(/<!--[\\\\s\\\\S]*?-->/g, '');
+            }
+            
+            const blob = new Blob([finalHtml], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = document.getElementById('outputName').value + '.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            log('Done!', 'success');
+            progressText.textContent = 'Complete!';
+            isProcessing = false;
+            updateStats();
+            setTimeout(() => progressContainer.classList.remove('active'), 2000);
+        });
+        
+        previewBtn.addEventListener('click', () => {
+            document.getElementById('previewBody').innerHTML = '<pre style="background:#0d1117;padding:20px;border-radius:8px;color:#c9d1d9;max-height:70vh;overflow:auto;">Files: ' + Array.from(files.keys()).join('\\\\n') + '</pre>';
+            document.getElementById('previewModal').classList.add('active');
+        });
+        
+        log('Ready. Drag files or click browse buttons.', 'info');
+    </script>
+</body>
+</html>
