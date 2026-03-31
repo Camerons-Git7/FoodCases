@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal File Bundler - Unity WebGL & All Files</title>
+    <title>Universal File Bundler - Fixed for Windows</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -103,44 +103,53 @@
         .preview-modal.active { display: flex; }
         .preview-content { background: #1a1a2e; border-radius: 15px; max-width: 90%; max-height: 90%; overflow: auto; padding: 20px; position: relative; width: 100%; }
         .preview-close { position: absolute; top: 10px; right: 15px; font-size: 1.5em; cursor: pointer; color: #fff; background: none; border: none; }
+
+        /* CRITICAL: Prevent browser from opening files */
+        body.drag-active {
+            pointer-events: none;
+        }
+        body.drag-active .drop-zone {
+            pointer-events: auto;
+        }
     </style>
+<base target="_blank">
 </head>
 <body>
     <div class="container">
         <h1>📦 Universal File Bundler</h1>
         <p class="subtitle">Bundle Unity WebGL builds & all file types into one self-contained HTML file</p>
-        
+
         <div class="stats">
             <div class="stat-card"><span class="stat-value" id="statFiles">0</span><div class="stat-label">Files</div></div>
             <div class="stat-card"><span class="stat-value" id="statSize">0 MB</span><div class="stat-label">Total Size</div></div>
             <div class="stat-card"><span class="stat-value" id="statTypes">0</span><div class="stat-label">File Types</div></div>
         </div>
-        
+
         <div class="upload-section">
-            <div class="drop-zone" id="dropZoneFiles" data-counter="0">
+            <div class="drop-zone" id="dropZoneFiles">
                 <span class="drop-zone-icon">📄</span>
                 <div class="drop-zone-text">Drop Files Here</div>
                 <div class="drop-zone-hint">Drop individual files or multiple files</div>
                 <button class="browse-btn" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">Browse Files</button>
             </div>
-            <div class="drop-zone" id="dropZoneFolder" data-counter="0">
+            <div class="drop-zone" id="dropZoneFolder">
                 <span class="drop-zone-icon">📁</span>
                 <div class="drop-zone-text">Drop Folder Here</div>
                 <div class="drop-zone-hint">Drop entire folder with subfolders</div>
                 <button class="browse-btn" onclick="event.stopPropagation(); document.getElementById('folderInput').click()">Browse Folder</button>
             </div>
         </div>
-        
+
         <input type="file" id="fileInput" class="file-input-hidden" multiple>
         <input type="file" id="folderInput" class="file-input-hidden" webkitdirectory directory multiple>
-        
+
         <div class="file-list" id="fileList">
             <div class="empty-state">
                 <div style="font-size: 3em; margin-bottom: 15px;">📂</div>
                 <div>No files uploaded yet</div>
             </div>
         </div>
-        
+
         <div class="controls">
             <div class="control-group">
                 <h4>⚙️ General Options</h4>
@@ -154,20 +163,20 @@
                 <div class="option"><label>WebGL 2.0</label><input type="checkbox" id="webgl2" checked></div>
             </div>
         </div>
-        
+
         <div class="progress-container" id="progressContainer">
             <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
             <div class="progress-text" id="progressText">Processing...</div>
             <div class="log-console" id="logConsole"></div>
         </div>
-        
+
         <div class="action-buttons">
             <button class="btn btn-primary" id="bundleBtn" disabled>Create Bundle</button>
             <button class="btn btn-secondary" id="clearBtn">Clear All</button>
             <button class="btn btn-secondary" id="previewBtn" disabled>Preview</button>
         </div>
     </div>
-    
+
     <div class="preview-modal" id="previewModal">
         <div class="preview-content">
             <button class="preview-close" onclick="document.getElementById('previewModal').classList.remove('active')">&times;</button>
@@ -178,7 +187,8 @@
     <script>
         let files = new Map();
         let isProcessing = false;
-        
+        let dragCounter = 0;
+
         const dropZoneFiles = document.getElementById('dropZoneFiles');
         const dropZoneFolder = document.getElementById('dropZoneFolder');
         const fileInput = document.getElementById('fileInput');
@@ -191,15 +201,16 @@
         const progressFill = document.getElementById('progressFill');
         const progressText = document.getElementById('progressText');
         const logConsole = document.getElementById('logConsole');
-        
+
         function log(msg, type='info') {
             const entry = document.createElement('div');
-            entry.className = `log-entry ${type}`;
-            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            entry.className = 'log-entry ' + type;
+            entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
             logConsole.appendChild(entry);
             logConsole.scrollTop = logConsole.scrollHeight;
+            console.log('[' + type + '] ' + msg);
         }
-        
+
         function formatSize(bytes) {
             if (bytes === 0) return '0 B';
             const k = 1024;
@@ -207,7 +218,7 @@
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
-        
+
         function updateStats() {
             const arr = Array.from(files.values());
             document.getElementById('statFiles').textContent = arr.length;
@@ -216,7 +227,7 @@
             bundleBtn.disabled = arr.length === 0 || isProcessing;
             previewBtn.disabled = arr.length === 0 || isProcessing;
         }
-        
+
         function renderFileList() {
             if (files.size === 0) {
                 fileList.innerHTML = '<div class="empty-state"><div style="font-size:3em;margin-bottom:15px;">📂</div>No files uploaded yet</div>';
@@ -226,25 +237,25 @@
             fileList.innerHTML = '<h3>📁 Files (' + files.size + ')</h3>' + sorted.map(f => {
                 const ext = f.name.split('.').pop().toLowerCase();
                 const icon = ext.match(/png|jpg|jpeg|gif/) ? '🖼️' : ext === 'js' ? '📜' : ext === 'css' ? '🎨' : ext.match(/html?/) ? '🌐' : ext === 'json' ? '📋' : ext === 'wasm' ? '⚡' : ext === 'unityweb' ? '🎮' : '📄';
-                return `<div class="file-item"><div class="file-info"><span class="file-icon">${icon}</span><div style="min-width:0;"><div class="file-name">${f.name}</div><div class="file-path">${f.path}</div></div></div><span class="file-size">${formatSize(f.size)}</span><div class="file-actions"><button class="btn-icon" onclick="window.removeFile('${f.path}')">🗑️</button></div></div>`;
+                return '<div class="file-item"><div class="file-info"><span class="file-icon">' + icon + '</span><div style="min-width:0;"><div class="file-name">' + f.name + '</div><div class="file-path">' + f.path + '</div></div></div><span class="file-size">' + formatSize(f.size) + '</span><div class="file-actions"><button class="btn-icon" onclick="window.removeFile('' + f.path + '')">🗑️</button></div></div>';
             }).join('');
         }
-        
+
         window.removeFile = function(path) {
             files.delete(path);
             updateStats();
             renderFileList();
             log('Removed: ' + path, 'warn');
         };
-        
+
         async function addFile(file, path) {
-            path = path.replace(/^\\//, '');
+            path = path.replace(/^\//, '');
             if (files.has(path)) log('Replacing: ' + path, 'warn');
             files.set(path, { name: file.name, path: path, size: file.size, type: file.type, file: file });
             log('Added: ' + path + ' (' + formatSize(file.size) + ')', 'success');
         }
-        
-        async function processEntry(entry, path='') {
+
+        async function processEntry(entry, path) {
             if (!entry) return;
             if (entry.isFile) {
                 return new Promise((resolve) => {
@@ -271,89 +282,106 @@
                 });
             }
         }
-        
+
+        // CRITICAL FIX: Prevent browser from opening files
+        // Must prevent default on ALL drag events at document level
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.addEventListener(eventName, function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, false);
+        });
+
         function setupDropZone(zone) {
-            let counter = 0;
-            
-            zone.addEventListener('dragenter', (e) => {
+            let enterCounter = 0;
+
+            zone.addEventListener('dragenter', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                counter++;
-                if (counter === 1) zone.classList.add('dragover');
-            });
-            
-            zone.addEventListener('dragover', (e) => {
+                enterCounter++;
+                if (enterCounter === 1) {
+                    zone.classList.add('dragover');
+                    document.body.classList.add('drag-active');
+                }
+            }, false);
+
+            zone.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-            });
-            
-            zone.addEventListener('dragleave', (e) => {
+                // CRITICAL: Set dropEffect to 'copy' to enable drop
+                if (e.dataTransfer) {
+                    e.dataTransfer.dropEffect = 'copy';
+                }
+                return false;
+            }, false);
+
+            zone.addEventListener('dragleave', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                counter--;
-                if (counter === 0) zone.classList.remove('dragover');
-            });
-            
-            zone.addEventListener('drop', async (e) => {
+                enterCounter--;
+                if (enterCounter === 0) {
+                    zone.classList.remove('dragover');
+                    document.body.classList.remove('drag-active');
+                }
+            }, false);
+
+            zone.addEventListener('drop', async function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                counter = 0;
+                enterCounter = 0;
                 zone.classList.remove('dragover');
-                
+                document.body.classList.remove('drag-active');
+
                 log('DROP EVENT FIRED!', 'success');
-                
+
                 const dt = e.dataTransfer;
                 log('Drop types: ' + (dt.types ? dt.types.join(', ') : 'none'));
-                
+                log('Files count: ' + (dt.files ? dt.files.length : 0));
+                log('Items count: ' + (dt.items ? dt.items.length : 0));
+
                 // Try items first (for folders)
                 if (dt.items && dt.items.length > 0) {
-                    log('Processing ' + dt.items.length + ' items...', 'info');
+                    log('Processing ' + dt.items.length + ' items via webkitGetAsEntry...', 'info');
                     for (let i = 0; i < dt.items.length; i++) {
                         const item = dt.items[i];
-                        log('Item ' + i + ': kind=' + item.kind + ', type=' + item.type, 'info');
-                        
+                        log('Item ' + i + ': kind=' + item.kind + ', type=' + item.type);
+
                         if (item.kind === 'file') {
-                            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry();
+                            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : (item.getAsEntry ? item.getAsEntry() : null);
                             if (entry) {
-                                log('Got entry: ' + entry.name + (entry.isDirectory ? ' [DIR]' : ' [FILE]'), 'info');
+                                log('Got entry: ' + entry.name + (entry.isDirectory ? ' [DIR]' : ' [FILE]'));
                                 await processEntry(entry);
                             } else {
-                                // Fallback to getAsFile
+                                // Fallback: try getAsFile
                                 const file = item.getAsFile();
                                 if (file) {
+                                    log('Using getAsFile fallback for: ' + file.name);
                                     await addFile(file, file.name);
                                 }
                             }
                         }
                     }
                 } else if (dt.files && dt.files.length > 0) {
-                    // Fallback to files
-                    log('Processing ' + dt.files.length + ' files...', 'info');
+                    // Fallback to files list
+                    log('Processing ' + dt.files.length + ' files via dataTransfer.files...', 'info');
                     for (let i = 0; i < dt.files.length; i++) {
                         const file = dt.files[i];
                         const path = file.webkitRelativePath || file.name;
                         await addFile(file, path);
                     }
                 } else {
-                    log('No items or files found in drop', 'error');
+                    log('ERROR: No items or files found in drop!', 'error');
                 }
-                
+
                 updateStats();
                 renderFileList();
-            });
-        }
-        
-        // Prevent default drag behaviors on document
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            document.body.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
             }, false);
-        });
-        
+        }
+
         setupDropZone(dropZoneFiles);
         setupDropZone(dropZoneFolder);
-        
+
         fileInput.addEventListener('change', async (e) => {
             log('File input changed: ' + e.target.files.length + ' files', 'info');
             for (let i = 0; i < e.target.files.length; i++) {
@@ -363,7 +391,7 @@
             renderFileList();
             e.target.value = '';
         });
-        
+
         folderInput.addEventListener('change', async (e) => {
             log('Folder input changed: ' + e.target.files.length + ' files', 'info');
             for (let i = 0; i < e.target.files.length; i++) {
@@ -374,9 +402,9 @@
             renderFileList();
             e.target.value = '';
         });
-        
+
         clearBtn.addEventListener('click', () => { files.clear(); updateStats(); renderFileList(); log('Cleared', 'warn'); });
-        
+
         async function readFileAsBase64(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -384,7 +412,7 @@
                 reader.readAsDataURL(file);
             });
         }
-        
+
         async function readFileAsText(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -392,54 +420,54 @@
                 reader.readAsText(file);
             });
         }
-        
+
         function getMimeType(ext) {
             const map = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', wasm: 'application/wasm', unityweb: 'application/octet-stream', mp3: 'audio/mpeg', mp4: 'video/mp4' };
             return map[ext] || 'application/octet-stream';
         }
-        
+
         bundleBtn.addEventListener('click', async () => {
             isProcessing = true;
             updateStats();
             progressContainer.classList.add('active');
             logConsole.innerHTML = '';
             log('Starting bundle...', 'info');
-            
+
             const fileArray = Array.from(files.values());
             const resources = {};
             let css = '', js = '', html = '';
-            
+
             for (let i = 0; i < fileArray.length; i++) {
                 const file = fileArray[i];
                 progressFill.style.width = ((i + 1) / fileArray.length * 100) + '%';
                 progressText.textContent = 'Processing ' + file.name + '...';
-                
+
                 const ext = file.name.split('.').pop().toLowerCase();
                 const isBinary = !['js', 'json', 'html', 'htm', 'css', 'txt', 'xml'].includes(ext);
-                
+
                 try {
                     if (isBinary) {
                         resources[file.path] = 'data:' + getMimeType(ext) + ';base64,' + await readFileAsBase64(file.file);
                     } else {
                         const content = await readFileAsText(file.file);
-                        if (ext === 'css') css += content + '\\n';
-                        else if (ext === 'js') js += content + '\\n';
+                        if (ext === 'css') css += content + '\n';
+                        else if (ext === 'js') js += content + '\n';
                         else if ((ext === 'html' || ext === 'htm') && !html) html = content;
                         else resources[file.path] = content;
                     }
                 } catch (err) { log('Error: ' + err.message, 'error'); }
             }
-            
-            const loaderScript = '<script>(function(){const R=' + JSON.stringify(resources) + ';const oF=window.fetch;window.fetch=function(u,o){const c=u.toString().replace(window.location.origin+\'/\',\'\').replace(/^\\//,\'\');if(R[c])return Promise.resolve(new Response(R[c],{status:200}));return oF.apply(this,arguments)};const oX=window.XMLHttpRequest;window.XMLHttpRequest=function(){const x=new oX();const oO=x.open;x.open=function(m,u,a,us,p){const c=u.toString().replace(window.location.origin+\'/\',\'\').replace(/^\\//,\'\');if(R[c]){Object.defineProperty(x,\'response\',{get:function(){const d=R[c];if(this.responseType===\'arraybuffer\'){const b=atob(d.split(\',\')[1]);const n=new Uint8Array(b.length);for(let i=0;i<b.length;i++)n[i]=b.charCodeAt(i);return n.buffer}return d}});Object.defineProperty(x,\'status\',{value:200});Object.defineProperty(x,\'readyState\',{value:4});setTimeout(()=>{if(x.onreadystatechange)x.onreadystatechange();if(x.onload)x.onload()},0);return}return oO.apply(this,arguments)};return x}})();<\\/script>';
-            
+
+            const loaderScript = '<script>(function(){const R=' + JSON.stringify(resources) + ';const oF=window.fetch;window.fetch=function(u,o){const c=u.toString().replace(window.location.origin+'/','').replace(/^\//,'');if(R[c])return Promise.resolve(new Response(R[c],{status:200}));return oF.apply(this,arguments)};const oX=window.XMLHttpRequest;window.XMLHttpRequest=function(){const x=new oX();const oO=x.open;x.open=function(m,u,a,us,p){const c=u.toString().replace(window.location.origin+'/','').replace(/^\//,'');if(R[c]){Object.defineProperty(x,'response',{get:function(){const d=R[c];if(this.responseType==='arraybuffer'){const b=atob(d.split(',')[1]);const n=new Uint8Array(b.length);for(let i=0;i<b.length;i++)n[i]=b.charCodeAt(i);return n.buffer}return d}});Object.defineProperty(x,'status',{value:200});Object.defineProperty(x,'readyState',{value:4});setTimeout(()=>{if(x.onreadystatechange)x.onreadystatechange();if(x.onload)x.onload()},0);return}return oO.apply(this,arguments)};return x}})();<\/script>';
+
             let finalHtml = html || '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>App</title></head><body></body></html>';
             if (css) finalHtml = finalHtml.replace('</head>', '<style>' + css + '</style></head>');
-            finalHtml = finalHtml.replace('</body>', loaderScript + '<script>' + js + '<\\/script></body>');
-            
+            finalHtml = finalHtml.replace('</body>', loaderScript + '<script>' + js + '<\/script></body>');
+
             if (document.getElementById('minifyCode').checked) {
-                finalHtml = finalHtml.replace(/>\\s+</g, '><').replace(/\\s{2,}/g, ' ').replace(/<!--[\\s\\S]*?-->/g, '');
+                finalHtml = finalHtml.replace(/>\s+</g, '><').replace(/\s{2,}/g, ' ').replace(/<!--[\s\S]*?-->/g, '');
             }
-            
+
             const blob = new Blob([finalHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -449,19 +477,19 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
+
             log('Done!', 'success');
             progressText.textContent = 'Complete!';
             isProcessing = false;
             updateStats();
             setTimeout(() => progressContainer.classList.remove('active'), 2000);
         });
-        
+
         previewBtn.addEventListener('click', () => {
-            document.getElementById('previewBody').innerHTML = '<pre style="background:#0d1117;padding:20px;border-radius:8px;color:#c9d1d9;max-height:70vh;overflow:auto;">' + Array.from(files.keys()).join('\\n') + '</pre>';
+            document.getElementById('previewBody').innerHTML = '<pre style="background:#0d1117;padding:20px;border-radius:8px;color:#c9d1d9;max-height:70vh;overflow:auto;">' + Array.from(files.keys()).join('\n') + '</pre>';
             document.getElementById('previewModal').classList.add('active');
         });
-        
+
         log('Ready. Drag & drop or use browse buttons.', 'info');
     </script>
 </body>
