@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>🔗 Seamless Games 🔗</title>
   <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" />
+  <link rel="apple-touch-icon" href="https://i.ibb.co/M5QfsnBW/Playground-Image1.jpg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Seamless Games" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet" />
@@ -263,9 +267,8 @@
     let isSecretTrack = false;
     let holdTimer = null;
     let isHolding = false;
-    const HOLD_DURATION = 5000; // 5 seconds
+    const HOLD_DURATION = 5000;
     
-    // Video IDs
     const DEFAULT_VIDEO_ID = 'F0A_R2XV_os';
     const SECRET_VIDEO_ID = 'y-Q15Ul-9ww';
     
@@ -302,19 +305,9 @@
     
     function switchToSecretTrack() {
       if (!playerReady || !ytPlayer) return;
-      
       isSecretTrack = true;
-      
-      // Fade out current audio
       fadeVolume(0, 300, () => {
-        // Load new video - instantly start and loop
-        ytPlayer.loadVideoById({
-          videoId: SECRET_VIDEO_ID,
-          startSeconds: 0,
-          suggestedQuality: 'small'
-        });
-        
-        // Unmute and play immediately
+        ytPlayer.loadVideoById({ videoId: SECRET_VIDEO_ID, startSeconds: 0, suggestedQuality: 'small' });
         ytPlayer.unMute();
         ytPlayer.setVolume(100);
         isMuted = false;
@@ -325,19 +318,9 @@
     
     function resetToDefaultTrack() {
       if (!playerReady || !ytPlayer) return;
-      
       isSecretTrack = false;
-      
-      // Fade out current audio
       fadeVolume(0, 300, () => {
-        // Load original video
-        ytPlayer.loadVideoById({
-          videoId: DEFAULT_VIDEO_ID,
-          startSeconds: 0,
-          suggestedQuality: 'small'
-        });
-        
-        // Keep muted initially (original behavior)
+        ytPlayer.loadVideoById({ videoId: DEFAULT_VIDEO_ID, startSeconds: 0, suggestedQuality: 'small' });
         ytPlayer.mute();
         ytPlayer.setVolume(0);
         isMuted = true;
@@ -348,13 +331,9 @@
     
     function toggleMute() {
       if (!playerReady) return;
-      
-      // If holding, don't toggle - let the hold handler work
       if (isHolding) return;
-      
       isMuted = !isMuted; 
       updateMuteButton();
-      
       if (isMuted) { 
         ytPlayer.mute(); 
         fadeVolume(0, 500); 
@@ -372,24 +351,15 @@
       isHolding = true;
       const btn = document.getElementById('muteBtn');
       if (btn) btn.classList.add('holding');
-      
       holdTimer = setTimeout(() => {
-        // 5 seconds elapsed - switch to secret track
-        if (isSecretTrack) {
-          resetToDefaultTrack();
-        } else {
-          switchToSecretTrack();
-        }
+        if (isSecretTrack) { resetToDefaultTrack(); } else { switchToSecretTrack(); }
         isHolding = false;
         if (btn) btn.classList.remove('holding');
       }, HOLD_DURATION);
     }
     
     function cancelHoldTimer() {
-      if (holdTimer) {
-        clearTimeout(holdTimer);
-        holdTimer = null;
-      }
+      if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
       isHolding = false;
       const btn = document.getElementById('muteBtn');
       if (btn) btn.classList.remove('holding');
@@ -405,24 +375,9 @@
     
     function onYouTubeIframeAPIReady() {
       ytPlayer = new YT.Player('yt-player', { 
-        width: 1, 
-        height: 1, 
-        videoId: DEFAULT_VIDEO_ID, 
-        playerVars: { 
-          autoplay: 0, 
-          loop: 1, 
-          playlist: DEFAULT_VIDEO_ID, 
-          controls: 0, 
-          disablekb: 1, 
-          fs: 0, 
-          modestbranding: 1, 
-          rel: 0, 
-          showinfo: 0 
-        }, 
-        events: { 
-          'onReady': onPlayerReady, 
-          'onStateChange': onPlayerStateChange 
-        } 
+        width: 1, height: 1, videoId: DEFAULT_VIDEO_ID, 
+        playerVars: { autoplay: 0, loop: 1, playlist: DEFAULT_VIDEO_ID, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, showinfo: 0 }, 
+        events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange } 
       });
     }
     
@@ -433,14 +388,9 @@
     }
     
     function onPlayerStateChange(event) { 
-      // For secret track: instantly restart when ended (loop behavior)
       if (event.data === YT.PlayerState.ENDED) {
-        if (isSecretTrack) {
-          ytPlayer.seekTo(0);
-          ytPlayer.playVideo();
-        } else {
-          ytPlayer.playVideo();
-        }
+        if (isSecretTrack) { ytPlayer.seekTo(0); ytPlayer.playVideo(); } 
+        else { ytPlayer.playVideo(); }
       }
     }
     
@@ -478,20 +428,16 @@
     }
     setInterval(draw, 30);
     
-    // AUTO-RESIZE TEXT TO FIT ON ONE LINE
     function fitTextToButton() {
       const buttons = document.querySelectorAll('.game-button');
       const baseSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--button-size'));
-      const maxFontSize = baseSize * 0.18; // ~20px max
-      const minFontSize = baseSize * 0.09; // ~10px min
-      
+      const maxFontSize = baseSize * 0.18;
+      const minFontSize = baseSize * 0.09;
       buttons.forEach(button => {
         const textEl = button.querySelector('.game-name');
-        const buttonWidth = button.clientWidth - (baseSize * 0.114); // account for padding
+        const buttonWidth = button.clientWidth - (baseSize * 0.114);
         let fontSize = maxFontSize;
         textEl.style.fontSize = fontSize + 'px';
-        
-        // Shrink font until text fits or hits minimum
         while (textEl.scrollWidth > buttonWidth && fontSize > minFontSize) {
           fontSize -= 0.5;
           textEl.style.fontSize = fontSize + 'px';
@@ -499,48 +445,22 @@
       });
     }
     
-    // Mute button event handlers
     const muteBtn = document.getElementById('muteBtn');
     
-    muteBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      startHoldTimer();
-    });
-    
+    muteBtn.addEventListener('mousedown', (e) => { e.preventDefault(); startHoldTimer(); });
     muteBtn.addEventListener('mouseup', (e) => {
       e.preventDefault();
-      if (isHolding && !holdTimer) {
-        // Timer already fired (secret track activated), do nothing
-      } else if (isHolding) {
-        // Released before 5 seconds - treat as normal click
-        cancelHoldTimer();
-        toggleMute();
-      }
+      if (isHolding && !holdTimer) { /* timer fired */ } 
+      else if (isHolding) { cancelHoldTimer(); toggleMute(); }
     });
-    
-    muteBtn.addEventListener('mouseleave', () => {
-      cancelHoldTimer();
-    });
-    
-    // Touch support for mobile
-    muteBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      startHoldTimer();
-    });
-    
+    muteBtn.addEventListener('mouseleave', () => { cancelHoldTimer(); });
+    muteBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startHoldTimer(); });
     muteBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
-      if (isHolding && !holdTimer) {
-        // Timer already fired
-      } else if (isHolding) {
-        cancelHoldTimer();
-        toggleMute();
-      }
+      if (isHolding && !holdTimer) { /* timer fired */ } 
+      else if (isHolding) { cancelHoldTimer(); toggleMute(); }
     });
-    
-    muteBtn.addEventListener('touchcancel', () => {
-      cancelHoldTimer();
-    });
+    muteBtn.addEventListener('touchcancel', () => { cancelHoldTimer(); });
     
     document.querySelectorAll('.game-button').forEach(button => {
       button.addEventListener('click', event => {
@@ -555,10 +475,10 @@
       updateMuteButton();
       document.body.classList.add('fade-in');
       loadYouTubeAPI();
-      fitTextToButton(); // Run text fitting after load
+      fitTextToButton();
     };
     
-    window.addEventListener('resize', fitTextToButton); // Re-fit on resize
+    window.addEventListener('resize', fitTextToButton);
     
     window.addEventListener('pageshow', () => {
       document.body.classList.remove('fade-out', 'fade-in');
@@ -566,16 +486,10 @@
       document.body.classList.add('fade-in');
       if (playerReady && ytPlayer && ytPlayer.setVolume) {
         if (isMuted) { 
-          ytPlayer.setVolume(0); 
-          ytPlayer.mute(); 
-          hasStartedPlaying = false; 
+          ytPlayer.setVolume(0); ytPlayer.mute(); hasStartedPlaying = false; 
         } else { 
-          ytPlayer.setVolume(100); 
-          ytPlayer.unMute(); 
-          if (!hasStartedPlaying) { 
-            ytPlayer.playVideo(); 
-            hasStartedPlaying = true; 
-          } 
+          ytPlayer.setVolume(100); ytPlayer.unMute(); 
+          if (!hasStartedPlaying) { ytPlayer.playVideo(); hasStartedPlaying = true; } 
         }
       }
     });
