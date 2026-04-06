@@ -173,7 +173,7 @@
                 <h4>⚙️ General Options</h4>
                 <div class="option"><label>Output Filename</label><input type="text" id="outputName" value="bundled-game"></div>
                 <div class="option"><label>Minify HTML/JS/CSS</label><input type="checkbox" id="minifyCode" checked></div>
-                <div class="option"><label>External Image Hosting</label><input type="checkbox" id="externalImages" checked></div>
+                <div class="option"><label>External Image Hosting</label><input type="checkbox" id="externalImages"></div>
                 <div class="option"><label>Strip Path Prefix</label><input type="text" id="stripPrefix" value="" placeholder="e.g., Build/"></div>
             </div>
             <div class="control-group" id="unityOptions" style="display: none;">
@@ -689,6 +689,11 @@
                             resources[resourceKey] = { type: 'base64', data: base64, mime: file.type || 'image/png' };
                             failedUploads++;
                         }
+                    } else if (isImg) {
+                        // Always use base64 for images when not using external hosting
+                        const base64 = await readFileAsBase64(file.file);
+                        resources[resourceKey] = { type: 'base64', data: base64, mime: file.type || 'image/png' };
+                        log('Image → base64: ' + file.name, 'success');
                     } else if (isWasm || isData) {
                         const arrayBuffer = await readFileAsArrayBuffer(file.file);
                         const bytes = new Uint8Array(arrayBuffer);
@@ -759,16 +764,60 @@
                     }
                 }
                 
-                function findResource(url) {
-                    var cleanUrl = url.toString().replace(window.location.origin, '').replace(/^\\/+/, '');
-                    var variations = [cleanUrl, '/' + cleanUrl, cleanUrl.replace(/^[^/]+\\//, ''), cleanUrl.toLowerCase()];
+                function getResourceUrl(key) {
+                    var res = RESOURCES[key];
+                    if (!res) return null;
                     
+                    if (res.type === 'url') {
+                        return res.data;
+                    }
+                    if (res.type === 'base64') {
+                        return res.data;
+                    }
+                    if (res.type === 'wasm' || res.type === 'binary') {
+                        return createBlobUrl(key, res.data, res.mime);
+                    }
+                    return null;
+                }
+                
+                function findResource(url) {
+                    // Normalize URL
+                    var cleanUrl = url.toString().replace(window.location.origin, '').replace(/^\\/+/, '');
+                    var decodedUrl = decodeURIComponent(cleanUrl);
+                    
+                    // Try exact match first
+                    if (RESOURCES[cleanUrl]) return { key: cleanUrl, res: RESOURCES[cleanUrl] };
+                    if (RESOURCES[decodedUrl]) return { key: decodedUrl, res: RESOURCES[decodedUrl] };
+                    
+                    // Try variations
+                    var variations = [cleanUrl, decodedUrl, '/' + cleanUrl, '/' + decodedUrl];
+                    
+                    // Remove query strings and hashes
+                    var noQuery = cleanUrl.split('?')[0].split('#')[0];
+                    variations.push(noQuery, '/' + noQuery, decodeURIComponent(noQuery));
+                    
+                    // Try with/without leading ./
+                    if (cleanUrl.startsWith('./')) {
+                        variations.push(cleanUrl.substring(2), decodedUrl.substring(2));
+                    } else {
+                        variations.push('./' + cleanUrl, './' + decodedUrl);
+                    }
+                    
+                    // Try case-insensitive
+                    var lowerUrl = cleanUrl.toLowerCase();
+                    var keys = Object.keys(RESOURCES);
+                    for (var k = 0; k < keys.length; k++) {
+                        if (keys[k].toLowerCase() === lowerUrl || keys[k].toLowerCase() === './' + lowerUrl) {
+                            return { key: keys[k], res: RESOURCES[keys[k]] };
+                        }
+                    }
+                    
+                    // WASM variations
                     if (cleanUrl.endsWith('.wasm')) {
-                        variations.push(cleanUrl + '.br');
-                        variations.push(cleanUrl + '.gz');
+                        variations.push(cleanUrl + '.br', cleanUrl + '.gz', decodedUrl + '.br', decodedUrl + '.gz');
                     }
                     if (cleanUrl.endsWith('.wasm.br') || cleanUrl.endsWith('.wasm.gz')) {
-                        variations.push(cleanUrl.replace(/\\.(br|gz)$/, ''));
+                        variations.push(cleanUrl.replace(/\\.(br|gz)$/, ''), decodedUrl.replace(/\\.(br|gz)$/, ''));
                     }
                     
                     for (var i = 0; i < variations.length; i++) {
@@ -776,9 +825,19 @@
                             return { key: variations[i], res: RESOURCES[variations[i]] };
                         }
                     }
+                    
+                    // Check if any resource ends with this path
+                    for (var j = 0; j < keys.length; j++) {
+                        if (keys[j].endsWith(cleanUrl) || keys[j].endsWith('/' + cleanUrl) || 
+                            keys[j].endsWith(decodedUrl) || keys[j].endsWith('/' + decodedUrl)) {
+                            return { key: keys[j], res: RESOURCES[keys[j]] };
+                        }
+                    }
+                    
                     return null;
                 }
                 
+                // Override fetch
                 var originalFetch = window.fetch;
                 window.fetch = function(url, options) {
                     if (typeof url !== 'string') return originalFetch.apply(this, arguments);
@@ -790,6 +849,10 @@
                             return originalFetch(res.data, options);
                         }
                         if (res.type === 'base64') {
+                            // For images and other data URLs, return as-is
+                            if (res.data.startsWith('data:')) {
+                                return originalFetch(res.data, options);
+                            }
                             return Promise.resolve(new Response(res.data, { 
                                 status: 200, 
                                 statusText: 'OK',
@@ -821,6 +884,7 @@
                     return originalFetch.apply(this, arguments);
                 };
                 
+                // Override XMLHttpRequest
                 var OriginalXHR = window.XMLHttpRequest;
                 window.XMLHttpRequest = function() {
                     var xhr = new OriginalXHR();
@@ -858,6 +922,14 @@
                                     }
                                     return bytes.buffer;
                                 }
+                                if (responseType === 'blob' && typeof responseData === 'string') {
+                                    var byteString = atob(responseData.split(',')[1] || responseData);
+                                    var ab = new Uint8Array(byteString.length);
+                                    for (var j = 0; j < byteString.length; j++) {
+                                        ab[j] = byteString.charCodeAt(j);
+                                    }
+                                    return new Blob([ab]);
+                                }
                                 return responseData;
                             }
                             return xhr._realResponse !== undefined ? xhr._realResponse : xhr.response;
@@ -891,7 +963,9 @@
                             var res = this._internalResource;
                             
                             setTimeout(function() {
-                                if (res.type === 'base64' || res.type === 'text') {
+                                if (res.type === 'base64') {
+                                    responseData = res.data;
+                                } else if (res.type === 'text') {
                                     responseData = res.data;
                                 } else if (res.type === 'wasm') {
                                     var blobUrl = createBlobUrl(self._internalKey, res.data, res.mime);
@@ -907,6 +981,7 @@
                                         return;
                                     }
                                 }
+                                responseType = self.responseType;
                                 if (self.onreadystatechange) self.onreadystatechange();
                                 if (self.onload) self.onload();
                             }, 0);
@@ -927,25 +1002,57 @@
                     return xhr;
                 };
                 
-                if (window.WebAssembly && WebAssembly.instantiateStreaming) {
-                    var originalInstantiateStreaming = WebAssembly.instantiateStreaming;
-                    WebAssembly.instantiateStreaming = function(source, importObject) {
-                        if (source instanceof Response) {
-                            var url = source.url;
-                            var found = findResource(url);
-                            if (found && found.res.type === 'wasm') {
-                                var res = found.res;
-                                var blobUrl = createBlobUrl(found.key, res.data, res.mime);
-                                if (blobUrl) {
-                                    return originalFetch(blobUrl).then(function(r) {
-                                        return originalInstantiateStreaming(r, importObject);
-                                    });
-                                }
+                // Override image loading
+                var originalImageSrc = Object.getOwnPropertyDescriptor(Image.prototype, 'src');
+                Object.defineProperty(Image.prototype, 'src', {
+                    get: function() {
+                        return this._originalSrc || '';
+                    },
+                    set: function(value) {
+                        this._originalSrc = value;
+                        var found = findResource(value);
+                        if (found && found.res.type === 'base64') {
+                            originalImageSrc.set.call(this, found.res.data);
+                        } else if (found && found.res.type === 'url') {
+                            originalImageSrc.set.call(this, found.res.data);
+                        } else {
+                            originalImageSrc.set.call(this, value);
+                        }
+                    }
+                });
+                
+                // Override CSS background images via style injection
+                var originalSetProperty = CSSStyleDeclaration.prototype.setProperty;
+                CSSStyleDeclaration.prototype.setProperty = function(property, value, priority) {
+                    if (property && value && (property.toLowerCase().includes('background') || property.toLowerCase().includes('background-image'))) {
+                        var urlMatch = value.match(/url\\(['"]?([^'")]+)['"]?\\)/);
+                        if (urlMatch) {
+                            var imgUrl = urlMatch[1];
+                            var found = findResource(imgUrl);
+                            if (found && found.res.type === 'base64') {
+                                value = value.replace(urlMatch[1], found.res.data);
+                            } else if (found && found.res.type === 'url') {
+                                value = value.replace(urlMatch[1], found.res.data);
                             }
                         }
-                        return originalInstantiateStreaming.apply(this, arguments);
-                    };
-                }
+                    }
+                    return originalSetProperty.call(this, property, value, priority);
+                };
+                
+                // Override canvas drawImage to handle resource URLs
+                var originalDrawImage = CanvasRenderingContext2D.prototype.drawImage;
+                CanvasRenderingContext2D.prototype.drawImage = function(image) {
+                    var args = Array.prototype.slice.call(arguments);
+                    if (image && image.tagName === 'IMG' && image._originalSrc) {
+                        var found = findResource(image._originalSrc);
+                        if (found && found.res.type === 'base64') {
+                            var newImg = new Image();
+                            newImg.src = found.res.data;
+                            args[0] = newImg;
+                        }
+                    }
+                    return originalDrawImage.apply(this, args);
+                };
                 
                 console.log('[Bundler] Resource loader initialized with', Object.keys(RESOURCES).length, 'resources');
             })();`;
@@ -957,7 +1064,15 @@
             // Build final HTML
             let finalHtml = htmlContent || '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bundled Game</title></head><body></body></html>';
             
+            // Process CSS content to inline image URLs
             if (cssContent) {
+                cssContent = cssContent.replace(/url\(['"]?([^'")]+)['"]?\)/g, function(match, url) {
+                    var found = findResourceInResources(url, resources);
+                    if (found && found.res.type === 'base64') {
+                        return 'url(' + found.res.data + ')';
+                    }
+                    return match;
+                });
                 finalHtml = finalHtml.replace('</head>', '<style>' + cssContent + '</style></head>');
             }
             
@@ -991,6 +1106,20 @@
             updateStats();
             setTimeout(function() { progressContainer.classList.remove('active'); }, 3000);
         });
+
+        // Helper function to find resources during CSS processing
+        function findResourceInResources(url, resources) {
+            if (resources[url]) return { key: url, res: resources[url] };
+            
+            // Try variations
+            var variations = [url, './' + url, url.replace(/^\.\//, '')];
+            for (var i = 0; i < variations.length; i++) {
+                if (resources[variations[i]]) {
+                    return { key: variations[i], res: resources[variations[i]] };
+                }
+            }
+            return null;
+        }
 
         previewBtn.addEventListener('click', function() {
             const fileNames = Array.from(files.keys()).join('\n');
