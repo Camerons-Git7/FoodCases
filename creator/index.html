@@ -49,13 +49,6 @@
         .drop-zone-icon { font-size: 3em; margin-bottom: 15px; display: block; pointer-events: none; }
         .drop-zone-text { font-size: 1.2em; margin-bottom: 10px; color: #fff; font-weight: 600; pointer-events: none; }
         .drop-zone-hint { color: #888; font-size: 0.85em; line-height: 1.4; pointer-events: none; }
-        .file-input-hidden { 
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
-            pointer-events: none;
-        }
         .browse-btn {
             background: rgba(233, 69, 96, 0.2);
             border: 2px solid #e94560;
@@ -114,21 +107,19 @@
         .preview-modal.active { display: flex; }
         .preview-content { background: #1a1a2e; border-radius: 15px; max-width: 90%; max-height: 90%; overflow: auto; padding: 20px; position: relative; width: 100%; }
         .preview-close { position: absolute; top: 10px; right: 15px; font-size: 1.5em; cursor: pointer; color: #fff; background: none; border: none; }
-        
-        .image-badge {
-            background: #e94560;
-            color: white;
-            font-size: 0.7em;
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-left: 8px;
-        }
+        .image-badge { background: #e94560; color: white; font-size: 0.7em; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
+        .warning-box { background: rgba(255, 193, 7, 0.1); border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 20px; color: #ffc107; font-size: 0.85em; display: none; }
+        .warning-box.visible { display: block; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📦 Universal File Bundler</h1>
         <p class="subtitle">Bundle Unity WebGL builds & all file types into one self-contained HTML file</p>
+        
+        <div class="warning-box" id="warningBox">
+            ⚠️ <strong>Note:</strong> For Unity WebGL games, make sure to include ALL files: index.html, Build folder (data, framework, wasm), and TemplateData folder.
+        </div>
 
         <div class="stats">
             <div class="stat-card"><span class="stat-value" id="statFiles">0</span><div class="stat-label">Files</div></div>
@@ -143,14 +134,12 @@
                 <div class="drop-zone-text">Drop Files Here</div>
                 <div class="drop-zone-hint">Drop individual files or multiple files</div>
                 <button class="browse-btn" id="browseFilesBtn" type="button">Browse Files</button>
-                <input type="file" id="fileInput" class="file-input-hidden" multiple>
             </div>
             <div class="drop-zone" id="dropZoneFolder">
                 <span class="drop-zone-icon">📁</span>
                 <div class="drop-zone-text">Drop Folder Here</div>
                 <div class="drop-zone-hint">Drop entire folder with subfolders</div>
                 <button class="browse-btn" id="browseFolderBtn" type="button">Browse Folder</button>
-                <input type="file" id="folderInput" class="file-input-hidden" webkitdirectory directory multiple>
             </div>
         </div>
 
@@ -167,6 +156,7 @@
                 <div class="option"><label>Output Filename</label><input type="text" id="outputName" value="bundled-app"></div>
                 <div class="option"><label>Minify HTML/JS/CSS</label><input type="checkbox" id="minifyCode" checked></div>
                 <div class="option"><label>Convert Images to URLs</label><input type="checkbox" id="convertImages" checked></div>
+                <div class="option"><label>Strip Path Prefix</label><input type="text" id="stripPrefix" value="" placeholder="e.g., smashkarts/"></div>
             </div>
             <div class="control-group">
                 <h4>🎮 Unity WebGL Options</h4>
@@ -197,16 +187,12 @@
     </div>
 
     <script>
-        // HARDCODED API KEY - Replace with your own if needed
         const IMGBB_API_KEY = '9c96da8cf964e9b1331c5275d0f455c9';
-        
         let files = new Map();
         let isProcessing = false;
 
         const dropZoneFiles = document.getElementById('dropZoneFiles');
         const dropZoneFolder = document.getElementById('dropZoneFolder');
-        const fileInput = document.getElementById('fileInput');
-        const folderInput = document.getElementById('folderInput');
         const browseFilesBtn = document.getElementById('browseFilesBtn');
         const browseFolderBtn = document.getElementById('browseFolderBtn');
         const fileList = document.getElementById('fileList');
@@ -217,6 +203,7 @@
         const progressFill = document.getElementById('progressFill');
         const progressText = document.getElementById('progressText');
         const logConsole = document.getElementById('logConsole');
+        const warningBox = document.getElementById('warningBox');
 
         function log(msg, type='info') {
             const entry = document.createElement('div');
@@ -224,7 +211,6 @@
             entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
             logConsole.appendChild(entry);
             logConsole.scrollTop = logConsole.scrollHeight;
-            console.log('[' + type + '] ' + msg);
         }
 
         function formatSize(bytes) {
@@ -240,12 +226,14 @@
             document.getElementById('statFiles').textContent = arr.length;
             document.getElementById('statSize').textContent = formatSize(arr.reduce((s, f) => s + f.size, 0));
             document.getElementById('statTypes').textContent = new Set(arr.map(f => f.name.split('.').pop())).size;
-            
             const imageCount = arr.filter(f => isImage(f.name)).length;
             document.getElementById('statImages').textContent = imageCount;
-            
             bundleBtn.disabled = arr.length === 0 || isProcessing;
             previewBtn.disabled = arr.length === 0 || isProcessing;
+            
+            if (arr.length > 0) {
+                warningBox.classList.add('visible');
+            }
         }
 
         function isImage(filename) {
@@ -261,7 +249,7 @@
             const sorted = Array.from(files.values()).sort((a, b) => a.path.localeCompare(b.path));
             fileList.innerHTML = '<h3>📁 Files (' + files.size + ')</h3>' + sorted.map(f => {
                 const ext = f.name.split('.').pop().toLowerCase();
-                const icon = ext.match(/png|jpg|jpeg|gif/) ? '🖼️' : ext === 'js' ? '📜' : ext === 'css' ? '🎨' : ext.match(/html?/) ? '🌐' : ext === 'json' ? '📋' : ext === 'wasm' ? '⚡' : ext === 'unityweb' ? '🎮' : '📄';
+                const icon = ext.match(/png|jpg|jpeg|gif/) ? '🖼️' : ext === 'js' ? '📜' : ext === 'css' ? '🎨' : ext.match(/html?/) ? '🌐' : ext === 'json' ? '📋' : ext === 'wasm' ? '⚡' : ext === 'unityweb' ? '🎮' : ext === 'data' ? '💾' : ext === 'br' ? '📦' : '📄';
                 const imgBadge = isImage(f.name) ? '<span class="image-badge">IMG→URL</span>' : '';
                 return '<div class="file-item"><div class="file-info"><span class="file-icon">' + icon + '</span><div style="min-width:0;"><div class="file-name">' + f.name + imgBadge + '</div><div class="file-path">' + f.path + '</div></div></div><span class="file-size">' + formatSize(f.size) + '</span><div class="file-actions"><button class="btn-icon" onclick="window.removeFile(\'' + f.path + '\')">🗑️</button></div></div>';
             }).join('');
@@ -275,7 +263,7 @@
         };
 
         async function addFile(file, path) {
-            path = path.replace(/^\//, '');
+            path = path.replace(/^\/+/, '');
             if (files.has(path)) log('Replacing: ' + path, 'warn');
             files.set(path, { name: file.name, path: path, size: file.size, type: file.type, file: file });
             log('Added: ' + path + ' (' + formatSize(file.size) + ')' + (isImage(file.name) ? ' [Image→URL]' : ''), 'success');
@@ -309,7 +297,6 @@
             }
         }
 
-        // Chromebook-friendly file input handling
         function createFileInput(isFolder) {
             const input = document.createElement('input');
             input.type = 'file';
@@ -326,40 +313,28 @@
             e.preventDefault();
             e.stopPropagation();
             log('Opening file picker...', 'info');
-            
             const newInput = createFileInput(false);
             newInput.accept = '*/*';
             newInput.addEventListener('change', handleFileSelect);
             document.body.appendChild(newInput);
             newInput.click();
-            
-            setTimeout(() => {
-                if (newInput.parentNode) newInput.parentNode.removeChild(newInput);
-            }, 60000);
+            setTimeout(() => { if (newInput.parentNode) newInput.parentNode.removeChild(newInput); }, 60000);
         });
 
         browseFolderBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             log('Opening folder picker...', 'info');
-            
             const newInput = createFileInput(true);
             newInput.addEventListener('change', handleFolderSelect);
             document.body.appendChild(newInput);
             newInput.click();
-            
-            setTimeout(() => {
-                if (newInput.parentNode) newInput.parentNode.removeChild(newInput);
-            }, 60000);
+            setTimeout(() => { if (newInput.parentNode) newInput.parentNode.removeChild(newInput); }, 60000);
         });
-
-        fileInput.addEventListener('change', handleFileSelect);
-        folderInput.addEventListener('change', handleFolderSelect);
 
         async function handleFileSelect(e) {
             const selectedFiles = e.target.files;
             log('Selected ' + selectedFiles.length + ' files', 'info');
-            
             for (let i = 0; i < selectedFiles.length; i++) {
                 await addFile(selectedFiles[i], selectedFiles[i].name);
             }
@@ -371,7 +346,6 @@
         async function handleFolderSelect(e) {
             const selectedFiles = e.target.files;
             log('Selected ' + selectedFiles.length + ' files from folder', 'info');
-            
             for (let i = 0; i < selectedFiles.length; i++) {
                 const f = selectedFiles[i];
                 const path = f.webkitRelativePath || f.name;
@@ -382,7 +356,6 @@
             e.target.value = '';
         }
 
-        // Drag and drop handlers
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             document.addEventListener(eventName, function(e) {
                 e.preventDefault();
@@ -392,31 +365,25 @@
 
         function setupDropZone(zone, isFolder) {
             let enterCounter = 0;
-
             zone.addEventListener('dragenter', function(e) {
                 e.preventDefault();
                 enterCounter++;
                 if (enterCounter === 1) zone.classList.add('dragover');
             }, false);
-
             zone.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
             }, false);
-
             zone.addEventListener('dragleave', function(e) {
                 e.preventDefault();
                 enterCounter--;
                 if (enterCounter === 0) zone.classList.remove('dragover');
             }, false);
-
             zone.addEventListener('drop', async function(e) {
                 e.preventDefault();
                 enterCounter = 0;
                 zone.classList.remove('dragover');
-
                 const dt = e.dataTransfer;
-                
                 if (dt.items && dt.items.length > 0) {
                     for (let i = 0; i < dt.items.length; i++) {
                         const item = dt.items[i];
@@ -437,7 +404,6 @@
                         await addFile(file, path);
                     }
                 }
-
                 updateStats();
                 renderFileList();
             }, false);
@@ -474,21 +440,16 @@
         async function uploadImageToImgBB(file) {
             const base64 = await readFileAsBase64(file);
             const base64Data = base64.split(',')[1];
-            
             const formData = new FormData();
             formData.append('image', base64Data);
             formData.append('name', file.name.replace(/\.[^.]+$/, ''));
-            
             const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
                 method: 'POST',
                 body: formData
             });
-            
             if (!response.ok) throw new Error('ImgBB upload failed: ' + response.status);
-            
             const data = await response.json();
             if (!data.success) throw new Error(data.error?.message || 'Upload failed');
-            
             return data.data.display_url || data.data.url;
         }
 
@@ -500,6 +461,7 @@
             log('Starting bundle creation...', 'info');
 
             const convertImages = document.getElementById('convertImages').checked;
+            const stripPrefix = document.getElementById('stripPrefix').value;
             const fileArray = Array.from(files.values());
             const resources = {};
             let css = '', js = '', html = '';
@@ -514,32 +476,38 @@
                 const ext = file.name.split('.').pop().toLowerCase();
                 const isBinary = !['js', 'json', 'html', 'htm', 'css', 'txt', 'xml'].includes(ext);
                 const isImg = isImage(file.name);
+                
+                // Calculate resource key (with optional prefix stripping)
+                let resourceKey = file.path;
+                if (stripPrefix && resourceKey.startsWith(stripPrefix)) {
+                    resourceKey = resourceKey.substring(stripPrefix.length);
+                }
 
                 try {
                     if (isImg && convertImages) {
                         log(`Uploading image to ImgBB: ${file.name}...`, 'info');
                         try {
                             const imageUrl = await uploadImageToImgBB(file.file);
-                            resources[file.path] = imageUrl;
-                            log(`Image → URL: ${file.name}`, 'success');
+                            resources[resourceKey] = imageUrl;
+                            log(`Image → URL: ${file.name} (key: ${resourceKey})`, 'success');
                             uploadedImages++;
                         } catch (uploadErr) {
                             log(`ImgBB upload failed for ${file.name}: ${uploadErr.message}. Falling back to base64.`, 'error');
                             const base64 = await readFileAsBase64(file.file);
-                            resources[file.path] = base64;
+                            resources[resourceKey] = base64;
                             failedUploads++;
                         }
                     } else if (isBinary) {
                         const base64 = await readFileAsBase64(file.file);
-                        resources[file.path] = base64;
-                        log(`Encoded binary: ${file.name}`, 'success');
+                        resources[resourceKey] = base64;
+                        log(`Encoded binary: ${file.name} (key: ${resourceKey})`, 'success');
                     } else {
                         const content = await readFileAsText(file.file);
                         if (ext === 'css') css += content + '\n';
                         else if (ext === 'js') js += content + '\n';
                         else if ((ext === 'html' || ext === 'htm') && !html) html = content;
-                        else resources[file.path] = content;
-                        log(`Processed text: ${file.name}`, 'success');
+                        else resources[resourceKey] = content;
+                        log(`Processed text: ${file.name} (key: ${resourceKey})`, 'success');
                     }
                 } catch (err) { 
                     log(`Error processing ${file.name}: ${err.message}`, 'error'); 
@@ -548,64 +516,78 @@
 
             log(`Upload complete: ${uploadedImages} images to URLs, ${failedUploads} failed (used base64)`, 'info');
 
-            const loaderScript = `<script>(function(){
-                const R=${JSON.stringify(resources)};
-                const originalFetch=window.fetch;
+            // Build resource loader with proper escaping
+            const resourcesJson = JSON.stringify(resources);
+            const escapedResources = resourcesJson.replace(/</g, '\\u003c');
+            
+            // Use string concatenation to avoid script tag issues
+            const scriptOpen = '<' + 'scr' + 'ipt' + '>';
+            const scriptClose = '<' + '/scr' + 'ipt' + '>';
+            
+            const loaderScript = scriptOpen + `(function(){
+                var R=` + escapedResources + `;
+                var originalFetch=window.fetch;
                 window.fetch=function(url,opts){
-                    const cleanUrl=url.toString().replace(window.location.origin+"/","").replace(/^\\/+/,"");
-                    if(R[cleanUrl]){
-                        const data=R[cleanUrl];
-                        if(data.startsWith('http')){
-                            return originalFetch.apply(this,[data,opts]);
-                        }
-                        if(data.startsWith('data:')){
+                    var cleanUrl=url.toString().replace(window.location.origin+"/","").replace(/^\\/+/, "");
+                    // Try multiple path variations
+                    var variations = [cleanUrl, cleanUrl.replace(/^[^/]+\\//, ""), "smashkarts/" + cleanUrl];
+                    for (var i=0; i<variations.length; i++) {
+                        var key = variations[i];
+                        if(R[key]){
+                            var data=R[key];
+                            if(data.startsWith('http')) return originalFetch.apply(this,[data,opts]);
+                            if(data.startsWith('data:')) return Promise.resolve(new Response(data,{status:200}));
                             return Promise.resolve(new Response(data,{status:200,statusText:"OK"}));
                         }
-                        return Promise.resolve(new Response(data,{status:200,statusText:"OK"}));
                     }
                     return originalFetch.apply(this,arguments);
                 };
-                const OriginalXHR=window.XMLHttpRequest;
+                var OriginalXHR=window.XMLHttpRequest;
                 window.XMLHttpRequest=function(){
-                    const xhr=new OriginalXHR();
-                    const originalOpen=xhr.open;
+                    var xhr=new OriginalXHR();
+                    var originalOpen=xhr.open;
                     xhr.open=function(method,url,async,user,password){
-                        const cleanUrl=url.toString().replace(window.location.origin+"/","").replace(/^\\/+/,"");
-                        if(R[cleanUrl]){
-                            const data=R[cleanUrl];
-                            if(data.startsWith('http')){
-                                return originalOpen.apply(this,[method,data,async,user,password]);
+                        var cleanUrl=url.toString().replace(window.location.origin+"/","").replace(/^\\/+/, "");
+                        var variations = [cleanUrl, cleanUrl.replace(/^[^/]+\\//, ""), "smashkarts/" + cleanUrl];
+                        for (var i=0; i<variations.length; i++) {
+                            var key = variations[i];
+                            if(R[key]){
+                                var data=R[key];
+                                if(data.startsWith('http')) return originalOpen.apply(this,[method,data,async,user,password]);
+                                Object.defineProperty(xhr,"response",{get:function(){
+                                    if(this.responseType==="arraybuffer"&&data.startsWith('data:')){
+                                        var base64=data.split(',')[1];
+                                        var binary=atob(base64);
+                                        var bytes=new Uint8Array(binary.length);
+                                        for(var j=0;j<binary.length;j++)bytes[j]=binary.charCodeAt(j);
+                                        return bytes.buffer;
+                                    }
+                                    return data;
+                                }});
+                                Object.defineProperty(xhr,"responseText",{get:function(){return data;}});
+                                Object.defineProperty(xhr,"status",{value:200});
+                                Object.defineProperty(xhr,"statusText",{value:"OK"});
+                                Object.defineProperty(xhr,"readyState",{value:4});
+                                setTimeout(function(){
+                                    if(xhr.onreadystatechange)xhr.onreadystatechange();
+                                    if(xhr.onload)xhr.onload();
+                                },0);
+                                return;
                             }
-                            Object.defineProperty(xhr,"response",{get:function(){
-                                if(this.responseType==="arraybuffer"&&data.startsWith('data:')){
-                                    const base64=data.split(',')[1];
-                                    const binary=atob(base64);
-                                    const bytes=new Uint8Array(binary.length);
-                                    for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
-                                    return bytes.buffer;
-                                }
-                                return data;
-                            }});
-                            Object.defineProperty(xhr,"responseText",{get:function(){return data;}});
-                            Object.defineProperty(xhr,"status",{value:200});
-                            Object.defineProperty(xhr,"statusText",{value:"OK"});
-                            Object.defineProperty(xhr,"readyState",{value:4});
-                            setTimeout(()=>{
-                                if(xhr.onreadystatechange)xhr.onreadystatechange();
-                                if(xhr.onload)xhr.onload();
-                            },0);
-                            return;
                         }
                         return originalOpen.apply(this,arguments);
                     };
                     return xhr;
                 };
-            })();<\/script>`;
+            })();` + scriptClose;
 
             let finalHtml = html || '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bundled App</title></head><body></body></html>';
             
-            if (css) finalHtml = finalHtml.replace('</head>', `<style>${css}</style></head>`);
-            finalHtml = finalHtml.replace('</body>', loaderScript + `<script>${js}<\/script></body>`);
+            if (css) {
+                finalHtml = finalHtml.replace('</head>', `<style>${css}</style></head>`);
+            }
+            
+            finalHtml = finalHtml.replace('</body>', loaderScript + scriptOpen + js + scriptClose + '</body>');
 
             if (document.getElementById('minifyCode').checked) {
                 finalHtml = finalHtml.replace(/>\s+</g, '><').replace(/\s{2,}/g, ' ').replace(/<!--[\s\S]*?-->/g, '');
