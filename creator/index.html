@@ -61,6 +61,7 @@
             font-size: 1em;
             position: relative;
             z-index: 10;
+            pointer-events: auto;
         }
         .browse-btn:hover { background: #e94560; }
         .browse-btn:active { transform: scale(0.98); }
@@ -103,6 +104,7 @@
         .log-entry.success { color: #3fb950; }
         .log-entry.error { color: #f85149; }
         .log-entry.warn { color: #f0883e; }
+        .log-entry.info { color: #58a6ff; }
         .preview-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1000; justify-content: center; align-items: center; padding: 20px; }
         .preview-modal.active { display: flex; }
         .preview-content { background: #1a1a2e; border-radius: 15px; max-width: 90%; max-height: 90%; overflow: auto; padding: 20px; position: relative; width: 100%; }
@@ -110,35 +112,51 @@
         .image-badge { background: #e94560; color: white; font-size: 0.7em; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
         .warning-box { background: rgba(255, 193, 7, 0.1); border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 20px; color: #ffc107; font-size: 0.85em; display: none; }
         .warning-box.visible { display: block; }
+        .mode-selector { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+        .mode-btn { padding: 10px 20px; border: 2px solid #e94560; background: transparent; color: #fff; border-radius: 8px; cursor: pointer; transition: all 0.3s; position: relative; }
+        .mode-btn.active { background: #e94560; }
+        .mode-btn.auto-detected { border-color: #3fb950; color: #3fb950; }
+        .mode-btn.auto-detected.active { background: #3fb950; color: #fff; }
+        .auto-badge { position: absolute; top: -8px; right: -8px; background: #3fb950; color: #fff; font-size: 0.6em; padding: 2px 6px; border-radius: 4px; display: none; }
+        .mode-btn.auto-detected .auto-badge { display: block; }
+        .detection-info { text-align: center; color: #58a6ff; font-size: 0.9em; margin-bottom: 15px; min-height: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📦 Universal File Bundler</h1>
-        <p class="subtitle">Bundle Unity WebGL builds & all file types into one self-contained HTML file</p>
+        <p class="subtitle">Bundle Unity WebGL, HTML5 games & all file types into one self-contained HTML file</p>
         
         <div class="warning-box" id="warningBox">
-            ⚠️ <strong>Note:</strong> For Unity WebGL games, make sure to include ALL files: index.html, Build folder (data, framework, wasm), and TemplateData folder.
+            ⚠️ <strong>Note:</strong> For Unity WebGL games, include ALL files: index.html, Build folder (data, framework, wasm, loader), and TemplateData folder.
         </div>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" id="modeStandard">Standard</button>
+            <button class="mode-btn" id="modeUnity">Unity WebGL</button>
+            <button class="mode-btn" id="modeAdvanced">Advanced</button>
+        </div>
+
+        <div class="detection-info" id="detectionInfo">Auto-detection ready - upload files to detect game type</div>
 
         <div class="stats">
             <div class="stat-card"><span class="stat-value" id="statFiles">0</span><div class="stat-label">Files</div></div>
             <div class="stat-card"><span class="stat-value" id="statSize">0 MB</span><div class="stat-label">Total Size</div></div>
             <div class="stat-card"><span class="stat-value" id="statTypes">0</span><div class="stat-label">File Types</div></div>
-            <div class="stat-card"><span class="stat-value" id="statImages">0</span><div class="stat-label">Images</div></div>
+            <div class="stat-card"><span class="stat-value" id="statWASM">0</span><div class="stat-label">WASM</div></div>
         </div>
 
         <div class="upload-section">
             <div class="drop-zone" id="dropZoneFiles">
                 <span class="drop-zone-icon">📄</span>
                 <div class="drop-zone-text">Drop Files Here</div>
-                <div class="drop-zone-hint">Drop individual files or multiple files</div>
+                <div class="drop-zone-hint">Drop individual files or multiple files<br>Works with any HTML5 game</div>
                 <button class="browse-btn" id="browseFilesBtn" type="button">Browse Files</button>
             </div>
             <div class="drop-zone" id="dropZoneFolder">
                 <span class="drop-zone-icon">📁</span>
                 <div class="drop-zone-text">Drop Folder Here</div>
-                <div class="drop-zone-hint">Drop entire folder with subfolders</div>
+                <div class="drop-zone-hint">Drop entire folder with subfolders<br>Preserves directory structure</div>
                 <button class="browse-btn" id="browseFolderBtn" type="button">Browse Folder</button>
             </div>
         </div>
@@ -153,16 +171,17 @@
         <div class="controls">
             <div class="control-group">
                 <h4>⚙️ General Options</h4>
-                <div class="option"><label>Output Filename</label><input type="text" id="outputName" value="bundled-app"></div>
+                <div class="option"><label>Output Filename</label><input type="text" id="outputName" value="bundled-game"></div>
                 <div class="option"><label>Minify HTML/JS/CSS</label><input type="checkbox" id="minifyCode" checked></div>
-                <div class="option"><label>Convert Images to URLs</label><input type="checkbox" id="convertImages" checked></div>
-                <div class="option"><label>Strip Path Prefix</label><input type="text" id="stripPrefix" value="" placeholder="e.g., smashkarts/"></div>
+                <div class="option"><label>External Image Hosting</label><input type="checkbox" id="externalImages" checked></div>
+                <div class="option"><label>Strip Path Prefix</label><input type="text" id="stripPrefix" value="" placeholder="e.g., Build/"></div>
             </div>
-            <div class="control-group">
+            <div class="control-group" id="unityOptions" style="display: none;">
                 <h4>🎮 Unity WebGL Options</h4>
                 <div class="option"><label>Canvas Width</label><input type="text" id="canvasWidth" value="960"></div>
                 <div class="option"><label>Canvas Height</label><input type="text" id="canvasHeight" value="600"></div>
-                <div class="option"><label>WebGL 2.0</label><input type="checkbox" id="webgl2" checked></div>
+                <div class="option"><label>Enable WebGL 2.0</label><input type="checkbox" id="webgl2" checked></div>
+                <div class="option"><label>Compatibility Mode</label><input type="checkbox" id="compatMode" checked></div>
             </div>
         </div>
 
@@ -175,7 +194,7 @@
         <div class="action-buttons">
             <button class="btn btn-primary" id="bundleBtn" disabled>Create Bundle</button>
             <button class="btn btn-secondary" id="clearBtn">Clear All</button>
-            <button class="btn btn-secondary" id="previewBtn" disabled>Preview</button>
+            <button class="btn btn-secondary" id="previewBtn" disabled>Preview Files</button>
         </div>
     </div>
 
@@ -187,10 +206,14 @@
     </div>
 
     <script>
+        // Configuration
         const IMGBB_API_KEY = '9c96da8cf964e9b1331c5275d0f455c9';
         let files = new Map();
         let isProcessing = false;
+        let currentMode = 'standard';
+        let autoDetectedMode = null;
 
+        // DOM Elements
         const dropZoneFiles = document.getElementById('dropZoneFiles');
         const dropZoneFolder = document.getElementById('dropZoneFolder');
         const browseFilesBtn = document.getElementById('browseFilesBtn');
@@ -204,6 +227,158 @@
         const progressText = document.getElementById('progressText');
         const logConsole = document.getElementById('logConsole');
         const warningBox = document.getElementById('warningBox');
+        const modeStandard = document.getElementById('modeStandard');
+        const modeUnity = document.getElementById('modeUnity');
+        const modeAdvanced = document.getElementById('modeAdvanced');
+        const unityOptions = document.getElementById('unityOptions');
+        const detectionInfo = document.getElementById('detectionInfo');
+
+        // Auto-detection function
+        function detectGameType() {
+            const fileArray = Array.from(files.values());
+            const fileNames = fileArray.map(f => f.name.toLowerCase());
+            const filePaths = fileArray.map(f => f.path.toLowerCase());
+            const allNames = fileNames.join(' ');
+            const allPaths = filePaths.join(' ');
+            
+            let detectedMode = 'standard';
+            let confidence = 'low';
+            let reasons = [];
+
+            // Unity WebGL Detection
+            const hasWasm = fileNames.some(n => n.endsWith('.wasm') || n.endsWith('.wasm.br'));
+            const hasUnityData = fileNames.some(n => n.includes('.data.') || n.endsWith('.data'));
+            const hasUnityFramework = fileNames.some(n => n.includes('framework') && n.endsWith('.js'));
+            const hasUnityLoader = fileNames.some(n => n.includes('loader') && n.endsWith('.js'));
+            const hasUnityWebgl = fileNames.some(n => n.includes('unityweb'));
+            const hasBuildFolder = filePaths.some(p => p.includes('build/') || p.includes('build\\'));
+            const hasTemplateData = filePaths.some(p => p.includes('templatedata/') || p.includes('templatedata\\'));
+            const hasUnityInstance = fileArray.some(f => {
+                if (f.name.endsWith('.js') || f.name.endsWith('.html')) {
+                    // Check content for Unity patterns (simplified check)
+                    return false; // Would need to read file content
+                }
+                return false;
+            });
+
+            // Check for Unity patterns
+            const unityScore = [
+                hasWasm, hasUnityData, hasUnityFramework, hasUnityLoader, 
+                hasUnityWebgl, hasBuildFolder, hasTemplateData
+            ].filter(Boolean).length;
+
+            if (unityScore >= 3 || (hasWasm && hasUnityData)) {
+                detectedMode = 'unity';
+                confidence = unityScore >= 5 ? 'high' : 'medium';
+                reasons = [];
+                if (hasWasm) reasons.push('WASM file detected');
+                if (hasUnityData) reasons.push('Unity data file detected');
+                if (hasUnityLoader) reasons.push('Unity loader detected');
+                if (hasBuildFolder) reasons.push('Build folder structure');
+                if (hasTemplateData) reasons.push('TemplateData folder');
+            }
+            // Advanced mode detection (complex multi-file games with special requirements)
+            else if (fileArray.length > 50 || fileNames.some(n => 
+                n.includes('worker') || n.includes('pthread') || 
+                n.includes('memfs') || n.includes('fsroot'))) {
+                detectedMode = 'advanced';
+                confidence = 'medium';
+                reasons = ['Complex file structure', 'Web Workers or advanced features detected'];
+            }
+            // Standard HTML5 detection
+            else {
+                confidence = fileArray.length > 0 ? 'medium' : 'low';
+                reasons = ['Standard HTML5 game structure'];
+            }
+
+            return { mode: detectedMode, confidence: confidence, reasons: reasons };
+        }
+
+        function updateModeUI(mode, isAutoDetected = false) {
+            // Remove auto-detected class from all
+            modeStandard.classList.remove('auto-detected');
+            modeUnity.classList.remove('auto-detected');
+            modeAdvanced.classList.remove('auto-detected');
+            
+            // Remove active from all
+            modeStandard.classList.remove('active');
+            modeUnity.classList.remove('active');
+            modeAdvanced.classList.remove('active');
+
+            // Add active to selected
+            if (mode === 'unity') {
+                modeUnity.classList.add('active');
+                unityOptions.style.display = 'block';
+            } else if (mode === 'advanced') {
+                modeAdvanced.classList.add('active');
+                unityOptions.style.display = 'none';
+            } else {
+                modeStandard.classList.add('active');
+                unityOptions.style.display = 'none';
+            }
+
+            // Add auto-detected styling if applicable
+            if (isAutoDetected) {
+                if (mode === 'unity') modeUnity.classList.add('auto-detected');
+                else if (mode === 'advanced') modeAdvanced.classList.add('auto-detected');
+                else modeStandard.classList.add('auto-detected');
+            }
+        }
+
+        function setMode(mode, isAutoDetected = false) {
+            currentMode = mode;
+            updateModeUI(mode, isAutoDetected);
+            
+            if (isAutoDetected) {
+                log('Auto-detected mode: ' + mode.toUpperCase(), 'info');
+            } else {
+                log('Manually switched to ' + mode.toUpperCase() + ' mode', 'info');
+            }
+        }
+
+        function runAutoDetection() {
+            if (files.size === 0) {
+                autoDetectedMode = null;
+                detectionInfo.textContent = 'Auto-detection ready - upload files to detect game type';
+                detectionInfo.style.color = '#58a6ff';
+                updateModeUI(currentMode, false);
+                return;
+            }
+
+            const detection = detectGameType();
+            autoDetectedMode = detection.mode;
+            
+            // Only auto-switch if confidence is high enough
+            if (detection.confidence === 'high') {
+                setMode(detection.mode, true);
+                detectionInfo.textContent = 'Auto-detected: ' + detection.mode.toUpperCase() + ' mode (' + detection.confidence + ' confidence) - ' + detection.reasons.join(', ');
+                detectionInfo.style.color = '#3fb950';
+            } else if (detection.confidence === 'medium') {
+                // Show suggestion but don't auto-switch if user has manually selected
+                detectionInfo.textContent = 'Suggested: ' + detection.mode.toUpperCase() + ' mode - ' + detection.reasons.join(', ') + ' (click mode button to switch)';
+                detectionInfo.style.color = '#f0883e';
+                // Auto-switch to suggested if currently standard
+                if (currentMode === 'standard') {
+                    setMode(detection.mode, true);
+                }
+            } else {
+                detectionInfo.textContent = 'Standard HTML5 game detected';
+                detectionInfo.style.color = '#a0a0a0';
+            }
+        }
+
+        // Mode button handlers
+        modeStandard.addEventListener('click', function() {
+            setMode('standard', false);
+        });
+
+        modeUnity.addEventListener('click', function() {
+            setMode('unity', false);
+        });
+
+        modeAdvanced.addEventListener('click', function() {
+            setMode('advanced', false);
+        });
 
         function log(msg, type='info') {
             const entry = document.createElement('div');
@@ -225,20 +400,42 @@
             const arr = Array.from(files.values());
             document.getElementById('statFiles').textContent = arr.length;
             document.getElementById('statSize').textContent = formatSize(arr.reduce((s, f) => s + f.size, 0));
-            document.getElementById('statTypes').textContent = new Set(arr.map(f => f.name.split('.').pop())).size;
-            const imageCount = arr.filter(f => isImage(f.name)).length;
-            document.getElementById('statImages').textContent = imageCount;
+            document.getElementById('statTypes').textContent = new Set(arr.map(f => f.name.split('.').pop().toLowerCase())).size;
+            const wasmCount = arr.filter(f => f.name.endsWith('.wasm') || f.name.endsWith('.wasm.br')).length;
+            document.getElementById('statWASM').textContent = wasmCount;
             bundleBtn.disabled = arr.length === 0 || isProcessing;
             previewBtn.disabled = arr.length === 0 || isProcessing;
             
             if (arr.length > 0) {
                 warningBox.classList.add('visible');
             }
+
+            // Run auto-detection when files change
+            runAutoDetection();
         }
 
         function isImage(filename) {
             const ext = filename.split('.').pop().toLowerCase();
             return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
+        }
+
+        function isBinary(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const binaryExts = ['wasm', 'wasm.br', 'data', 'data.br', 'data.gz', 'unityweb', 'mem', 'dll', 'so', 'dylib', 'exe'];
+            return binaryExts.includes(ext) || !['js', 'json', 'html', 'htm', 'css', 'txt', 'xml', 'svg'].includes(ext);
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) return '🖼️';
+            if (ext === 'js') return '📜';
+            if (ext === 'css') return '🎨';
+            if (['html', 'htm'].includes(ext)) return '🌐';
+            if (ext === 'json') return '📋';
+            if (['wasm', 'wasm.br'].includes(ext)) return '⚡';
+            if (['data', 'data.br', 'data.gz', 'unityweb'].includes(ext)) return '💾';
+            if (ext === 'mem') return '🧠';
+            return '📄';
         }
 
         function renderFileList() {
@@ -248,14 +445,14 @@
             }
             const sorted = Array.from(files.values()).sort((a, b) => a.path.localeCompare(b.path));
             fileList.innerHTML = '<h3>📁 Files (' + files.size + ')</h3>' + sorted.map(f => {
-                const ext = f.name.split('.').pop().toLowerCase();
-                const icon = ext.match(/png|jpg|jpeg|gif/) ? '🖼️' : ext === 'js' ? '📜' : ext === 'css' ? '🎨' : ext.match(/html?/) ? '🌐' : ext === 'json' ? '📋' : ext === 'wasm' ? '⚡' : ext === 'unityweb' ? '🎮' : ext === 'data' ? '💾' : ext === 'br' ? '📦' : '📄';
-                const imgBadge = isImage(f.name) ? '<span class="image-badge">IMG→URL</span>' : '';
-                return '<div class="file-item"><div class="file-info"><span class="file-icon">' + icon + '</span><div style="min-width:0;"><div class="file-name">' + f.name + imgBadge + '</div><div class="file-path">' + f.path + '</div></div></div><span class="file-size">' + formatSize(f.size) + '</span><div class="file-actions"><button class="btn-icon" onclick="window.removeFile(\'' + f.path + '\')">🗑️</button></div></div>';
+                const imgBadge = isImage(f.name) ? '<span class="image-badge">IMG</span>' : '';
+                const wasmBadge = f.name.endsWith('.wasm') ? '<span class="image-badge" style="background:#9c27b0">WASM</span>' : '';
+                return '<div class="file-item"><div class="file-info"><span class="file-icon">' + getFileIcon(f.name) + '</span><div style="min-width:0;"><div class="file-name">' + f.name + imgBadge + wasmBadge + '</div><div class="file-path">' + f.path + '</div></div></div><span class="file-size">' + formatSize(f.size) + '</span><div class="file-actions"><button class="btn-icon" onclick="window.removeFile(\'' + encodeURIComponent(f.path) + '\')">🗑️</button></div></div>';
             }).join('');
         }
 
-        window.removeFile = function(path) {
+        window.removeFile = function(encodedPath) {
+            const path = decodeURIComponent(encodedPath);
             files.delete(path);
             updateStats();
             renderFileList();
@@ -266,7 +463,7 @@
             path = path.replace(/^\/+/, '');
             if (files.has(path)) log('Replacing: ' + path, 'warn');
             files.set(path, { name: file.name, path: path, size: file.size, type: file.type, file: file });
-            log('Added: ' + path + ' (' + formatSize(file.size) + ')' + (isImage(file.name) ? ' [Image→URL]' : ''), 'success');
+            log('Added: ' + path + ' (' + formatSize(file.size) + ')', 'success');
         }
 
         async function processEntry(entry, path) {
@@ -297,73 +494,53 @@
             }
         }
 
-        function createFileInput(isFolder) {
+        // File input handlers
+        browseFilesBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
             const input = document.createElement('input');
             input.type = 'file';
-            input.style.display = 'none';
             input.multiple = true;
-            if (isFolder) {
-                input.webkitdirectory = true;
-                input.directory = true;
-            }
-            return input;
-        }
-
-        browseFilesBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            log('Opening file picker...', 'info');
-            const newInput = createFileInput(false);
-            newInput.accept = '*/*';
-            newInput.addEventListener('change', handleFileSelect);
-            document.body.appendChild(newInput);
-            newInput.click();
-            setTimeout(() => { if (newInput.parentNode) newInput.parentNode.removeChild(newInput); }, 60000);
+            input.onchange = async function(e) {
+                const selectedFiles = e.target.files;
+                log('Selected ' + selectedFiles.length + ' files', 'info');
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    await addFile(selectedFiles[i], selectedFiles[i].name);
+                }
+                updateStats();
+                renderFileList();
+            };
+            input.click();
         });
 
         browseFolderBtn.addEventListener('click', function(e) {
-            e.preventDefault();
             e.stopPropagation();
-            log('Opening folder picker...', 'info');
-            const newInput = createFileInput(true);
-            newInput.addEventListener('change', handleFolderSelect);
-            document.body.appendChild(newInput);
-            newInput.click();
-            setTimeout(() => { if (newInput.parentNode) newInput.parentNode.removeChild(newInput); }, 60000);
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.webkitdirectory = true;
+            input.directory = true;
+            input.onchange = async function(e) {
+                const selectedFiles = e.target.files;
+                log('Selected ' + selectedFiles.length + ' files from folder', 'info');
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const f = selectedFiles[i];
+                    const path = f.webkitRelativePath || f.name;
+                    await addFile(f, path);
+                }
+                updateStats();
+                renderFileList();
+            };
+            input.click();
         });
 
-        async function handleFileSelect(e) {
-            const selectedFiles = e.target.files;
-            log('Selected ' + selectedFiles.length + ' files', 'info');
-            for (let i = 0; i < selectedFiles.length; i++) {
-                await addFile(selectedFiles[i], selectedFiles[i].name);
-            }
-            updateStats();
-            renderFileList();
-            e.target.value = '';
-        }
-
-        async function handleFolderSelect(e) {
-            const selectedFiles = e.target.files;
-            log('Selected ' + selectedFiles.length + ' files from folder', 'info');
-            for (let i = 0; i < selectedFiles.length; i++) {
-                const f = selectedFiles[i];
-                const path = f.webkitRelativePath || f.name;
-                await addFile(f, path);
-            }
-            updateStats();
-            renderFileList();
-            e.target.value = '';
-        }
-
+        // Drag and drop handlers
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            document.addEventListener(eventName, function(e) {
+            document.body.addEventListener(eventName, function(e) {
                 e.preventDefault();
                 e.stopPropagation();
             }, false);
         });
 
-        function setupDropZone(zone, isFolder) {
+        function setupDropZone(zone) {
             let enterCounter = 0;
             zone.addEventListener('dragenter', function(e) {
                 e.preventDefault();
@@ -372,7 +549,7 @@
             }, false);
             zone.addEventListener('dragover', function(e) {
                 e.preventDefault();
-                if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+                e.dataTransfer.dropEffect = 'copy';
             }, false);
             zone.addEventListener('dragleave', function(e) {
                 e.preventDefault();
@@ -409,22 +586,32 @@
             }, false);
         }
 
-        setupDropZone(dropZoneFiles, false);
-        setupDropZone(dropZoneFolder, true);
+        setupDropZone(dropZoneFiles);
+        setupDropZone(dropZoneFolder);
 
-        clearBtn.addEventListener('click', () => { 
+        clearBtn.addEventListener('click', function() { 
             files.clear(); 
             updateStats(); 
             renderFileList(); 
             log('Cleared all files', 'warn'); 
         });
 
+        // File reading utilities
         async function readFileAsBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
+            });
+        }
+
+        async function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
             });
         }
 
@@ -443,7 +630,7 @@
             const formData = new FormData();
             formData.append('image', base64Data);
             formData.append('name', file.name.replace(/\.[^.]+$/, ''));
-            const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+            const response = await fetch('https://api.imgbb.com/1/upload?key=' + IMGBB_API_KEY, {
                 method: 'POST',
                 body: formData
             });
@@ -453,146 +640,343 @@
             return data.data.display_url || data.data.url;
         }
 
-        bundleBtn.addEventListener('click', async () => {
+        // Main bundle creation
+        bundleBtn.addEventListener('click', async function() {
             isProcessing = true;
             updateStats();
             progressContainer.classList.add('active');
             logConsole.innerHTML = '';
-            log('Starting bundle creation...', 'info');
+            log('Starting bundle creation in ' + currentMode.toUpperCase() + ' mode...', 'info');
 
-            const convertImages = document.getElementById('convertImages').checked;
+            const externalImages = document.getElementById('externalImages').checked;
             const stripPrefix = document.getElementById('stripPrefix').value;
             const fileArray = Array.from(files.values());
+            
             const resources = {};
-            let css = '', js = '', html = '';
+            let cssContent = '';
+            let jsContent = '';
+            let htmlContent = '';
             let uploadedImages = 0;
             let failedUploads = 0;
 
+            // Phase 1: Process all files
             for (let i = 0; i < fileArray.length; i++) {
                 const file = fileArray[i];
-                progressFill.style.width = ((i + 1) / fileArray.length * 100) + '%';
-                progressText.textContent = `Processing ${i + 1}/${fileArray.length}: ${file.name}`;
+                progressFill.style.width = ((i + 1) / fileArray.length * 50) + '%';
+                progressText.textContent = 'Processing ' + (i + 1) + '/' + fileArray.length + ': ' + file.name;
 
                 const ext = file.name.split('.').pop().toLowerCase();
-                const isBinary = !['js', 'json', 'html', 'htm', 'css', 'txt', 'xml'].includes(ext);
+                const isWasm = file.name.endsWith('.wasm') || file.name.endsWith('.wasm.br');
+                const isData = file.name.endsWith('.data') || file.name.endsWith('.data.br') || file.name.endsWith('.data.gz');
                 const isImg = isImage(file.name);
                 
-                // Calculate resource key (with optional prefix stripping)
                 let resourceKey = file.path;
                 if (stripPrefix && resourceKey.startsWith(stripPrefix)) {
                     resourceKey = resourceKey.substring(stripPrefix.length);
                 }
 
                 try {
-                    if (isImg && convertImages) {
-                        log(`Uploading image to ImgBB: ${file.name}...`, 'info');
+                    if (isImg && externalImages) {
+                        log('Uploading image: ' + file.name + '...', 'info');
                         try {
                             const imageUrl = await uploadImageToImgBB(file.file);
-                            resources[resourceKey] = imageUrl;
-                            log(`Image → URL: ${file.name} (key: ${resourceKey})`, 'success');
+                            resources[resourceKey] = { type: 'url', data: imageUrl, mime: file.type || 'image/png' };
+                            log('Image → URL: ' + file.name, 'success');
                             uploadedImages++;
                         } catch (uploadErr) {
-                            log(`ImgBB upload failed for ${file.name}: ${uploadErr.message}. Falling back to base64.`, 'error');
+                            log('ImgBB failed for ' + file.name + ', using base64', 'warn');
                             const base64 = await readFileAsBase64(file.file);
-                            resources[resourceKey] = base64;
+                            resources[resourceKey] = { type: 'base64', data: base64, mime: file.type || 'image/png' };
                             failedUploads++;
                         }
-                    } else if (isBinary) {
+                    } else if (isWasm || isData) {
+                        const arrayBuffer = await readFileAsArrayBuffer(file.file);
+                        const bytes = new Uint8Array(arrayBuffer);
+                        let binary = '';
+                        for (let j = 0; j < bytes.byteLength; j++) {
+                            binary += String.fromCharCode(bytes[j]);
+                        }
+                        const base64 = btoa(binary);
+                        const mime = isWasm ? 'application/wasm' : 'application/octet-stream';
+                        resources[resourceKey] = { 
+                            type: 'wasm', 
+                            data: base64, 
+                            mime: mime,
+                            isCompressed: file.name.endsWith('.br') || file.name.endsWith('.gz')
+                        };
+                        log('Encoded binary: ' + file.name + ' (' + formatSize(file.size) + ')', 'success');
+                    } else if (isBinary(file.name)) {
                         const base64 = await readFileAsBase64(file.file);
-                        resources[resourceKey] = base64;
-                        log(`Encoded binary: ${file.name} (key: ${resourceKey})`, 'success');
+                        resources[resourceKey] = { type: 'base64', data: base64, mime: 'application/octet-stream' };
+                        log('Encoded binary: ' + file.name, 'success');
                     } else {
                         const content = await readFileAsText(file.file);
-                        if (ext === 'css') css += content + '\n';
-                        else if (ext === 'js') js += content + '\n';
-                        else if ((ext === 'html' || ext === 'htm') && !html) html = content;
-                        else resources[resourceKey] = content;
-                        log(`Processed text: ${file.name} (key: ${resourceKey})`, 'success');
+                        if (ext === 'css') {
+                            cssContent += '\n/* ' + file.name + ' */\n' + content + '\n';
+                        } else if (ext === 'js') {
+                            jsContent += '\n/* ' + file.name + ' */\n' + content + '\n';
+                        } else if ((ext === 'html' || ext === 'htm') && !htmlContent) {
+                            htmlContent = content;
+                        } else {
+                            resources[resourceKey] = { type: 'text', data: content, mime: file.type || 'text/plain' };
+                        }
+                        log('Processed: ' + file.name, 'success');
                     }
                 } catch (err) { 
-                    log(`Error processing ${file.name}: ${err.message}`, 'error'); 
+                    log('Error processing ' + file.name + ': ' + err.message, 'error'); 
                 }
             }
 
-            log(`Upload complete: ${uploadedImages} images to URLs, ${failedUploads} failed (used base64)`, 'info');
+            // Phase 2: Build the loader
+            progressFill.style.width = '60%';
+            progressText.textContent = 'Building resource loader...';
+            log('Building resource loader...', 'info');
 
-            // Build resource loader with proper escaping
             const resourcesJson = JSON.stringify(resources);
-            const escapedResources = resourcesJson.replace(/</g, '\\u003c');
             
-            // Use string concatenation to avoid script tag issues
-            const scriptOpen = '<' + 'scr' + 'ipt' + '>';
-            const scriptClose = '<' + '/scr' + 'ipt' + '>';
-            
-            const loaderScript = scriptOpen + `(function(){
-                var R=` + escapedResources + `;
-                var originalFetch=window.fetch;
-                window.fetch=function(url,opts){
-                    var cleanUrl=url.toString().replace(window.location.origin+"/","").replace(/^\\/+/, "");
-                    // Try multiple path variations
-                    var variations = [cleanUrl, cleanUrl.replace(/^[^/]+\\//, ""), "smashkarts/" + cleanUrl];
-                    for (var i=0; i<variations.length; i++) {
-                        var key = variations[i];
-                        if(R[key]){
-                            var data=R[key];
-                            if(data.startsWith('http')) return originalFetch.apply(this,[data,opts]);
-                            if(data.startsWith('data:')) return Promise.resolve(new Response(data,{status:200}));
-                            return Promise.resolve(new Response(data,{status:200,statusText:"OK"}));
+            // Create loader script with proper escaping
+            const loaderScript = `(function() {
+                'use strict';
+                
+                var RESOURCES = ` + resourcesJson + `;
+                var BLOB_CACHE = {};
+                
+                function createBlobUrl(key, base64Data, mimeType) {
+                    if (BLOB_CACHE[key]) return BLOB_CACHE[key];
+                    try {
+                        var byteString = atob(base64Data);
+                        var bytes = new Uint8Array(byteString.length);
+                        for (var i = 0; i < byteString.length; i++) {
+                            bytes[i] = byteString.charCodeAt(i);
+                        }
+                        var blob = new Blob([bytes], { type: mimeType });
+                        var url = URL.createObjectURL(blob);
+                        BLOB_CACHE[key] = url;
+                        return url;
+                    } catch(e) {
+                        console.error('Failed to create blob for', key, e);
+                        return null;
+                    }
+                }
+                
+                function findResource(url) {
+                    var cleanUrl = url.toString().replace(window.location.origin, '').replace(/^\\/+/, '');
+                    var variations = [cleanUrl, '/' + cleanUrl, cleanUrl.replace(/^[^/]+\\//, ''), cleanUrl.toLowerCase()];
+                    
+                    if (cleanUrl.endsWith('.wasm')) {
+                        variations.push(cleanUrl + '.br');
+                        variations.push(cleanUrl + '.gz');
+                    }
+                    if (cleanUrl.endsWith('.wasm.br') || cleanUrl.endsWith('.wasm.gz')) {
+                        variations.push(cleanUrl.replace(/\\.(br|gz)$/, ''));
+                    }
+                    
+                    for (var i = 0; i < variations.length; i++) {
+                        if (RESOURCES[variations[i]]) {
+                            return { key: variations[i], res: RESOURCES[variations[i]] };
                         }
                     }
-                    return originalFetch.apply(this,arguments);
-                };
-                var OriginalXHR=window.XMLHttpRequest;
-                window.XMLHttpRequest=function(){
-                    var xhr=new OriginalXHR();
-                    var originalOpen=xhr.open;
-                    xhr.open=function(method,url,async,user,password){
-                        var cleanUrl=url.toString().replace(window.location.origin+"/","").replace(/^\\/+/, "");
-                        var variations = [cleanUrl, cleanUrl.replace(/^[^/]+\\//, ""), "smashkarts/" + cleanUrl];
-                        for (var i=0; i<variations.length; i++) {
-                            var key = variations[i];
-                            if(R[key]){
-                                var data=R[key];
-                                if(data.startsWith('http')) return originalOpen.apply(this,[method,data,async,user,password]);
-                                Object.defineProperty(xhr,"response",{get:function(){
-                                    if(this.responseType==="arraybuffer"&&data.startsWith('data:')){
-                                        var base64=data.split(',')[1];
-                                        var binary=atob(base64);
-                                        var bytes=new Uint8Array(binary.length);
-                                        for(var j=0;j<binary.length;j++)bytes[j]=binary.charCodeAt(j);
-                                        return bytes.buffer;
-                                    }
-                                    return data;
-                                }});
-                                Object.defineProperty(xhr,"responseText",{get:function(){return data;}});
-                                Object.defineProperty(xhr,"status",{value:200});
-                                Object.defineProperty(xhr,"statusText",{value:"OK"});
-                                Object.defineProperty(xhr,"readyState",{value:4});
-                                setTimeout(function(){
-                                    if(xhr.onreadystatechange)xhr.onreadystatechange();
-                                    if(xhr.onload)xhr.onload();
-                                },0);
-                                return;
+                    return null;
+                }
+                
+                var originalFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url !== 'string') return originalFetch.apply(this, arguments);
+                    
+                    var found = findResource(url);
+                    if (found) {
+                        var res = found.res;
+                        if (res.type === 'url') {
+                            return originalFetch(res.data, options);
+                        }
+                        if (res.type === 'base64') {
+                            return Promise.resolve(new Response(res.data, { 
+                                status: 200, 
+                                statusText: 'OK',
+                                headers: { 'Content-Type': res.mime }
+                            }));
+                        }
+                        if (res.type === 'text') {
+                            return Promise.resolve(new Response(res.data, { 
+                                status: 200, 
+                                statusText: 'OK',
+                                headers: { 'Content-Type': res.mime }
+                            }));
+                        }
+                        if (res.type === 'wasm') {
+                            var blobUrl = createBlobUrl(found.key, res.data, res.mime);
+                            if (blobUrl) {
+                                return originalFetch(blobUrl, options).then(function(response) {
+                                    var newResponse = new Response(response.body, {
+                                        status: response.status,
+                                        statusText: response.statusText,
+                                        headers: response.headers
+                                    });
+                                    Object.defineProperty(newResponse, 'url', { value: url });
+                                    return newResponse;
+                                });
                             }
                         }
-                        return originalOpen.apply(this,arguments);
+                    }
+                    return originalFetch.apply(this, arguments);
+                };
+                
+                var OriginalXHR = window.XMLHttpRequest;
+                window.XMLHttpRequest = function() {
+                    var xhr = new OriginalXHR();
+                    var originalOpen = xhr.open;
+                    var originalSend = xhr.send;
+                    var requestUrl = '';
+                    var responseData = null;
+                    var responseType = '';
+                    
+                    xhr.open = function(method, url, async, user, password) {
+                        requestUrl = url;
+                        var found = findResource(url);
+                        
+                        if (found) {
+                            var res = found.res;
+                            if (res.type === 'url') {
+                                return originalOpen.call(this, method, res.data, async, user, password);
+                            }
+                            this._isInternalResource = true;
+                            this._internalResource = res;
+                            this._internalKey = found.key;
+                            return;
+                        }
+                        return originalOpen.apply(this, arguments);
                     };
+                    
+                    Object.defineProperty(xhr, 'response', {
+                        get: function() {
+                            if (this._isInternalResource && responseData !== null) {
+                                if (responseType === 'arraybuffer' && typeof responseData === 'string') {
+                                    var binary = atob(responseData.split(',')[1] || responseData);
+                                    var bytes = new Uint8Array(binary.length);
+                                    for (var i = 0; i < binary.length; i++) {
+                                        bytes[i] = binary.charCodeAt(i);
+                                    }
+                                    return bytes.buffer;
+                                }
+                                return responseData;
+                            }
+                            return xhr._realResponse !== undefined ? xhr._realResponse : xhr.response;
+                        }
+                    });
+                    
+                    Object.defineProperty(xhr, 'responseText', {
+                        get: function() {
+                            if (this._isInternalResource && responseData !== null) {
+                                return typeof responseData === 'string' ? responseData : String(responseData);
+                            }
+                            return xhr._realResponseText !== undefined ? xhr._realResponseText : xhr.responseText;
+                        }
+                    });
+                    
+                    Object.defineProperty(xhr, 'status', {
+                        get: function() { return this._isInternalResource ? 200 : (xhr._realStatus || xhr.status); }
+                    });
+                    
+                    Object.defineProperty(xhr, 'statusText', {
+                        get: function() { return this._isInternalResource ? 'OK' : (xhr._realStatusText || xhr.statusText); }
+                    });
+                    
+                    Object.defineProperty(xhr, 'readyState', {
+                        get: function() { return this._isInternalResource ? 4 : (xhr._realReadyState || xhr.readyState); }
+                    });
+                    
+                    xhr.send = function(body) {
+                        if (this._isInternalResource) {
+                            var self = this;
+                            var res = this._internalResource;
+                            
+                            setTimeout(function() {
+                                if (res.type === 'base64' || res.type === 'text') {
+                                    responseData = res.data;
+                                } else if (res.type === 'wasm') {
+                                    var blobUrl = createBlobUrl(self._internalKey, res.data, res.mime);
+                                    if (blobUrl) {
+                                        originalFetch(blobUrl).then(function(r) {
+                                            return r.arrayBuffer();
+                                        }).then(function(buffer) {
+                                            responseData = buffer;
+                                            responseType = self.responseType;
+                                            if (self.onreadystatechange) self.onreadystatechange();
+                                            if (self.onload) self.onload();
+                                        });
+                                        return;
+                                    }
+                                }
+                                if (self.onreadystatechange) self.onreadystatechange();
+                                if (self.onload) self.onload();
+                            }, 0);
+                            return;
+                        }
+                        
+                        xhr.addEventListener('readystatechange', function() {
+                            xhr._realReadyState = xhr.readyState;
+                            xhr._realStatus = xhr.status;
+                            xhr._realStatusText = xhr.statusText;
+                            try { xhr._realResponse = xhr.response; } catch(e) {}
+                            try { xhr._realResponseText = xhr.responseText; } catch(e) {}
+                        });
+                        
+                        return originalSend.apply(this, arguments);
+                    };
+                    
                     return xhr;
                 };
-            })();` + scriptClose;
+                
+                if (window.WebAssembly && WebAssembly.instantiateStreaming) {
+                    var originalInstantiateStreaming = WebAssembly.instantiateStreaming;
+                    WebAssembly.instantiateStreaming = function(source, importObject) {
+                        if (source instanceof Response) {
+                            var url = source.url;
+                            var found = findResource(url);
+                            if (found && found.res.type === 'wasm') {
+                                var res = found.res;
+                                var blobUrl = createBlobUrl(found.key, res.data, res.mime);
+                                if (blobUrl) {
+                                    return originalFetch(blobUrl).then(function(r) {
+                                        return originalInstantiateStreaming(r, importObject);
+                                    });
+                                }
+                            }
+                        }
+                        return originalInstantiateStreaming.apply(this, arguments);
+                    };
+                }
+                
+                console.log('[Bundler] Resource loader initialized with', Object.keys(RESOURCES).length, 'resources');
+            })();`;
 
-            let finalHtml = html || '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bundled App</title></head><body></body></html>';
+            progressFill.style.width = '80%';
+            progressText.textContent = 'Assembling final HTML...';
+            log('Assembling final HTML...', 'info');
+
+            // Build final HTML
+            let finalHtml = htmlContent || '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bundled Game</title></head><body></body></html>';
             
-            if (css) {
-                finalHtml = finalHtml.replace('</head>', `<style>${css}</style></head>`);
+            if (cssContent) {
+                finalHtml = finalHtml.replace('</head>', '<style>' + cssContent + '</style></head>');
             }
             
-            finalHtml = finalHtml.replace('</body>', loaderScript + scriptOpen + js + scriptClose + '</body>');
+            // Use string concatenation to avoid script tag parsing issues
+            const fullScript = loaderScript + '\n' + jsContent;
+            const scriptOpen = String.fromCharCode(60) + 'script' + String.fromCharCode(62);
+            const scriptClose = String.fromCharCode(60) + '/script' + String.fromCharCode(62);
+            
+            finalHtml = finalHtml.replace('</body>', scriptOpen + fullScript + scriptClose + '</body>');
 
             if (document.getElementById('minifyCode').checked) {
                 finalHtml = finalHtml.replace(/>\s+</g, '><').replace(/\s{2,}/g, ' ').replace(/<!--[\s\S]*?-->/g, '');
             }
 
+            progressFill.style.width = '100%';
+            progressText.textContent = 'Complete! Downloading...';
+            log('Bundle created successfully!', 'success');
+
+            // Download
             const blob = new Blob([finalHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -603,20 +987,18 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            log(`Bundle created! ${uploadedImages} images hosted externally.`, 'success');
-            progressText.textContent = 'Complete! Downloading...';
             isProcessing = false;
             updateStats();
-            setTimeout(() => progressContainer.classList.remove('active'), 3000);
+            setTimeout(function() { progressContainer.classList.remove('active'); }, 3000);
         });
 
-        previewBtn.addEventListener('click', () => {
+        previewBtn.addEventListener('click', function() {
             const fileNames = Array.from(files.keys()).join('\n');
             document.getElementById('previewBody').innerHTML = '<pre style="background:#0d1117;padding:20px;border-radius:8px;color:#c9d1d9;max-height:70vh;overflow:auto;">' + fileNames + '</pre>';
             document.getElementById('previewModal').classList.add('active');
         });
 
-        log('Ready. Images will be converted to URLs (smaller output files).', 'info');
+        log('Ready. Auto-detection enabled - upload files to detect game type.', 'info');
         updateStats();
     </script>
 </body>
