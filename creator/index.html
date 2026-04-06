@@ -3,861 +3,639 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal File Inliner - Unity WebGL Edition</title>
+    <title>Universal File Bundler</title>
+    <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             min-height: 100vh;
+            color: #eaeaea;
             padding: 20px;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            background: linear-gradient(90deg, #e94560, #ff6b6b, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { text-align: center; color: #a0a0a0; margin-bottom: 30px; font-size: 1.1em; }
+        .upload-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        @media (max-width: 768px) { .upload-section { grid-template-columns: 1fr; } }
+        .drop-zone {
+            border: 3px dashed #e94560;
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-        .header {
-            background: linear-gradient(135deg, #1b70f0 0%, #2196f3 100%);
-            color: white;
-            padding: 30px;
+            padding: 40px 30px;
             text-align: center;
-        }
-        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
-        .header p { opacity: 0.9; font-size: 1.1em; }
-        
-        .upload-section {
-            padding: 30px;
-            background: #f8f9fa;
-            border-bottom: 2px dashed #dee2e6;
-        }
-        
-        .upload-label {
-            display: block;
-            cursor: pointer;
-            border: 3px dashed #1b70f0;
-            border-radius: 15px;
-            padding: 40px;
-            text-align: center;
-            background: white;
+            background: rgba(233, 69, 96, 0.05);
             transition: all 0.3s ease;
-        }
-        
-        .upload-label:hover, .upload-label.dragover {
-            background: #e3f2fd;
-            border-color: #2196f3;
-            transform: scale(1.02);
-        }
-        
-        #fileInput {
-            display: none;
-        }
-        
-        .file-list {
-            margin-top: 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-        }
-        .file-item {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            border-left: 4px solid #1b70f0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            animation: slideIn 0.3s ease;
-        }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .file-icon { font-size: 1.5em; }
-        .file-info { flex: 1; }
-        .file-name { font-weight: bold; color: #333; word-break: break-all; }
-        .file-size { color: #666; font-size: 0.85em; }
-        
-        .controls {
-            padding: 30px;
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        button {
-            padding: 15px 30px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1em;
-            font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .btn-primary {
-            background: linear-gradient(135deg, #1b70f0 0%, #2196f3 100%);
-            color: white;
-        }
-        .btn-primary:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(27, 112, 240, 0.3);
-        }
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .output-section {
-            padding: 30px;
-            background: #f8f9fa;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 30px;
-            background: #e9ecef;
-            border-radius: 15px;
-            overflow: hidden;
-            margin-bottom: 20px;
-            display: none;
-        }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #1b70f0 0%, #2196f3 100%);
-            width: 0%;
-            transition: width 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-        
-        .code-output {
-            background: #1e1e1e;
-            color: #d4d4d4;
-            padding: 20px;
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85em;
-            max-height: 500px;
-            overflow: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-            display: none;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 200px;
         }
-        .code-output.show { display: block; }
+        .drop-zone.dragover {
+            border-color: #ff6b6b;
+            background: rgba(233, 69, 96, 0.2);
+            transform: scale(1.02);
+            box-shadow: 0 10px 40px rgba(233, 69, 96, 0.3);
+        }
+        .drop-zone-icon { font-size: 3em; margin-bottom: 15px; display: block; pointer-events: none; }
+        .drop-zone-text { font-size: 1.2em; margin-bottom: 10px; color: #fff; font-weight: 600; pointer-events: none; }
+        .drop-zone-hint { color: #888; font-size: 0.85em; line-height: 1.4; pointer-events: none; }
+        .file-input-hidden { 
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+        .browse-btn {
+            background: rgba(233, 69, 96, 0.2);
+            border: 2px solid #e94560;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: 600;
+            font-size: 1em;
+            position: relative;
+            z-index: 10;
+        }
+        .browse-btn:hover { background: #e94560; }
+        .browse-btn:active { transform: scale(0.98); }
+        .file-list { background: rgba(0, 0, 0, 0.3); border-radius: 15px; padding: 20px; margin-bottom: 30px; max-height: 400px; overflow-y: auto; }
+        .file-list h3 { margin-bottom: 15px; color: #e94560; }
+        .file-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: rgba(255, 255, 255, 0.05); border-radius: 10px; margin-bottom: 8px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .file-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+        .file-icon { font-size: 1.5em; width: 40px; text-align: center; }
+        .file-name { font-weight: 500; color: #fff; word-break: break-all; }
+        .file-path { font-size: 0.8em; color: #888; margin-top: 2px; }
+        .file-size { color: #a0a0a0; font-size: 0.9em; margin-right: 15px; }
+        .file-actions { display: flex; gap: 8px; }
+        .btn-icon { background: rgba(233, 69, 96, 0.2); border: none; color: #e94560; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; }
+        .btn-icon:hover { background: #e94560; color: white; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .control-group { background: rgba(0, 0, 0, 0.3); padding: 20px; border-radius: 15px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .control-group h4 { margin-bottom: 15px; color: #feca57; }
+        .option { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .option label { color: #ccc; font-size: 0.95em; }
+        input[type="text"] { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; padding: 8px 12px; border-radius: 8px; width: 50%; }
+        input[type="checkbox"] { width: 20px; height: 20px; accent-color: #e94560; }
+        .progress-container { background: rgba(0, 0, 0, 0.5); border-radius: 15px; padding: 25px; margin-bottom: 30px; display: none; }
+        .progress-container.active { display: block; }
+        .progress-bar { width: 100%; height: 30px; background: rgba(255, 255, 255, 0.1); border-radius: 15px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #e94560, #ff6b6b, #feca57); width: 0%; transition: width 0.3s ease; }
+        .progress-text { text-align: center; margin-top: 10px; color: #feca57; font-weight: 500; }
+        .action-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .btn { padding: 15px 30px; border: none; border-radius: 12px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; }
+        .btn-primary { background: linear-gradient(135deg, #e94560, #ff6b6b); color: white; }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(233, 69, 96, 0.6); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background: rgba(255, 255, 255, 0.1); color: #fff; border: 2px solid rgba(255, 255, 255, 0.2); }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .stat-card { background: rgba(0, 0, 0, 0.3); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .stat-value { font-size: 2em; font-weight: bold; color: #e94560; }
+        .stat-label { color: #888; font-size: 0.9em; margin-top: 5px; }
+        .empty-state { text-align: center; padding: 40px; color: #666; }
+        .log-console { background: #0d1117; border-radius: 12px; padding: 15px; font-family: 'Courier New', monospace; font-size: 0.85em; max-height: 200px; overflow-y: auto; margin-top: 20px; color: #c9d1d9; }
+        .log-entry { margin-bottom: 5px; padding: 3px 0; border-bottom: 1px solid #21262d; }
+        .log-entry.success { color: #3fb950; }
+        .log-entry.error { color: #f85149; }
+        .log-entry.warn { color: #f0883e; }
+        .preview-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1000; justify-content: center; align-items: center; padding: 20px; }
+        .preview-modal.active { display: flex; }
+        .preview-content { background: #1a1a2e; border-radius: 15px; max-width: 90%; max-height: 90%; overflow: auto; padding: 20px; position: relative; width: 100%; }
+        .preview-close { position: absolute; top: 10px; right: 15px; font-size: 1.5em; cursor: pointer; color: #fff; background: none; border: none; }
         
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        .stat-value {
-            font-size: 2em;
-            font-weight: bold;
-            color: #1b70f0;
-        }
-        .stat-label {
-            color: #666;
-            font-size: 0.9em;
-            margin-top: 5px;
-        }
-        
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #28a745;
+        .image-badge {
+            background: #e94560;
             color: white;
-            padding: 20px 30px;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            z-index: 1000;
-        }
-        .toast.show { transform: translateX(0); }
-        
-        .unity-warning {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #856404;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        .unity-warning.show { display: block; }
-        
-        .critical-warning {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        .critical-warning.show { display: block; }
-        
-        .upload-hint {
-            color: #666;
-            margin-top: 10px;
-            font-size: 0.9em;
+            font-size: 0.7em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
         }
     </style>
-<base target="_blank">
-<base target="_blank">
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🎮 Unity WebGL File Inliner</h1>
-            <p>Upload all your files and get a TRULY self-contained HTML file - ALL assets inlined including Unity build files!</p>
+        <h1>📦 Universal File Bundler</h1>
+        <p class="subtitle">Bundle Unity WebGL builds & all file types into one self-contained HTML file</p>
+
+        <div class="stats">
+            <div class="stat-card"><span class="stat-value" id="statFiles">0</span><div class="stat-label">Files</div></div>
+            <div class="stat-card"><span class="stat-value" id="statSize">0 MB</span><div class="stat-label">Total Size</div></div>
+            <div class="stat-card"><span class="stat-value" id="statTypes">0</span><div class="stat-label">File Types</div></div>
+            <div class="stat-card"><span class="stat-value" id="statImages">0</span><div class="stat-label">Images</div></div>
         </div>
-        
-        <div class="unity-warning" id="unityWarning">
-            <strong>⚠️ Unity WebGL Detected:</strong> Make sure to include all build files: .data.br/.data.gz, .wasm.br/.wasm.gz, .framework.js.br/.framework.js.gz, loader.js, and all icon files!
-        </div>
-        
-        <div class="critical-warning" id="criticalWarning">
-            <strong>🔴 Critical Files Missing:</strong> The following Unity files are required but not found: <span id="missingFiles"></span>
-        </div>
-        
+
         <div class="upload-section">
-            <label for="fileInput" class="upload-label" id="dropZone">
-                <input type="file" id="fileInput" multiple accept="*/*">
-                <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
-                <h3>Drop files/folder here or click to browse</h3>
-                <p class="upload-hint">Supports: HTML, JS, CSS, PNG, JPG, JPEG, GIF, SVG, JSON, ICO, BR, GZ, WASM, DATA</p>
-                <p style="color: #1b70f0; margin-top: 5px; font-weight: bold;">💡 Tip: Drag & drop your entire Unity WebGL build folder!</p>
-            </label>
-            <div class="file-list" id="fileList"></div>
+            <div class="drop-zone" id="dropZoneFiles">
+                <span class="drop-zone-icon">📄</span>
+                <div class="drop-zone-text">Drop Files Here</div>
+                <div class="drop-zone-hint">Drop individual files or multiple files</div>
+                <button class="browse-btn" id="browseFilesBtn" type="button">Browse Files</button>
+                <input type="file" id="fileInput" class="file-input-hidden" multiple>
+            </div>
+            <div class="drop-zone" id="dropZoneFolder">
+                <span class="drop-zone-icon">📁</span>
+                <div class="drop-zone-text">Drop Folder Here</div>
+                <div class="drop-zone-hint">Drop entire folder with subfolders</div>
+                <button class="browse-btn" id="browseFolderBtn" type="button">Browse Folder</button>
+                <input type="file" id="folderInput" class="file-input-hidden" webkitdirectory directory multiple>
+            </div>
         </div>
-        
+
+        <div class="file-list" id="fileList">
+            <div class="empty-state">
+                <div style="font-size: 3em; margin-bottom: 15px;">📂</div>
+                <div>No files uploaded yet</div>
+            </div>
+        </div>
+
         <div class="controls">
-            <button class="btn-primary" id="processBtn" onclick="processFiles()" disabled>
-                🚀 Process & Inline Everything
-            </button>
-            <button class="btn-secondary" onclick="clearFiles()">Clear All</button>
-            <button class="btn-success" id="downloadBtn" onclick="downloadResult()" style="display:none;">
-                💾 Download Single HTML File
-            </button>
-            <button class="btn-success" id="copyBtn" onclick="copyToClipboard()" style="display:none;">
-                📋 Copy to Clipboard
-            </button>
+            <div class="control-group">
+                <h4>⚙️ General Options</h4>
+                <div class="option"><label>Output Filename</label><input type="text" id="outputName" value="bundled-app"></div>
+                <div class="option"><label>Minify HTML/JS/CSS</label><input type="checkbox" id="minifyCode" checked></div>
+                <div class="option"><label>Convert Images to URLs</label><input type="checkbox" id="convertImages" checked></div>
+            </div>
+            <div class="control-group">
+                <h4>🎮 Unity WebGL Options</h4>
+                <div class="option"><label>Canvas Width</label><input type="text" id="canvasWidth" value="960"></div>
+                <div class="option"><label>Canvas Height</label><input type="text" id="canvasHeight" value="600"></div>
+                <div class="option"><label>WebGL 2.0</label><input type="checkbox" id="webgl2" checked></div>
+            </div>
         </div>
-        
-        <div class="output-section">
-            <div class="progress-bar" id="progressBar">
-                <div class="progress-fill" id="progressFill">0%</div>
-            </div>
-            
-            <div class="stats" id="stats" style="display:none;">
-                <div class="stat-card">
-                    <div class="stat-value" id="statFiles">0</div>
-                    <div class="stat-label">Files Processed</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="statImages">0</div>
-                    <div class="stat-label">Images Inlined</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="statBinaries">0</div>
-                    <div class="stat-label">Unity Binaries Inlined</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="statSize">0</div>
-                    <div class="stat-label">Final Size (MB)</div>
-                </div>
-            </div>
-            
-            <pre class="code-output" id="codeOutput"></pre>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-text" id="progressText">Processing...</div>
+            <div class="log-console" id="logConsole"></div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" id="bundleBtn" disabled>Create Bundle</button>
+            <button class="btn btn-secondary" id="clearBtn">Clear All</button>
+            <button class="btn btn-secondary" id="previewBtn" disabled>Preview</button>
         </div>
     </div>
-    
-    <div class="toast" id="toast">Copied to clipboard!</div>
+
+    <div class="preview-modal" id="previewModal">
+        <div class="preview-content">
+            <button class="preview-close" onclick="document.getElementById('previewModal').classList.remove('active')">&times;</button>
+            <div id="previewBody"></div>
+        </div>
+    </div>
 
     <script>
-        // Helper to escape script end tags in inlined content
-function escapeScriptTags(str) {
-    return str.replace(/<\/scr" + "ipt>/gi, '<\\/scr' + 'ipt>');
-}
+        // HARDCODED API KEY - Replace with your own if needed
+        const IMGBB_API_KEY = '9c96da8cf964e9b1331c5275d0f455c9';
+        
+        let files = new Map();
+        let isProcessing = false;
 
-const files = new Map();
-        let processedHTML = '';
-        let isUnityBuild = false;
-        
-        const dropZone = document.getElementById('dropZone');
+        const dropZoneFiles = document.getElementById('dropZoneFiles');
+        const dropZoneFolder = document.getElementById('dropZoneFolder');
         const fileInput = document.getElementById('fileInput');
+        const folderInput = document.getElementById('folderInput');
+        const browseFilesBtn = document.getElementById('browseFilesBtn');
+        const browseFolderBtn = document.getElementById('browseFolderBtn');
         const fileList = document.getElementById('fileList');
-        const processBtn = document.getElementById('processBtn');
-        const unityWarning = document.getElementById('unityWarning');
-        const criticalWarning = document.getElementById('criticalWarning');
-        
-        fileInput.addEventListener('click', function() {
-            this.value = '';
-        });
-        
-        fileInput.addEventListener('change', function(e) {
-            if (e.target.files && e.target.files.length > 0) {
-                handleFiles(e.target.files);
-            }
-        });
-        
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropZone.classList.add('dragover');
-        });
-        
-        dropZone.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropZone.classList.remove('dragover');
-        });
-        
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropZone.classList.remove('dragover');
-            
-            const items = e.dataTransfer.items;
-            if (items && items.length > 0) {
-                const entries = [];
-                for (let i = 0; i < items.length; i++) {
-                    const entry = items[i].webkitGetAsEntry();
-                    if (entry) entries.push(entry);
-                }
-                if (entries.length > 0) {
-                    processEntries(entries);
-                } else {
-                    handleFiles(e.dataTransfer.files);
-                }
-            } else {
-                handleFiles(e.dataTransfer.files);
-            }
-        });
-        
-        async function processEntries(entries) {
-            const filePromises = [];
-            
-            for (const entry of entries) {
-                if (entry.isFile) {
-                    filePromises.push(getFileFromEntry(entry));
-                } else if (entry.isDirectory) {
-                    filePromises.push(...await readDirectory(entry));
-                }
-            }
-            
-            const fileResults = await Promise.all(filePromises);
-            fileResults.forEach(file => {
-                if (file && file.name && !file.name.startsWith('.')) {
-                    files.set(file.name, file);
-                }
-            });
-            
-            updateFileList();
-            detectUnityBuild();
-            checkCriticalFiles();
+        const bundleBtn = document.getElementById('bundleBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const previewBtn = document.getElementById('previewBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const logConsole = document.getElementById('logConsole');
+
+        function log(msg, type='info') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+            logConsole.appendChild(entry);
+            logConsole.scrollTop = logConsole.scrollHeight;
+            console.log('[' + type + '] ' + msg);
         }
-        
-        function getFileFromEntry(entry) {
-            return new Promise((resolve) => {
-                entry.file(resolve, () => resolve(null));
-            });
-        }
-        
-        async function readDirectory(dirEntry) {
-            const files = [];
-            const reader = dirEntry.createReader();
-            
-            return new Promise((resolve) => {
-                const readEntries = () => {
-                    reader.readEntries(async (entries) => {
-                        if (entries.length === 0) {
-                            resolve(files);
-                            return;
-                        }
-                        
-                        for (const entry of entries) {
-                            if (entry.isFile) {
-                                const file = await getFileFromEntry(entry);
-                                if (file) files.push(file);
-                            } else if (entry.isDirectory) {
-                                files.push(...await readDirectory(entry));
-                            }
-                        }
-                        readEntries();
-                    }, () => resolve(files));
-                };
-                readEntries();
-            });
-        }
-        
-        function handleFiles(fileList) {
-            Array.from(fileList).forEach(file => {
-                if (file.name && !file.name.startsWith('.')) {
-                    files.set(file.name, file);
-                }
-            });
-            updateFileList();
-            detectUnityBuild();
-            checkCriticalFiles();
-        }
-        
-        function detectUnityBuild() {
-            const unityIndicators = ['.data.br', '.wasm.br', '.framework.js.br', '.loader.js', '.data.gz', '.wasm.gz'];
-            isUnityBuild = Array.from(files.keys()).some(name => 
-                unityIndicators.some(ind => name.toLowerCase().includes(ind.toLowerCase()))
-            );
-            if (isUnityBuild) unityWarning.classList.add('show');
-            else unityWarning.classList.remove('show');
-        }
-        
-        function checkCriticalFiles() {
-            if (!isUnityBuild) return;
-            const criticalPatterns = [
-                { pattern: /loader\\.js$/i, name: 'loader.js' },
-                { pattern: /\\.data\\.(br|gz)$/i, name: '.data.br/.data.gz' },
-                { pattern: /\\.wasm\\.(br|gz)$/i, name: '.wasm.br/.wasm.gz' },
-                { pattern: /framework.*\\.js\\.(br|gz)$/i, name: '.framework.js.br/.framework.js.gz' }
-            ];
-            const missing = [];
-            criticalPatterns.forEach(({ pattern, name }) => {
-                const found = Array.from(files.keys()).some(n => pattern.test(n));
-                if (!found) missing.push(name);
-            });
-            if (missing.length > 0) {
-                document.getElementById('missingFiles').textContent = missing.join(', ');
-                criticalWarning.classList.add('show');
-            } else criticalWarning.classList.remove('show');
-        }
-        
-        function updateFileList() {
-            fileList.innerHTML = '';
-            files.forEach((file, name) => {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                item.innerHTML = `
-                    <span class="file-icon">${getFileIcon(file.name)}</span>
-                    <div class="file-info">
-                        <div class="file-name">${name}</div>
-                        <div class="file-size">${formatSize(file.size)}</div>
-                    </div>
-                    <button onclick="removeFile('${name}')" style="background:none;border:none;cursor:pointer;font-size:1.2em;">❌</button>
-                `;
-                fileList.appendChild(item);
-            });
-            processBtn.disabled = files.size === 0;
-        }
-        
-        function getFileIcon(filename) {
-            const ext = filename.split('.').pop().toLowerCase();
-            const icons = { html: '🌐', js: '📜', css: '🎨', json: '📋', png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️', svg: '🎭', ico: '🎯', br: '📦', gz: '📦', wasm: '⚙️', data: '💾' };
-            return icons[ext] || '📄';
-        }
-        
+
         function formatSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
+            if (bytes === 0) return '0 B';
             const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const sizes = ['B', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
-        
-        function removeFile(name) {
-            files.delete(name);
-            updateFileList();
-            detectUnityBuild();
-            checkCriticalFiles();
+
+        function updateStats() {
+            const arr = Array.from(files.values());
+            document.getElementById('statFiles').textContent = arr.length;
+            document.getElementById('statSize').textContent = formatSize(arr.reduce((s, f) => s + f.size, 0));
+            document.getElementById('statTypes').textContent = new Set(arr.map(f => f.name.split('.').pop())).size;
+            
+            const imageCount = arr.filter(f => isImage(f.name)).length;
+            document.getElementById('statImages').textContent = imageCount;
+            
+            bundleBtn.disabled = arr.length === 0 || isProcessing;
+            previewBtn.disabled = arr.length === 0 || isProcessing;
         }
-        
-        function clearFiles() {
-            files.clear();
-            updateFileList();
-            unityWarning.classList.remove('show');
-            criticalWarning.classList.remove('show');
-            document.getElementById('codeOutput').classList.remove('show');
-            document.getElementById('stats').style.display = 'none';
-            document.getElementById('downloadBtn').style.display = 'none';
-            document.getElementById('copyBtn').style.display = 'none';
+
+        function isImage(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(ext);
         }
-        
-        function readFileAsArrayBuffer(file) {
+
+        function renderFileList() {
+            if (files.size === 0) {
+                fileList.innerHTML = '<div class="empty-state"><div style="font-size:3em;margin-bottom:15px;">📂</div>No files uploaded yet</div>';
+                return;
+            }
+            const sorted = Array.from(files.values()).sort((a, b) => a.path.localeCompare(b.path));
+            fileList.innerHTML = '<h3>📁 Files (' + files.size + ')</h3>' + sorted.map(f => {
+                const ext = f.name.split('.').pop().toLowerCase();
+                const icon = ext.match(/png|jpg|jpeg|gif/) ? '🖼️' : ext === 'js' ? '📜' : ext === 'css' ? '🎨' : ext.match(/html?/) ? '🌐' : ext === 'json' ? '📋' : ext === 'wasm' ? '⚡' : ext === 'unityweb' ? '🎮' : '📄';
+                const imgBadge = isImage(f.name) ? '<span class="image-badge">IMG→URL</span>' : '';
+                return '<div class="file-item"><div class="file-info"><span class="file-icon">' + icon + '</span><div style="min-width:0;"><div class="file-name">' + f.name + imgBadge + '</div><div class="file-path">' + f.path + '</div></div></div><span class="file-size">' + formatSize(f.size) + '</span><div class="file-actions"><button class="btn-icon" onclick="window.removeFile(\'' + f.path + '\')">🗑️</button></div></div>';
+            }).join('');
+        }
+
+        window.removeFile = function(path) {
+            files.delete(path);
+            updateStats();
+            renderFileList();
+            log('Removed: ' + path, 'warn');
+        };
+
+        async function addFile(file, path) {
+            path = path.replace(/^\//, '');
+            if (files.has(path)) log('Replacing: ' + path, 'warn');
+            files.set(path, { name: file.name, path: path, size: file.size, type: file.type, file: file });
+            log('Added: ' + path + ' (' + formatSize(file.size) + ')' + (isImage(file.name) ? ' [Image→URL]' : ''), 'success');
+        }
+
+        async function processEntry(entry, path) {
+            if (!entry) return;
+            if (entry.isFile) {
+                return new Promise((resolve) => {
+                    entry.file(async (file) => {
+                        await addFile(file, path + file.name);
+                        resolve();
+                    }, (err) => { log('File error: ' + err, 'error'); resolve(); });
+                });
+            } else if (entry.isDirectory) {
+                const reader = entry.createReader();
+                return new Promise((resolve) => {
+                    const entries = [];
+                    const readEntries = () => {
+                        reader.readEntries((results) => {
+                            if (results.length === 0) {
+                                Promise.all(entries.map(e => processEntry(e, path + entry.name + '/'))).then(resolve);
+                            } else {
+                                entries.push(...results);
+                                readEntries();
+                            }
+                        }, (err) => { log('Dir error: ' + err, 'error'); resolve(); });
+                    };
+                    readEntries();
+                });
+            }
+        }
+
+        // Chromebook-friendly file input handling
+        function createFileInput(isFolder) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.style.display = 'none';
+            input.multiple = true;
+            if (isFolder) {
+                input.webkitdirectory = true;
+                input.directory = true;
+            }
+            return input;
+        }
+
+        browseFilesBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            log('Opening file picker...', 'info');
+            
+            const newInput = createFileInput(false);
+            newInput.accept = '*/*';
+            newInput.addEventListener('change', handleFileSelect);
+            document.body.appendChild(newInput);
+            newInput.click();
+            
+            setTimeout(() => {
+                if (newInput.parentNode) newInput.parentNode.removeChild(newInput);
+            }, 60000);
+        });
+
+        browseFolderBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            log('Opening folder picker...', 'info');
+            
+            const newInput = createFileInput(true);
+            newInput.addEventListener('change', handleFolderSelect);
+            document.body.appendChild(newInput);
+            newInput.click();
+            
+            setTimeout(() => {
+                if (newInput.parentNode) newInput.parentNode.removeChild(newInput);
+            }, 60000);
+        });
+
+        fileInput.addEventListener('change', handleFileSelect);
+        folderInput.addEventListener('change', handleFolderSelect);
+
+        async function handleFileSelect(e) {
+            const selectedFiles = e.target.files;
+            log('Selected ' + selectedFiles.length + ' files', 'info');
+            
+            for (let i = 0; i < selectedFiles.length; i++) {
+                await addFile(selectedFiles[i], selectedFiles[i].name);
+            }
+            updateStats();
+            renderFileList();
+            e.target.value = '';
+        }
+
+        async function handleFolderSelect(e) {
+            const selectedFiles = e.target.files;
+            log('Selected ' + selectedFiles.length + ' files from folder', 'info');
+            
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const f = selectedFiles[i];
+                const path = f.webkitRelativePath || f.name;
+                await addFile(f, path);
+            }
+            updateStats();
+            renderFileList();
+            e.target.value = '';
+        }
+
+        // Drag and drop handlers
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.addEventListener(eventName, function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        function setupDropZone(zone, isFolder) {
+            let enterCounter = 0;
+
+            zone.addEventListener('dragenter', function(e) {
+                e.preventDefault();
+                enterCounter++;
+                if (enterCounter === 1) zone.classList.add('dragover');
+            }, false);
+
+            zone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+            }, false);
+
+            zone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                enterCounter--;
+                if (enterCounter === 0) zone.classList.remove('dragover');
+            }, false);
+
+            zone.addEventListener('drop', async function(e) {
+                e.preventDefault();
+                enterCounter = 0;
+                zone.classList.remove('dragover');
+
+                const dt = e.dataTransfer;
+                
+                if (dt.items && dt.items.length > 0) {
+                    for (let i = 0; i < dt.items.length; i++) {
+                        const item = dt.items[i];
+                        if (item.kind === 'file') {
+                            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+                            if (entry) {
+                                await processEntry(entry, '');
+                            } else {
+                                const file = item.getAsFile();
+                                if (file) await addFile(file, file.name);
+                            }
+                        }
+                    }
+                } else if (dt.files && dt.files.length > 0) {
+                    for (let i = 0; i < dt.files.length; i++) {
+                        const file = dt.files[i];
+                        const path = file.webkitRelativePath || file.name;
+                        await addFile(file, path);
+                    }
+                }
+
+                updateStats();
+                renderFileList();
+            }, false);
+        }
+
+        setupDropZone(dropZoneFiles, false);
+        setupDropZone(dropZoneFolder, true);
+
+        clearBtn.addEventListener('click', () => { 
+            files.clear(); 
+            updateStats(); 
+            renderFileList(); 
+            log('Cleared all files', 'warn'); 
+        });
+
+        async function readFileAsBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = (e) => reject(e);
-                reader.readAsArrayBuffer(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
             });
         }
-        
-        function readFileAsText(file) {
+
+        async function readFileAsText(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = (e) => reject(e);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
                 reader.readAsText(file);
             });
         }
-        
-        function arrayBufferToBase64(buffer) {
-            const bytes = new Uint8Array(buffer);
-            let binary = '';
-            const len = bytes.byteLength;
-            for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
-            return btoa(binary);
-        }
-        
-        function getMimeType(filename) {
-            const lowerName = filename.toLowerCase();
-            if (lowerName.endsWith('.br')) return 'application/octet-stream';
-            if (lowerName.endsWith('.gz')) return 'application/gzip';
-            if (lowerName.endsWith('.wasm') || lowerName.includes('.wasm.')) return 'application/wasm';
-            if (lowerName.endsWith('.data') || lowerName.includes('.data.')) return 'application/octet-stream';
-            if (lowerName.endsWith('.js')) return 'application/javascript';
-            if (lowerName.endsWith('.json')) return 'application/json';
-            if (lowerName.endsWith('.png')) return 'image/png';
-            if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) return 'image/jpeg';
-            if (lowerName.endsWith('.gif')) return 'image/gif';
-            if (lowerName.endsWith('.svg')) return 'image/svg+xml';
-            if (lowerName.endsWith('.ico')) return 'image/x-icon';
-            if (lowerName.endsWith('.css')) return 'text/css';
-            if (lowerName.endsWith('.html')) return 'text/html';
-            return 'application/octet-stream';
-        }
-        
-        async function processFiles() {
-            const progressBar = document.getElementById('progressBar');
-            const progressFill = document.getElementById('progressFill');
-            const codeOutput = document.getElementById('codeOutput');
-            progressBar.style.display = 'block';
-            codeOutput.classList.remove('show');
+
+        async function uploadImageToImgBB(file) {
+            const base64 = await readFileAsBase64(file);
+            const base64Data = base64.split(',')[1];
             
-            let mainHTML = null;
-            const images = new Map(), scripts = new Map(), styles = new Map();
-            const jsons = new Map(), binaries = new Map(), loader = new Map();
+            const formData = new FormData();
+            formData.append('image', base64Data);
+            formData.append('name', file.name.replace(/\.[^.]+$/, ''));
             
-            files.forEach((file, name) => {
-                const lowerName = name.toLowerCase();
-                if (lowerName.endsWith('.html') && !mainHTML) mainHTML = file;
-                else if (['png','jpg','jpeg','gif','svg','ico'].some(ext => lowerName.endsWith('.' + ext))) images.set(name, file);
-                else if (lowerName.endsWith('.css')) styles.set(name, file);
-                else if (lowerName.endsWith('.json')) jsons.set(name, file);
-                else if (lowerName === 'loader.js' || (lowerName.includes('loader') && lowerName.endsWith('.js'))) loader.set(name, file);
-                else if (lowerName.endsWith('.js') && !lowerName.includes('loader')) scripts.set(name, file);
-                else if (lowerName.match(/\\.(br|gz|wasm|data)$/) || lowerName.match(/\\.data\\.(br|gz)$/) || lowerName.match(/\\.wasm\\.(br|gz)$/) || lowerName.match(/framework.*\\.js\\.(br|gz)$/)) binaries.set(name, file);
+            const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                method: 'POST',
+                body: formData
             });
             
-            if (!mainHTML) {
-                alert('No HTML file found! Please upload an index.html file.');
-                progressBar.style.display = 'none';
-                return;
-            }
+            if (!response.ok) throw new Error('ImgBB upload failed: ' + response.status);
             
-            let htmlContent = await readFileAsText(mainHTML);
-            let processedCount = 0;
-            const totalFiles = files.size;
-            const binaryDataUrls = new Map();
+            const data = await response.json();
+            if (!data.success) throw new Error(data.error?.message || 'Upload failed');
             
-            // Process binaries first
-            for (const [name, file] of binaries) {
-                try {
-                    const arrayBuffer = await readFileAsArrayBuffer(file);
-                    const base64 = arrayBufferToBase64(arrayBuffer);
-                    const mime = getMimeType(name);
-                    const dataUrl = `data:${mime};base64,${base64}`;
-                    binaryDataUrls.set(name, dataUrl);
-                    processedCount++;
-                    updateProgress((processedCount / totalFiles) * 100);
-                } catch (err) { console.error(`Error processing binary ${name}:`, err); }
-            }
-            
-            // Process loader with data URL helper
-            let loaderContent = '';
-            for (const [name, file] of loader) {
-                try {
-                    loaderContent = await readFileAsText(file);
-                    loaderContent = escapeScriptTags(modifyUnityLoader(loaderContent, binaryDataUrls));
-                    
-                    // FIX: Create proper script tag without double closing
-                    const loaderScript = '<scr' + 'ipt>' + loaderContent + '</scr' + 'ipt>';
-                    
-                    // Remove old loader references
-                    htmlContent = htmlContent.replace(new RegExp('<script[^>]*src=["\'][^"\']*' + escapeRegex(name) + '["\'][^>]*></scr' + 'ipt>', 'gi'), '');
-                    
-                    // Insert before closing body tag, or append to end
-                    if (htmlContent.includes('</body>')) {
-                        htmlContent = htmlContent.replace('</body>', loaderScript + '\\n</body>');
-                    } else {
-                        htmlContent += loaderScript;
-                    }
-                    processedCount++;
-                    updateProgress((processedCount / totalFiles) * 100);
-                } catch (err) { console.error(`Error processing loader ${name}:`, err); }
-            }
-            
-            // Process images
-            for (const [name, file] of images) {
-                try {
-                    const arrayBuffer = await readFileAsArrayBuffer(file);
-                    const base64 = arrayBufferToBase64(arrayBuffer);
-                    const mime = file.type || getMimeType(name);
-                    const dataUrl = `data:${mime};base64,${base64}`;
-                    const patterns = [
-                        new RegExp(`src=["\']${escapeRegex(name)}["\']`, 'gi'),
-                        new RegExp(`src=["\'][^"\']*${escapeRegex(name)}["\']`, 'gi'),
-                        new RegExp(`url\\(["\']?${escapeRegex(name)}["\']?\\)`, 'gi'),
-                        new RegExp(`href=["\']${escapeRegex(name)}["\']`, 'gi'),
-                        new RegExp(`content=["\']${escapeRegex(name)}["\']`, 'gi'),
-                        new RegExp(`["\']${escapeRegex(name)}["\']`, 'gi')
-                    ];
-                    patterns.forEach(pattern => {
-                        htmlContent = htmlContent.replace(pattern, (match) => {
-                            if (match.includes('src=')) return `src="${dataUrl}"`;
-                            if (match.includes('href=')) return `href="${dataUrl}"`;
-                            if (match.includes('content=')) return `content="${dataUrl}"`;
-                            if (match.includes('url(')) return `url("${dataUrl}")`;
-                            return `"${dataUrl}"`;
-                        });
-                    });
-                    processedCount++;
-                    updateProgress((processedCount / totalFiles) * 100);
-                } catch (err) { console.error(`Error processing image ${name}:`, err); }
-            }
-            
-            // Process styles
-            for (const [name, file] of styles) {
-                try {
-                    const cssContent = await readFileAsText(file);
-                    const styleId = 'style-' + name.replace(/[^a-zA-Z0-9]/g, '-');
-                    const linkPattern = new RegExp(`<link[^>]*href=["\'][^"\']*${escapeRegex(name)}["\'][^>]*>`, 'gi');
-                    const styleTag = '<style id="' + styleId + '">' + cssContent + '</style>';
-                    
-                    if (linkPattern.test(htmlContent)) {
-                        htmlContent = htmlContent.replace(linkPattern, styleTag);
-                    } else {
-                        htmlContent = htmlContent.replace('</head>', styleTag + '\\n</head>');
-                    }
-                    processedCount++;
-                    updateProgress((processedCount / totalFiles) * 100);
-                } catch (err) { console.error(`Error processing CSS ${name}:`, err); }
-            }
-            
-            // Process scripts
-            for (const [name, file] of scripts) {
-                try {
-                    const jsContent = escapeScriptTags(await readFileAsText(file));
-                    const scriptId = 'script-' + name.replace(/[^a-zA-Z0-9]/g, '-');
-                    // FIX: Use string concatenation to avoid parsing issues
-                    const scriptTag = '<scr' + 'ipt id="' + scriptId + '">' + jsContent + '</scr' + 'ipt>';
-                    
-                    htmlContent = htmlContent.replace(new RegExp('<script[^>]*src=["\'][^"\']*' + escapeRegex(name) + '["\'][^>]*></scr' + 'ipt>', 'gi'), '');
-                    
-                    if (htmlContent.includes('</body>')) {
-                        htmlContent = htmlContent.replace('</body>', scriptTag + '\\n</body>');
-                    } else {
-                        htmlContent += scriptTag;
-                    }
-                    processedCount++;
-                    updateProgress((processedCount / totalFiles) * 100);
-                } catch (err) { console.error(`Error processing JS ${name}:`, err); }
-            }
-            
-            // Process JSON
-            for (const [name, file] of jsons) {
-                try {
-                    const jsonContent = escapeScriptTags(await readFileAsText(file));
-                    const varName = name.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, '_$&');
-                    let jsonScript;
-                    
-                    if (name.toLowerCase().includes('manifest')) {
-                        jsonScript = '<scr' + 'ipt>window.unityManifest = ' + jsonContent + ';</scr' + 'ipt>';
-                        htmlContent = htmlContent.replace('</head>', jsonScript + '\\n</head>');
-                    } else {
-                        jsonScript = '<scr' + 'ipt>window.' + varName + ' = ' + jsonContent + ';</scr' + 'ipt>';
-                        htmlContent = htmlContent.replace('</body>', jsonScript + '\\n</body>');
-                    }
-                    processedCount++;
-                    updateProgress((processedCount / totalFiles) * 100);
-                } catch (err) { console.error(`Error processing JSON ${name}:`, err); }
-            }
-            
-            // Apply Unity fixes
-            htmlContent = replaceUnityConfigUrls(htmlContent, binaryDataUrls);
-            htmlContent = removeExternalCdnReferences(htmlContent);
-            htmlContent = htmlContent.replace(/<link[^>]*rel=["\']stylesheet["\'][^>]*href=["\'][^"\']*["\'][^>]*>/gi, '');
-            htmlContent = htmlContent.replace(/<script[^>]*src=["\'][^"\']*["\'][^>]*><\\/script>/gi, '');
-            
-            // FIX: Remove duplicate Firebase stubs
-            htmlContent = htmlContent.replace(/<script>console\.warn\("Firebase CDN removed - offline mode"\);[\\s\\S]*?<\\/script>\\s*/gi, '');
-            
-            if (isUnityBuild) htmlContent = applyUnityFinalFixes(htmlContent);
-            
-            // Clean up any remaining double script tags
-            htmlContent = htmlContent.replace(/<\\/script>\\s*<\\/script>/gi, '</scr' + 'ipt>');
-            htmlContent = htmlContent.replace(/<script><\\/script>/gi, '');
-            
-            processedHTML = htmlContent;
-            document.getElementById('statFiles').textContent = files.size;
-            document.getElementById('statImages').textContent = images.size;
-            document.getElementById('statBinaries').textContent = binaries.size;
-            document.getElementById('statSize').textContent = (htmlContent.length / (1024 * 1024)).toFixed(2);
-            document.getElementById('stats').style.display = 'grid';
-            codeOutput.textContent = '✅ Processing complete! Your inlined HTML is ready. Click Download or Copy to get your file.';
-            codeOutput.classList.add('show');
-            document.getElementById('downloadBtn').style.display = 'inline-block';
-            document.getElementById('copyBtn').style.display = 'inline-block';
-            progressBar.style.display = 'none';
-            showToast('Processing complete! Ready to download.');
+            return data.data.display_url || data.data.url;
         }
-        
-        function modifyUnityLoader(loaderCode, binaryDataUrls) {
-            let modified = loaderCode;
-            
-            // Add fetch interceptor at the start
-            const fetchInterceptor = `
-// Inlined Unity Build - Fetch Interceptor
-(function() {
-    const binaryDataUrls = {};
-`;
-            
-            // Build binary data map
-            let dataMapCode = '';
-            for (const [name, url] of binaryDataUrls) {
-                const varName = name.replace(/[^a-zA-Z0-9]/g, '_');
-                dataMapCode += `    binaryDataUrls["${name}"] = "${url}";\\n`;
-            }
-            
-            const fetchHelper = `
-    const originalFetch = window.fetch;
-    window.fetch = function(url, options) {
-        if (typeof url === 'string') {
-            const urlName = url.split('/').pop();
-            if (binaryDataUrls[urlName]) {
-                const dataUrl = binaryDataUrls[urlName];
-                const base64 = dataUrl.split(',')[1];
-                const binary = atob(base64);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                return Promise.resolve(new Response(bytes.buffer));
-            }
-        }
-        return originalFetch.apply(this, arguments);
-    };
-})();
-`;
-            
-            modified = fetchInterceptor + dataMapCode + fetchHelper + modified;
-            return escapeScriptTags(modified);
-        }
-        
-        function replaceUnityConfigUrls(htmlContent, binaryDataUrls) {
-            let modified = htmlContent;
-            
-            // Replace config URLs with data URLs
-            for (const [name, url] of binaryDataUrls) {
-                const lowerName = name.toLowerCase();
-                if (lowerName.includes('.data')) {
-                    modified = modified.replace(/dataUrl\\s*:\\s*["\'][^"\']+["\']/g, `dataUrl: "${url}"`);
-                }
-                if (lowerName.includes('framework')) {
-                    modified = modified.replace(/frameworkUrl\\s*:\\s*["\'][^"\']+["\']/g, `frameworkUrl: "${url}"`);
-                }
-                if (lowerName.includes('.wasm')) {
-                    modified = modified.replace(/codeUrl\\s*:\\s*["\'][^"\']+["\']/g, `codeUrl: "${url}"`);
+
+        bundleBtn.addEventListener('click', async () => {
+            isProcessing = true;
+            updateStats();
+            progressContainer.classList.add('active');
+            logConsole.innerHTML = '';
+            log('Starting bundle creation...', 'info');
+
+            const convertImages = document.getElementById('convertImages').checked;
+            const fileArray = Array.from(files.values());
+            const resources = {};
+            let css = '', js = '', html = '';
+            let uploadedImages = 0;
+            let failedUploads = 0;
+
+            for (let i = 0; i < fileArray.length; i++) {
+                const file = fileArray[i];
+                progressFill.style.width = ((i + 1) / fileArray.length * 100) + '%';
+                progressText.textContent = `Processing ${i + 1}/${fileArray.length}: ${file.name}`;
+
+                const ext = file.name.split('.').pop().toLowerCase();
+                const isBinary = !['js', 'json', 'html', 'htm', 'css', 'txt', 'xml'].includes(ext);
+                const isImg = isImage(file.name);
+
+                try {
+                    if (isImg && convertImages) {
+                        log(`Uploading image to ImgBB: ${file.name}...`, 'info');
+                        try {
+                            const imageUrl = await uploadImageToImgBB(file.file);
+                            resources[file.path] = imageUrl;
+                            log(`Image → URL: ${file.name}`, 'success');
+                            uploadedImages++;
+                        } catch (uploadErr) {
+                            log(`ImgBB upload failed for ${file.name}: ${uploadErr.message}. Falling back to base64.`, 'error');
+                            const base64 = await readFileAsBase64(file.file);
+                            resources[file.path] = base64;
+                            failedUploads++;
+                        }
+                    } else if (isBinary) {
+                        const base64 = await readFileAsBase64(file.file);
+                        resources[file.path] = base64;
+                        log(`Encoded binary: ${file.name}`, 'success');
+                    } else {
+                        const content = await readFileAsText(file.file);
+                        if (ext === 'css') css += content + '\n';
+                        else if (ext === 'js') js += content + '\n';
+                        else if ((ext === 'html' || ext === 'htm') && !html) html = content;
+                        else resources[file.path] = content;
+                        log(`Processed text: ${file.name}`, 'success');
+                    }
+                } catch (err) { 
+                    log(`Error processing ${file.name}: ${err.message}`, 'error'); 
                 }
             }
+
+            log(`Upload complete: ${uploadedImages} images to URLs, ${failedUploads} failed (used base64)`, 'info');
+
+            const loaderScript = `<script>(function(){
+                const R=${JSON.stringify(resources)};
+                const originalFetch=window.fetch;
+                window.fetch=function(url,opts){
+                    const cleanUrl=url.toString().replace(window.location.origin+"/","").replace(/^\\/+/,"");
+                    if(R[cleanUrl]){
+                        const data=R[cleanUrl];
+                        if(data.startsWith('http')){
+                            return originalFetch.apply(this,[data,opts]);
+                        }
+                        if(data.startsWith('data:')){
+                            return Promise.resolve(new Response(data,{status:200,statusText:"OK"}));
+                        }
+                        return Promise.resolve(new Response(data,{status:200,statusText:"OK"}));
+                    }
+                    return originalFetch.apply(this,arguments);
+                };
+                const OriginalXHR=window.XMLHttpRequest;
+                window.XMLHttpRequest=function(){
+                    const xhr=new OriginalXHR();
+                    const originalOpen=xhr.open;
+                    xhr.open=function(method,url,async,user,password){
+                        const cleanUrl=url.toString().replace(window.location.origin+"/","").replace(/^\\/+/,"");
+                        if(R[cleanUrl]){
+                            const data=R[cleanUrl];
+                            if(data.startsWith('http')){
+                                return originalOpen.apply(this,[method,data,async,user,password]);
+                            }
+                            Object.defineProperty(xhr,"response",{get:function(){
+                                if(this.responseType==="arraybuffer"&&data.startsWith('data:')){
+                                    const base64=data.split(',')[1];
+                                    const binary=atob(base64);
+                                    const bytes=new Uint8Array(binary.length);
+                                    for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+                                    return bytes.buffer;
+                                }
+                                return data;
+                            }});
+                            Object.defineProperty(xhr,"responseText",{get:function(){return data;}});
+                            Object.defineProperty(xhr,"status",{value:200});
+                            Object.defineProperty(xhr,"statusText",{value:"OK"});
+                            Object.defineProperty(xhr,"readyState",{value:4});
+                            setTimeout(()=>{
+                                if(xhr.onreadystatechange)xhr.onreadystatechange();
+                                if(xhr.onload)xhr.onload();
+                            },0);
+                            return;
+                        }
+                        return originalOpen.apply(this,arguments);
+                    };
+                    return xhr;
+                };
+            })();<\/script>`;
+
+            let finalHtml = html || '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bundled App</title></head><body></body></html>';
             
-            modified = modified.replace(/const buildUrl\\s*=\\s*["\'][^"\']*["\']/g, 'const buildUrl = ""');
-            modified = modified.replace(/const loaderUrl\\s*=\\s*["\'][^"\']*["\']/g, 'const loaderUrl = ""');
-            return modified;
-        }
-        
-        function removeExternalCdnReferences(htmlContent) {
-            let modified = htmlContent;
-            
-            // Replace Firebase CDN with single stub (avoid duplicates)
-            const firebaseStub = '<scr' + 'ipt>console.warn("Firebase CDN removed - offline mode"); window.firebase = { analytics: () => ({ logEvent: () => {}, setCurrentScreen: () => {} }), initializeApp: () => {}, auth: () => ({ onAuthStateChanged: () => {}, signInAnonymously: () => Promise.resolve() }), database: () => ({ ref: () => ({ once: () => Promise.resolve({ exists: () => false }) }) }), performance: () => ({ trace: () => ({ start: () => {}, stop: () => {} }) }) };</scr' + 'ipt>';
-            
-            modified = modified.replace(/<script[^>]*src=["\']https:\\/\\/www\\.gstatic\\.com\\/firebasejs[^"\']*["\'][^>]*><\\/script>/gi, firebaseStub);
-            modified = modified.replace(/<script[^>]*src=["\']https:\\/\\/pagead2\\.googlesyndication\\.com[^"\']*["\'][^>]*><\\/script>/gi, '');
-            modified = modified.replace(/<script[^>]*src=["\']https?:\\/\\/[^"\']*["\'][^>]*><\\/script>/gi, '');
-            modified = modified.replace(/<link[^>]*href=["\']https?:\\/\\/[^"\']*["\'][^>]*>/gi, '');
-            return modified;
-        }
-        
-        function applyUnityFinalFixes(htmlContent) {
-            let modified = htmlContent;
-            
-            // Add unityFirebaseGameOjbectName if missing
-            if (modified.includes('unityFirebaseGameOjbectName') && !modified.includes('var unityFirebaseGameOjbectName')) {
-                modified = modified.replace('</head>', '<scr' + 'ipt>var unityFirebaseGameOjbectName = "JavascriptMessageReceiver";</scr' + 'ipt>\\n</head>');
+            if (css) finalHtml = finalHtml.replace('</head>', `<style>${css}</style></head>`);
+            finalHtml = finalHtml.replace('</body>', loaderScript + `<script>${js}<\/script></body>`);
+
+            if (document.getElementById('minifyCode').checked) {
+                finalHtml = finalHtml.replace(/>\s+</g, '><').replace(/\s{2,}/g, ' ').replace(/<!--[\s\S]*?-->/g, '');
             }
-            
-            // Disable service worker
-            modified = modified.replace(/navigator\\.serviceWorker\\.register\\(['"][^'"]*['"]\\)/g, '// navigator.serviceWorker.register("service-worker.js")');
-            
-            // Add offline mode marker
-            modified = modified.replace('</head>', '<scr' + 'ipt>console.log("Unity WebGL running in OFFLINE inlined mode"); window.unityOfflineMode = true;</scr' + 'ipt>\\n</head>');
-            
-            return modified;
-        }
-        
-        function updateProgress(percent) {
-            const fill = document.getElementById('progressFill');
-            fill.style.width = percent + '%';
-            fill.textContent = Math.round(percent) + '%';
-        }
-        
-        function escapeRegex(string) {
-            return string.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
-        }
-        
-        function downloadResult() {
-            const blob = new Blob([processedHTML], { type: 'text/html' });
+
+            const blob = new Blob([finalHtml], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = isUnityBuild ? 'unity-game-inlined-OFFLINE.html' : 'game-inlined.html';
+            a.download = document.getElementById('outputName').value + '.html';
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showToast(`Downloaded ${isUnityBuild ? 'unity-game-inlined-OFFLINE.html' : 'game-inlined.html'}!`);
-        }
-        
-        function copyToClipboard() {
-            navigator.clipboard.writeText(processedHTML).then(() => showToast('Copied to clipboard!'));
-        }
-        
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
+
+            log(`Bundle created! ${uploadedImages} images hosted externally.`, 'success');
+            progressText.textContent = 'Complete! Downloading...';
+            isProcessing = false;
+            updateStats();
+            setTimeout(() => progressContainer.classList.remove('active'), 3000);
+        });
+
+        previewBtn.addEventListener('click', () => {
+            const fileNames = Array.from(files.keys()).join('\n');
+            document.getElementById('previewBody').innerHTML = '<pre style="background:#0d1117;padding:20px;border-radius:8px;color:#c9d1d9;max-height:70vh;overflow:auto;">' + fileNames + '</pre>';
+            document.getElementById('previewModal').classList.add('active');
+        });
+
+        log('Ready. Images will be converted to URLs (smaller output files).', 'info');
+        updateStats();
     </script>
 </body>
 </html>
