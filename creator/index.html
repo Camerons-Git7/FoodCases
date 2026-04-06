@@ -70,6 +70,7 @@
         .file-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: rgba(255, 255, 255, 0.05); border-radius: 10px; margin-bottom: 8px; border: 1px solid rgba(255, 255, 255, 0.1); }
         .file-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
         .file-icon { font-size: 1.5em; width: 40px; text-align: center; }
+        .file-thumbnail { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.2); display: block; }
         .file-name { font-weight: 500; color: #fff; word-break: break-all; }
         .file-path { font-size: 0.8em; color: #888; margin-top: 2px; }
         .file-size { color: #a0a0a0; font-size: 0.9em; margin-right: 15px; }
@@ -120,6 +121,9 @@
         .auto-badge { position: absolute; top: -8px; right: -8px; background: #3fb950; color: #fff; font-size: 0.6em; padding: 2px 6px; border-radius: 4px; display: none; }
         .mode-btn.auto-detected .auto-badge { display: block; }
         .detection-info { text-align: center; color: #58a6ff; font-size: 0.9em; margin-bottom: 15px; min-height: 20px; }
+        .auto-prefix-info { text-align: center; color: #888; font-size: 0.8em; margin-top: 5px; font-style: italic; }
+        .missing-files { background: rgba(248, 81, 73, 0.1); border: 1px solid #f85149; border-radius: 8px; padding: 10px; margin-top: 10px; color: #f85149; font-size: 0.8em; display: none; }
+        .missing-files.visible { display: block; }
     </style>
 </head>
 <body>
@@ -168,13 +172,15 @@
             </div>
         </div>
 
+        <div class="missing-files" id="missingFiles"></div>
+
         <div class="controls">
             <div class="control-group">
                 <h4>⚙️ General Options</h4>
                 <div class="option"><label>Output Filename</label><input type="text" id="outputName" value="bundled-game"></div>
                 <div class="option"><label>Minify HTML/JS/CSS</label><input type="checkbox" id="minifyCode" checked></div>
-                <div class="option"><label>External Image Hosting</label><input type="checkbox" id="externalImages" checked></div>
-                <div class="option"><label>Strip Path Prefix</label><input type="text" id="stripPrefix" value="" placeholder="e.g., Build/"></div>
+                <div class="option"><label>External Image Hosting</label><input type="checkbox" id="externalImages"></div>
+                <div class="auto-prefix-info" id="autoPrefixInfo"></div>
             </div>
             <div class="control-group" id="unityOptions" style="display: none;">
                 <h4>🎮 Unity WebGL Options</h4>
@@ -212,6 +218,7 @@
         let isProcessing = false;
         let currentMode = 'standard';
         let autoDetectedMode = null;
+        let autoStripPrefix = '';
 
         // DOM Elements
         const dropZoneFiles = document.getElementById('dropZoneFiles');
@@ -232,6 +239,8 @@
         const modeAdvanced = document.getElementById('modeAdvanced');
         const unityOptions = document.getElementById('unityOptions');
         const detectionInfo = document.getElementById('detectionInfo');
+        const autoPrefixInfo = document.getElementById('autoPrefixInfo');
+        const missingFilesDiv = document.getElementById('missingFiles');
 
         // Auto-detection function
         function detectGameType() {
@@ -253,15 +262,7 @@
             const hasUnityWebgl = fileNames.some(n => n.includes('unityweb'));
             const hasBuildFolder = filePaths.some(p => p.includes('build/') || p.includes('build\\'));
             const hasTemplateData = filePaths.some(p => p.includes('templatedata/') || p.includes('templatedata\\'));
-            const hasUnityInstance = fileArray.some(f => {
-                if (f.name.endsWith('.js') || f.name.endsWith('.html')) {
-                    // Check content for Unity patterns (simplified check)
-                    return false; // Would need to read file content
-                }
-                return false;
-            });
 
-            // Check for Unity patterns
             const unityScore = [
                 hasWasm, hasUnityData, hasUnityFramework, hasUnityLoader, 
                 hasUnityWebgl, hasBuildFolder, hasTemplateData
@@ -277,7 +278,6 @@
                 if (hasBuildFolder) reasons.push('Build folder structure');
                 if (hasTemplateData) reasons.push('TemplateData folder');
             }
-            // Advanced mode detection (complex multi-file games with special requirements)
             else if (fileArray.length > 50 || fileNames.some(n => 
                 n.includes('worker') || n.includes('pthread') || 
                 n.includes('memfs') || n.includes('fsroot'))) {
@@ -285,7 +285,6 @@
                 confidence = 'medium';
                 reasons = ['Complex file structure', 'Web Workers or advanced features detected'];
             }
-            // Standard HTML5 detection
             else {
                 confidence = fileArray.length > 0 ? 'medium' : 'low';
                 reasons = ['Standard HTML5 game structure'];
@@ -294,18 +293,145 @@
             return { mode: detectedMode, confidence: confidence, reasons: reasons };
         }
 
+        // Check for missing referenced files
+        function checkMissingFiles() {
+            const fileArray = Array.from(files.values());
+            const fileNames = new Set(fileArray.map(f => f.name.toLowerCase()));
+            const missing = [];
+            
+            // Get all HTML and CSS content
+            let allContent = '';
+            fileArray.forEach(f => {
+                if (f.name.endsWith('.html') || f.name.endsWith('.htm') || 
+                    f.name.endsWith('.css') || f.name.endsWith('.js')) {
+                    // We'll check content during processing
+                }
+            });
+            
+            // Check HTML files for references
+            fileArray.forEach(f => {
+                if (f.name.endsWith('.html') || f.name.endsWith('.htm')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const content = e.target.result;
+                        
+                        // Find src attributes
+                        const srcMatches = content.match(/src=["']([^"']+)["']/gi) || [];
+                        const hrefMatches = content.match(/href=["']([^"']+)["']/gi) || [];
+                        
+                        const refs = [...srcMatches, ...hrefMatches];
+                        
+                        refs.forEach(ref => {
+                            const url = ref.match(/["']([^"']+)["']/)[1];
+                            // Remove query strings
+                            const cleanUrl = url.split('?')[0].split('#')[0];
+                            
+                            if (cleanUrl && !cleanUrl.startsWith('http') && !cleanUrl.startsWith('//') && 
+                                !cleanUrl.startsWith('data:') && cleanUrl !== '') {
+                                const baseName = cleanUrl.split('/').pop().toLowerCase();
+                                if (!fileNames.has(baseName.toLowerCase())) {
+                                    if (!missing.includes(baseName)) {
+                                        missing.push(baseName);
+                                    }
+                                }
+                            }
+                        });
+                        
+                        updateMissingFiles(missing);
+                    };
+                    reader.readAsText(f.file);
+                }
+                
+                // Check CSS files for url() references
+                if (f.name.endsWith('.css')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const content = e.target.result;
+                        const urlMatches = content.match(/url\(["']?([^"')]+)["']?\)/gi) || [];
+                        
+                        urlMatches.forEach(match => {
+                            const url = match.match(/url\(["']?([^"')]+)["']?\)/i)[1];
+                            const cleanUrl = url.split('?')[0].split('#')[0];
+                            
+                            if (cleanUrl && !cleanUrl.startsWith('http') && !cleanUrl.startsWith('//') && 
+                                !cleanUrl.startsWith('data:') && cleanUrl !== '') {
+                                const baseName = cleanUrl.split('/').pop().toLowerCase();
+                                if (!fileNames.has(baseName.toLowerCase())) {
+                                    if (!missing.includes(baseName)) {
+                                        missing.push(baseName);
+                                    }
+                                }
+                            }
+                        });
+                        
+                        updateMissingFiles(missing);
+                    };
+                    reader.readAsText(f.file);
+                }
+            });
+        }
+
+        function updateMissingFiles(missing) {
+            if (missing.length > 0) {
+                missingFilesDiv.innerHTML = '⚠️ <strong>Missing referenced files:</strong> ' + missing.join(', ');
+                missingFilesDiv.classList.add('visible');
+            } else {
+                missingFilesDiv.classList.remove('visible');
+            }
+        }
+
+        // Auto-detect strip prefix based on common patterns
+        function detectStripPrefix() {
+            const fileArray = Array.from(files.values());
+            if (fileArray.length === 0) {
+                autoStripPrefix = '';
+                return;
+            }
+
+            const paths = fileArray.map(f => f.path);
+            
+            // Check for common root folder patterns
+            const firstSegments = paths.map(p => p.split('/')[0]).filter((v, i, a) => a.indexOf(v) === i);
+            
+            if (firstSegments.length === 1 && firstSegments[0]) {
+                const segment = firstSegments[0];
+                const commonRoots = ['build', 'dist', 'assets', 'static', 'public', 'www', 'web'];
+                const hasSubfolders = paths.some(p => p.split('/').length > 2);
+                
+                if (commonRoots.includes(segment.toLowerCase()) || hasSubfolders) {
+                    autoStripPrefix = segment + '/';
+                    return;
+                }
+            }
+            
+            const hasIndexHtml = paths.some(p => p.toLowerCase().endsWith('index.html'));
+            if (hasIndexHtml) {
+                const indexPath = paths.find(p => p.toLowerCase().endsWith('index.html'));
+                if (indexPath) {
+                    const parts = indexPath.split('/');
+                    if (parts.length > 1) {
+                        const root = parts[0] + '/';
+                        const allHaveRoot = paths.every(p => p.startsWith(root));
+                        if (allHaveRoot) {
+                            autoStripPrefix = root;
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            autoStripPrefix = '';
+        }
+
         function updateModeUI(mode, isAutoDetected = false) {
-            // Remove auto-detected class from all
             modeStandard.classList.remove('auto-detected');
             modeUnity.classList.remove('auto-detected');
             modeAdvanced.classList.remove('auto-detected');
             
-            // Remove active from all
             modeStandard.classList.remove('active');
             modeUnity.classList.remove('active');
             modeAdvanced.classList.remove('active');
 
-            // Add active to selected
             if (mode === 'unity') {
                 modeUnity.classList.add('active');
                 unityOptions.style.display = 'block';
@@ -317,7 +443,6 @@
                 unityOptions.style.display = 'none';
             }
 
-            // Add auto-detected styling if applicable
             if (isAutoDetected) {
                 if (mode === 'unity') modeUnity.classList.add('auto-detected');
                 else if (mode === 'advanced') modeAdvanced.classList.add('auto-detected');
@@ -339,8 +464,11 @@
         function runAutoDetection() {
             if (files.size === 0) {
                 autoDetectedMode = null;
+                autoStripPrefix = '';
                 detectionInfo.textContent = 'Auto-detection ready - upload files to detect game type';
                 detectionInfo.style.color = '#58a6ff';
+                autoPrefixInfo.textContent = '';
+                missingFilesDiv.classList.remove('visible');
                 updateModeUI(currentMode, false);
                 return;
             }
@@ -348,16 +476,22 @@
             const detection = detectGameType();
             autoDetectedMode = detection.mode;
             
-            // Only auto-switch if confidence is high enough
+            detectStripPrefix();
+            if (autoStripPrefix) {
+                autoPrefixInfo.textContent = 'Auto-detected path prefix: "' + autoStripPrefix + '" will be stripped';
+            } else {
+                autoPrefixInfo.textContent = '';
+            }
+            
+            checkMissingFiles();
+            
             if (detection.confidence === 'high') {
                 setMode(detection.mode, true);
                 detectionInfo.textContent = 'Auto-detected: ' + detection.mode.toUpperCase() + ' mode (' + detection.confidence + ' confidence) - ' + detection.reasons.join(', ');
                 detectionInfo.style.color = '#3fb950';
             } else if (detection.confidence === 'medium') {
-                // Show suggestion but don't auto-switch if user has manually selected
                 detectionInfo.textContent = 'Suggested: ' + detection.mode.toUpperCase() + ' mode - ' + detection.reasons.join(', ') + ' (click mode button to switch)';
                 detectionInfo.style.color = '#f0883e';
-                // Auto-switch to suggested if currently standard
                 if (currentMode === 'standard') {
                     setMode(detection.mode, true);
                 }
@@ -367,7 +501,6 @@
             }
         }
 
-        // Mode button handlers
         modeStandard.addEventListener('click', function() {
             setMode('standard', false);
         });
@@ -410,7 +543,6 @@
                 warningBox.classList.add('visible');
             }
 
-            // Run auto-detection when files change
             runAutoDetection();
         }
 
@@ -443,12 +575,25 @@
                 fileList.innerHTML = '<div class="empty-state"><div style="font-size:3em;margin-bottom:15px;">📂</div>No files uploaded yet</div>';
                 return;
             }
+            
             const sorted = Array.from(files.values()).sort((a, b) => a.path.localeCompare(b.path));
-            fileList.innerHTML = '<h3>📁 Files (' + files.size + ')</h3>' + sorted.map(f => {
+            let html = '<h3>📁 Files (' + files.size + ')</h3>';
+            
+            sorted.forEach(f => {
                 const imgBadge = isImage(f.name) ? '<span class="image-badge">IMG</span>' : '';
                 const wasmBadge = f.name.endsWith('.wasm') ? '<span class="image-badge" style="background:#9c27b0">WASM</span>' : '';
-                return '<div class="file-item"><div class="file-info"><span class="file-icon">' + getFileIcon(f.name) + '</span><div style="min-width:0;"><div class="file-name">' + f.name + imgBadge + wasmBadge + '</div><div class="file-path">' + f.path + '</div></div></div><span class="file-size">' + formatSize(f.size) + '</span><div class="file-actions"><button class="btn-icon" onclick="window.removeFile(\'' + encodeURIComponent(f.path) + '\')">🗑️</button></div></div>';
-            }).join('');
+                
+                let iconHtml;
+                if (f.thumbnail) {
+                    iconHtml = '<img class="file-thumbnail" src="' + f.thumbnail + '" alt="' + f.name + '" onerror="this.outerHTML=\'<span class=\\\'file-icon\\\'>' + getFileIcon(f.name) + '</span>\'">';
+                } else {
+                    iconHtml = '<span class="file-icon">' + getFileIcon(f.name) + '</span>';
+                }
+                
+                html += '<div class="file-item"><div class="file-info">' + iconHtml + '<div style="min-width:0;"><div class="file-name">' + f.name + imgBadge + wasmBadge + '</div><div class="file-path">' + f.path + '</div></div></div><span class="file-size">' + formatSize(f.size) + '</span><div class="file-actions"><button class="btn-icon" onclick="window.removeFile(\'' + encodeURIComponent(f.path) + '\')">🗑️</button></div></div>';
+            });
+            
+            fileList.innerHTML = html;
         }
 
         window.removeFile = function(encodedPath) {
@@ -459,10 +604,83 @@
             log('Removed: ' + path, 'warn');
         };
 
+        async function createThumbnail(file) {
+            return new Promise((resolve) => {
+                if (!isImage(file.name)) {
+                    resolve(null);
+                    return;
+                }
+                
+                if (file.name.toLowerCase().endsWith('.svg')) {
+                    resolve(null);
+                    return;
+                }
+                
+                if (file.size > 5 * 1024 * 1024) {
+                    resolve(null);
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const size = 40;
+                        canvas.width = size;
+                        canvas.height = size;
+                        
+                        ctx.fillStyle = '#1a1a2e';
+                        ctx.fillRect(0, 0, size, size);
+                        
+                        const aspect = img.width / img.height;
+                        let drawWidth, drawHeight, offsetX, offsetY;
+                        
+                        if (aspect > 1) {
+                            drawHeight = size;
+                            drawWidth = size * aspect;
+                            offsetX = (size - drawWidth) / 2;
+                            offsetY = 0;
+                        } else {
+                            drawWidth = size;
+                            drawHeight = size / aspect;
+                            offsetX = 0;
+                            offsetY = (size - drawHeight) / 2;
+                        }
+                        
+                        ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    };
+                    img.onerror = function() {
+                        resolve(null);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.onerror = function() {
+                    resolve(null);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         async function addFile(file, path) {
             path = path.replace(/^\/+/, '');
             if (files.has(path)) log('Replacing: ' + path, 'warn');
-            files.set(path, { name: file.name, path: path, size: file.size, type: file.type, file: file });
+            
+            let thumbnail = null;
+            if (isImage(file.name)) {
+                thumbnail = await createThumbnail(file);
+            }
+            
+            files.set(path, { 
+                name: file.name, 
+                path: path, 
+                size: file.size, 
+                type: file.type, 
+                file: file,
+                thumbnail: thumbnail
+            });
             log('Added: ' + path + ' (' + formatSize(file.size) + ')', 'success');
         }
 
@@ -494,7 +712,6 @@
             }
         }
 
-        // File input handlers
         browseFilesBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             const input = document.createElement('input');
@@ -532,7 +749,6 @@
             input.click();
         });
 
-        // Drag and drop handlers
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             document.body.addEventListener(eventName, function(e) {
                 e.preventDefault();
@@ -596,7 +812,6 @@
             log('Cleared all files', 'warn'); 
         });
 
-        // File reading utilities
         async function readFileAsBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -640,56 +855,79 @@
             return data.data.display_url || data.data.url;
         }
 
-        // Main bundle creation
+        // Helper to normalize file references (remove query strings, etc.)
+        function normalizeFileRef(ref) {
+            return ref.split('?')[0].split('#')[0];
+        }
+
+        // Helper to find file by reference
+        function findFileByRef(ref, fileMap) {
+            const normalized = normalizeFileRef(ref).toLowerCase();
+            const fileNames = Array.from(fileMap.keys());
+            
+            // Direct match
+            if (fileMap.has(normalized)) return normalized;
+            
+            // Match by basename
+            const baseName = normalized.split('/').pop();
+            for (const path of fileNames) {
+                if (path.toLowerCase().endsWith('/' + baseName) || path.toLowerCase() === baseName) {
+                    return path;
+                }
+            }
+            
+            return null;
+        }
+
         bundleBtn.addEventListener('click', async function() {
             isProcessing = true;
             updateStats();
             progressContainer.classList.add('active');
             logConsole.innerHTML = '';
             log('Starting bundle creation in ' + currentMode.toUpperCase() + ' mode...', 'info');
+            
+            if (autoStripPrefix) {
+                log('Auto-stripping prefix: "' + autoStripPrefix + '"', 'info');
+            }
 
             const externalImages = document.getElementById('externalImages').checked;
-            const stripPrefix = document.getElementById('stripPrefix').value;
             const fileArray = Array.from(files.values());
             
+            // Build resource map with stripped prefixes
             const resources = {};
-            let cssContent = '';
-            let jsContent = '';
-            let htmlContent = '';
-            let uploadedImages = 0;
-            let failedUploads = 0;
-
-            // Phase 1: Process all files
+            const fileContentCache = {};
+            
+            // First pass: process all files and build content cache
             for (let i = 0; i < fileArray.length; i++) {
                 const file = fileArray[i];
-                progressFill.style.width = ((i + 1) / fileArray.length * 50) + '%';
-                progressText.textContent = 'Processing ' + (i + 1) + '/' + fileArray.length + ': ' + file.name;
+                progressFill.style.width = ((i + 1) / fileArray.length * 30) + '%';
+                progressText.textContent = 'Reading ' + (i + 1) + '/' + fileArray.length + ': ' + file.name;
 
-                const ext = file.name.split('.').pop().toLowerCase();
-                const isWasm = file.name.endsWith('.wasm') || file.name.endsWith('.wasm.br');
-                const isData = file.name.endsWith('.data') || file.name.endsWith('.data.br') || file.name.endsWith('.data.gz');
-                const isImg = isImage(file.name);
-                
                 let resourceKey = file.path;
-                if (stripPrefix && resourceKey.startsWith(stripPrefix)) {
-                    resourceKey = resourceKey.substring(stripPrefix.length);
+                if (autoStripPrefix && resourceKey.startsWith(autoStripPrefix)) {
+                    resourceKey = resourceKey.substring(autoStripPrefix.length);
                 }
 
                 try {
-                    if (isImg && externalImages) {
-                        log('Uploading image: ' + file.name + '...', 'info');
-                        try {
-                            const imageUrl = await uploadImageToImgBB(file.file);
-                            resources[resourceKey] = { type: 'url', data: imageUrl, mime: file.type || 'image/png' };
-                            log('Image → URL: ' + file.name, 'success');
-                            uploadedImages++;
-                        } catch (uploadErr) {
-                            log('ImgBB failed for ' + file.name + ', using base64', 'warn');
+                    if (isImage(file.name)) {
+                        if (externalImages) {
+                            log('Uploading image: ' + file.name + '...', 'info');
+                            try {
+                                const imageUrl = await uploadImageToImgBB(file.file);
+                                resources[resourceKey] = { type: 'url', data: imageUrl, mime: file.type || 'image/png' };
+                                log('Image → URL: ' + file.name, 'success');
+                            } catch (uploadErr) {
+                                log('ImgBB failed for ' + file.name + ', using base64', 'warn');
+                                const base64 = await readFileAsBase64(file.file);
+                                resources[resourceKey] = { type: 'base64', data: base64, mime: file.type || 'image/png' };
+                            }
+                        } else {
                             const base64 = await readFileAsBase64(file.file);
                             resources[resourceKey] = { type: 'base64', data: base64, mime: file.type || 'image/png' };
-                            failedUploads++;
+                            log('Encoded image: ' + file.name, 'success');
                         }
-                    } else if (isWasm || isData) {
+                    } else if (file.name.endsWith('.wasm') || file.name.endsWith('.wasm.br') || 
+                               file.name.endsWith('.data') || file.name.endsWith('.data.br') || file.name.endsWith('.data.gz')) {
                         const arrayBuffer = await readFileAsArrayBuffer(file.file);
                         const bytes = new Uint8Array(arrayBuffer);
                         let binary = '';
@@ -697,7 +935,7 @@
                             binary += String.fromCharCode(bytes[j]);
                         }
                         const base64 = btoa(binary);
-                        const mime = isWasm ? 'application/wasm' : 'application/octet-stream';
+                        const mime = file.name.endsWith('.wasm') || file.name.endsWith('.wasm.br') ? 'application/wasm' : 'application/octet-stream';
                         resources[resourceKey] = { 
                             type: 'wasm', 
                             data: base64, 
@@ -710,31 +948,186 @@
                         resources[resourceKey] = { type: 'base64', data: base64, mime: 'application/octet-stream' };
                         log('Encoded binary: ' + file.name, 'success');
                     } else {
+                        // Text files - cache content for processing
                         const content = await readFileAsText(file.file);
-                        if (ext === 'css') {
-                            cssContent += '\n/* ' + file.name + ' */\n' + content + '\n';
-                        } else if (ext === 'js') {
-                            jsContent += '\n/* ' + file.name + ' */\n' + content + '\n';
-                        } else if ((ext === 'html' || ext === 'htm') && !htmlContent) {
-                            htmlContent = content;
-                        } else {
-                            resources[resourceKey] = { type: 'text', data: content, mime: file.type || 'text/plain' };
-                        }
-                        log('Processed: ' + file.name, 'success');
+                        fileContentCache[resourceKey] = { name: file.name, content: content, originalPath: file.path };
                     }
                 } catch (err) { 
                     log('Error processing ' + file.name + ': ' + err.message, 'error'); 
                 }
             }
 
-            // Phase 2: Build the loader
+            // Second pass: process HTML and CSS to inline references
+            progressFill.style.width = '40%';
+            progressText.textContent = 'Processing HTML/CSS references...';
+            log('Processing HTML/CSS references...', 'info');
+
+            let htmlContent = '';
+            let cssContent = '';
+            let jsContent = '';
+
+            // Find main HTML file
+            let mainHtmlKey = null;
+            for (const [key, data] of Object.entries(fileContentCache)) {
+                if (data.name.toLowerCase() === 'index.html' || data.name.toLowerCase() === 'index.htm') {
+                    mainHtmlKey = key;
+                    break;
+                }
+            }
+            if (!mainHtmlKey) {
+                // Use first HTML file found
+                for (const [key, data] of Object.entries(fileContentCache)) {
+                    if (data.name.endsWith('.html') || data.name.endsWith('.htm')) {
+                        mainHtmlKey = key;
+                        break;
+                    }
+                }
+            }
+
+            // Process CSS files first to collect them
+            const processedCss = {};
+            for (const [key, data] of Object.entries(fileContentCache)) {
+                if (data.name.endsWith('.css')) {
+                    let css = data.content;
+                    
+                    // Replace url() references in CSS
+                    css = css.replace(/url\(["']?([^"')]+)["']?\)/gi, function(match, url) {
+                        const cleanUrl = normalizeFileRef(url);
+                        if (!cleanUrl || cleanUrl.startsWith('http') || cleanUrl.startsWith('//') || cleanUrl.startsWith('data:')) {
+                            return match;
+                        }
+                        
+                        const foundKey = findFileByRef(cleanUrl, new Map(Object.entries(resources)));
+                        if (foundKey && resources[foundKey]) {
+                            const res = resources[foundKey];
+                            if (res.type === 'url') {
+                                return 'url(' + res.data + ')';
+                            } else if (res.type === 'base64') {
+                                return 'url(' + res.data + ')';
+                            }
+                        }
+                        log('Warning: Could not resolve CSS url: ' + url, 'warn');
+                        return match;
+                    });
+                    
+                    processedCss[key] = css;
+                    cssContent += '\n/* ' + data.name + ' */\n' + css + '\n';
+                }
+            }
+
+            // Process JS files
+            for (const [key, data] of Object.entries(fileContentCache)) {
+                if (data.name.endsWith('.js')) {
+                    // Special handling for email_decode.js - remove the self-removal code
+                    let js = data.content;
+                    if (data.name.includes('email_decode') || js.includes('document.currentScript')) {
+                        // Remove the self-removal code at the end
+                        js = js.replace(/,\s*function\s*\(\)\s*\{\s*var\s+[^}]+parentNode\.removeChild[^}]+\}\(\)\s*$/, '');
+                        js = js.replace(/\(function\(\)\s*\{\s*var\s+[^}]+parentNode\.removeChild[^}]+\}\(\)\s*;?\s*$/, '');
+                    }
+                    jsContent += '\n/* ' + data.name + ' */\n' + js + '\n';
+                }
+            }
+
+            // Process HTML file
+            if (mainHtmlKey) {
+                let html = fileContentCache[mainHtmlKey].content;
+                
+                // Remove external script references that will be inlined
+                // Handle script tags with src
+                html = html.replace(/<script[^>]+src=["']([^"']+)["'][^>]*>\s*<\/script>/gi, function(match, src) {
+                    const cleanSrc = normalizeFileRef(src);
+                    if (!cleanSrc || cleanSrc.startsWith('http') || cleanSrc.startsWith('//') || cleanSrc.startsWith('/')) {
+                        return match; // Keep external scripts
+                    }
+                    
+                    const foundKey = findFileByRef(cleanSrc, new Map(Object.entries(fileContentCache)));
+                    if (foundKey && fileContentCache[foundKey] && fileContentCache[foundKey].name.endsWith('.js')) {
+                        return ''; // Remove, will be inlined
+                    }
+                    return match;
+                });
+                
+                // Handle link tags for CSS
+                html = html.replace(/<link[^>]+href=["']([^"']+)["'][^>]*>/gi, function(match, href) {
+                    const cleanHref = normalizeFileRef(href);
+                    if (match.includes('stylesheet')) {
+                        if (!cleanHref || cleanHref.startsWith('http') || cleanHref.startsWith('//') || cleanHref.startsWith('/')) {
+                            return match; // Keep external stylesheets
+                        }
+                        
+                        const foundKey = findFileByRef(cleanHref, new Map(Object.entries(fileContentCache)));
+                        if (foundKey && fileContentCache[foundKey] && fileContentCache[foundKey].name.endsWith('.css')) {
+                            return ''; // Remove, will be inlined
+                        }
+                    }
+                    // Handle other link tags (favicon, etc.)
+                    if (match.includes('icon') || match.includes('shortcut')) {
+                        const foundKey = findFileByRef(cleanHref, new Map(Object.entries(resources)));
+                        if (foundKey && resources[foundKey]) {
+                            const res = resources[foundKey];
+                            if (res.type === 'url' || res.type === 'base64') {
+                                return match.replace(href, res.data);
+                            }
+                        }
+                    }
+                    return match;
+                });
+                
+                // Replace image src references
+                html = html.replace(/src=["']([^"']+)["']/gi, function(match, src) {
+                    const cleanSrc = normalizeFileRef(src);
+                    if (!cleanSrc || cleanSrc.startsWith('http') || cleanSrc.startsWith('//') || cleanSrc.startsWith('data:') || cleanSrc.startsWith('/')) {
+                        return match;
+                    }
+                    
+                    const foundKey = findFileByRef(cleanSrc, new Map(Object.entries(resources)));
+                    if (foundKey && resources[foundKey]) {
+                        const res = resources[foundKey];
+                        if (res.type === 'url' || res.type === 'base64') {
+                            return 'src="' + res.data + '"';
+                        }
+                    }
+                    log('Warning: Could not resolve image src: ' + src, 'warn');
+                    return match;
+                });
+                
+                // Replace background-image and other url references in inline styles
+                html = html.replace(/url\(["']?([^"')]+)["']?\)/gi, function(match, url) {
+                    const cleanUrl = normalizeFileRef(url);
+                    if (!cleanUrl || cleanUrl.startsWith('http') || cleanUrl.startsWith('//') || cleanUrl.startsWith('data:')) {
+                        return match;
+                    }
+                    
+                    const foundKey = findFileByRef(cleanUrl, new Map(Object.entries(resources)));
+                    if (foundKey && resources[foundKey]) {
+                        const res = resources[foundKey];
+                        if (res.type === 'url' || res.type === 'base64') {
+                            return 'url(' + res.data + ')';
+                        }
+                    }
+                    return match;
+                });
+                
+                htmlContent = html;
+                log('Processed HTML: ' + fileContentCache[mainHtmlKey].name, 'success');
+            }
+
+            // Build the resource loader script
             progressFill.style.width = '60%';
             progressText.textContent = 'Building resource loader...';
             log('Building resource loader...', 'info');
 
-            const resourcesJson = JSON.stringify(resources);
+            // Filter resources to only include those that need runtime loading
+            const runtimeResources = {};
+            for (const [key, res] of Object.entries(resources)) {
+                if (res.type === 'wasm' || (res.type === 'base64' && !key.match(/\.(png|jpg|jpeg|gif|webp|svg)$/i))) {
+                    runtimeResources[key] = res;
+                }
+            }
+
+            const resourcesJson = JSON.stringify(runtimeResources);
             
-            // Create loader script with proper escaping
             const loaderScript = `(function() {
                 'use strict';
                 
@@ -786,23 +1179,6 @@
                     var found = findResource(url);
                     if (found) {
                         var res = found.res;
-                        if (res.type === 'url') {
-                            return originalFetch(res.data, options);
-                        }
-                        if (res.type === 'base64') {
-                            return Promise.resolve(new Response(res.data, { 
-                                status: 200, 
-                                statusText: 'OK',
-                                headers: { 'Content-Type': res.mime }
-                            }));
-                        }
-                        if (res.type === 'text') {
-                            return Promise.resolve(new Response(res.data, { 
-                                status: 200, 
-                                statusText: 'OK',
-                                headers: { 'Content-Type': res.mime }
-                            }));
-                        }
                         if (res.type === 'wasm') {
                             var blobUrl = createBlobUrl(found.key, res.data, res.mime);
                             if (blobUrl) {
@@ -836,9 +1212,6 @@
                         
                         if (found) {
                             var res = found.res;
-                            if (res.type === 'url') {
-                                return originalOpen.call(this, method, res.data, async, user, password);
-                            }
                             this._isInternalResource = true;
                             this._internalResource = res;
                             this._internalKey = found.key;
@@ -851,7 +1224,7 @@
                         get: function() {
                             if (this._isInternalResource && responseData !== null) {
                                 if (responseType === 'arraybuffer' && typeof responseData === 'string') {
-                                    var binary = atob(responseData.split(',')[1] || responseData);
+                                    var binary = atob(responseData);
                                     var bytes = new Uint8Array(binary.length);
                                     for (var i = 0; i < binary.length; i++) {
                                         bytes[i] = binary.charCodeAt(i);
@@ -891,9 +1264,7 @@
                             var res = this._internalResource;
                             
                             setTimeout(function() {
-                                if (res.type === 'base64' || res.type === 'text') {
-                                    responseData = res.data;
-                                } else if (res.type === 'wasm') {
+                                if (res.type === 'wasm') {
                                     var blobUrl = createBlobUrl(self._internalKey, res.data, res.mime);
                                     if (blobUrl) {
                                         originalFetch(blobUrl).then(function(r) {
@@ -957,17 +1328,19 @@
             // Build final HTML
             let finalHtml = htmlContent || '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bundled Game</title></head><body></body></html>';
             
+            // Inject CSS
             if (cssContent) {
                 finalHtml = finalHtml.replace('</head>', '<style>' + cssContent + '</style></head>');
             }
             
-            // Use string concatenation to avoid script tag parsing issues
+            // Inject JS (loader + scripts)
             const fullScript = loaderScript + '\n' + jsContent;
-            const scriptOpen = String.fromCharCode(60) + 'script' + String.fromCharCode(62);
-            const scriptClose = String.fromCharCode(60) + '/script' + String.fromCharCode(62);
+            const scriptOpen = '<script>';
+            const scriptClose = '<\/script>';
             
             finalHtml = finalHtml.replace('</body>', scriptOpen + fullScript + scriptClose + '</body>');
 
+            // Minify if requested
             if (document.getElementById('minifyCode').checked) {
                 finalHtml = finalHtml.replace(/>\s+</g, '><').replace(/\s{2,}/g, ' ').replace(/<!--[\s\S]*?-->/g, '');
             }
