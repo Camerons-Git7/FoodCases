@@ -860,19 +860,46 @@
             return ref.split('?')[0].split('#')[0];
         }
 
-        // Helper to find file by reference
+        // Helper to find file by reference with better matching
         function findFileByRef(ref, fileMap) {
             const normalized = normalizeFileRef(ref).toLowerCase();
-            const fileNames = Array.from(fileMap.keys());
             
             // Direct match
             if (fileMap.has(normalized)) return normalized;
             
+            // Try with and without leading slash
+            const variations = [
+                normalized,
+                normalized.replace(/^\//, ''),
+                '/' + normalized.replace(/^\//, ''),
+                normalized.replace(/^build\//, ''),
+                normalized.replace(/^Build\//, ''),
+                normalized.replace(/^BUILD\//, '')
+            ];
+            
+            for (const variant of variations) {
+                if (fileMap.has(variant)) return variant;
+            }
+            
             // Match by basename
             const baseName = normalized.split('/').pop();
-            for (const path of fileNames) {
-                if (path.toLowerCase().endsWith('/' + baseName) || path.toLowerCase() === baseName) {
+            for (const [path, data] of fileMap) {
+                const pathBase = path.split('/').pop().toLowerCase();
+                if (pathBase === baseName) {
                     return path;
+                }
+            }
+            
+            // Fuzzy match for Unity files (e.g., Build/Game.data.gz -> Build/Game.data)
+            if (normalized.includes('.data.')) {
+                const dataMatch = normalized.match(/(.+)\.data\.(gz|br)$/);
+                if (dataMatch) {
+                    const base = dataMatch[1] + '.data';
+                    for (const [path, data] of fileMap) {
+                        if (path.toLowerCase().includes(base.toLowerCase())) {
+                            return path;
+                        }
+                    }
                 }
             }
             
@@ -894,7 +921,7 @@
             const fileArray = Array.from(files.values());
             
             // Build resource map with stripped prefixes
-            const resources = {};
+            const resources = new Map();
             const fileContentCache = {};
             
             // First pass: process all files and build content cache
@@ -914,16 +941,16 @@
                             log('Uploading image: ' + file.name + '...', 'info');
                             try {
                                 const imageUrl = await uploadImageToImgBB(file.file);
-                                resources[resourceKey] = { type: 'url', data: imageUrl, mime: file.type || 'image/png' };
+                                resources.set(resourceKey, { type: 'url', data: imageUrl, mime: file.type || 'image/png' });
                                 log('Image → URL: ' + file.name, 'success');
                             } catch (uploadErr) {
                                 log('ImgBB failed for ' + file.name + ', using base64', 'warn');
                                 const base64 = await readFileAsBase64(file.file);
-                                resources[resourceKey] = { type: 'base64', data: base64, mime: file.type || 'image/png' };
+                                resources.set(resourceKey, { type: 'base64', data: base64, mime: file.type || 'image/png' });
                             }
                         } else {
                             const base64 = await readFileAsBase64(file.file);
-                            resources[resourceKey] = { type: 'base64', data: base64, mime: file.type || 'image/png' };
+                            resources.set(resourceKey, { type: 'base64', data: base64, mime: file.type || 'image/png' });
                             log('Encoded image: ' + file.name, 'success');
                         }
                     } else if (file.name.endsWith('.wasm') || file.name.endsWith('.wasm.br') || 
@@ -931,21 +958,23 @@
                         const arrayBuffer = await readFileAsArrayBuffer(file.file);
                         const bytes = new Uint8Array(arrayBuffer);
                         let binary = '';
-                        for (let j = 0; j < bytes.byteLength; j++) {
-                            binary += String.fromCharCode(bytes[j]);
+                        const chunkSize = 8192;
+                        for (let j = 0; j < bytes.byteLength; j += chunkSize) {
+                            const chunk = bytes.subarray(j, Math.min(j + chunkSize, bytes.byteLength));
+                            binary += String.fromCharCode.apply(null, chunk);
                         }
                         const base64 = btoa(binary);
                         const mime = file.name.endsWith('.wasm') || file.name.endsWith('.wasm.br') ? 'application/wasm' : 'application/octet-stream';
-                        resources[resourceKey] = { 
+                        resources.set(resourceKey, { 
                             type: 'wasm', 
                             data: base64, 
                             mime: mime,
                             isCompressed: file.name.endsWith('.br') || file.name.endsWith('.gz')
-                        };
+                        });
                         log('Encoded binary: ' + file.name + ' (' + formatSize(file.size) + ')', 'success');
                     } else if (isBinary(file.name)) {
                         const base64 = await readFileAsBase64(file.file);
-                        resources[resourceKey] = { type: 'base64', data: base64, mime: 'application/octet-stream' };
+                        resources.set(resourceKey, { type: 'base64', data: base64, mime: 'application/octet-stream' });
                         log('Encoded binary: ' + file.name, 'success');
                     } else {
                         // Text files - cache content for processing
@@ -997,9 +1026,9 @@
                             return match;
                         }
                         
-                        const foundKey = findFileByRef(cleanUrl, new Map(Object.entries(resources)));
-                        if (foundKey && resources[foundKey]) {
-                            const res = resources[foundKey];
+                        const foundKey = findFileByRef(cleanUrl, resources);
+                        if (foundKey && resources.has(foundKey)) {
+                            const res = resources.get(foundKey);
                             if (res.type === 'url') {
                                 return 'url(' + res.data + ')';
                             } else if (res.type === 'base64') {
@@ -1015,17 +1044,19 @@
                 }
             }
 
-            // Process JS files
+            // Process JS files - collect them for inlining
+            const jsFiles = [];
             for (const [key, data] of Object.entries(fileContentCache)) {
                 if (data.name.endsWith('.js')) {
-                    // Special handling for email_decode.js - remove the self-removal code
                     let js = data.content;
+                    
+                    // Remove self-removing scripts (email_decode, etc.)
                     if (data.name.includes('email_decode') || js.includes('document.currentScript')) {
-                        // Remove the self-removal code at the end
                         js = js.replace(/,\s*function\s*\(\)\s*\{\s*var\s+[^}]+parentNode\.removeChild[^}]+\}\(\)\s*$/, '');
                         js = js.replace(/\(function\(\)\s*\{\s*var\s+[^}]+parentNode\.removeChild[^}]+\}\(\)\s*;?\s*$/, '');
                     }
-                    jsContent += '\n/* ' + data.name + ' */\n' + js + '\n';
+                    
+                    jsFiles.push({ key: key, name: data.name, content: js });
                 }
             }
 
@@ -1033,8 +1064,7 @@
             if (mainHtmlKey) {
                 let html = fileContentCache[mainHtmlKey].content;
                 
-                // Remove external script references that will be inlined
-                // Handle script tags with src
+                // Handle script tags with src - inline them instead of removing
                 html = html.replace(/<script[^>]+src=["']([^"']+)["'][^>]*>\s*<\/script>/gi, function(match, src) {
                     const cleanSrc = normalizeFileRef(src);
                     if (!cleanSrc || cleanSrc.startsWith('http') || cleanSrc.startsWith('//') || cleanSrc.startsWith('/')) {
@@ -1043,12 +1073,22 @@
                     
                     const foundKey = findFileByRef(cleanSrc, new Map(Object.entries(fileContentCache)));
                     if (foundKey && fileContentCache[foundKey] && fileContentCache[foundKey].name.endsWith('.js')) {
-                        return ''; // Remove, will be inlined
+                        const jsData = fileContentCache[foundKey];
+                        let js = jsData.content;
+                        
+                        // Remove self-removing scripts
+                        if (jsData.name.includes('email_decode') || js.includes('document.currentScript')) {
+                            js = js.replace(/,\s*function\s*\(\)\s*\{\s*var\s+[^}]+parentNode\.removeChild[^}]+\}\(\)\s*$/, '');
+                            js = js.replace(/\(function\(\)\s*\{\s*var\s+[^}]+parentNode\.removeChild[^}]+\}\(\)\s*;?\s*$/, '');
+                        }
+                        
+                        // Inline the script content
+                        return '<script>' + js + '<\/script>';
                     }
                     return match;
                 });
                 
-                // Handle link tags for CSS
+                // Handle link tags for CSS - inline them
                 html = html.replace(/<link[^>]+href=["']([^"']+)["'][^>]*>/gi, function(match, href) {
                     const cleanHref = normalizeFileRef(href);
                     if (match.includes('stylesheet')) {
@@ -1058,14 +1098,15 @@
                         
                         const foundKey = findFileByRef(cleanHref, new Map(Object.entries(fileContentCache)));
                         if (foundKey && fileContentCache[foundKey] && fileContentCache[foundKey].name.endsWith('.css')) {
-                            return ''; // Remove, will be inlined
+                            const cssData = fileContentCache[foundKey];
+                            return '<style>' + cssData.content + '<\/style>';
                         }
                     }
                     // Handle other link tags (favicon, etc.)
                     if (match.includes('icon') || match.includes('shortcut')) {
-                        const foundKey = findFileByRef(cleanHref, new Map(Object.entries(resources)));
-                        if (foundKey && resources[foundKey]) {
-                            const res = resources[foundKey];
+                        const foundKey = findFileByRef(cleanHref, resources);
+                        if (foundKey && resources.has(foundKey)) {
+                            const res = resources.get(foundKey);
                             if (res.type === 'url' || res.type === 'base64') {
                                 return match.replace(href, res.data);
                             }
@@ -1081,9 +1122,9 @@
                         return match;
                     }
                     
-                    const foundKey = findFileByRef(cleanSrc, new Map(Object.entries(resources)));
-                    if (foundKey && resources[foundKey]) {
-                        const res = resources[foundKey];
+                    const foundKey = findFileByRef(cleanSrc, resources);
+                    if (foundKey && resources.has(foundKey)) {
+                        const res = resources.get(foundKey);
                         if (res.type === 'url' || res.type === 'base64') {
                             return 'src="' + res.data + '"';
                         }
@@ -1099,9 +1140,9 @@
                         return match;
                     }
                     
-                    const foundKey = findFileByRef(cleanUrl, new Map(Object.entries(resources)));
-                    if (foundKey && resources[foundKey]) {
-                        const res = resources[foundKey];
+                    const foundKey = findFileByRef(cleanUrl, resources);
+                    if (foundKey && resources.has(foundKey)) {
+                        const res = resources.get(foundKey);
                         if (res.type === 'url' || res.type === 'base64') {
                             return 'url(' + res.data + ')';
                         }
@@ -1118,50 +1159,73 @@
             progressText.textContent = 'Building resource loader...';
             log('Building resource loader...', 'info');
 
-            // Filter resources to only include those that need runtime loading
-            const runtimeResources = {};
-            for (const [key, res] of Object.entries(resources)) {
+            // Convert resources Map to plain object for JSON serialization
+            const resourcesObj = {};
+            for (const [key, res] of resources.entries()) {
+                // Only include binary resources that need runtime loading
                 if (res.type === 'wasm' || (res.type === 'base64' && !key.match(/\.(png|jpg|jpeg|gif|webp|svg)$/i))) {
-                    runtimeResources[key] = res;
+                    resourcesObj[key] = res;
                 }
             }
 
-            const resourcesJson = JSON.stringify(runtimeResources);
+            const resourcesJson = JSON.stringify(resourcesObj);
             
             const loaderScript = `(function() {
                 'use strict';
                 
-                var RESOURCES = ` + resourcesJson + `;
+                var RESOURCES = ${resourcesJson};
                 var BLOB_CACHE = {};
+                var ORIGINAL_FETCH = window.fetch;
+                var OriginalXHR = window.XMLHttpRequest;
                 
                 function createBlobUrl(key, base64Data, mimeType) {
                     if (BLOB_CACHE[key]) return BLOB_CACHE[key];
                     try {
-                        var byteString = atob(base64Data);
-                        var bytes = new Uint8Array(byteString.length);
-                        for (var i = 0; i < byteString.length; i++) {
-                            bytes[i] = byteString.charCodeAt(i);
+                        var binaryString = atob(base64Data);
+                        var bytes = new Uint8Array(binaryString.length);
+                        for (var i = 0; i < binaryString.length; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
                         }
                         var blob = new Blob([bytes], { type: mimeType });
                         var url = URL.createObjectURL(blob);
                         BLOB_CACHE[key] = url;
                         return url;
                     } catch(e) {
-                        console.error('Failed to create blob for', key, e);
+                        console.error('[Bundler] Failed to create blob for', key, e);
                         return null;
                     }
                 }
                 
                 function findResource(url) {
-                    var cleanUrl = url.toString().replace(window.location.origin, '').replace(/^\\/+/, '');
-                    var variations = [cleanUrl, '/' + cleanUrl, cleanUrl.replace(/^[^/]+\\//, ''), cleanUrl.toLowerCase()];
+                    if (typeof url !== 'string') return null;
                     
+                    // Remove origin if present
+                    var cleanUrl = url.replace(window.location.origin, '').replace(/^[\\/]+/, '');
+                    var lowerUrl = cleanUrl.toLowerCase();
+                    
+                    // Direct match
+                    if (RESOURCES[cleanUrl]) return { key: cleanUrl, res: RESOURCES[cleanUrl] };
+                    if (RESOURCES[lowerUrl]) return { key: lowerUrl, res: RESOURCES[lowerUrl] };
+                    
+                    // Try variations with/without leading slash
+                    var variations = [
+                        cleanUrl,
+                        '/' + cleanUrl,
+                        cleanUrl.replace(/^[^/]+\\//, ''),
+                        cleanUrl.toLowerCase(),
+                        cleanUrl.replace(/^build\\//i, ''),
+                        cleanUrl.replace(/^Build\\//, '')
+                    ];
+                    
+                    // Try with compression extensions
                     if (cleanUrl.endsWith('.wasm')) {
                         variations.push(cleanUrl + '.br');
                         variations.push(cleanUrl + '.gz');
+                        variations.push(cleanUrl + '.br.gz');
                     }
-                    if (cleanUrl.endsWith('.wasm.br') || cleanUrl.endsWith('.wasm.gz')) {
-                        variations.push(cleanUrl.replace(/\\.(br|gz)$/, ''));
+                    if (cleanUrl.endsWith('.data')) {
+                        variations.push(cleanUrl + '.gz');
+                        variations.push(cleanUrl + '.br');
                     }
                     
                     for (var i = 0; i < variations.length; i++) {
@@ -1169,61 +1233,126 @@
                             return { key: variations[i], res: RESOURCES[variations[i]] };
                         }
                     }
+                    
+                    // Match by basename
+                    var baseName = cleanUrl.split(/[\\\\/]/).pop();
+                    for (var key in RESOURCES) {
+                        if (key.toLowerCase().split(/[\\\\/]/).pop() === baseName.toLowerCase()) {
+                            return { key: key, res: RESOURCES[key] };
+                        }
+                    }
+                    
                     return null;
                 }
                 
-                var originalFetch = window.fetch;
+                // Override fetch
                 window.fetch = function(url, options) {
-                    if (typeof url !== 'string') return originalFetch.apply(this, arguments);
+                    var urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : String(url));
+                    var found = findResource(urlStr);
                     
-                    var found = findResource(url);
                     if (found) {
                         var res = found.res;
-                        if (res.type === 'wasm') {
-                            var blobUrl = createBlobUrl(found.key, res.data, res.mime);
+                        if (res.type === 'wasm' || res.type === 'base64') {
+                            var blobUrl = createBlobUrl(found.key, res.data, res.mime || 'application/octet-stream');
                             if (blobUrl) {
-                                return originalFetch(blobUrl, options).then(function(response) {
+                                console.log('[Bundler] Serving from blob:', urlStr, '->', found.key);
+                                return ORIGINAL_FETCH(blobUrl, options).then(function(response) {
+                                    // Create new response with original URL
                                     var newResponse = new Response(response.body, {
-                                        status: response.status,
-                                        statusText: response.statusText,
-                                        headers: response.headers
+                                        status: 200,
+                                        statusText: 'OK',
+                                        headers: new Headers({
+                                            'Content-Type': res.mime || 'application/octet-stream',
+                                            'Content-Length': String(res.data.length)
+                                        })
                                     });
-                                    Object.defineProperty(newResponse, 'url', { value: url });
+                                    Object.defineProperty(newResponse, 'url', { value: urlStr });
                                     return newResponse;
                                 });
                             }
                         }
                     }
-                    return originalFetch.apply(this, arguments);
+                    return ORIGINAL_FETCH.apply(this, arguments);
                 };
                 
-                var OriginalXHR = window.XMLHttpRequest;
+                // Override XMLHttpRequest
                 window.XMLHttpRequest = function() {
                     var xhr = new OriginalXHR();
                     var originalOpen = xhr.open;
-                    var originalSend = xhr.send;
                     var requestUrl = '';
                     var responseData = null;
+                    var isInternalResource = false;
+                    var internalResource = null;
+                    var internalKey = '';
                     var responseType = '';
+                    var readyState = 0;
+                    var status = 0;
+                    var statusText = '';
+                    var responseHeaders = '';
+                    
+                    // Event handlers
+                    var onreadystatechange = null;
+                    var onload = null;
+                    var onerror = null;
+                    var onloadstart = null;
+                    var onprogress = null;
+                    var onloadend = null;
+                    var onabort = null;
+                    var ontimeout = null;
+                    
+                    Object.defineProperty(xhr, 'onreadystatechange', {
+                        set: function(fn) { onreadystatechange = fn; },
+                        get: function() { return onreadystatechange; }
+                    });
+                    Object.defineProperty(xhr, 'onload', {
+                        set: function(fn) { onload = fn; },
+                        get: function() { return onload; }
+                    });
+                    Object.defineProperty(xhr, 'onerror', {
+                        set: function(fn) { onerror = fn; },
+                        get: function() { return onerror; }
+                    });
+                    Object.defineProperty(xhr, 'onloadstart', {
+                        set: function(fn) { onloadstart = fn; },
+                        get: function() { return onloadstart; }
+                    });
+                    Object.defineProperty(xhr, 'onprogress', {
+                        set: function(fn) { onprogress = fn; },
+                        get: function() { return onprogress; }
+                    });
+                    Object.defineProperty(xhr, 'onloadend', {
+                        set: function(fn) { onloadend = fn; },
+                        get: function() { return onloadend; }
+                    });
+                    Object.defineProperty(xhr, 'onabort', {
+                        set: function(fn) { onabort = fn; },
+                        get: function() { return onabort; }
+                    });
+                    Object.defineProperty(xhr, 'ontimeout', {
+                        set: function(fn) { ontimeout = fn; },
+                        get: function() { return ontimeout; }
+                    });
                     
                     xhr.open = function(method, url, async, user, password) {
                         requestUrl = url;
                         var found = findResource(url);
                         
                         if (found) {
-                            var res = found.res;
-                            this._isInternalResource = true;
-                            this._internalResource = res;
-                            this._internalKey = found.key;
+                            isInternalResource = true;
+                            internalResource = found.res;
+                            internalKey = found.key;
+                            console.log('[Bundler] XHR intercepted:', url, '->', found.key);
                             return;
                         }
+                        
                         return originalOpen.apply(this, arguments);
                     };
                     
                     Object.defineProperty(xhr, 'response', {
                         get: function() {
-                            if (this._isInternalResource && responseData !== null) {
-                                if (responseType === 'arraybuffer' && typeof responseData === 'string') {
+                            if (isInternalResource && responseData !== null) {
+                                if (responseType === 'arraybuffer') {
+                                    if (responseData instanceof ArrayBuffer) return responseData;
                                     var binary = atob(responseData);
                                     var bytes = new Uint8Array(binary.length);
                                     for (var i = 0; i < binary.length; i++) {
@@ -1231,90 +1360,192 @@
                                     }
                                     return bytes.buffer;
                                 }
+                                if (responseType === 'blob' && responseData instanceof Blob) {
+                                    return responseData;
+                                }
                                 return responseData;
                             }
-                            return xhr._realResponse !== undefined ? xhr._realResponse : xhr.response;
+                            return xhr._realResponse;
                         }
                     });
                     
                     Object.defineProperty(xhr, 'responseText', {
                         get: function() {
-                            if (this._isInternalResource && responseData !== null) {
+                            if (isInternalResource && responseData !== null) {
                                 return typeof responseData === 'string' ? responseData : String(responseData);
                             }
-                            return xhr._realResponseText !== undefined ? xhr._realResponseText : xhr.responseText;
+                            return xhr._realResponseText;
                         }
                     });
                     
                     Object.defineProperty(xhr, 'status', {
-                        get: function() { return this._isInternalResource ? 200 : (xhr._realStatus || xhr.status); }
+                        get: function() { return isInternalResource ? status : xhr.status; }
                     });
                     
                     Object.defineProperty(xhr, 'statusText', {
-                        get: function() { return this._isInternalResource ? 'OK' : (xhr._realStatusText || xhr.statusText); }
+                        get: function() { return isInternalResource ? statusText : xhr.statusText; }
                     });
                     
                     Object.defineProperty(xhr, 'readyState', {
-                        get: function() { return this._isInternalResource ? 4 : (xhr._realReadyState || xhr.readyState); }
+                        get: function() { return isInternalResource ? readyState : xhr.readyState; }
                     });
                     
+                    Object.defineProperty(xhr, 'responseURL', {
+                        get: function() { return isInternalResource ? requestUrl : xhr.responseURL; }
+                    });
+                    
+                    Object.defineProperty(xhr, 'responseXML', {
+                        get: function() { return null; }
+                    });
+                    
+                    xhr.getAllResponseHeaders = function() {
+                        return isInternalResource ? responseHeaders : xhr.getAllResponseHeaders();
+                    };
+                    
+                    xhr.getResponseHeader = function(header) {
+                        if (!isInternalResource) return xhr.getResponseHeader(header);
+                        var h = header.toLowerCase();
+                        if (h === 'content-type') return internalResource.mime || 'application/octet-stream';
+                        if (h === 'content-length') return String(internalResource.data.length);
+                        return null;
+                    };
+                    
+                    xhr.setRequestHeader = function(header, value) {
+                        if (!isInternalResource) {
+                            return xhr.setRequestHeader(header, value);
+                        }
+                    };
+                    
                     xhr.send = function(body) {
-                        if (this._isInternalResource) {
-                            var self = this;
-                            var res = this._internalResource;
-                            
-                            setTimeout(function() {
-                                if (res.type === 'wasm') {
-                                    var blobUrl = createBlobUrl(self._internalKey, res.data, res.mime);
-                                    if (blobUrl) {
-                                        originalFetch(blobUrl).then(function(r) {
-                                            return r.arrayBuffer();
-                                        }).then(function(buffer) {
-                                            responseData = buffer;
-                                            responseType = self.responseType;
-                                            if (self.onreadystatechange) self.onreadystatechange();
-                                            if (self.onload) self.onload();
-                                        });
-                                        return;
-                                    }
-                                }
-                                if (self.onreadystatechange) self.onreadystatechange();
-                                if (self.onload) self.onload();
-                            }, 0);
-                            return;
+                        if (!isInternalResource) {
+                            xhr.addEventListener('readystatechange', function() {
+                                xhr._realReadyState = xhr.readyState;
+                                xhr._realStatus = xhr.status;
+                                xhr._realStatusText = xhr.statusText;
+                                try { xhr._realResponse = xhr.response; } catch(e) {}
+                                try { xhr._realResponseText = xhr.responseText; } catch(e) {}
+                            });
+                            return xhr.send(body);
                         }
                         
-                        xhr.addEventListener('readystatechange', function() {
-                            xhr._realReadyState = xhr.readyState;
-                            xhr._realStatus = xhr.status;
-                            xhr._realStatusText = xhr.statusText;
-                            try { xhr._realResponse = xhr.response; } catch(e) {}
-                            try { xhr._realResponseText = xhr.responseText; } catch(e) {}
-                        });
+                        var self = this;
+                        responseType = xhr.responseType || '';
                         
-                        return originalSend.apply(this, arguments);
+                        // Simulate async XHR
+                        setTimeout(function() {
+                            // LOADING state
+                            readyState = 3;
+                            if (onreadystatechange) onreadystatechange.call(self);
+                            if (onprogress) onprogress.call(self);
+                            
+                            // Process the resource
+                            var res = internalResource;
+                            
+                            if (res.type === 'wasm' || res.type === 'base64') {
+                                var blobUrl = createBlobUrl(internalKey, res.data, res.mime || 'application/octet-stream');
+                                if (blobUrl) {
+                                    ORIGINAL_FETCH(blobUrl).then(function(r) {
+                                        if (responseType === 'arraybuffer') {
+                                            return r.arrayBuffer();
+                                        } else if (responseType === 'blob') {
+                                            return r.blob();
+                                        } else {
+                                            return r.text();
+                                        }
+                                    }).then(function(data) {
+                                        responseData = data;
+                                        status = 200;
+                                        statusText = 'OK';
+                                        responseHeaders = 'Content-Type: ' + (res.mime || 'application/octet-stream') + '\\r\\nContent-Length: ' + res.data.length;
+                                        
+                                        // DONE state
+                                        readyState = 4;
+                                        if (onreadystatechange) onreadystatechange.call(self);
+                                        if (onload) onload.call(self);
+                                        if (onloadend) onloadend.call(self);
+                                    }).catch(function(err) {
+                                        console.error('[Bundler] XHR blob fetch error:', err);
+                                        status = 500;
+                                        statusText = 'Internal Server Error';
+                                        readyState = 4;
+                                        if (onreadystatechange) onreadystatechange.call(self);
+                                        if (onerror) onerror.call(self);
+                                        if (onloadend) onloadend.call(self);
+                                    });
+                                    return;
+                                }
+                            }
+                            
+                            // Fallback for non-blob resources
+                            responseData = res.data;
+                            status = 200;
+                            statusText = 'OK';
+                            readyState = 4;
+                            if (onreadystatechange) onreadystatechange.call(self);
+                            if (onload) onload.call(self);
+                            if (onloadend) onloadend.call(self);
+                        }, 0);
+                    };
+                    
+                    xhr.abort = function() {
+                        if (!isInternalResource) return xhr.abort();
+                        if (onabort) onabort.call(xhr);
                     };
                     
                     return xhr;
                 };
                 
+                // Override WebAssembly.instantiateStreaming for Unity
                 if (window.WebAssembly && WebAssembly.instantiateStreaming) {
                     var originalInstantiateStreaming = WebAssembly.instantiateStreaming;
                     WebAssembly.instantiateStreaming = function(source, importObject) {
+                        console.log('[Bundler] WebAssembly.instantiateStreaming called', source);
+                        
+                        // Handle Response object
                         if (source instanceof Response) {
                             var url = source.url;
                             var found = findResource(url);
-                            if (found && found.res.type === 'wasm') {
+                            if (found && (found.res.type === 'wasm' || found.res.type === 'base64')) {
                                 var res = found.res;
-                                var blobUrl = createBlobUrl(found.key, res.data, res.mime);
+                                var blobUrl = createBlobUrl(found.key, res.data, res.mime || 'application/wasm');
                                 if (blobUrl) {
-                                    return originalFetch(blobUrl).then(function(r) {
+                                    console.log('[Bundler] WASM streaming -> blob:', url);
+                                    return ORIGINAL_FETCH(blobUrl).then(function(r) {
                                         return originalInstantiateStreaming(r, importObject);
                                     });
                                 }
                             }
                         }
+                        
+                        // Handle promise of Response
+                        if (source && typeof source.then === 'function') {
+                            return source.then(function(response) {
+                                var url = response.url;
+                                var found = findResource(url);
+                                if (found && (found.res.type === 'wasm' || found.res.type === 'base64')) {
+                                    var res = found.res;
+                                    var blobUrl = createBlobUrl(found.key, res.data, res.mime || 'application/wasm');
+                                    if (blobUrl) {
+                                        console.log('[Bundler] WASM streaming (promise) -> blob:', url);
+                                        return ORIGINAL_FETCH(blobUrl).then(function(r) {
+                                            return originalInstantiateStreaming(r, importObject);
+                                        });
+                                    }
+                                }
+                                return originalInstantiateStreaming(response, importObject);
+                            });
+                        }
+                        
                         return originalInstantiateStreaming.apply(this, arguments);
+                    };
+                }
+                
+                // Also override WebAssembly.instantiate for fallback
+                if (window.WebAssembly && WebAssembly.instantiate) {
+                    var originalInstantiate = WebAssembly.instantiate;
+                    WebAssembly.instantiate = function(bufferSource, importObject) {
+                        console.log('[Bundler] WebAssembly.instantiate called');
+                        return originalInstantiate.apply(this, arguments);
                     };
                 }
                 
@@ -1333,12 +1564,17 @@
                 finalHtml = finalHtml.replace('</head>', '<style>' + cssContent + '</style></head>');
             }
             
-            // Inject JS (loader + scripts)
+            // Inject JS (loader + scripts) - MUST be in head for Unity to work properly
             const fullScript = loaderScript + '\n' + jsContent;
-            const scriptOpen = '<script>';
-            const scriptClose = '<\/script>';
             
-            finalHtml = finalHtml.replace('</body>', scriptOpen + fullScript + scriptClose + '</body>');
+            // Try to inject in head first, fallback to before closing body
+            if (finalHtml.includes('</head>')) {
+                finalHtml = finalHtml.replace('</head>', '<script>' + fullScript + '<\/script></head>');
+            } else if (finalHtml.includes('<head>')) {
+                finalHtml = finalHtml.replace('<head>', '<head><script>' + fullScript + '<\/script>');
+            } else {
+                finalHtml = finalHtml.replace('</body>', '<script>' + fullScript + '<\/script></body>');
+            }
 
             // Minify if requested
             if (document.getElementById('minifyCode').checked) {
