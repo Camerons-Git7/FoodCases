@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal File Bundler</title>
+    <title>Universal File Bundler - Fixed</title>
     <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -178,7 +178,7 @@
             <div class="control-group">
                 <h4>⚙️ General Options</h4>
                 <div class="option"><label>Output Filename</label><input type="text" id="outputName" value="bundled-game"></div>
-                <div class="option"><label>Minify HTML/JS/CSS</label><input type="checkbox" id="minifyCode" checked></div>
+                <div class="option"><label>Minify HTML/JS/CSS</label><input type="checkbox" id="minifyCode"></div>
                 <div class="option"><label>External Image Hosting</label><input type="checkbox" id="externalImages"></div>
                 <div class="auto-prefix-info" id="autoPrefixInfo"></div>
             </div>
@@ -298,15 +298,6 @@
             const fileArray = Array.from(files.values());
             const fileNames = new Set(fileArray.map(f => f.name.toLowerCase()));
             const missing = [];
-            
-            // Get all HTML and CSS content
-            let allContent = '';
-            fileArray.forEach(f => {
-                if (f.name.endsWith('.html') || f.name.endsWith('.htm') || 
-                    f.name.endsWith('.css') || f.name.endsWith('.js')) {
-                    // We'll check content during processing
-                }
-            });
             
             // Check HTML files for references
             fileArray.forEach(f => {
@@ -1178,15 +1169,21 @@
                 var ORIGINAL_FETCH = window.fetch;
                 var OriginalXHR = window.XMLHttpRequest;
                 
+                function base64ToArrayBuffer(base64) {
+                    var binary_string = window.atob(base64);
+                    var len = binary_string.length;
+                    var bytes = new Uint8Array(len);
+                    for (var i = 0; i < len; i++) {
+                        bytes[i] = binary_string.charCodeAt(i);
+                    }
+                    return bytes.buffer;
+                }
+                
                 function createBlobUrl(key, base64Data, mimeType) {
                     if (BLOB_CACHE[key]) return BLOB_CACHE[key];
                     try {
-                        var binaryString = atob(base64Data);
-                        var bytes = new Uint8Array(binaryString.length);
-                        for (var i = 0; i < binaryString.length; i++) {
-                            bytes[i] = binaryString.charCodeAt(i);
-                        }
-                        var blob = new Blob([bytes], { type: mimeType });
+                        var buffer = base64ToArrayBuffer(base64Data);
+                        var blob = new Blob([buffer], { type: mimeType });
                         var url = URL.createObjectURL(blob);
                         BLOB_CACHE[key] = url;
                         return url;
@@ -1200,7 +1197,7 @@
                     if (typeof url !== 'string') return null;
                     
                     // Remove origin if present
-                    var cleanUrl = url.replace(window.location.origin, '').replace(/^[\\/]+/, '');
+                    var cleanUrl = url.replace(window.location.origin, '').replace(/^[\\\\/]+/, '');
                     var lowerUrl = cleanUrl.toLowerCase();
                     
                     // Direct match
@@ -1211,17 +1208,16 @@
                     var variations = [
                         cleanUrl,
                         '/' + cleanUrl,
-                        cleanUrl.replace(/^[^/]+\\//, ''),
+                        cleanUrl.replace(/^[^/]+\\\\//, ''),
                         cleanUrl.toLowerCase(),
-                        cleanUrl.replace(/^build\\//i, ''),
-                        cleanUrl.replace(/^Build\\//, '')
+                        cleanUrl.replace(/^build\\\\//i, ''),
+                        cleanUrl.replace(/^Build\\\\//, '')
                     ];
                     
                     // Try with compression extensions
                     if (cleanUrl.endsWith('.wasm')) {
                         variations.push(cleanUrl + '.br');
                         variations.push(cleanUrl + '.gz');
-                        variations.push(cleanUrl + '.br.gz');
                     }
                     if (cleanUrl.endsWith('.data')) {
                         variations.push(cleanUrl + '.gz');
@@ -1235,9 +1231,9 @@
                     }
                     
                     // Match by basename
-                    var baseName = cleanUrl.split(/[\\\\/]/).pop();
+                    var baseName = cleanUrl.split(/[\\\\\\\\/]/).pop();
                     for (var key in RESOURCES) {
-                        if (key.toLowerCase().split(/[\\\\/]/).pop() === baseName.toLowerCase()) {
+                        if (key.toLowerCase().split(/[\\\\\\\\/]/).pop() === baseName.toLowerCase()) {
                             return { key: key, res: RESOURCES[key] };
                         }
                     }
@@ -1245,7 +1241,7 @@
                     return null;
                 }
                 
-                // Override fetch
+                // CRITICAL FIX: Override fetch to return proper Response objects for Unity
                 window.fetch = function(url, options) {
                     var urlStr = typeof url === 'string' ? url : (url && url.url ? url.url : String(url));
                     var found = findResource(urlStr);
@@ -1253,267 +1249,193 @@
                     if (found) {
                         var res = found.res;
                         if (res.type === 'wasm' || res.type === 'base64') {
-                            var blobUrl = createBlobUrl(found.key, res.data, res.mime || 'application/octet-stream');
-                            if (blobUrl) {
-                                console.log('[Bundler] Serving from blob:', urlStr, '->', found.key);
-                                return ORIGINAL_FETCH(blobUrl, options).then(function(response) {
-                                    // Create new response with original URL
-                                    var newResponse = new Response(response.body, {
-                                        status: 200,
-                                        statusText: 'OK',
-                                        headers: new Headers({
-                                            'Content-Type': res.mime || 'application/octet-stream',
-                                            'Content-Length': String(res.data.length)
-                                        })
-                                    });
-                                    Object.defineProperty(newResponse, 'url', { value: urlStr });
-                                    return newResponse;
-                                });
-                            }
+                            var buffer = base64ToArrayBuffer(res.data);
+                            
+                            // Create a proper Response object that Unity expects
+                            var response = new Response(buffer, {
+                                status: 200,
+                                statusText: 'OK',
+                                headers: {
+                                    'Content-Type': res.mime || 'application/octet-stream',
+                                    'Content-Length': String(buffer.byteLength)
+                                }
+                            });
+                            
+                            // Override the url property to match what Unity expects
+                            Object.defineProperty(response, 'url', {
+                                value: urlStr,
+                                writable: false
+                            });
+                            
+                            console.log('[Bundler] Serving from memory:', urlStr);
+                            return Promise.resolve(response);
                         }
                     }
                     return ORIGINAL_FETCH.apply(this, arguments);
                 };
                 
-                // Override XMLHttpRequest
+                // CRITICAL FIX: Override XMLHttpRequest for Unity loader
                 window.XMLHttpRequest = function() {
-                    var xhr = new OriginalXHR();
-                    var originalOpen = xhr.open;
-                    var requestUrl = '';
-                    var responseData = null;
-                    var isInternalResource = false;
-                    var internalResource = null;
-                    var internalKey = '';
-                    var responseType = '';
+                    var xhr = this;
+                    var _url = '';
+                    var _method = 'GET';
+                    var _async = true;
+                    var _foundResource = null;
+                    var _responseBuffer = null;
+                    
+                    // State
                     var readyState = 0;
                     var status = 0;
                     var statusText = '';
-                    var responseHeaders = '';
                     
                     // Event handlers
-                    var onreadystatechange = null;
-                    var onload = null;
-                    var onerror = null;
-                    var onloadstart = null;
-                    var onprogress = null;
-                    var onloadend = null;
-                    var onabort = null;
-                    var ontimeout = null;
-                    
-                    Object.defineProperty(xhr, 'onreadystatechange', {
-                        set: function(fn) { onreadystatechange = fn; },
-                        get: function() { return onreadystatechange; }
-                    });
-                    Object.defineProperty(xhr, 'onload', {
-                        set: function(fn) { onload = fn; },
-                        get: function() { return onload; }
-                    });
-                    Object.defineProperty(xhr, 'onerror', {
-                        set: function(fn) { onerror = fn; },
-                        get: function() { return onerror; }
-                    });
-                    Object.defineProperty(xhr, 'onloadstart', {
-                        set: function(fn) { onloadstart = fn; },
-                        get: function() { return onloadstart; }
-                    });
-                    Object.defineProperty(xhr, 'onprogress', {
-                        set: function(fn) { onprogress = fn; },
-                        get: function() { return onprogress; }
-                    });
-                    Object.defineProperty(xhr, 'onloadend', {
-                        set: function(fn) { onloadend = fn; },
-                        get: function() { return onloadend; }
-                    });
-                    Object.defineProperty(xhr, 'onabort', {
-                        set: function(fn) { onabort = fn; },
-                        get: function() { return onabort; }
-                    });
-                    Object.defineProperty(xhr, 'ontimeout', {
-                        set: function(fn) { ontimeout = fn; },
-                        get: function() { return ontimeout; }
-                    });
+                    xhr.onreadystatechange = null;
+                    xhr.onload = null;
+                    xhr.onerror = null;
+                    xhr.onloadstart = null;
+                    xhr.onprogress = null;
+                    xhr.onloadend = null;
                     
                     xhr.open = function(method, url, async, user, password) {
-                        requestUrl = url;
-                        var found = findResource(url);
+                        _method = method;
+                        _url = url;
+                        _async = async !== false;
+                        _foundResource = findResource(url);
                         
-                        if (found) {
-                            isInternalResource = true;
-                            internalResource = found.res;
-                            internalKey = found.key;
-                            console.log('[Bundler] XHR intercepted:', url, '->', found.key);
+                        readyState = 1; // OPENED
+                        if (xhr.onreadystatechange) xhr.onreadystatechange();
+                    };
+                    
+                    xhr.send = function(body) {
+                        var self = this;
+                        
+                        if (!_foundResource) {
+                            // Not our resource, create real XHR
+                            var realXHR = new OriginalXHR();
+                            realXHR.open(_method, _url, _async);
+                            realXHR.responseType = xhr.responseType;
+                            realXHR.onreadystatechange = function() {
+                                self.readyState = realXHR.readyState;
+                                self.status = realXHR.status;
+                                self.statusText = realXHR.statusText;
+                                self.response = realXHR.response;
+                                self.responseText = realXHR.responseText;
+                                if (xhr.onreadystatechange) xhr.onreadystatechange();
+                            };
+                            realXHR.onload = function() {
+                                if (xhr.onload) xhr.onload();
+                            };
+                            realXHR.onerror = function() {
+                                if (xhr.onerror) xhr.onerror();
+                            };
+                            realXHR.send(body);
                             return;
                         }
                         
-                        return originalOpen.apply(this, arguments);
+                        // Handle our resource
+                        setTimeout(function() {
+                            // Load start
+                            readyState = 2; // HEADERS_RECEIVED
+                            if (xhr.onloadstart) xhr.onloadstart();
+                            if (xhr.onreadystatechange) xhr.onreadystatechange();
+                            
+                            // Process resource
+                            var res = _foundResource.res;
+                            _responseBuffer = base64ToArrayBuffer(res.data);
+                            
+                            // Set properties
+                            readyState = 3; // LOADING
+                            status = 200;
+                            statusText = 'OK';
+                            
+                            if (xhr.onreadystatechange) xhr.onreadystatechange();
+                            if (xhr.onprogress) {
+                                xhr.onprogress({
+                                    lengthComputable: true,
+                                    loaded: _responseBuffer.byteLength,
+                                    total: _responseBuffer.byteLength
+                                });
+                            }
+                            
+                            // Complete
+                            setTimeout(function() {
+                                readyState = 4; // DONE
+                                
+                                // Set response based on responseType
+                                if (xhr.responseType === 'arraybuffer' || xhr.responseType === '') {
+                                    xhr.response = _responseBuffer;
+                                } else if (xhr.responseType === 'blob') {
+                                    xhr.response = new Blob([_responseBuffer], { type: res.mime });
+                                } else {
+                                    // Text
+                                    var bytes = new Uint8Array(_responseBuffer);
+                                    xhr.responseText = '';
+                                    for (var i = 0; i < bytes.length; i++) {
+                                        xhr.responseText += String.fromCharCode(bytes[i]);
+                                    }
+                                    xhr.response = xhr.responseText;
+                                }
+                                
+                                xhr.status = 200;
+                                xhr.statusText = 'OK';
+                                
+                                if (xhr.onreadystatechange) xhr.onreadystatechange();
+                                if (xhr.onload) xhr.onload();
+                                if (xhr.onloadend) xhr.onloadend();
+                            }, 0);
+                        }, 0);
                     };
                     
-                    Object.defineProperty(xhr, 'response', {
-                        get: function() {
-                            if (isInternalResource && responseData !== null) {
-                                if (responseType === 'arraybuffer') {
-                                    if (responseData instanceof ArrayBuffer) return responseData;
-                                    var binary = atob(responseData);
-                                    var bytes = new Uint8Array(binary.length);
-                                    for (var i = 0; i < binary.length; i++) {
-                                        bytes[i] = binary.charCodeAt(i);
-                                    }
-                                    return bytes.buffer;
-                                }
-                                if (responseType === 'blob' && responseData instanceof Blob) {
-                                    return responseData;
-                                }
-                                return responseData;
-                            }
-                            return xhr._realResponse;
-                        }
-                    });
-                    
-                    Object.defineProperty(xhr, 'responseText', {
-                        get: function() {
-                            if (isInternalResource && responseData !== null) {
-                                return typeof responseData === 'string' ? responseData : String(responseData);
-                            }
-                            return xhr._realResponseText;
-                        }
-                    });
-                    
-                    Object.defineProperty(xhr, 'status', {
-                        get: function() { return isInternalResource ? status : xhr.status; }
-                    });
-                    
-                    Object.defineProperty(xhr, 'statusText', {
-                        get: function() { return isInternalResource ? statusText : xhr.statusText; }
-                    });
-                    
+                    // Properties
                     Object.defineProperty(xhr, 'readyState', {
-                        get: function() { return isInternalResource ? readyState : xhr.readyState; }
+                        get: function() { return readyState; }
                     });
-                    
+                    Object.defineProperty(xhr, 'status', {
+                        get: function() { return status; }
+                    });
+                    Object.defineProperty(xhr, 'statusText', {
+                        get: function() { return statusText; }
+                    });
                     Object.defineProperty(xhr, 'responseURL', {
-                        get: function() { return isInternalResource ? requestUrl : xhr.responseURL; }
-                    });
-                    
-                    Object.defineProperty(xhr, 'responseXML', {
-                        get: function() { return null; }
+                        get: function() { return _url; }
                     });
                     
                     xhr.getAllResponseHeaders = function() {
-                        return isInternalResource ? responseHeaders : xhr.getAllResponseHeaders();
+                        if (!_foundResource) return '';
+                        return 'Content-Type: ' + (_foundResource.res.mime || 'application/octet-stream') + '\\\\r\\\\nContent-Length: ' + _responseBuffer.byteLength;
                     };
                     
                     xhr.getResponseHeader = function(header) {
-                        if (!isInternalResource) return xhr.getResponseHeader(header);
+                        if (!_foundResource) return null;
                         var h = header.toLowerCase();
-                        if (h === 'content-type') return internalResource.mime || 'application/octet-stream';
-                        if (h === 'content-length') return String(internalResource.data.length);
+                        if (h === 'content-type') return _foundResource.res.mime || 'application/octet-stream';
+                        if (h === 'content-length') return String(_responseBuffer.byteLength);
                         return null;
                     };
                     
                     xhr.setRequestHeader = function(header, value) {
-                        if (!isInternalResource) {
-                            return xhr.setRequestHeader(header, value);
-                        }
-                    };
-                    
-                    xhr.send = function(body) {
-                        if (!isInternalResource) {
-                            xhr.addEventListener('readystatechange', function() {
-                                xhr._realReadyState = xhr.readyState;
-                                xhr._realStatus = xhr.status;
-                                xhr._realStatusText = xhr.statusText;
-                                try { xhr._realResponse = xhr.response; } catch(e) {}
-                                try { xhr._realResponseText = xhr.responseText; } catch(e) {}
-                            });
-                            return xhr.send(body);
-                        }
-                        
-                        var self = this;
-                        responseType = xhr.responseType || '';
-                        
-                        // Simulate async XHR
-                        setTimeout(function() {
-                            // LOADING state
-                            readyState = 3;
-                            if (onreadystatechange) onreadystatechange.call(self);
-                            if (onprogress) onprogress.call(self);
-                            
-                            // Process the resource
-                            var res = internalResource;
-                            
-                            if (res.type === 'wasm' || res.type === 'base64') {
-                                var blobUrl = createBlobUrl(internalKey, res.data, res.mime || 'application/octet-stream');
-                                if (blobUrl) {
-                                    ORIGINAL_FETCH(blobUrl).then(function(r) {
-                                        if (responseType === 'arraybuffer') {
-                                            return r.arrayBuffer();
-                                        } else if (responseType === 'blob') {
-                                            return r.blob();
-                                        } else {
-                                            return r.text();
-                                        }
-                                    }).then(function(data) {
-                                        responseData = data;
-                                        status = 200;
-                                        statusText = 'OK';
-                                        responseHeaders = 'Content-Type: ' + (res.mime || 'application/octet-stream') + '\\r\\nContent-Length: ' + res.data.length;
-                                        
-                                        // DONE state
-                                        readyState = 4;
-                                        if (onreadystatechange) onreadystatechange.call(self);
-                                        if (onload) onload.call(self);
-                                        if (onloadend) onloadend.call(self);
-                                    }).catch(function(err) {
-                                        console.error('[Bundler] XHR blob fetch error:', err);
-                                        status = 500;
-                                        statusText = 'Internal Server Error';
-                                        readyState = 4;
-                                        if (onreadystatechange) onreadystatechange.call(self);
-                                        if (onerror) onerror.call(self);
-                                        if (onloadend) onloadend.call(self);
-                                    });
-                                    return;
-                                }
-                            }
-                            
-                            // Fallback for non-blob resources
-                            responseData = res.data;
-                            status = 200;
-                            statusText = 'OK';
-                            readyState = 4;
-                            if (onreadystatechange) onreadystatechange.call(self);
-                            if (onload) onload.call(self);
-                            if (onloadend) onloadend.call(self);
-                        }, 0);
+                        // No-op for our resources
                     };
                     
                     xhr.abort = function() {
-                        if (!isInternalResource) return xhr.abort();
-                        if (onabort) onabort.call(xhr);
+                        // No-op
                     };
-                    
-                    return xhr;
                 };
                 
-                // Override WebAssembly.instantiateStreaming for Unity
+                // CRITICAL FIX: Override WebAssembly.instantiateStreaming for Unity
                 if (window.WebAssembly && WebAssembly.instantiateStreaming) {
                     var originalInstantiateStreaming = WebAssembly.instantiateStreaming;
                     WebAssembly.instantiateStreaming = function(source, importObject) {
-                        console.log('[Bundler] WebAssembly.instantiateStreaming called', source);
+                        console.log('[Bundler] WebAssembly.instantiateStreaming intercepted');
                         
-                        // Handle Response object
+                        // Handle Response object directly
                         if (source instanceof Response) {
                             var url = source.url;
                             var found = findResource(url);
-                            if (found && (found.res.type === 'wasm' || found.res.type === 'base64')) {
-                                var res = found.res;
-                                var blobUrl = createBlobUrl(found.key, res.data, res.mime || 'application/wasm');
-                                if (blobUrl) {
-                                    console.log('[Bundler] WASM streaming -> blob:', url);
-                                    return ORIGINAL_FETCH(blobUrl).then(function(r) {
-                                        return originalInstantiateStreaming(r, importObject);
-                                    });
-                                }
+                            if (found && found.res.type === 'wasm') {
+                                console.log('[Bundler] Loading WASM from base64:', url);
+                                var buffer = base64ToArrayBuffer(found.res.data);
+                                return WebAssembly.instantiate(buffer, importObject);
                             }
                         }
                         
@@ -1522,15 +1444,10 @@
                             return source.then(function(response) {
                                 var url = response.url;
                                 var found = findResource(url);
-                                if (found && (found.res.type === 'wasm' || found.res.type === 'base64')) {
-                                    var res = found.res;
-                                    var blobUrl = createBlobUrl(found.key, res.data, res.mime || 'application/wasm');
-                                    if (blobUrl) {
-                                        console.log('[Bundler] WASM streaming (promise) -> blob:', url);
-                                        return ORIGINAL_FETCH(blobUrl).then(function(r) {
-                                            return originalInstantiateStreaming(r, importObject);
-                                        });
-                                    }
+                                if (found && found.res.type === 'wasm') {
+                                    console.log('[Bundler] Loading WASM from base64 (promise):', url);
+                                    var buffer = base64ToArrayBuffer(found.res.data);
+                                    return WebAssembly.instantiate(buffer, importObject);
                                 }
                                 return originalInstantiateStreaming(response, importObject);
                             });
@@ -1540,12 +1457,41 @@
                     };
                 }
                 
-                // Also override WebAssembly.instantiate for fallback
-                if (window.WebAssembly && WebAssembly.instantiate) {
-                    var originalInstantiate = WebAssembly.instantiate;
-                    WebAssembly.instantiate = function(bufferSource, importObject) {
-                        console.log('[Bundler] WebAssembly.instantiate called');
-                        return originalInstantiate.apply(this, arguments);
+                // CRITICAL FIX: Override WebAssembly.instantiate for fallback
+                var originalInstantiate = WebAssembly.instantiate;
+                WebAssembly.instantiate = function(bufferSource, importObject) {
+                    console.log('[Bundler] WebAssembly.instantiate called');
+                    return originalInstantiate.apply(this, arguments);
+                };
+                
+                // CRITICAL FIX: Patch Unity's createUnityInstance if it exists
+                if (window.createUnityInstance) {
+                    var originalCreateUnityInstance = window.createUnityInstance;
+                    window.createUnityInstance = function(canvas, config, onProgress) {
+                        console.log('[Bundler] Patching Unity config for inline loading');
+                        
+                        // Ensure instantiateWasm is set to use our XHR override
+                        if (!config.instantiateWasm) {
+                            config.instantiateWasm = function(imports, successCallback) {
+                                console.log('[Bundler] Unity instantiateWasm callback');
+                                var wasmUrl = config.codeUrl || config.dataUrl.replace('.data', '.wasm');
+                                var found = findResource(wasmUrl);
+                                
+                                if (found && found.res.type === 'wasm') {
+                                    console.log('[Bundler] Instantiating WASM from base64:', wasmUrl);
+                                    var buffer = base64ToArrayBuffer(found.res.data);
+                                    WebAssembly.instantiate(buffer, imports).then(function(result) {
+                                        successCallback(result.module, result.instance);
+                                    });
+                                    return {}; // Return empty object as Unity expects
+                                }
+                                
+                                // Fallback to default behavior
+                                return null;
+                            };
+                        }
+                        
+                        return originalCreateUnityInstance(canvas, config, onProgress);
                     };
                 }
                 
@@ -1561,22 +1507,30 @@
             
             // Inject CSS
             if (cssContent) {
-                finalHtml = finalHtml.replace('</head>', '<style>' + cssContent + '</style></head>');
+                if (finalHtml.includes('</head>')) {
+                    finalHtml = finalHtml.replace('</head>', '<style>' + cssContent + '</style></head>');
+                } else {
+                    finalHtml = finalHtml.replace('<head>', '<head><style>' + cssContent + '</style>');
+                }
             }
             
-            // Inject JS (loader + scripts) - MUST be in head for Unity to work properly
-            const fullScript = loaderScript + '\n' + jsContent;
+            // Collect all JS content
+            let allJsContent = loaderScript + '\n';
+            for (const jsFile of jsFiles) {
+                allJsContent += '\n/* ' + jsFile.name + ' */\n' + jsFile.content + '\n';
+            }
             
-            // Try to inject in head first, fallback to before closing body
+            // Inject JS in head (CRITICAL: must be before any other scripts run)
             if (finalHtml.includes('</head>')) {
-                finalHtml = finalHtml.replace('</head>', '<script>' + fullScript + '<\/script></head>');
+                finalHtml = finalHtml.replace('</head>', '<script>' + allJsContent + '<\/script></head>');
             } else if (finalHtml.includes('<head>')) {
-                finalHtml = finalHtml.replace('<head>', '<head><script>' + fullScript + '<\/script>');
+                finalHtml = finalHtml.replace('<head>', '<head><script>' + allJsContent + '<\/script>');
             } else {
-                finalHtml = finalHtml.replace('</body>', '<script>' + fullScript + '<\/script></body>');
+                // No head tag, add one
+                finalHtml = finalHtml.replace('<html>', '<html><head><script>' + allJsContent + '<\/script></head>');
             }
 
-            // Minify if requested
+            // Minify if requested (disabled by default for Unity)
             if (document.getElementById('minifyCode').checked) {
                 finalHtml = finalHtml.replace(/>\s+</g, '><').replace(/\s{2,}/g, ' ').replace(/<!--[\s\S]*?-->/g, '');
             }
