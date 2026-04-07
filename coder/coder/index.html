@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Code Runner</title>
+<title>Universal Code Runner</title>
 <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -164,24 +164,25 @@
 </div>
 
 <script>
-  const mainContainer = document.getElementById('main-container');
-  const dropZone = document.getElementById('drop-zone');
-  const fileInput = document.getElementById('file-input');
-  const previewContainer = document.getElementById('preview-container');
-  const loadingIndicator = document.getElementById('loading-indicator');
-  const loadingText = document.getElementById('loading-text');
-  const errorToast = document.getElementById('error-toast');
-  const errorText = document.getElementById('error-text');
-  const clipboardBtn = document.getElementById('clipboard-btn');
-  const clipboardPreview = document.getElementById('clipboard-preview');
-  const clipboardCode = document.getElementById('clipboard-code');
-  const autoRunCheckbox = document.getElementById('auto-run-checkbox');
-  const clipboardStatus = document.getElementById('clipboard-status');
+(function() {
+  var mainContainer = document.getElementById('main-container');
+  var dropZone = document.getElementById('drop-zone');
+  var fileInput = document.getElementById('file-input');
+  var previewContainer = document.getElementById('preview-container');
+  var loadingIndicator = document.getElementById('loading-indicator');
+  var loadingText = document.getElementById('loading-text');
+  var errorToast = document.getElementById('error-toast');
+  var errorText = document.getElementById('error-text');
+  var clipboardBtn = document.getElementById('clipboard-btn');
+  var clipboardPreview = document.getElementById('clipboard-preview');
+  var clipboardCode = document.getElementById('clipboard-code');
+  var autoRunCheckbox = document.getElementById('auto-run-checkbox');
+  var clipboardStatus = document.getElementById('clipboard-status');
 
-  let currentFiles = new Map();
-  let basePath = '';
-  let clipboardCheckInterval = null;
-  let lastClipboardContent = '';
+  var currentFiles = {};
+  var basePath = '';
+  var clipboardCheckInterval = null;
+  var lastClipboardContent = '';
 
   function showLoading(text) {
     loadingText.textContent = text;
@@ -236,7 +237,6 @@
     }
   });
 
-  // Clipboard functionality
   clipboardBtn.addEventListener('click', function() {
     try {
       navigator.clipboard.readText().then(function(text) {
@@ -254,11 +254,9 @@
   function processClipboardContent(text, manual) {
     var trimmed = text.trim();
     
-    // Show preview
     clipboardPreview.classList.remove('hidden');
     clipboardCode.textContent = trimmed.substring(0, 500) + (trimmed.length > 500 ? '...' : '');
     
-    // Detect if it's HTML
     var isHtml = trimmed.match(/^<!DOCTYPE/i) || 
                  trimmed.match(/^<html/i) || 
                  trimmed.match(/^<[a-z][\s\S]*>/i) ||
@@ -267,14 +265,12 @@
     if (isHtml) {
       if (manual || autoRunCheckbox.checked) {
         clipboardStatus.classList.remove('hidden');
-        // Small delay to show the preview before running
         setTimeout(function() {
           runHtml(trimmed, 'clipboard.html');
           clipboardStatus.classList.add('hidden');
         }, manual ? 100 : 300);
       }
     } else if (trimmed) {
-      // Wrap non-HTML content
       if (manual || autoRunCheckbox.checked) {
         var wrapped = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>Clipboard Content</title>\n  <style>\n    body { \n      font-family: \'JetBrains Mono\', monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n      line-height: 1.6;\n    }\n    pre { \n      background: #1e293b; \n      padding: 1rem; \n      border-radius: 8px; \n      overflow-x: auto;\n      border: 1px solid #334155;\n      white-space: pre-wrap;\n      word-wrap: break-word;\n    }\n    h1 { color: #6366f1; border-bottom: 2px solid #334155; padding-bottom: 0.5rem; }\n    .meta { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }\n  </style>\n</head>\n<body>\n  <h1>📋 Clipboard Content</h1>\n  <div class="meta">Auto-rendered</div>\n  <pre><code>' + escapeHtml(trimmed) + '</code></pre>\n</body>\n</html>';
         clipboardStatus.classList.remove('hidden');
@@ -286,7 +282,6 @@
     }
   }
 
-  // Auto-run clipboard monitoring
   autoRunCheckbox.addEventListener('change', function() {
     if (autoRunCheckbox.checked) {
       startClipboardMonitoring();
@@ -298,10 +293,7 @@
   });
 
   function startClipboardMonitoring() {
-    // Check clipboard immediately
     checkClipboard();
-    
-    // Set up interval checking
     clipboardCheckInterval = setInterval(checkClipboard, 1000);
   }
 
@@ -321,11 +313,10 @@
         }
       });
     } catch (err) {
-      // Silently fail - permissions might not be granted yet
+      // Silently fail
     }
   }
 
-  // Handle paste events for immediate response
   document.addEventListener('paste', function(e) {
     if (!autoRunCheckbox.checked) return;
     
@@ -415,27 +406,33 @@
     
     readFileAsArrayBuffer(file).then(function(arrayBuffer) {
       JSZip.loadAsync(arrayBuffer).then(function(zip) {
-        currentFiles.clear();
+        currentFiles = {};
         var files = [];
         var rootFolder = '';
         
-        // Detect GitHub ZIP structure (root folder like "Repo-Name-master/")
         var filePaths = Object.keys(zip.files);
-        var firstFile = filePaths.find(function(p) { 
-          return !zip.files[p].dir; 
-        });
+        var firstFile = null;
+        for (var i = 0; i < filePaths.length; i++) {
+          if (!zip.files[filePaths[i]].dir) {
+            firstFile = filePaths[i];
+            break;
+          }
+        }
         
         if (firstFile && firstFile.indexOf('/') > -1) {
           var potentialRoot = firstFile.split('/')[0];
-          var allInRoot = filePaths.every(function(p) { 
-            return p.indexOf(potentialRoot + '/') === 0; 
-          });
+          var allInRoot = true;
+          for (var j = 0; j < filePaths.length; j++) {
+            if (filePaths[j].indexOf(potentialRoot + '/') !== 0) {
+              allInRoot = false;
+              break;
+            }
+          }
           if (allInRoot) {
             rootFolder = potentialRoot + '/';
           }
         }
         
-        // Collect all files, stripping root folder if present
         zip.forEach(function(relativePath, zipEntry) {
           if (!zipEntry.dir) {
             var cleanPath = rootFolder ? relativePath.replace(rootFolder, '') : relativePath;
@@ -453,7 +450,6 @@
 
         showLoading('Processing files...');
 
-        // Find entry point
         var entryPoint = null;
         var priorities = [
           'index.html', 'Index.html', 'INDEX.HTML',
@@ -462,21 +458,24 @@
           'default.html', 'Default.html'
         ];
         
-        for (var i = 0; i < priorities.length; i++) {
-          var priority = priorities[i];
-          var found = files.find(function(f) { 
-            return f.path.toLowerCase() === priority.toLowerCase(); 
-          });
-          if (found) {
-            entryPoint = found;
-            break;
+        for (var p = 0; p < priorities.length; p++) {
+          var priority = priorities[p];
+          for (var f = 0; f < files.length; f++) {
+            if (files[f].path.toLowerCase() === priority.toLowerCase()) {
+              entryPoint = files[f];
+              break;
+            }
           }
+          if (entryPoint) break;
         }
         
         if (!entryPoint) {
-          var htmlFiles = files.filter(function(f) { 
-            return f.name.match(/\.(html|htm)$/i); 
-          });
+          var htmlFiles = [];
+          for (var h = 0; h < files.length; h++) {
+            if (files[h].name.match(/\.(html|htm)$/i)) {
+              htmlFiles.push(files[h]);
+            }
+          }
           if (htmlFiles.length > 0) {
             htmlFiles.sort(function(a, b) {
               var depthA = a.path.split('/').length;
@@ -494,17 +493,19 @@
 
         showLoading('Loading ' + entryPoint.name + '...');
         
-        // Extract all files to memory
-        var filePromises = files.map(function(file) {
-          return file.entry.async('uint8array').then(function(content) {
-            var blob = new Blob([content]);
-            currentFiles.set(file.path, {
-              blob: blob,
-              url: URL.createObjectURL(blob),
-              type: getMimeType(file.name)
-            });
-          });
-        });
+        var filePromises = [];
+        for (var fp = 0; fp < files.length; fp++) {
+          (function(file) {
+            filePromises.push(file.entry.async('uint8array').then(function(content) {
+              var blob = new Blob([content]);
+              currentFiles[file.path] = {
+                blob: blob,
+                url: URL.createObjectURL(blob),
+                type: getMimeType(file.name)
+              };
+            }));
+          })(files[fp]);
+        }
 
         Promise.all(filePromises).then(function() {
           basePath = entryPoint.dir;
@@ -517,9 +518,10 @@
   }
 
   function showFileBrowser(files, zip, rootFolder) {
-    var fileList = files.map(function(f) {
-      return '<li style="margin: 0.5rem 0; cursor: pointer; color: #6366f1;" onclick="window.viewFile(\'' + f.fullPath + '\', \'' + rootFolder + '\')">📄 ' + f.path + '</li>';
-    }).join('');
+    var fileList = '';
+    for (var i = 0; i < files.length; i++) {
+      fileList += '<li style="margin: 0.5rem 0; cursor: pointer; color: #6366f1;" onclick="window.viewFile(\'' + files[i].fullPath + '\', \'' + rootFolder + '\')">📄 ' + files[i].path + '</li>';
+    }
     
     var html = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>ZIP Contents</title>\n  <style>\n    body { \n      font-family: \'JetBrains Mono\', monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n    }\n    h1 { color: #6366f1; }\n    ul { list-style: none; padding: 0; }\n    li:hover { text-decoration: underline; }\n  </style>\n</head>\n<body>\n  <h1>📦 ZIP Archive Contents</h1>\n  <p>No HTML entry point found. Click a file to view:</p>\n  <ul>' + fileList + '</ul>\n</body>\n</html>';
     
@@ -554,7 +556,6 @@
     filePath = filePath || '';
     showLoading('Rendering...');
     
-    // Check if this is a server-side template
     var hasTemplates = htmlContent.indexOf('{{') > -1 && htmlContent.indexOf('}}') > -1;
     
     if (hasTemplates) {
@@ -563,7 +564,6 @@
     
     var baseDir = filePath ? filePath.split('/').slice(0, -1).join('/') : '';
     
-    // Process HTML to handle relative paths
     var processedHtml = htmlContent;
     
     // Process href attributes
@@ -587,7 +587,6 @@
         return 'href="' + file.url + '"';
       }
       
-      // Try common variations
       var variations = [
         resolvedPath,
         'views/' + resolvedPath,
@@ -597,8 +596,8 @@
         resolvedPath.replace(/^\.\//, '')
       ];
       
-      for (var i = 0; i < variations.length; i++) {
-        var varFile = findFileCaseInsensitive(variations[i]);
+      for (var v = 0; v < variations.length; v++) {
+        var varFile = findFileCaseInsensitive(variations[v]);
         if (varFile) {
           return 'href="' + varFile.url + '"';
         }
@@ -637,8 +636,8 @@
         resolvedPath.replace(/^\.\//, '')
       ];
       
-      for (var i = 0; i < variations.length; i++) {
-        var varFile = findFileCaseInsensitive(variations[i]);
+      for (var v = 0; v < variations.length; v++) {
+        var varFile = findFileCaseInsensitive(variations[v]);
         if (varFile) {
           return 'src="' + varFile.url + '"';
         }
@@ -677,8 +676,8 @@
         resolvedPath.replace(/^\.\//, '')
       ];
       
-      for (var i = 0; i < variations.length; i++) {
-        var varFile = findFileCaseInsensitive(variations[i]);
+      for (var v = 0; v < variations.length; v++) {
+        var varFile = findFileCaseInsensitive(variations[v]);
         if (varFile) {
           return 'url("' + varFile.url + '")';
         }
@@ -687,19 +686,18 @@
       return match;
     });
 
-    // Hide main UI
     mainContainer.classList.add('fade-out');
     setTimeout(function() {
       mainContainer.style.display = 'none';
       previewContainer.style.display = 'block';
     }, 500);
 
-    // Create blob and run
     var blob = new Blob([processedHtml], { type: 'text/html' });
     var url = URL.createObjectURL(blob);
     
-    // Use a more restrictive sandbox to avoid interfering with Ruffle
-    previewContainer.innerHTML = '<iframe id="preview-iframe" src="' + url + '" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>';
+    // CRITICAL FIX: Remove sandbox entirely to avoid Ruffle conflicts
+    // Ruffle needs full access to work properly without polyfill conflicts
+    previewContainer.innerHTML = '<iframe id="preview-iframe" src="' + url + '"></iframe>';
     
     hideLoading();
     
@@ -711,30 +709,16 @@
   function stripTemplates(html) {
     var stripped = html;
     
-    // Handle {{mask}}content{{/mask}} - keep content, remove tags
     stripped = stripped.replace(/\{\{\s*mask\s*\}\}([\s\S]*?)\{\{\s*\/mask\s*\}\}/gi, '$1');
-    
-    // Handle standalone {{mask}} tags (opening/closing separately)
     stripped = stripped.replace(/\{\{\s*mask\s*\}\}/gi, '');
     stripped = stripped.replace(/\{\{\s*\/mask\s*\}\}/gi, '');
-    
-    // Handle {{ifSEO}}...{{/ifSEO}} - keep content
     stripped = stripped.replace(/\{\{\s*ifSEO\s*\}\}([\s\S]*?)\{\{\s*\/ifSEO\s*\}\}/gi, '$1');
     stripped = stripped.replace(/\{\{\s*ifSEO\s*\}\}/gi, '');
-    
-    // Handle specific Holy Unblocker templates
     stripped = stripped.replace(/\{\{\s*getSplash\s*\}\}/gi, '<div style="padding:2rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;text-align:center;border-radius:8px;margin:1rem 0;"><h1>Holy Unblocker</h1><p>Web Proxy Service</p></div>');
-    
     stripped = stripped.replace(/\{\{\s*inline\s*\}\}/gi, '');
     stripped = stripped.replace(/\{\{\s*version\s*\}\}/gi, '6.0.0');
-    
-    // Handle any other {{variable}} patterns - remove them but preserve structure
     stripped = stripped.replace(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/gi, '');
-    
-    // Clean up multiple consecutive empty lines
     stripped = stripped.replace(/\n\s*\n\s*\n/g, '\n\n');
-    
-    // Clean up empty template artifacts
     stripped = stripped.replace(/\{\{\s*\}\}/g, '');
     
     return stripped;
@@ -770,18 +754,17 @@
       previewContainer.innerHTML = '';
       mainContainer.style.display = 'flex';
       mainContainer.classList.remove('fade-out');
-      currentFiles.clear();
+      currentFiles = {};
       basePath = '';
-      // Reset clipboard preview
       clipboardPreview.classList.add('hidden');
       clipboardStatus.classList.add('hidden');
     }
   });
 
-  // Cleanup on page unload
   window.addEventListener('beforeunload', function() {
     stopClipboardMonitoring();
   });
+})();
 </script>
 </body>
 </html>
