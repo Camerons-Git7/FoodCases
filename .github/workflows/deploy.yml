@@ -4,6 +4,15 @@ on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      force_full_sync:
+        description: 'Force complete re-upload (delete sync state first)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 jobs:
   web-deploy:
@@ -13,7 +22,16 @@ jobs:
     steps:
       - name: Get latest code
         uses: actions/checkout@v4
-        
+        with:
+          fetch-depth: 0  # Ensure full history for better change detection
+      
+      - name: Clear sync state (Force Full Sync)
+        if: github.event.inputs.force_full_sync == 'true'
+        run: |
+          echo "Force full sync requested - will delete local sync state if it exists"
+          rm -f .ftp-sync-state.json
+          echo "Sync state cleared. All files will be re-uploaded."
+      
       - name: Deploy all files to InfinityFree
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -31,3 +49,7 @@ jobs:
             **/.github/**
             README.md
             .gitignore
+            .ftp-sync-state.json
+          log-level: standard
+          # Note: dangerous-clean-slate is NOT used to avoid deleting untracked files on server
+          # Instead we rely on deleting the state file to force re-upload
