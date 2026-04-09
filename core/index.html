@@ -17,7 +17,7 @@
       --accent: #0f0;
       --bg: #000;
       --surface: #050505;
-      --button-size: 110px;
+      --button-size: 100px;
       --emoji-size: calc(var(--button-size) * 0.48);
       --text-size: calc(var(--button-size) * 0.18);
       --padding-top: calc(var(--button-size) * 0.114);
@@ -60,6 +60,18 @@
       pointer-events: none;
       z-index: -9999;
     }
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      z-index: 100;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+    }
     .title {
       font-size: 4rem;
       font-weight: 900;
@@ -67,6 +79,7 @@
       text-align: center;
       letter-spacing: 0.05em;
       margin-bottom: 2rem;
+      margin-top: 3rem;
       text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
       animation: textPulse 2s infinite alternate;
       user-select: none;
@@ -74,6 +87,80 @@
     @keyframes textPulse {
       from { text-shadow: 0 0 10px var(--accent); }
       to { text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0; }
+    }
+    .search-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-input {
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      color: var(--accent);
+      padding: 0.5rem 1rem;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1rem;
+      width: 250px;
+      outline: none;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+      transition: all 0.3s ease;
+    }
+    .search-input:focus {
+      box-shadow: 0 0 25px var(--accent);
+      background: rgba(0, 50, 0, 0.9);
+    }
+    .search-input::placeholder {
+      color: rgba(0, 255, 0, 0.5);
+    }
+    .search-dropdown {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: 250px;
+      background: rgba(0, 0, 0, 0.95);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+      display: none;
+      overflow: hidden;
+      z-index: 101;
+    }
+    .search-dropdown.active {
+      display: block;
+    }
+    .search-result {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+    }
+    .search-result:last-child {
+      border-bottom: none;
+    }
+    .search-result:hover {
+      background: rgba(0, 50, 0, 0.8);
+      padding-left: 1.25rem;
+    }
+    .search-result-emoji {
+      font-size: 1.5rem;
+      margin-right: 0.75rem;
+      filter: drop-shadow(0 0 2px var(--accent));
+    }
+    .search-result-name {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .no-results {
+      padding: 1rem;
+      color: rgba(0, 255, 0, 0.6);
+      text-align: center;
+      font-size: 0.9rem;
     }
     .button-container {
       display: flex;
@@ -217,10 +304,35 @@
       background: rgba(0, 50, 0, 0.9);
     }
     .request-button:active { transform: scale(0.95); }
+    @media (max-width: 600px) {
+      .header {
+        padding: 0.75rem 1rem;
+      }
+      .search-input {
+        width: 180px;
+        font-size: 0.9rem;
+      }
+      .search-dropdown {
+        width: 180px;
+      }
+      .title {
+        font-size: 2.5rem;
+        margin-top: 4rem;
+      }
+    }
   </style>
 </head>
 <body>
   <canvas id="matrixCanvas"></canvas>
+  
+  <div class="header">
+    <div></div>
+    <div class="search-container">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search games..." autocomplete="off">
+      <div class="search-dropdown" id="searchDropdown"></div>
+    </div>
+  </div>
+  
   <h1 class="title">SEAMLESS GAMES</h1>
   <div class="button-container" role="group" aria-label="Seamless Games menu">
     <button class="game-button" data-url="https://menist.free.nf/" aria-label="Back"><div class="emoji">⬅</div><div class="game-name">back</div></button>
@@ -645,6 +757,91 @@
           if (!hasStartedPlaying) { ytPlayer.playVideo(); hasStartedPlaying = true; } 
         }
       }
+    });
+    
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    const searchDropdown = document.getElementById('searchDropdown');
+    
+    // Collect all games data
+    const gamesData = [];
+    document.querySelectorAll('.game-button').forEach(button => {
+      const name = button.getAttribute('aria-label');
+      const url = button.getAttribute('data-url');
+      const emoji = button.querySelector('.emoji').textContent;
+      if (name && name !== 'Back') {
+        gamesData.push({ name, url, emoji });
+      }
+    });
+    
+    function calculateSimilarity(str1, str2) {
+      str1 = str1.toLowerCase();
+      str2 = str2.toLowerCase();
+      
+      if (str1 === str2) return 1;
+      if (str1.includes(str2)) return 0.9;
+      if (str2.includes(str1)) return 0.8;
+      
+      let matches = 0;
+      const minLength = Math.min(str1.length, str2.length);
+      for (let i = 0; i < minLength; i++) {
+        if (str1[i] === str2[i]) matches++;
+      }
+      return matches / Math.max(str1.length, str2.length);
+    }
+    
+    function updateSearchResults(query) {
+      if (!query.trim()) {
+        searchDropdown.classList.remove('active');
+        return;
+      }
+      
+      const scoredGames = gamesData.map(game => ({
+        ...game,
+        score: calculateSimilarity(game.name, query)
+      }));
+      
+      scoredGames.sort((a, b) => b.score - a.score);
+      const topResults = scoredGames.slice(0, 5).filter(game => game.score > 0);
+      
+      if (topResults.length === 0) {
+        searchDropdown.innerHTML = '<div class="no-results">No games found</div>';
+      } else {
+        searchDropdown.innerHTML = topResults.map(game => `
+          <div class="search-result" data-url="${game.url}">
+            <span class="search-result-emoji">${game.emoji}</span>
+            <span class="search-result-name">${game.name}</span>
+          </div>
+        `).join('');
+        
+        // Add click handlers to search results
+        searchDropdown.querySelectorAll('.search-result').forEach(result => {
+          result.addEventListener('click', () => {
+            const url = result.getAttribute('data-url');
+            document.body.classList.remove('fade-in');
+            document.body.classList.add('fade-out');
+            fadeOutAudio(1000, () => { window.location.href = url; });
+          });
+        });
+      }
+      
+      searchDropdown.classList.add('active');
+    }
+    
+    searchInput.addEventListener('input', (e) => {
+      updateSearchResults(e.target.value);
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-container')) {
+        searchDropdown.classList.remove('active');
+      }
+    });
+    
+    // Keep dropdown open when clicking inside it
+    searchDropdown.addEventListener('click', (e) => {
+      e.stopPropagation();
     });
   </script>
 </body>
