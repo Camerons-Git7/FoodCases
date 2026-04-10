@@ -508,6 +508,9 @@
   <button class="mute-button" id="muteBtn" aria-label="Toggle mute">🔈</button>
   <a class="request-button" href="https://forms.gle/tcMZUPfym8Y7zPsm8" target="_blank" rel="noopener noreferrer" aria-label="Request a game">↗ Report Bugs ↗</a>
   <div id="youtube-audio"><div id="yt-player"></div></div>
+  <audio id="secret-audio" loop style="display: none;">
+    <source src="https://www.dropbox.com/scl/fi/m6bhb54qxs186fc8vcr8f/onlymp3.io-Charlie-Kirky-Funk-320-1775831564958.mp3?rlkey=yl3awn2kz3dqllapu2ukdrfp8&st=64t9b1ul&dl=1" type="audio/mpeg">
+  </audio>
   <script>
     let ytPlayer, playerReady = false, isMuted = true, volumeFadeInterval = null, hasStartedPlaying = false;
     let isSecretTrack = false;
@@ -516,7 +519,8 @@
     const HOLD_DURATION = 5000;
     
     const DEFAULT_VIDEO_ID = 'F0A_R2XV_os';
-    const SECRET_VIDEO_ID = 'y-Q15Ul-9ww';
+    const secretAudio = document.getElementById('secret-audio');
+    let secretAudioVolume = 1.0;
     
     function updateMuteButton() { 
       const btn = document.getElementById('muteBtn'); 
@@ -524,6 +528,10 @@
     }
     
     function fadeVolume(targetVolume, duration, callback) {
+      if (isSecretTrack) {
+        fadeSecretAudioVolume(targetVolume / 100, duration, callback);
+        return;
+      }
       if (!playerReady || !ytPlayer || !ytPlayer.setVolume) { 
         if (callback) callback(); 
         return; 
@@ -549,13 +557,42 @@
       }, stepDuration);
     }
     
+    function fadeSecretAudioVolume(targetVolume, duration, callback) {
+      if (volumeFadeInterval) clearInterval(volumeFadeInterval);
+      const startVolume = secretAudioVolume, steps = 30, stepDuration = duration / steps, volumeDiff = targetVolume - startVolume;
+      let currentStep = 0;
+      const btn = document.getElementById('muteBtn'); 
+      if (btn) btn.classList.add('fading');
+      volumeFadeInterval = setInterval(() => {
+        currentStep++;
+        const easeProgress = 1 - Math.pow(1 - (currentStep / steps), 2);
+        let newVolume = startVolume + (volumeDiff * easeProgress);
+        newVolume = Math.max(0, Math.min(1, newVolume));
+        secretAudioVolume = newVolume;
+        secretAudio.volume = newVolume;
+        if (currentStep >= steps) { 
+          clearInterval(volumeFadeInterval); 
+          volumeFadeInterval = null; 
+          secretAudioVolume = targetVolume;
+          secretAudio.volume = targetVolume;
+          if (btn) btn.classList.remove('fading'); 
+          if (callback) callback(); 
+        }
+      }, stepDuration);
+    }
+    
     function switchToSecretTrack() {
-      if (!playerReady || !ytPlayer) return;
+      if (isSecretTrack) return;
       isSecretTrack = true;
       fadeVolume(0, 300, () => {
-        ytPlayer.loadVideoById({ videoId: SECRET_VIDEO_ID, startSeconds: 0, suggestedQuality: 'small' });
-        ytPlayer.unMute();
-        ytPlayer.setVolume(100);
+        if (playerReady && ytPlayer) {
+          ytPlayer.pauseVideo();
+          ytPlayer.mute();
+        }
+        secretAudio.currentTime = 0;
+        secretAudio.volume = 1;
+        secretAudioVolume = 1;
+        secretAudio.play().catch(e => console.log('Audio play failed:', e));
         isMuted = false;
         hasStartedPlaying = true;
         updateMuteButton();
@@ -563,33 +600,50 @@
     }
     
     function resetToDefaultTrack() {
-      if (!playerReady || !ytPlayer) return;
+      if (!isSecretTrack) return;
       isSecretTrack = false;
-      fadeVolume(0, 300, () => {
-        ytPlayer.loadVideoById({ videoId: DEFAULT_VIDEO_ID, startSeconds: 0, suggestedQuality: 'small' });
-        ytPlayer.mute();
-        ytPlayer.setVolume(0);
-        isMuted = true;
-        hasStartedPlaying = false;
+      fadeSecretAudioVolume(0, 300, () => {
+        secretAudio.pause();
+        secretAudio.currentTime = 0;
+        if (playerReady && ytPlayer) {
+          ytPlayer.seekTo(0);
+          ytPlayer.unMute();
+          ytPlayer.setVolume(100);
+          ytPlayer.playVideo();
+        }
+        isMuted = false;
+        hasStartedPlaying = true;
         updateMuteButton();
       });
     }
     
     function toggleMute() {
-      if (!playerReady) return;
       if (isHolding) return;
       isMuted = !isMuted; 
       updateMuteButton();
-      if (isMuted) { 
-        ytPlayer.mute(); 
-        fadeVolume(0, 500); 
-      } else { 
-        ytPlayer.unMute(); 
-        if (!hasStartedPlaying) { 
-          ytPlayer.playVideo(); 
-          hasStartedPlaying = true; 
-        } 
-        fadeVolume(100, 500); 
+      if (isSecretTrack) {
+        if (isMuted) { 
+          fadeSecretAudioVolume(0, 500);
+        } else { 
+          if (!hasStartedPlaying) {
+            secretAudio.play().catch(e => console.log('Audio play failed:', e));
+            hasStartedPlaying = true;
+          }
+          fadeSecretAudioVolume(1, 500);
+        }
+      } else {
+        if (!playerReady) return;
+        if (isMuted) { 
+          ytPlayer.mute(); 
+          fadeVolume(0, 500); 
+        } else { 
+          ytPlayer.unMute(); 
+          if (!hasStartedPlaying) { 
+            ytPlayer.playVideo(); 
+            hasStartedPlaying = true; 
+          } 
+          fadeVolume(100, 500); 
+        }
       }
     }
     
@@ -635,12 +689,15 @@
     
     function onPlayerStateChange(event) { 
       if (event.data === YT.PlayerState.ENDED) {
-        if (isSecretTrack) { ytPlayer.seekTo(0); ytPlayer.playVideo(); } 
-        else { ytPlayer.playVideo(); }
+        if (!isSecretTrack) { ytPlayer.playVideo(); }
       }
     }
     
     function fadeOutAudio(duration, callback) {
+      if (isSecretTrack) {
+        fadeSecretAudioVolume(0, duration, callback);
+        return;
+      }
       if (!playerReady || !ytPlayer || !ytPlayer.setVolume) { 
         if (callback) callback(); 
         return; 
@@ -730,7 +787,19 @@
       document.body.classList.remove('fade-out', 'fade-in');
       void document.body.offsetWidth;
       document.body.classList.add('fade-in');
-      if (playerReady && ytPlayer && ytPlayer.setVolume) {
+      if (isSecretTrack) {
+        if (isMuted) {
+          secretAudio.volume = 0;
+          secretAudioVolume = 0;
+        } else {
+          secretAudio.volume = 1;
+          secretAudioVolume = 1;
+          if (!hasStartedPlaying) {
+            secretAudio.play().catch(e => console.log('Audio play failed:', e));
+            hasStartedPlaying = true;
+          }
+        }
+      } else if (playerReady && ytPlayer && ytPlayer.setVolume) {
         if (isMuted) { 
           ytPlayer.setVolume(0); ytPlayer.mute(); hasStartedPlaying = false; 
         } else { 
