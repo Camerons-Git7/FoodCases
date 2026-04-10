@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🕞 Seamless Widgets 🕞</title>
+  <title>Seamless Widgets</title>
   <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -345,6 +345,37 @@
   </div>
 
   <script>
+    // Clock emoji lookup table - 24 emojis for each hour and half hour
+    const clockEmojis = {
+      "0.0": "🕛", "0.30": "🕧",
+      "1.0": "🕐", "1.30": "🕜",
+      "2.0": "🕑", "2.30": "🕝",
+      "3.0": "🕒", "3.30": "🕞",
+      "4.0": "🕓", "4.30": "🕟",
+      "5.0": "🕔", "5.30": "🕠",
+      "6.0": "🕕", "6.30": "🕡",
+      "7.0": "🕖", "7.30": "🕢",
+      "8.0": "🕗", "8.30": "🕣",
+      "9.0": "🕘", "9.30": "🕤",
+      "10.0": "🕙", "10.30": "🕥",
+      "11.0": "🕚", "11.30": "🕦"
+    };
+
+    // Get the closest clock emoji for current time
+    function getClockEmoji(date) {
+      // Add 15 minutes and round down to closest half hour
+      const adjustedTime = new Date(date.getTime() + 15 * 60 * 1000);
+      const hours = adjustedTime.getHours() % 12;
+      const minutes = adjustedTime.getMinutes() < 30 ? 0 : 30;
+      return clockEmojis[`${hours}.${minutes}`];
+    }
+
+    // Update the document title with current clock emoji
+    function updateTitleEmoji() {
+      const emoji = getClockEmoji(new Date());
+      document.title = `${emoji} Seamless Widgets ${emoji}`;
+    }
+
     // Time and Date Functions
     function getOrdinalSuffix(day) {
       if (day > 3 && day < 21) return 'th';
@@ -514,9 +545,10 @@
 
     // Initialize - Load data first, then fade in
     window.onload = async () => {
-      // Update time and date immediately (local data)
+      // Update time, date, and title emoji immediately (local data)
       updateTime();
       updateDate();
+      updateTitleEmoji();
       
       // Wait for weather data to load
       await fetchWeather();
@@ -526,6 +558,7 @@
       
       // Start intervals after fade
       setInterval(updateTime, 1000);
+      setInterval(updateTitleEmoji, 1000); // Update title emoji every second
       setInterval(fetchWeather, 30 * 60 * 1000);
     };
   </script>
