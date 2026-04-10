@@ -107,7 +107,7 @@
       transition: all 0.3s ease;
     }
     .search-input:focus {
-      box-shadow: 0 0 25px var(--accent);
+      box-shadow: 0 0 25px var(--accent));
       background: rgba(0, 50, 0, 0.9);
     }
     .search-input::placeholder {
@@ -749,20 +749,23 @@
     document.querySelectorAll('.game-button').forEach(button => {
       const name = button.getAttribute('aria-label');
       const url = button.getAttribute('data-url');
-      const emoji = button.querySelector('.emoji').textContent;
+      const emoji = button.querySelector('.emoji').textContent.trim();
       if (name && name !== 'Back') {
         gamesData.push({ name, url, emoji });
       }
     });
+
+    function isEmojiQuery(query) {
+      // Match if the string contains only emoji characters (and optional whitespace)
+      return /^\s*[\p{Emoji}\u200d\uFE0F\u20E3\u{1F1E0}-\u{1F1FF}]+\s*$/u.test(query);
+    }
     
     function calculateSimilarity(str1, str2) {
       str1 = str1.toLowerCase();
       str2 = str2.toLowerCase();
-      
       if (str1 === str2) return 1;
       if (str1.includes(str2)) return 0.9;
       if (str2.includes(str1)) return 0.8;
-      
       let matches = 0;
       const minLength = Math.min(str1.length, str2.length);
       for (let i = 0; i < minLength; i++) {
@@ -776,26 +779,33 @@
         searchDropdown.classList.remove('active');
         return;
       }
+
+      let results;
+
+      if (isEmojiQuery(query)) {
+        // Emoji mode: return all games whose button emoji matches the query exactly
+        const trimmed = query.trim();
+        results = gamesData.filter(game => game.emoji === trimmed);
+      } else {
+        // Text mode: fuzzy match on game name, same as before
+        const scoredGames = gamesData.map(game => ({
+          ...game,
+          score: calculateSimilarity(game.name, query)
+        }));
+        scoredGames.sort((a, b) => b.score - a.score);
+        results = scoredGames.slice(0, 5).filter(game => game.score > 0);
+      }
       
-      const scoredGames = gamesData.map(game => ({
-        ...game,
-        score: calculateSimilarity(game.name, query)
-      }));
-      
-      scoredGames.sort((a, b) => b.score - a.score);
-      const topResults = scoredGames.slice(0, 5).filter(game => game.score > 0);
-      
-      if (topResults.length === 0) {
+      if (results.length === 0) {
         searchDropdown.innerHTML = '<div class="no-results">No games found</div>';
       } else {
-        searchDropdown.innerHTML = topResults.map(game => `
+        searchDropdown.innerHTML = results.map(game => `
           <div class="search-result" data-url="${game.url}">
             <span class="search-result-emoji">${game.emoji}</span>
             <span class="search-result-name">${game.name}</span>
           </div>
         `).join('');
         
-        // Add click handlers to search results
         searchDropdown.querySelectorAll('.search-result').forEach(result => {
           result.addEventListener('click', () => {
             const url = result.getAttribute('data-url');
@@ -813,14 +823,12 @@
       updateSearchResults(e.target.value);
     });
     
-    // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.search-container')) {
         searchDropdown.classList.remove('active');
       }
     });
     
-    // Keep dropdown open when clicking inside it
     searchDropdown.addEventListener('click', (e) => {
       e.stopPropagation();
     });
