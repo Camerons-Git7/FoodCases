@@ -37,6 +37,18 @@
       transition: opacity 1s ease;
     }
     body.fade-in { opacity: 1; }
+    
+    /* Matrix Canvas - Behind Everything */
+    #matrix {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      display: block;
+    }
+    
     .title {
       font-size: 4rem;
       font-weight: 900;
@@ -49,6 +61,8 @@
       user-select: none;
       opacity: 0;
       transition: opacity 1s ease;
+      position: relative;
+      z-index: 1;
     }
     body.fade-in .title {
       opacity: 1;
@@ -66,6 +80,8 @@
       gap: 1.5rem;
       opacity: 0;
       transition: opacity 1s ease;
+      position: relative;
+      z-index: 1;
     }
     body.fade-in .main-container {
       opacity: 1;
@@ -85,7 +101,7 @@
       position: relative;
       border: 2px solid var(--accent);
       border-radius: 10px;
-      background: rgba(0, 0, 0, 0.7);
+      background: #000;
       box-shadow: var(--glow);
       padding: 2rem;
       overflow: hidden;
@@ -137,7 +153,7 @@
     .current-temp-section {
       border: 2px solid var(--accent);
       border-radius: 10px;
-      background: rgba(0, 255, 0, 0.05);
+      background: #000;
       box-shadow: var(--glow);
       display: flex;
       flex-direction: column;
@@ -169,7 +185,7 @@
     .weather-cube {
       border: 2px solid var(--accent);
       border-radius: 10px;
-      background: rgba(0, 255, 0, 0.05);
+      background: #000;
       box-shadow: var(--glow);
       display: flex;
       flex-direction: column;
@@ -183,7 +199,7 @@
     .condition-section {
       border: 2px solid var(--accent);
       border-radius: 10px;
-      background: rgba(0, 255, 0, 0.05);
+      background: #000;
       box-shadow: var(--glow);
       display: flex;
       flex-direction: column;
@@ -279,6 +295,9 @@
   </style>
 </head>
 <body>
+  <!-- Matrix Canvas - Behind Everything -->
+  <canvas id="matrix"></canvas>
+  
   <h1 class="title">SEAMLESS WIDGETS</h1>
 
   <div class="main-container">
@@ -345,6 +364,53 @@
   </div>
 
   <script>
+    // Matrix Digital Rain Background
+    const matrixCanvas = document.getElementById('matrix');
+    const matrixCtx = matrixCanvas.getContext('2d');
+    let matrixInterval = null;
+    
+    function initMatrix() {
+      matrixCanvas.width = window.innerWidth;
+      matrixCanvas.height = window.innerHeight;
+    }
+    
+    const alphabet = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const fontSize = 16;
+    let columns;
+    let rainDrops;
+    
+    const drawMatrix = () => {
+      matrixCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      matrixCtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+      matrixCtx.fillStyle = '#0F0';
+      matrixCtx.font = fontSize + 'px monospace';
+      rainDrops.forEach((y, i) => {
+        const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+        matrixCtx.fillText(text, i * fontSize, y * fontSize);
+        if (y * fontSize > matrixCanvas.height && Math.random() > 0.975) rainDrops[i] = 0;
+        rainDrops[i]++;
+      });
+    };
+    
+    function startMatrix() {
+      if (!matrixInterval) {
+        // Initialize rain drops array
+        initMatrix();
+        columns = Math.floor(matrixCanvas.width / fontSize);
+        rainDrops = Array(columns).fill(1);
+        // Start the animation loop
+        matrixInterval = setInterval(drawMatrix, 30);
+      }
+    }
+    
+    window.addEventListener('resize', () => {
+      if (matrixInterval) {
+        initMatrix();
+        columns = Math.floor(matrixCanvas.width / fontSize);
+        rainDrops = Array(columns).fill(1);
+      }
+    });
+
     // Clock emoji lookup table - 24 emojis for each hour and half hour
     const clockEmojis = {
       "0.0": "🕛", "0.30": "🕧",
@@ -543,7 +609,7 @@
       return weatherCodes[code] || 'Unknown';
     }
 
-    // Initialize - Load data first, then fade in
+    // Initialize - Load data, then start Matrix and fade in together
     window.onload = async () => {
       // Update time, date, and title emoji immediately (local data)
       updateTime();
@@ -553,12 +619,13 @@
       // Wait for weather data to load
       await fetchWeather();
       
-      // Now fade in everything
+      // Start Matrix rain AND fade in at the same time
+      startMatrix();
       document.body.classList.add('fade-in');
       
       // Start intervals after fade
       setInterval(updateTime, 1000);
-      setInterval(updateTitleEmoji, 1000); // Update title emoji every second
+      setInterval(updateTitleEmoji, 1000);
       setInterval(fetchWeather, 30 * 60 * 1000);
     };
   </script>
