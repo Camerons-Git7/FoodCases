@@ -386,10 +386,23 @@
       fadeAudioVolume(currentAudio, 0, duration, callback);
     }
     
+    // Matrix Canvas Setup - Animation starts with fade-in
     const canvas = document.getElementById('matrixCanvas'), ctx = canvas.getContext('2d');
+    let matrixInterval = null;
+    
     function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     resizeCanvas(); window.addEventListener('resize', resizeCanvas);
-    const katakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ', latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', nums = '0123456789', alphabet = katakana + latin + nums, fontSize = 16, columns = Math.floor(canvas.width / fontSize), rainDrops = new Array(columns).fill(1);
+    
+    const katakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ', latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', nums = '0123456789', alphabet = katakana + latin + nums;
+    const fontSize = 16;
+    let columns, rainDrops;
+    
+    function initMatrix() {
+      resizeCanvas();
+      columns = Math.floor(canvas.width / fontSize);
+      rainDrops = new Array(columns).fill(1);
+    }
+    
     function draw() {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#0F0'; ctx.font = fontSize + 'px monospace';
@@ -399,7 +412,19 @@
         rainDrops[i]++;
       }
     }
-    setInterval(draw, 30);
+    
+    function startMatrix() {
+      if (!matrixInterval) {
+        initMatrix();
+        matrixInterval = setInterval(draw, 30);
+      }
+    }
+    
+    window.addEventListener('resize', () => {
+      if (matrixInterval) {
+        initMatrix();
+      }
+    });
     
     function fitTextToButton() {
       const buttons = document.querySelectorAll('.game-button');
@@ -444,10 +469,13 @@
       });
     });
     
+    // Initialize - Start Matrix and fade in together
     window.onload = () => {
       updateMuteButton();
-      document.body.classList.add('fade-in');
       fitTextToButton();
+      // Start Matrix rain AND fade in at the same time
+      startMatrix();
+      document.body.classList.add('fade-in');
     };
     
     window.addEventListener('resize', fitTextToButton);
