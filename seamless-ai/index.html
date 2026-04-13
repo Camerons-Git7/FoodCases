@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🔗 Seamless AI 🔗</title>
+  <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" />
+  <link rel="apple-touch-icon" href="https://i.ibb.co/M5QfsnBW/Playground-Image1.jpg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Seamless AI" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet" />
+  
+  <!-- Puter.js - Free AI API with NO API KEY required -->
+  <script src="https://js.puter.com/v2/"></script>
+  
+  <style>
+    :root {
+      --accent: #0f0;
+      --bg: #000;
+      --surface: #050505;
+      --text-primary: #fff;
+      --text-secondary: #888;
+      --border-radius: 10px;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      font-family: 'Nunito', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+      overflow-x: hidden;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+    
+    body.fade-in { opacity: 1; }
+    body.fade-out { opacity: 0; }
+    
+    #matrixCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.6;
+    }
+    
+    .title {
+      font-size: 4rem;
+      font-weight: 900;
+      color: var(--accent);
+      text-align: center;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+      animation: textPulse 2s infinite alternate;
+      user-select: none;
+    }
+    
+    .subtitle {
+      font-size: 1rem;
+      color: var(--accent);
+      opacity: 0.8;
+      margin-bottom: 2rem;
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+    }
+    
+    @keyframes textPulse {
+      from { text-shadow: 0 0 10px var(--accent); }
+      to { text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0; }
+    }
+    
+    .chat-container {
+      width: 100%;
+      max-width: 800px;
+      height: 60vh;
+      min-height: 400px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid var(--accent);
+      border-radius: var(--border-radius);
+      box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      scroll-behavior: smooth;
+    }
+    
+    .chat-messages::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-track {
+      background: rgba(0, 255, 0, 0.1);
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: var(--accent);
+      border-radius: 4px;
+    }
+    
+    .message {
+      max-width: 85%;
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      animation: messageSlide 0.3s ease;
+      word-wrap: break-word;
+    }
+    
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .message.user {
+      align-self: flex-end;
+      background: rgba(0, 255, 0, 0.15);
+      border: 1px solid var(--accent);
+      color: var(--text-primary);
+      text-align: right;
+    }
+    
+    .message.ai {
+      align-self: flex-start;
+      background: rgba(0, 50, 0, 0.6);
+      border: 1px solid rgba(0, 255, 0, 0.5);
+      color: var(--text-primary);
+    }
+    
+    .message.loading {
+      align-self: flex-start;
+      background: transparent;
+      border: none;
+      color: var(--accent);
+      font-family: 'Courier New', monospace;
+    }
+    
+    .typing-indicator {
+      display: flex;
+      gap: 0.3rem;
+      align-items: center;
+    }
+    
+    .typing-indicator span {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: typingBounce 1.4s infinite ease-in-out both;
+      box-shadow: 0 0 10px var(--accent);
+    }
+    
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    
+    @keyframes typingBounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+    
+    .input-container {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem;
+      border-top: 1px solid rgba(0, 255, 0, 0.3);
+      background: rgba(0, 0, 0, 0.9);
+    }
+    
+    .chat-input {
+      flex: 1;
+      background: rgba(0, 20, 0, 0.8);
+      border: 2px solid var(--accent);
+      border-radius: var(--border-radius);
+      padding: 0.8rem 1rem;
+      color: var(--accent);
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    
+    .chat-input::placeholder {
+      color: rgba(0, 255, 0, 0.5);
+    }
+    
+    .chat-input:focus {
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+      background: rgba(0, 30, 0, 0.9);
+    }
+    
+    .send-button {
+      background: rgba(0, 50, 0, 0.8);
+      border: 2px solid var(--accent);
+      border-radius: var(--border-radius);
+      color: var(--accent);
+      padding: 0.8rem 1.5rem;
+      cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 100px;
+    }
+    
+    .send-button:hover:not(:disabled) {
+      background: var(--accent);
+      color: var(--bg);
+      box-shadow: 0 0 25px var(--accent);
+      transform: translateY(-2px);
+    }
+    
+    .send-button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    
+    .send-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .model-selector {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid var(--accent);
+      border-radius: var(--border-radius);
+      padding: 0.5rem;
+      color: var(--accent);
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      cursor: pointer;
+      outline: none;
+      z-index: 10;
+    }
+    
+    .model-selector:hover {
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+    }
+    
+    .model-selector option {
+      background: var(--bg);
+      color: var(--accent);
+    }
+    
+    .bottom-note {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 0.9rem;
+      color: var(--accent);
+      text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+      animation: textPulse 2s infinite alternate;
+      user-select: none;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 10;
+    }
+    
+    .mute-button {
+      position: fixed;
+      bottom: 1rem;
+      left: 1rem;
+      font-size: 1.5rem;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      color: var(--accent);
+      cursor: pointer;
+      padding: 0.5rem 0.8rem;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+      transition: all 0.3s ease;
+      user-select: none;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 50px;
+      min-height: 50px;
+    }
+    
+    .mute-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 25px var(--accent);
+      background: rgba(0, 50, 0, 0.9);
+    }
+    
+    .mute-button:active { transform: scale(0.95); }
+    
+    .api-status {
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      color: var(--accent);
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--accent);
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      z-index: 10;
+    }
+    
+    .api-status.connected {
+      border-color: #0f0;
+      color: #0f0;
+      text-shadow: 0 0 5px #0f0;
+    }
+    
+    .api-status.error {
+      border-color: #f00;
+      color: #f00;
+      text-shadow: 0 0 5px #f00;
+    }
+    
+    @media (max-width: 600px) {
+      .title { font-size: 2.5rem; }
+      .chat-container { height: 70vh; min-height: 300px; }
+      .message { max-width: 95%; font-size: 0.9rem; }
+      .model-selector { position: relative; top: auto; right: auto; margin-bottom: 1rem; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="matrixCanvas"></canvas>
+  
+  <div class="api-status connected" id="apiStatus">● PUTER.JS CONNECTED</div>
+  
+  <h1 class="title">SEAMLESS AI</h1>
+  <div class="subtitle">Neural Interface // v2.0.26</div>
+  
+  <div class="chat-container">
+    <select class="model-selector" id="modelSelector">
+      <option value="gpt-4.1-nano">GPT-4.1 Nano (Fast)</option>
+      <option value="claude-sonnet-4">Claude Sonnet 4</option>
+      <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+      <option value="deepseek-chat">DeepSeek Chat</option>
+      <option value="meta-llama/llama-4-scout">Llama 4 Scout</option>
+    </select>
+    
+    <div class="chat-messages" id="chatMessages">
+      <div class="message ai">
+        <strong>SYSTEM:</strong> Neural link established. Welcome to Seamless AI. How may I assist you today?
+      </div>
+    </div>
+    
+    <div class="input-container">
+      <input 
+        type="text" 
+        class="chat-input" 
+        id="chatInput" 
+        placeholder="Enter command..." 
+        autocomplete="off"
+      />
+      <button class="send-button" id="sendButton">SEND</button>
+    </div>
+  </div>
+  
+  <div class="bottom-note">ⓘ Puter.js Enabled — No API Key Required ⓘ</div>
+  <button class="mute-button" id="muteBtn">🔈</button>
+
+  <audio id="ambient-audio" loop style="display: none;">
+    <source src="https://www.dropbox.com/scl/fi/z5e5u9p83wvp9sh41rdrs/onlymp3.io-Hide-CS01-Ambient-Rework-AMA-Drum-Bass-RMX-320-1776035788770.mp3?rlkey=owt699kjq6qxbuklbd0xtp03x&st=hh5cfej4&dl=1" type="audio/mpeg">
+  </audio>
+
+  <script>
+    // ============================================
+    // PUTER.JS CONFIGURATION (NO API KEY NEEDED!)
+    // ============================================
+    // Puter.js provides free AI access with no backend required.
+    // Simply include the script tag and start making AI calls.
+    // 
+    // ALTERNATIVE: If you want to use your own API key, 
+    // uncomment the OPENROUTER or GROQ sections below:
+    
+    /* 
+    // --- OPENROUTER CONFIG (Bring your own API key) ---
+    const OPENROUTER_API_KEY = 'your-key-here'; // Replace with your key
+    const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+    
+    async function sendToOpenRouter(message, model) {
+      const response = await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.href,
+          'X-Title': 'Seamless AI'
+        },
+        body: JSON.stringify({
+          model: model, // e.g., "openai/gpt-4o-mini"
+          messages: [{ role: 'user', content: message }]
+        })
+      });
+      const data = await response.json();
+      return data.choices[0].message.content;
+    }
+    */
+    
+    /*
+    // --- GROQ CONFIG (Bring your own API key) ---
+    const GROQ_API_KEY = 'your-key-here'; // Replace with your key
+    const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+    
+    async function sendToGroq(message, model) {
+      const response = await fetch(GROQ_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: model, // e.g., "llama-3.3-70b-versatile"
+          messages: [{ role: 'user', content: message }]
+        })
+      });
+      const data = await response.json();
+      return data.choices[0].message.content;
+    }
+    */
+    
+    // ============================================
+    // CHAT INTERFACE LOGIC
+    // ============================================
+    
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const sendButton = document.getElementById('sendButton');
+    const modelSelector = document.getElementById('modelSelector');
+    const apiStatus = document.getElementById('apiStatus');
+    
+    let isProcessing = false;
+    let conversationHistory = [];
+    
+    function addMessage(text, sender) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${sender}`;
+      
+      if (sender === 'ai') {
+        // Format AI responses with code blocks
+        let formattedText = text
+          .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre style="background:rgba(0,0,0,0.8);border:1px solid #0f0;padding:10px;border-radius:5px;overflow-x:auto;"><code style="color:#0f0;font-family:Courier New;">$2</code></pre>')
+          .replace(/`([^`]+)`/g, '<code style="background:rgba(0,255,0,0.2);padding:2px 5px;border-radius:3px;color:#0f0;">$1</code>')
+          .replace(/\n/g, '<br>');
+        messageDiv.innerHTML = formattedText;
+      } else {
+        messageDiv.textContent = text;
+      }
+      
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return messageDiv;
+    }
+    
+    function showLoading() {
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'message loading';
+      loadingDiv.id = 'loadingIndicator';
+      loadingDiv.innerHTML = `
+        <div class="typing-indicator">
+          <span></span><span></span><span></span>
+        </div>
+        <div style="margin-top:0.5rem;font-size:0.8rem;">Processing neural request...</div>
+      `;
+      chatMessages.appendChild(loadingDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    function hideLoading() {
+      const loading = document.getElementById('loadingIndicator');
+      if (loading) loading.remove();
+    }
+    
+    async function sendMessage() {
+      if (isProcessing) return;
+      
+      const message = chatInput.value.trim();
+      if (!message) return;
+      
+      // Add user message
+      addMessage(message, 'user');
+      chatInput.value = '';
+      isProcessing = true;
+      sendButton.disabled = true;
+      
+      // Show loading
+      showLoading();
+      
+      try {
+        const selectedModel = modelSelector.value;
+        let response;
+        
+        // ============================================
+        // PUTER.JS AI CALL (NO API KEY REQUIRED!)
+        // ============================================
+        // This works immediately with no configuration.
+        // Puter handles the API keys and rate limits server-side.
+        
+        const puterResponse = await puter.ai.chat(message, {
+          model: selectedModel
+        });
+        
+        // Handle different response formats from different models
+        if (typeof puterResponse === 'string') {
+          response = puterResponse;
+        } else if (puterResponse.message && puterResponse.message.content) {
+          // Claude format
+          response = puterResponse.message.content[0].text;
+        } else if (puterResponse.choices && puterResponse.choices[0]) {
+          // OpenAI-like format
+          response = puterResponse.choices[0].message.content;
+        } else {
+          response = JSON.stringify(puterResponse, null, 2);
+        }
+        
+        /* 
+        // Uncomment to use OpenRouter instead:
+        response = await sendToOpenRouter(message, 'openai/gpt-4o-mini');
+        
+        // Or use Groq:
+        response = await sendToGroq(message, 'llama-3.3-70b-versatile');
+        */
+        
+        hideLoading();
+        addMessage(response, 'ai');
+        
+        // Update conversation history for context (optional future enhancement)
+        conversationHistory.push({ role: 'user', content: message });
+        conversationHistory.push({ role: 'assistant', content: response });
+        
+      } catch (error) {
+        hideLoading();
+        console.error('AI Error:', error);
+        addMessage(`⚠️ ERROR: Neural link disrupted. ${error.message || 'Please try again.'}`, 'ai');
+        apiStatus.textContent = '● CONNECTION ERROR';
+        apiStatus.className = 'api-status error';
+      } finally {
+        isProcessing = false;
+        sendButton.disabled = false;
+        chatInput.focus();
+      }
+    }
+    
+    // Event listeners
+    sendButton.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+    
+    // ============================================
+    // MATRIX BACKGROUND ANIMATION
+    // ============================================
+    
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    let matrixInterval = null;
+    
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    const katakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const nums = '0123456789';
+    const alphabet = katakana + latin + nums;
+    const fontSize = 16;
+    let columns, rainDrops;
+    
+    function initMatrix() {
+      resizeCanvas();
+      columns = Math.floor(canvas.width / fontSize);
+      rainDrops = new Array(columns).fill(1);
+    }
+    
+    function draw() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0F0';
+      ctx.font = fontSize + 'px monospace';
+      
+      for (let i = 0; i < rainDrops.length; i++) {
+        const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+        ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+        
+        if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          rainDrops[i] = 0;
+        }
+        rainDrops[i]++;
+      }
+    }
+    
+    function startMatrix() {
+      if (!matrixInterval) {
+        initMatrix();
+        matrixInterval = setInterval(draw, 30);
+      }
+    }
+    
+    // ============================================
+    // AUDIO SYSTEM
+    // ============================================
+    
+    let isMuted = true;
+    let hasStartedPlaying = false;
+    const ambientAudio = document.getElementById('ambient-audio');
+    const muteBtn = document.getElementById('muteBtn');
+    
+    function updateMuteButton() {
+      muteBtn.textContent = isMuted ? '🔈' : '🔊';
+    }
+    
+    function fadeAudio(targetVolume, duration) {
+      const startVolume = ambientAudio.volume;
+      const steps = 30;
+      const stepDuration = duration / steps;
+      const volumeDiff = targetVolume - startVolume;
+      let currentStep = 0;
+      
+      const fadeInterval = setInterval(() => {
+        currentStep++;
+        const easeProgress = 1 - Math.pow(1 - (currentStep / steps), 2);
+        ambientAudio.volume = Math.max(0, Math.min(1, startVolume + (volumeDiff * easeProgress)));
+        
+        if (currentStep >= steps) {
+          clearInterval(fadeInterval);
+          if (targetVolume === 0) ambientAudio.pause();
+        }
+      }, stepDuration);
+    }
+    
+    function toggleMute() {
+      isMuted = !isMuted;
+      updateMuteButton();
+      
+      if (isMuted) {
+        fadeAudio(0, 500);
+      } else {
+        if (!hasStartedPlaying) {
+          ambientAudio.play().catch(e => console.log('Audio play failed:', e));
+          hasStartedPlaying = true;
+        }
+        fadeAudio(1, 500);
+      }
+    }
+    
+    muteBtn.addEventListener('click', toggleMute);
+    
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    
+    window.onload = () => {
+      updateMuteButton();
+      startMatrix();
+      document.body.classList.add('fade-in');
+      chatInput.focus();
+      
+      // Check Puter.js availability
+      if (typeof puter === 'undefined') {
+        apiStatus.textContent = '● PUTER.JS UNAVAILABLE';
+        apiStatus.className = 'api-status error';
+        addMessage('⚠️ WARNING: Puter.js failed to load. Please check your internet connection.', 'ai');
+      }
+    };
+    
+    window.addEventListener('pageshow', () => {
+      document.body.classList.remove('fade-out', 'fade-in');
+      void document.body.offsetWidth;
+      document.body.classList.add('fade-in');
+      
+      if (!isMuted && hasStartedPlaying) {
+        ambientAudio.volume = 1;
+      }
+    });
+  </script>
+</body>
+</html>
