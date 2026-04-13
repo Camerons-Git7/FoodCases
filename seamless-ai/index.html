@@ -15,6 +15,10 @@
       --surface: #050505;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      width: 100%;
+    }
     body {
       min-height: 100vh;
       background: var(--bg);
@@ -22,8 +26,9 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 2rem;
-      overflow-x: hidden;
+      justify-content: center;
+      padding: 1rem;
+      overflow: hidden;
       color: #fff;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
@@ -41,12 +46,12 @@
       opacity: 0.6;
     }
     .title {
-      font-size: 3.5rem;
+      font-size: 2.5rem;
       font-weight: 900;
       color: var(--accent);
       text-align: center;
       letter-spacing: 0.05em;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
       text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
       animation: textPulse 3s infinite alternate;
       user-select: none;
@@ -63,8 +68,9 @@
       to { text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0, 0 0 40px #0f0; }
     }
     .chat-container {
-      width: 100%;
-      max-width: 800px;
+      width: 95vw;
+      height: 85vh;
+      max-width: 1200px;
       background: rgba(0, 0, 0, 0.8);
       border: 2px solid var(--accent);
       border-radius: 10px;
@@ -81,19 +87,19 @@
       transform: translateY(0) scale(1);
     }
     .chat-messages {
-      height: 400px;
+      flex: 1;
       overflow-y: auto;
-      padding: 1rem;
+      padding: 1.5rem;
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 1rem;
     }
     .message {
-      max-width: 80%;
-      padding: 0.75rem 1rem;
+      max-width: 85%;
+      padding: 1rem 1.25rem;
       border-radius: 8px;
-      font-size: 0.95rem;
-      line-height: 1.5;
+      font-size: 1rem;
+      line-height: 1.6;
       word-wrap: break-word;
       opacity: 0;
       transform: translateY(10px);
@@ -138,7 +144,7 @@
     }
     .input-area {
       display: flex;
-      padding: 1rem;
+      padding: 1.25rem;
       border-top: 2px solid var(--accent);
       background: rgba(0, 0, 0, 0.9);
       gap: 0.75rem;
@@ -148,10 +154,10 @@
       background: rgba(0, 20, 0, 0.8);
       border: 2px solid var(--accent);
       border-radius: 8px;
-      padding: 0.75rem 1rem;
+      padding: 1rem 1.25rem;
       color: var(--accent);
       font-family: 'Nunito', sans-serif;
-      font-size: 1rem;
+      font-size: 1.1rem;
       outline: none;
       transition: all 0.4s ease;
     }
@@ -173,10 +179,10 @@
       border: 2px solid var(--accent);
       border-radius: 8px;
       color: var(--accent);
-      padding: 0.75rem 1.5rem;
+      padding: 1rem 2rem;
       font-family: 'Nunito', sans-serif;
       font-weight: 700;
-      font-size: 1rem;
+      font-size: 1.1rem;
       cursor: pointer;
       transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       text-transform: uppercase;
@@ -219,10 +225,11 @@
       background: rgba(0, 10, 0, 0.95);
       border: 1px solid var(--accent);
       border-radius: 6px;
-      margin: 0.75rem 0;
+      margin: 1rem 0;
       overflow: hidden;
       box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
       animation: codeAppear 0.6s ease;
+      position: relative;
     }
     @keyframes codeAppear {
       from {
@@ -236,22 +243,53 @@
     }
     .code-header {
       background: rgba(0, 50, 0, 0.8);
-      padding: 0.4rem 0.75rem;
-      font-size: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
       color: var(--accent);
       text-transform: uppercase;
       letter-spacing: 0.1em;
       border-bottom: 1px solid var(--accent);
       display: flex;
       align-items: center;
+      justify-content: space-between;
+    }
+    .code-header-left {
+      display: flex;
+      align-items: center;
       gap: 0.5rem;
     }
-    .code-header::before {
+    .code-header-left::before {
       content: '▸';
       font-size: 0.6rem;
     }
+    .copy-btn {
+      background: rgba(0, 255, 0, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      color: var(--accent);
+      cursor: pointer;
+      padding: 0.35rem 0.5rem;
+      font-size: 1rem;
+      line-height: 1;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .copy-btn:hover {
+      background: rgba(0, 255, 0, 0.3);
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      transform: scale(1.1);
+    }
+    .copy-btn:active {
+      transform: scale(0.95);
+    }
+    .copy-btn.copied {
+      background: rgba(0, 255, 0, 0.5);
+      box-shadow: 0 0 15px var(--accent);
+    }
     .code-content {
-      padding: 0.75rem;
+      padding: 1rem;
       overflow-x: auto;
     }
     .code-content pre {
@@ -259,7 +297,7 @@
       white-space: pre-wrap;
       word-wrap: break-word;
       font-family: 'Courier New', Courier, monospace;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       color: #0f0;
       line-height: 1.6;
     }
@@ -269,7 +307,7 @@
       padding: 0;
     }
     p {
-      margin: 0.5rem 0;
+      margin: 0.75rem 0;
     }
     p:first-child {
       margin-top: 0;
@@ -278,15 +316,15 @@
       margin-bottom: 0;
     }
     ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
     }
     ::-webkit-scrollbar-track {
       background: rgba(0, 20, 0, 0.5);
     }
     ::-webkit-scrollbar-thumb {
       background: var(--accent);
-      border-radius: 4px;
+      border-radius: 5px;
       transition: all 0.3s ease;
     }
     ::-webkit-scrollbar-thumb:hover {
@@ -312,6 +350,13 @@
       0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
       40% { transform: scale(1); opacity: 1; }
     }
+    @media (max-width: 768px) {
+      .title { font-size: 1.8rem; }
+      .chat-container { width: 98vw; height: 90vh; }
+      .message { max-width: 95%; font-size: 0.9rem; }
+      .chat-input { font-size: 1rem; padding: 0.75rem 1rem; }
+      .send-btn { padding: 0.75rem 1.5rem; font-size: 1rem; }
+    }
   </style>
 </head>
 <body>
@@ -319,7 +364,7 @@
   <h1 class="title">SEAMLESS AI</h1>
   <div class="chat-container">
     <div class="chat-messages" id="chatMessages">
-      <div class="message ai">Welcome to Seamless AI. How can I assist you today?</div>
+      <div class="message ai">Welcome to Seamless AI. I'm here to help you with coding and any questions you have. What would you like to work on?</div>
     </div>
     <div class="input-area">
       <input type="text" class="chat-input" id="chatInput" placeholder="Enter your message..." autocomplete="off" />
@@ -335,7 +380,19 @@
     let conversationHistory = [
       {
         role: 'system',
-        content: 'You are Seamless AI, a helpful coding assistant. When providing code, always wrap it in triple backticks with the language identifier (e.g., ```html, ```css, ```javascript, ```python). Be concise and helpful. Remember the context of our conversation.'
+        content: `You are Seamless AI, an intelligent and helpful coding assistant. Follow these principles:
+
+1. IMPLICIT UNDERSTANDING: Don't just do exactly what the user says - understand their intent. If they mention a problem, diagnose root causes. If they ask for a feature, consider related improvements they might need. Think one step ahead.
+
+2. COMPLETE RESPONSES: Always provide full, complete answers. Never cut off mid-sentence or mid-code. If a response is long, structure it well with clear sections.
+
+3. PROACTIVE SUGGESTIONS: Offer best practices, potential pitfalls, and optimization tips even when not explicitly asked. Share relevant insights that add value.
+
+4. CODE QUALITY: Write clean, well-commented, production-ready code. Use proper error handling and follow language conventions. If you are asked to edit code, rewrite all of the code with the edits unless asked otherwise.
+
+5. CONTEXT AWARENESS: Remember what was discussed and build upon it. Reference previous messages when relevant.
+
+6. FORMATTING: Use markdown code blocks with language identifiers (e.g., \`\`\`html, \`\`\`css, \`\`\`javascript, \`\`\`python). Explain complex code sections.`
       }
     ];
 
@@ -400,15 +457,32 @@
       return div.innerHTML;
     }
 
+    function generateId() {
+      return 'code-' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function copyToClipboard(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const original = btn.innerHTML;
+        btn.innerHTML = '✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerHTML = original;
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+      });
+    }
+
     function formatMessage(text) {
-      // Handle code blocks with language identifiers
       const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
       let lastIndex = 0;
       let result = '';
       let match;
+      let codeIdCounter = 0;
       
       while ((match = codeBlockRegex.exec(text)) !== null) {
-        // Add text before code block as paragraphs
         const beforeText = text.substring(lastIndex, match.index).trim();
         if (beforeText) {
           const paragraphs = beforeText.split('\n\n').filter(p => p.trim());
@@ -417,12 +491,16 @@
           });
         }
         
-        // Add code block with language header
         const language = match[1] || 'code';
-        const code = match[2].trim();
+        const code = match[2];
+        const codeId = 'code-block-' + Date.now() + '-' + codeIdCounter++;
+        
         result += `
-          <div class="code-block">
-            <div class="code-header">${escapeHtml(language)}</div>
+          <div class="code-block" id="${codeId}">
+            <div class="code-header">
+              <div class="code-header-left">${escapeHtml(language)}</div>
+              <button class="copy-btn" onclick="window.copyCode('${codeId}')" title="Copy code">📋</button>
+            </div>
             <div class="code-content">
               <pre><code>${escapeHtml(code)}</code></pre>
             </div>
@@ -432,7 +510,6 @@
         lastIndex = match.index + match[0].length;
       }
       
-      // Add remaining text as paragraphs
       const remainingText = text.substring(lastIndex).trim();
       if (remainingText) {
         const paragraphs = remainingText.split('\n\n').filter(p => p.trim());
@@ -443,6 +520,24 @@
       
       return result || `<p>${escapeHtml(text)}</p>`;
     }
+
+    window.copyCode = function(codeId) {
+      const codeBlock = document.getElementById(codeId);
+      const code = codeBlock.querySelector('code').textContent;
+      const btn = codeBlock.querySelector('.copy-btn');
+      
+      navigator.clipboard.writeText(code).then(() => {
+        const original = btn.innerHTML;
+        btn.innerHTML = '✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerHTML = original;
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+      });
+    };
 
     function addMessage(text, type) {
       const messageDiv = document.createElement('div');
@@ -458,7 +553,6 @@
       
       chatMessages.appendChild(messageDiv);
       
-      // Smooth scroll to bottom
       chatMessages.scrollTo({
         top: chatMessages.scrollHeight,
         behavior: 'smooth'
@@ -478,7 +572,6 @@
       const message = chatInput.value.trim();
       if (!message) return;
 
-      // Add user message to UI and history
       addMessage(message, 'user');
       conversationHistory.push({ role: 'user', content: message });
       
@@ -502,7 +595,8 @@
             model: 'llama-3.3-70b-versatile',
             messages: conversationHistory,
             temperature: 0.7,
-            max_tokens: 2048
+            max_tokens: 4096,
+            top_p: 0.9
           })
         });
 
@@ -516,14 +610,12 @@
         const data = await response.json();
         const aiResponse = data.choices[0].message.content;
         
-        // Add AI response to history
         conversationHistory.push({ role: 'assistant', content: aiResponse });
         
-        // Keep history manageable (last 20 messages + system)
-        if (conversationHistory.length > 22) {
+        if (conversationHistory.length > 40) {
           conversationHistory = [
             conversationHistory[0],
-            ...conversationHistory.slice(-20)
+            ...conversationHistory.slice(-38)
           ];
         }
         
@@ -545,7 +637,6 @@
       if (e.key === 'Enter') sendMessage();
     });
 
-    // Initialize with fade in
     window.onload = () => {
       startMatrix();
       document.body.classList.add('fade-in');
