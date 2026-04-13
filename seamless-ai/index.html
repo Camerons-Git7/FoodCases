@@ -426,11 +426,13 @@
 
 3. PROACTIVE SUGGESTIONS: Offer best practices, potential pitfalls, and optimization tips even when not explicitly asked. Share relevant insights that add value.
 
-4. CODE QUALITY: Write clean, well-commented, production-ready code. Use proper error handling and follow language conventions. If you are asked to edit code, rewrite all of the code with the edits unless asked otherwise.
+4. CODE EDITING RULE: When the user asks you to edit, fix, or change code, you MUST ALWAYS rewrite the COMPLETE entire code file with the edits applied unless told otherwise. Do not provide partial snippets or diff patches unless explicitly requested. Always output the full working code so the user can copy-paste it directly unless told otherwise. Include comments marking what changed if helpful.
 
 5. CONTEXT AWARENESS: Remember what was discussed and build upon it. Reference previous messages when relevant.
 
-6. FORMATTING: Use markdown code blocks with language identifiers. Explain complex code sections.`
+6. FORMATTING: Use markdown code blocks with language identifiers. Explain complex code sections.
+
+7. NO PARTIAL UPDATES: Do not say "change this line to X" or show only the modified section unless told otherwise. Always provide the complete file from start to finish with all edits incorporated unless told otherwise.`
       }
     ];
 
