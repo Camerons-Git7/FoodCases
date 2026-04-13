@@ -3,12 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🔗 Seamless Games 🔗</title>
+  <title>🔗 Seamless AI 🔗</title>
   <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" />
-  <link rel="apple-touch-icon" href="https://i.ibb.co/M5QfsnBW/Playground-Image1.jpg" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Seamless Games" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet" />
@@ -17,15 +13,12 @@
       --accent: #0f0;
       --bg: #000;
       --surface: #050505;
-      --button-size: 117.5px;
-      --emoji-size: calc(var(--button-size) * 0.48);
-      --text-size: calc(var(--button-size) * 0.18);
-      --padding-top: calc(var(--button-size) * 0.114);
-      --padding-sides: calc(var(--button-size) * 0.057);
-      --padding-bottom: calc(var(--button-size) * 0.04);
-      --name-margin: calc(var(--button-size) * 0.015);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      width: 100%;
+    }
     body {
       min-height: 100vh;
       background: var(--bg);
@@ -33,16 +26,16 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding-top: 3rem;
-      overflow-x: hidden;
+      justify-content: center;
+      padding: 1rem;
+      overflow: hidden;
       color: #fff;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       opacity: 0;
-      transition: opacity 1s ease;
+      transition: opacity 1.2s ease;
     }
     body.fade-in { opacity: 1; }
-    body.fade-out { opacity: 0; }
     #matrixCanvas {
       position: fixed;
       top: 0;
@@ -53,453 +46,602 @@
       opacity: 0.6;
     }
     .title {
-      font-size: 4rem;
+      font-size: 2.5rem;
       font-weight: 900;
       color: var(--accent);
       text-align: center;
       letter-spacing: 0.05em;
-      margin-bottom: 2rem;
+      margin-bottom: 1rem;
       text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
-      animation: textPulse 2s infinite alternate;
+      animation: textPulse 3s infinite alternate;
       user-select: none;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: all 1s ease;
+    }
+    body.fade-in .title {
+      opacity: 1;
+      transform: translateY(0);
     }
     @keyframes textPulse {
       from { text-shadow: 0 0 10px var(--accent); }
-      to { text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0; }
+      to { text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0, 0 0 40px #0f0; }
     }
-    .button-container {
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
+    .chat-container {
       width: 95vw;
-      margin: 0 auto 4rem;
-      flex-wrap: wrap;
-    }
-    .game-button {
-      position: relative;
+      height: 85vh;
+      max-width: 1200px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      align-items: center;
-      width: var(--button-size);
-      height: var(--button-size);
-      padding: var(--padding-top) var(--padding-sides) var(--padding-bottom);
-      border: 2px solid var(--accent);
-      border-radius: 10px;
-      background: rgba(0, 0, 0, 0.7);
-      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+      transition: all 1s ease 0.3s;
+    }
+    body.fade-in .chat-container {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .message {
+      max-width: 85%;
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      line-height: 1.6;
+      word-wrap: break-word;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: messageAppear 0.5s ease forwards;
+    }
+    @keyframes messageAppear {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .message.user {
+      align-self: flex-end;
+      background: rgba(0, 255, 0, 0.15);
+      border: 1px solid var(--accent);
       color: var(--accent);
-      cursor: pointer;
-      font-family: 'Courier New', Courier, monospace;
+      animation-delay: 0.1s;
+    }
+    .message.ai {
+      align-self: flex-start;
+      background: rgba(0, 50, 0, 0.6);
+      border: 1px solid var(--accent);
+      color: #fff;
+    }
+    .message.loading {
+      align-self: flex-start;
+      background: rgba(0, 50, 0, 0.4);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-style: italic;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    .message.error {
+      align-self: center;
+      background: rgba(255, 0, 0, 0.2);
+      border: 1px solid #f00;
+      color: #f00;
+    }
+    .input-area {
+      display: flex;
+      padding: 1.25rem;
+      border-top: 2px solid var(--accent);
+      background: rgba(0, 0, 0, 0.9);
+      gap: 0.75rem;
+    }
+    .chat-input {
+      flex: 1;
+      background: rgba(0, 20, 0, 0.8);
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      color: var(--accent);
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.1rem;
+      outline: none;
+      transition: all 0.4s ease;
+    }
+    .chat-input::placeholder {
+      color: rgba(0, 255, 0, 0.5);
+      transition: all 0.3s ease;
+    }
+    .chat-input:focus {
+      box-shadow: 0 0 25px rgba(0, 255, 0, 0.6);
+      background: rgba(0, 30, 0, 0.9);
+      transform: scale(1.02);
+    }
+    .chat-input:focus::placeholder {
+      opacity: 0;
+      transform: translateX(10px);
+    }
+    .send-btn {
+      background: rgba(0, 50, 0, 0.8);
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      color: var(--accent);
+      padding: 1rem 2rem;
+      font-family: 'Nunito', sans-serif;
       font-weight: 700;
-      font-size: var(--text-size);
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      position: relative;
       overflow: hidden;
-      transition: all 0.3s ease;
-      user-select: none;
-      text-shadow: none;
     }
-    .game-button:hover {
-      transform: translateX(10px);
-      box-shadow: 0 0 40px var(--accent);
-      background: rgba(0, 50, 0, 0.9);
-    }
-    .game-button:active { transform: translateX(5px); }
-    .emoji {
-      font-size: var(--emoji-size);
-      color: var(--accent);
-      flex-grow: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
-      line-height: 1;
-      filter: drop-shadow(0 0 2px var(--accent));
-    }
-    .game-name {
-      font-size: var(--text-size);
-      text-align: center;
-      white-space: nowrap;
+    .send-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
       width: 100%;
-      user-select: none;
-      margin-top: var(--name-margin);
-      line-height: 1.1;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.3), transparent);
+      transition: left 0.5s ease;
+    }
+    .send-btn:hover::before {
+      left: 100%;
+    }
+    .send-btn:hover {
+      background: rgba(0, 100, 0, 0.9);
+      box-shadow: 0 0 30px var(--accent);
+      transform: translateY(-3px) scale(1.05);
+    }
+    .send-btn:active {
+      transform: translateY(-1px) scale(1.02);
+      transition: all 0.1s ease;
+    }
+    .send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .send-btn:disabled::before {
+      display: none;
+    }
+    .code-block {
+      background: rgba(0, 10, 0, 0.95);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      margin: 1rem 0;
       overflow: hidden;
-      text-overflow: ellipsis;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+      animation: codeAppear 0.6s ease;
+      position: relative;
     }
-    .bottom-note {
-      position: fixed;
-      bottom: 1rem;
-      left: 50%;
-      transform: translateX(-50%);
-      font-family: 'Nunito', sans-serif;
-      font-weight: 900;
-      font-size: 0.9rem;
-      color: var(--accent);
-      text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
-      animation: textPulse 2s infinite alternate;
-      user-select: none;
-      pointer-events: none;
-      white-space: nowrap;
-      z-index: 10;
+    @keyframes codeAppear {
+      from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
     }
-    .mute-button {
-      position: fixed;
-      bottom: 1rem;
-      left: 1rem;
-      font-size: 1.5rem;
-      background: rgba(0, 0, 0, 0.7);
-      border: 2px solid var(--accent);
-      border-radius: 10px;
+    .code-header {
+      background: rgba(0, 50, 0, 0.8);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
       color: var(--accent);
-      cursor: pointer;
-      padding: 0.5rem 0.8rem;
-      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
-      transition: all 0.3s ease;
-      user-select: none;
-      z-index: 10;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border-bottom: 1px solid var(--accent);
       display: flex;
       align-items: center;
-      justify-content: center;
-      min-width: 50px;
-      min-height: 50px;
+      justify-content: space-between;
     }
-    .mute-button:hover {
-      transform: scale(1.1);
-      box-shadow: 0 0 25px var(--accent);
-      background: rgba(0, 50, 0, 0.9);
+    .code-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-    .mute-button:active { transform: scale(0.95); }
-    .mute-button.fading { pointer-events: none; opacity: 0.7; }
-    .mute-button.holding {
-      animation: holdPulse 0.5s infinite alternate;
+    .code-header-left::before {
+      content: '▸';
+      font-size: 0.6rem;
     }
-    @keyframes holdPulse {
-      from { box-shadow: 0 0 15px rgba(0, 255, 0, 0.5); }
-      to { box-shadow: 0 0 35px var(--accent), 0 0 50px var(--accent); }
-    }
-    .request-button {
-      position: fixed;
-      bottom: 1rem;
-      right: 1rem;
-      font-family: 'Nunito', sans-serif;
-      font-weight: 700;
+    .copy-btn {
+      background: rgba(0, 255, 0, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      color: var(--accent);
+      cursor: pointer;
+      padding: 0.35rem 0.5rem;
       font-size: 1rem;
-      background: rgba(0, 0, 0, 0.7);
-      border: 2px solid var(--accent);
-      border-radius: 10px;
-      color: var(--accent);
-      cursor: pointer;
-      padding: 0.5rem 1rem;
-      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+      line-height: 1;
       transition: all 0.3s ease;
-      user-select: none;
-      z-index: 10;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-width: 80px;
-      min-height: 50px;
-      text-decoration: none;
     }
-    .request-button:hover {
+    .copy-btn:hover {
+      background: rgba(0, 255, 0, 0.3);
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
       transform: scale(1.1);
-      box-shadow: 0 0 25px var(--accent);
-      background: rgba(0, 50, 0, 0.9);
     }
-    .request-button:active { transform: scale(0.95); }
+    .copy-btn:active {
+      transform: scale(0.95);
+    }
+    .copy-btn.copied {
+      background: rgba(0, 255, 0, 0.5);
+      box-shadow: 0 0 15px var(--accent);
+    }
+    .code-content {
+      padding: 1rem;
+      overflow-x: auto;
+    }
+    .code-content pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.9rem;
+      color: #0f0;
+      line-height: 1.6;
+    }
+    .code-content code {
+      color: #0f0;
+      background: none;
+      padding: 0;
+    }
+    p {
+      margin: 0.75rem 0;
+    }
+    p:first-child {
+      margin-top: 0;
+    }
+    p:last-child {
+      margin-bottom: 0;
+    }
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 20, 0, 0.5);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--accent);
+      border-radius: 5px;
+      transition: all 0.3s ease;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #0c0;
+      box-shadow: 0 0 10px var(--accent);
+    }
+    .typing-indicator {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .typing-indicator span {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: typingBounce 1.4s infinite ease-in-out both;
+      box-shadow: 0 0 5px var(--accent);
+    }
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes typingBounce {
+      0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    @media (max-width: 768px) {
+      .title { font-size: 1.8rem; }
+      .chat-container { width: 98vw; height: 90vh; }
+      .message { max-width: 95%; font-size: 0.9rem; }
+      .chat-input { font-size: 1rem; padding: 0.75rem 1rem; }
+      .send-btn { padding: 0.75rem 1.5rem; font-size: 1rem; }
+    }
   </style>
 </head>
 <body>
   <canvas id="matrixCanvas"></canvas>
-  <h1 class="title">SEAMLESS GAMES</h1>
-  <div class="button-container" role="group" aria-label="Seamless Games menu">
-    <button class="game-button" data-url="https://menist.free.nf/case-opener/" aria-label="FoodCases"><div class="emoji">🍔</div><div class="game-name">Food-Cases</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/black-jack/" aria-label="Blackjack"><div class="emoji">🃏</div><div class="game-name">Black-Jack</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/word-bomb/" aria-label="WordBomb"><div class="emoji">💣</div><div class="game-name">Word-Bomb</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/flappy-bird/" aria-label="FlappyBird"><div class="emoji">🐦</div><div class="game-name">Flappy-Bird</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/droppy-merge/" aria-label="DroppyMerge"><div class="emoji">🧱</div><div class="game-name">Droppy-Merge</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/1v1.lol/" aria-label="1v1.lol"><div class="emoji">🥇</div><div class="game-name">1v1.lol</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/geometrydash/" aria-label="Geometry Dash"><div class="emoji">🔳</div><div class="game-name">Geo Dash</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/minecraft/" aria-label="Minecraft"><div class="emoji">⚒️</div><div class="game-name">Minecraft</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/youtube/" aria-label="YouTube"><div class="emoji">▶︎</div><div class="game-name">YouTube</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/basketball/" aria-label="Basketball"><div class="emoji">🌟</div><div class="game-name">Basketball</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/subway-surfers/" aria-label="Subway Surfers"><div class="emoji">🚇</div><div class="game-name">Subway Surf</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/volley-random/" aria-label="Basket Random"><div class="emoji">🏀</div><div class="game-name">Basketball 2</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/house-of-hazards/" aria-label="House of Hazards"><div class="emoji">🏠</div><div class="game-name">Hazard House</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/ragdoll-archers/" aria-label="Ragdoll Archers"><div class="emoji">🍎</div><div class="game-name">Raggy Arch</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/slope/" aria-label="Slope"><div class="emoji">🕹️</div><div class="game-name">Slope</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/plants-zombies/" aria-label="Plants Vs. Zombies"><div class="emoji">🧟</div><div class="game-name">Plan Vs Zomb</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/mario-kart/" aria-label="Mario Kart"><div class="emoji">🏎️</div><div class="game-name">Mario Kart</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/candy-crush/" aria-label="Candy Crush"><div class="emoji">🍬</div><div class="game-name">Candy Crush</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/drift-boss/" aria-label="Drift Boss"><div class="emoji">🚗</div><div class="game-name">Drift Boss</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/crossy-road/" aria-label="Crossy Road"><div class="emoji">🐔</div><div class="game-name">Crossy Road</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/level-devil/" aria-label="Level Devil"><div class="emoji">😈</div><div class="game-name">Level Devil</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/tap-road/" aria-label="Tap Road"><div class="emoji">🛣️</div><div class="game-name">Tap Road</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/angry-birds/" aria-label="Angry Birds"><div class="emoji">🐦‍⬛</div><div class="game-name">Angry Birds</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/tunnel-rush/" aria-label="Tunnel Rush"><div class="emoji">👾</div><div class="game-name">Tunnel Rush</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/bloonstd5/" aria-label="BloonsTD 5"><div class="emoji">🎈</div><div class="game-name">BloonsTD 5</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/awesome-tanks/" aria-label="Awesome Tanks"><div class="emoji">🪖</div><div class="game-name">Cool Tanks</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/granny/" aria-label="Granny"><div class="emoji">👵🏻</div><div class="game-name">Granny</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/two-player/" aria-label="Two Player"><div class="emoji">⚔️</div><div class="game-name">Two Player</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/hole-io/" aria-label="Hole.io"><div class="emoji">🕳️</div><div class="game-name">Hole.io</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/bowmasters/" aria-label="Bowmasters"><div class="emoji">🏹</div><div class="game-name">Bowmasters</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/duck-life/" aria-label="Duck Life"><div class="emoji">🦆</div><div class="game-name">Duck Life</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/jetpack-joyride/" aria-label="Jetpack Joyride"><div class="emoji">🚀</div><div class="game-name">Jetpack Joy</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/retro-bowl/" aria-label="Retro Bowl"><div class="emoji">🏈</div><div class="game-name">Retro Bowl</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/big/crazy-cattle-3d/" aria-label="Cattle 3D"><div class="emoji">🐑</div><div class="game-name">Crazy Cattle</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/seamless-widgets/" aria-label="More Games"><div class="emoji">🕞</div><div class="game-name">Widgets</div></button>
-    <button class="game-button" data-url="https://menist.free.nf/core/" aria-label="Seamless Widgets"><div class="emoji">⮕</div><div class="game-name">More Games</div></button>
+  <h1 class="title">SEAMLESS AI</h1>
+  <div class="chat-container">
+    <div class="chat-messages" id="chatMessages">
+      <div class="message ai">Welcome to Seamless AI. I'm here to help you with coding and any questions you have. What would you like to work on?</div>
+    </div>
+    <div class="input-area">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Enter your message..." autocomplete="off" />
+      <button class="send-btn" id="sendBtn">Send</button>
+    </div>
   </div>
-  <div class="bottom-note">ⓘ Don't Forget to Refresh Before Gameplay To Ensure You're Playing Latest Updates ⓘ</div>
-  <button class="mute-button" id="muteBtn" aria-label="Toggle mute">🔈</button>
-  <a class="request-button" href="https://forms.gle/tcMZUPfym8Y7zPsm8" target="_blank" rel="noopener noreferrer" aria-label="Request a game">↗ Report Bugs ↗</a>
-  
-  <audio id="default-audio" loop style="display: none;">
-    <source src="https://www.dropbox.com/scl/fi/z5e5u9p83wvp9sh41rdrs/onlymp3.io-Hide-CS01-Ambient-Rework-AMA-Drum-Bass-RMX-320-1776035788770.mp3?rlkey=owt699kjq6qxbuklbd0xtp03x&st=hh5cfej4&dl=1" type="audio/mpeg">
-  </audio>
-  
-  <audio id="secret-audio" loop style="display: none;">
-    <source src="https://www.dropbox.com/scl/fi/m6bhb54qxs186fc8vcr8f/onlymp3.io-Charlie-Kirky-Funk-320-1775831564958.mp3?rlkey=yl3awn2kz3dqllapu2ukdrfp8&st=64t9b1ul&dl=1" type="audio/mpeg">
-  </audio>
-  
+
   <script>
-    let isMuted = true, volumeFadeInterval = null, hasStartedPlaying = false;
-    let isSecretTrack = false;
-    let holdTimer = null;
-    let isHolding = false;
-    const HOLD_DURATION = 5000;
+    // Hardcoded Groq API Key
+    const GROQ_API_KEY = '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';
     
-    const defaultAudio = document.getElementById('default-audio');
-    const secretAudio = document.getElementById('secret-audio');
-    let currentAudio = defaultAudio;
-    let currentAudioVolume = 1.0;
-    
-    function updateMuteButton() { 
-      const btn = document.getElementById('muteBtn'); 
-      if (btn) btn.textContent = isMuted ? '🔈' : '🔊'; 
-    }
-    
-    function fadeAudioVolume(audioElement, targetVolume, duration, callback) {
-      if (volumeFadeInterval) clearInterval(volumeFadeInterval);
-      const startVolume = audioElement === defaultAudio ? defaultAudio.volume : secretAudioVolume;
-      const steps = 30, stepDuration = duration / steps, volumeDiff = targetVolume - startVolume;
-      let currentStep = 0;
-      const btn = document.getElementById('muteBtn'); 
-      if (btn) btn.classList.add('fading');
-      volumeFadeInterval = setInterval(() => {
-        currentStep++;
-        const easeProgress = 1 - Math.pow(1 - (currentStep / steps), 2);
-        let newVolume = startVolume + (volumeDiff * easeProgress);
-        newVolume = Math.max(0, Math.min(1, newVolume));
-        
-        if (audioElement === defaultAudio) {
-          defaultAudio.volume = newVolume;
-        } else {
-          secretAudioVolume = newVolume;
-          secretAudio.volume = newVolume;
-        }
-        
-        if (currentStep >= steps) { 
-          clearInterval(volumeFadeInterval); 
-          volumeFadeInterval = null; 
-          if (audioElement === defaultAudio) {
-            defaultAudio.volume = targetVolume;
-          } else {
-            secretAudioVolume = targetVolume;
-            secretAudio.volume = targetVolume;
-          }
-          if (btn) btn.classList.remove('fading'); 
-          if (callback) callback(); 
-        }
-      }, stepDuration);
-    }
-    
-    function switchToSecretTrack() {
-      if (isSecretTrack) return;
-      isSecretTrack = true;
-      currentAudio = secretAudio;
-      fadeAudioVolume(defaultAudio, 0, 300, () => {
-        defaultAudio.pause();
-        defaultAudio.currentTime = 0;
-        secretAudio.currentTime = 0;
-        secretAudio.volume = 1;
-        secretAudioVolume = 1;
-        secretAudio.play().catch(e => console.log('Audio play failed:', e));
-        isMuted = false;
-        hasStartedPlaying = true;
-        updateMuteButton();
-      });
-    }
-    
-    function resetToDefaultTrack() {
-      if (!isSecretTrack) return;
-      isSecretTrack = false;
-      currentAudio = defaultAudio;
-      fadeAudioVolume(secretAudio, 0, 300, () => {
-        secretAudio.pause();
-        secretAudio.currentTime = 0;
-        defaultAudio.currentTime = 0;
-        defaultAudio.volume = 1;
-        defaultAudio.play().catch(e => console.log('Audio play failed:', e));
-        isMuted = false;
-        hasStartedPlaying = true;
-        updateMuteButton();
-      });
-    }
-    
-    function toggleMute() {
-      if (isHolding) return;
-      isMuted = !isMuted; 
-      updateMuteButton();
-      if (isMuted) { 
-        fadeAudioVolume(currentAudio, 0, 500);
-      } else { 
-        if (!hasStartedPlaying) {
-          currentAudio.play().catch(e => console.log('Audio play failed:', e));
-          hasStartedPlaying = true;
-        }
-        fadeAudioVolume(currentAudio, 1, 500);
+    // Conversation memory
+    let conversationHistory = [
+      {
+        role: 'system',
+        content: `You are Seamless AI, an intelligent and helpful coding assistant. Follow these principles:
+
+1. IMPLICIT UNDERSTANDING: Don't just do exactly what the user says - understand their intent. If they mention a problem, diagnose root causes. If they ask for a feature, consider related improvements they might need. Think one step ahead.
+
+2. COMPLETE RESPONSES: Always provide full, complete answers. Never cut off mid-sentence or mid-code. If a response is long, structure it well with clear sections.
+
+3. PROACTIVE SUGGESTIONS: Offer best practices, potential pitfalls, and optimization tips even when not explicitly asked. Share relevant insights that add value.
+
+4. CODE QUALITY: Write clean, well-commented, production-ready code. Use proper error handling and follow language conventions.
+
+5. CONTEXT AWARENESS: Remember what was discussed and build upon it. Reference previous messages when relevant.
+
+6. FORMATTING: Use markdown code blocks with language identifiers (e.g., \`\`\`html, \`\`\`css, \`\`\`javascript, \`\`\`python). Explain complex code sections.`
       }
-    }
-    
-    function startHoldTimer() {
-      isHolding = true;
-      const btn = document.getElementById('muteBtn');
-      if (btn) btn.classList.add('holding');
-      holdTimer = setTimeout(() => {
-        if (isSecretTrack) { resetToDefaultTrack(); } else { switchToSecretTrack(); }
-        isHolding = false;
-        if (btn) btn.classList.remove('holding');
-      }, HOLD_DURATION);
-    }
-    
-    function cancelHoldTimer() {
-      if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
-      isHolding = false;
-      const btn = document.getElementById('muteBtn');
-      if (btn) btn.classList.remove('holding');
-    }
-    
-    function fadeOutAudio(duration, callback) {
-      fadeAudioVolume(currentAudio, 0, duration, callback);
-    }
-    
-    // Matrix Canvas Setup - Animation starts with fade-in
-    const canvas = document.getElementById('matrixCanvas'), ctx = canvas.getContext('2d');
+    ];
+
+    // Matrix Canvas Setup
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
     let matrixInterval = null;
-    
-    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    resizeCanvas(); window.addEventListener('resize', resizeCanvas);
-    
-    const katakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ', latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', nums = '0123456789', alphabet = katakana + latin + nums;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const katakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const nums = '0123456789';
+    const alphabet = katakana + latin + nums;
     const fontSize = 16;
     let columns, rainDrops;
-    
+
     function initMatrix() {
       resizeCanvas();
       columns = Math.floor(canvas.width / fontSize);
       rainDrops = new Array(columns).fill(1);
     }
-    
+
     function draw() {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#0F0'; ctx.font = fontSize + 'px monospace';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0F0';
+      ctx.font = fontSize + 'px monospace';
       for (let i = 0; i < rainDrops.length; i++) {
         ctx.fillText(alphabet.charAt(Math.floor(Math.random() * alphabet.length)), i * fontSize, rainDrops[i] * fontSize);
         if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) rainDrops[i] = 0;
         rainDrops[i]++;
       }
     }
-    
+
     function startMatrix() {
       if (!matrixInterval) {
         initMatrix();
         matrixInterval = setInterval(draw, 30);
       }
     }
-    
+
     window.addEventListener('resize', () => {
       if (matrixInterval) {
         initMatrix();
       }
     });
-    
-    function fitTextToButton() {
-      const buttons = document.querySelectorAll('.game-button');
-      const baseSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--button-size'));
-      const maxFontSize = baseSize * 0.18;
-      const minFontSize = baseSize * 0.09;
-      buttons.forEach(button => {
-        const textEl = button.querySelector('.game-name');
-        const buttonWidth = button.clientWidth - (baseSize * 0.114);
-        let fontSize = maxFontSize;
-        textEl.style.fontSize = fontSize + 'px';
-        while (textEl.scrollWidth > buttonWidth && fontSize > minFontSize) {
-          fontSize -= 0.5;
-          textEl.style.fontSize = fontSize + 'px';
-        }
+
+    // Chat functionality
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function generateId() {
+      return 'code-' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function copyToClipboard(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const original = btn.innerHTML;
+        btn.innerHTML = '✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerHTML = original;
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
       });
     }
-    
-    const muteBtn = document.getElementById('muteBtn');
-    
-    muteBtn.addEventListener('mousedown', (e) => { e.preventDefault(); startHoldTimer(); });
-    muteBtn.addEventListener('mouseup', (e) => {
-      e.preventDefault();
-      if (isHolding && !holdTimer) { /* timer fired */ } 
-      else if (isHolding) { cancelHoldTimer(); toggleMute(); }
-    });
-    muteBtn.addEventListener('mouseleave', () => { cancelHoldTimer(); });
-    muteBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startHoldTimer(); });
-    muteBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      if (isHolding && !holdTimer) { /* timer fired */ } 
-      else if (isHolding) { cancelHoldTimer(); toggleMute(); }
-    });
-    muteBtn.addEventListener('touchcancel', () => { cancelHoldTimer(); });
-    
-    document.querySelectorAll('.game-button').forEach(button => {
-      button.addEventListener('click', event => {
-        const url = button.getAttribute('data-url');
-        document.body.classList.remove('fade-in');
-        document.body.classList.add('fade-out');
-        fadeOutAudio(1000, () => { window.location.href = url; });
+
+    function formatMessage(text) {
+      const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
+      let lastIndex = 0;
+      let result = '';
+      let match;
+      let codeIdCounter = 0;
+      
+      while ((match = codeBlockRegex.exec(text)) !== null) {
+        const beforeText = text.substring(lastIndex, match.index).trim();
+        if (beforeText) {
+          const paragraphs = beforeText.split('\n\n').filter(p => p.trim());
+          paragraphs.forEach(p => {
+            result += `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`;
+          });
+        }
+        
+        const language = match[1] || 'code';
+        const code = match[2];
+        const codeId = 'code-block-' + Date.now() + '-' + codeIdCounter++;
+        
+        result += `
+          <div class="code-block" id="${codeId}">
+            <div class="code-header">
+              <div class="code-header-left">${escapeHtml(language)}</div>
+              <button class="copy-btn" onclick="window.copyCode('${codeId}')" title="Copy code">📋</button>
+            </div>
+            <div class="code-content">
+              <pre><code>${escapeHtml(code)}</code></pre>
+            </div>
+          </div>
+        `;
+        
+        lastIndex = match.index + match[0].length;
+      }
+      
+      const remainingText = text.substring(lastIndex).trim();
+      if (remainingText) {
+        const paragraphs = remainingText.split('\n\n').filter(p => p.trim());
+        paragraphs.forEach(p => {
+          result += `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`;
+        });
+      }
+      
+      return result || `<p>${escapeHtml(text)}</p>`;
+    }
+
+    window.copyCode = function(codeId) {
+      const codeBlock = document.getElementById(codeId);
+      const code = codeBlock.querySelector('code').textContent;
+      const btn = codeBlock.querySelector('.copy-btn');
+      
+      navigator.clipboard.writeText(code).then(() => {
+        const original = btn.innerHTML;
+        btn.innerHTML = '✓';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerHTML = original;
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
       });
+    };
+
+    function addMessage(text, type) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${type}`;
+      
+      if (type === 'ai') {
+        messageDiv.innerHTML = formatMessage(text);
+      } else if (type === 'loading') {
+        messageDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+      } else {
+        messageDiv.textContent = text;
+      }
+      
+      chatMessages.appendChild(messageDiv);
+      
+      chatMessages.scrollTo({
+        top: chatMessages.scrollHeight,
+        behavior: 'smooth'
+      });
+      
+      return messageDiv;
+    }
+
+    function removeMessage(element) {
+      element.style.opacity = '0';
+      element.style.transform = 'translateY(-10px)';
+      element.style.transition = 'all 0.3s ease';
+      setTimeout(() => element.remove(), 300);
+    }
+
+    async function sendMessage() {
+      const message = chatInput.value.trim();
+      if (!message) return;
+
+      addMessage(message, 'user');
+      conversationHistory.push({ role: 'user', content: message });
+      
+      chatInput.value = '';
+      chatInput.style.transform = 'scale(0.95)';
+      setTimeout(() => chatInput.style.transform = 'scale(1)', 200);
+      
+      sendBtn.disabled = true;
+      sendBtn.style.transform = 'scale(0.95)';
+
+      const loadingMsg = addMessage('', 'loading');
+
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: conversationHistory,
+            temperature: 0.7,
+            max_tokens: 4096,
+            top_p: 0.9
+          })
+        });
+
+        removeMessage(loadingMsg);
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const aiResponse = data.choices[0].message.content;
+        
+        conversationHistory.push({ role: 'assistant', content: aiResponse });
+        
+        if (conversationHistory.length > 40) {
+          conversationHistory = [
+            conversationHistory[0],
+            ...conversationHistory.slice(-38)
+          ];
+        }
+        
+        addMessage(aiResponse, 'ai');
+
+      } catch (error) {
+        removeMessage(loadingMsg);
+        addMessage(`Error: ${error.message}`, 'error');
+        console.error('API Error:', error);
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.style.transform = 'scale(1)';
+        setTimeout(() => chatInput.focus(), 100);
+      }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
     });
-    
-    // Initialize - Start Matrix and fade in together
+
     window.onload = () => {
-      updateMuteButton();
-      fitTextToButton();
-      // Start Matrix rain AND fade in at the same time
       startMatrix();
       document.body.classList.add('fade-in');
+      setTimeout(() => chatInput.focus(), 800);
     };
-    
-    window.addEventListener('resize', fitTextToButton);
-    
-    window.addEventListener('pageshow', () => {
-      document.body.classList.remove('fade-out', 'fade-in');
-      void document.body.offsetWidth;
-      document.body.classList.add('fade-in');
-      if (isMuted) {
-        currentAudio.volume = 0;
-        if (isSecretTrack) {
-          secretAudioVolume = 0;
-        }
-      } else {
-        currentAudio.volume = 1;
-        if (isSecretTrack) {
-          secretAudioVolume = 1;
-        }
-        if (!hasStartedPlaying) {
-          currentAudio.play().catch(e => console.log('Audio play failed:', e));
-          hasStartedPlaying = true;
-        }
-      }
-    });
   </script>
 </body>
 </html>
