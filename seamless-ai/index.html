@@ -13,9 +13,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet" />
   
-  <!-- Puter.js - Free AI API with NO API KEY required -->
-  <script src="https://js.puter.com/v2/"></script>
-  
   <style>
     :root {
       --accent: #0f0;
@@ -24,6 +21,8 @@
       --text-primary: #fff;
       --text-secondary: #888;
       --border-radius: 10px;
+      --error: #f00;
+      --warning: #ff0;
     }
     
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -85,6 +84,105 @@
       to { text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0; }
     }
     
+    .setup-panel {
+      width: 100%;
+      max-width: 600px;
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid var(--accent);
+      border-radius: var(--border-radius);
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+      animation: slideDown 0.5s ease;
+    }
+    
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .setup-title {
+      color: var(--accent);
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      text-shadow: 0 0 10px var(--accent);
+    }
+    
+    .setup-instructions {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .setup-instructions a {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px solid var(--accent);
+    }
+    
+    .setup-instructions a:hover {
+      text-shadow: 0 0 10px var(--accent);
+    }
+    
+    .api-key-input {
+      width: 100%;
+      background: rgba(0, 20, 0, 0.8);
+      border: 2px solid var(--accent);
+      border-radius: var(--border-radius);
+      padding: 1rem;
+      color: var(--accent);
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      outline: none;
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+    }
+    
+    .api-key-input::placeholder {
+      color: rgba(0, 255, 0, 0.5);
+    }
+    
+    .api-key-input:focus {
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+      background: rgba(0, 30, 0, 0.9);
+    }
+    
+    .api-key-input.error {
+      border-color: var(--error);
+      box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+    }
+    
+    .connect-button {
+      width: 100%;
+      background: rgba(0, 50, 0, 0.8);
+      border: 2px solid var(--accent);
+      border-radius: var(--border-radius);
+      color: var(--accent);
+      padding: 1rem;
+      cursor: pointer;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      transition: all 0.3s ease;
+    }
+    
+    .connect-button:hover:not(:disabled) {
+      background: var(--accent);
+      color: var(--bg);
+      box-shadow: 0 0 25px var(--accent);
+      transform: translateY(-2px);
+    }
+    
+    .connect-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
     .chat-container {
       width: 100%;
       max-width: 800px;
@@ -98,6 +196,17 @@
       flex-direction: column;
       overflow: hidden;
       position: relative;
+      display: none;
+    }
+    
+    .chat-container.active {
+      display: flex;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     
     .chat-messages {
@@ -157,6 +266,13 @@
       background: rgba(0, 50, 0, 0.6);
       border: 1px solid rgba(0, 255, 0, 0.5);
       color: var(--text-primary);
+    }
+    
+    .message.error {
+      align-self: flex-start;
+      background: rgba(50, 0, 0, 0.8);
+      border: 1px solid var(--error);
+      color: #ff6666;
     }
     
     .message.loading {
@@ -339,6 +455,7 @@
       padding: 0.5rem 1rem;
       border-radius: 5px;
       z-index: 10;
+      transition: all 0.3s ease;
     }
     
     .api-status.connected {
@@ -348,9 +465,31 @@
     }
     
     .api-status.error {
-      border-color: #f00;
-      color: #f00;
-      text-shadow: 0 0 5px #f00;
+      border-color: var(--error);
+      color: var(--error);
+      text-shadow: 0 0 5px var(--error);
+    }
+    
+    .api-status.connecting {
+      border-color: var(--warning);
+      color: var(--warning);
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .security-note {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      background: rgba(255, 255, 0, 0.1);
+      border: 1px solid var(--warning);
+      border-radius: 5px;
+      color: var(--warning);
+      font-size: 0.8rem;
+      font-family: 'Courier New', monospace;
     }
     
     @media (max-width: 600px) {
@@ -358,24 +497,47 @@
       .chat-container { height: 70vh; min-height: 300px; }
       .message { max-width: 95%; font-size: 0.9rem; }
       .model-selector { position: relative; top: auto; right: auto; margin-bottom: 1rem; width: 100%; }
+      .setup-panel { padding: 1rem; }
     }
   </style>
 </head>
 <body>
   <canvas id="matrixCanvas"></canvas>
   
-  <div class="api-status connected" id="apiStatus">● PUTER.JS CONNECTED</div>
+  <div class="api-status" id="apiStatus">● STANDBY</div>
   
   <h1 class="title">SEAMLESS AI</h1>
   <div class="subtitle">Neural Interface // v2.0.26</div>
   
-  <div class="chat-container">
+  <!-- Setup Panel -->
+  <div class="setup-panel" id="setupPanel">
+    <div class="setup-title">🔌 INITIALIZE NEURAL LINK</div>
+    <div class="setup-instructions">
+      <strong>STEP 1:</strong> Get a free API key from <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> (no credit card required)<br>
+      <strong>STEP 2:</strong> Paste your key below and click CONNECT<br>
+      <strong>NOTE:</strong> Your key is only stored in memory and never saved to disk.
+    </div>
+    <input 
+      type="password" 
+      class="api-key-input" 
+      id="apiKeyInput" 
+      placeholder="sk-or-v1-..." 
+      autocomplete="off"
+    />
+    <button class="connect-button" id="connectBtn">ESTABLISH CONNECTION</button>
+    <div class="security-note">
+      ⚠️ For production use, use a backend proxy to hide your API key. See browser console for details.
+    </div>
+  </div>
+  
+  <!-- Chat Interface (Hidden until connected) -->
+  <div class="chat-container" id="chatContainer">
     <select class="model-selector" id="modelSelector">
-      <option value="gpt-4.1-nano">GPT-4.1 Nano (Fast)</option>
-      <option value="claude-sonnet-4">Claude Sonnet 4</option>
-      <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-      <option value="deepseek-chat">DeepSeek Chat</option>
-      <option value="meta-llama/llama-4-scout">Llama 4 Scout</option>
+      <option value="google/gemini-2.5-flash-preview">Gemini 2.5 Flash (Free)</option>
+      <option value="meta-llama/llama-4-scout">Llama 4 Scout (Free)</option>
+      <option value="deepseek/deepseek-chat">DeepSeek Chat (Free)</option>
+      <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B (Free)</option>
+      <option value="mistralai/mistral-small-3.1-24b-instruct">Mistral Small 3.1 (Free)</option>
     </select>
     
     <div class="chat-messages" id="chatMessages">
@@ -396,7 +558,7 @@
     </div>
   </div>
   
-  <div class="bottom-note">ⓘ Puter.js Enabled — No API Key Required ⓘ</div>
+  <div class="bottom-note">ⓘ OpenRouter Free Tier — No Credit Card Required ⓘ</div>
   <button class="mute-button" id="muteBtn">🔈</button>
 
   <audio id="ambient-audio" loop style="display: none;">
@@ -405,72 +567,115 @@
 
   <script>
     // ============================================
-    // PUTER.JS CONFIGURATION (NO API KEY NEEDED!)
+    // CONFIGURATION & STATE
     // ============================================
-    // Puter.js provides free AI access with no backend required.
-    // Simply include the script tag and start making AI calls.
-    // 
-    // ALTERNATIVE: If you want to use your own API key, 
-    // uncomment the OPENROUTER or GROQ sections below:
     
-    /* 
-    // --- OPENROUTER CONFIG (Bring your own API key) ---
-    const OPENROUTER_API_KEY = 'your-key-here'; // Replace with your key
     const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-    
-    async function sendToOpenRouter(message, model) {
-      const response = await fetch(OPENROUTER_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.href,
-          'X-Title': 'Seamless AI'
-        },
-        body: JSON.stringify({
-          model: model, // e.g., "openai/gpt-4o-mini"
-          messages: [{ role: 'user', content: message }]
-        })
-      });
-      const data = await response.json();
-      return data.choices[0].message.content;
-    }
-    */
-    
-    /*
-    // --- GROQ CONFIG (Bring your own API key) ---
-    const GROQ_API_KEY = 'your-key-here'; // Replace with your key
-    const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-    
-    async function sendToGroq(message, model) {
-      const response = await fetch(GROQ_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: model, // e.g., "llama-3.3-70b-versatile"
-          messages: [{ role: 'user', content: message }]
-        })
-      });
-      const data = await response.json();
-      return data.choices[0].message.content;
-    }
-    */
+    let API_KEY = '';
+    let isConnected = false;
+    let isProcessing = false;
+    let conversationHistory = [];
     
     // ============================================
-    // CHAT INTERFACE LOGIC
+    // DOM ELEMENTS
     // ============================================
     
+    const setupPanel = document.getElementById('setupPanel');
+    const chatContainer = document.getElementById('chatContainer');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const connectBtn = document.getElementById('connectBtn');
+    const apiStatus = document.getElementById('apiStatus');
     const chatMessages = document.getElementById('chatMessages');
     const chatInput = document.getElementById('chatInput');
     const sendButton = document.getElementById('sendButton');
     const modelSelector = document.getElementById('modelSelector');
-    const apiStatus = document.getElementById('apiStatus');
     
-    let isProcessing = false;
-    let conversationHistory = [];
+    // ============================================
+    // API KEY SETUP
+    // ============================================
+    
+    // Production security warning
+    console.log('%c⚠️ SECURITY WARNING', 'color: #ff0; font-size: 16px; font-weight: bold;');
+    console.log('%cThis client-side API key setup is for testing only.', 'color: #f00;');
+    console.log('%cFor production, use a backend proxy to hide your API key.', 'color: #0f0;');
+    console.log('Learn more: https://github.com/orgs/community/discussions/161673');
+    
+    connectBtn.addEventListener('click', async () => {
+      const key = apiKeyInput.value.trim();
+      
+      if (!key) {
+        apiKeyInput.classList.add('error');
+        setTimeout(() => apiKeyInput.classList.remove('error'), 500);
+        return;
+      }
+      
+      if (!key.startsWith('sk-or-v1-')) {
+        alert('Invalid OpenRouter API key format. Key should start with "sk-or-v1-"');
+        return;
+      }
+      
+      connectBtn.disabled = true;
+      connectBtn.textContent = 'VERIFYING...';
+      apiStatus.textContent = '● CONNECTING...';
+      apiStatus.className = 'api-status connecting';
+      
+      // Test the API key with a simple request
+      try {
+        const testResponse = await fetch(OPENROUTER_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.href,
+            'X-Title': 'Seamless AI'
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash-preview',
+            messages: [{ role: 'user', content: 'Hi' }],
+            max_tokens: 5
+          })
+        });
+        
+        if (!testResponse.ok) {
+          const error = await testResponse.json();
+          throw new Error(error.error?.message || 'Invalid API key');
+        }
+        
+        // Success!
+        API_KEY = key;
+        isConnected = true;
+        
+        apiStatus.textContent = '● CONNECTED';
+        apiStatus.className = 'api-status connected';
+        
+        // Hide setup, show chat
+        setupPanel.style.display = 'none';
+        chatContainer.classList.add('active');
+        
+        // Focus input
+        setTimeout(() => chatInput.focus(), 100);
+        
+        console.log('✅ Connected to OpenRouter successfully');
+        
+      } catch (error) {
+        console.error('Connection failed:', error);
+        apiStatus.textContent = '● CONNECTION FAILED';
+        apiStatus.className = 'api-status error';
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'ESTABLISH CONNECTION';
+        
+        addMessage(`⚠️ Connection failed: ${error.message}`, 'error');
+      }
+    });
+    
+    // Allow Enter key to connect
+    apiKeyInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') connectBtn.click();
+    });
+    
+    // ============================================
+    // CHAT INTERFACE
+    // ============================================
     
     function addMessage(text, sender) {
       const messageDiv = document.createElement('div');
@@ -512,7 +717,7 @@
     }
     
     async function sendMessage() {
-      if (isProcessing) return;
+      if (!isConnected || isProcessing) return;
       
       const message = chatInput.value.trim();
       if (!message) return;
@@ -528,52 +733,55 @@
       
       try {
         const selectedModel = modelSelector.value;
-        let response;
         
-        // ============================================
-        // PUTER.JS AI CALL (NO API KEY REQUIRED!)
-        // ============================================
-        // This works immediately with no configuration.
-        // Puter handles the API keys and rate limits server-side.
-        
-        const puterResponse = await puter.ai.chat(message, {
-          model: selectedModel
+        const response = await fetch(OPENROUTER_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${API_KEY}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.href,
+            'X-Title': 'Seamless AI'
+          },
+          body: JSON.stringify({
+            model: selectedModel,
+            messages: [
+              ...conversationHistory.slice(-10), // Keep last 10 messages for context
+              { role: 'user', content: message }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000
+          })
         });
         
-        // Handle different response formats from different models
-        if (typeof puterResponse === 'string') {
-          response = puterResponse;
-        } else if (puterResponse.message && puterResponse.message.content) {
-          // Claude format
-          response = puterResponse.message.content[0].text;
-        } else if (puterResponse.choices && puterResponse.choices[0]) {
-          // OpenAI-like format
-          response = puterResponse.choices[0].message.content;
-        } else {
-          response = JSON.stringify(puterResponse, null, 2);
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error?.message || `HTTP ${response.status}`);
         }
         
-        /* 
-        // Uncomment to use OpenRouter instead:
-        response = await sendToOpenRouter(message, 'openai/gpt-4o-mini');
-        
-        // Or use Groq:
-        response = await sendToGroq(message, 'llama-3.3-70b-versatile');
-        */
+        const data = await response.json();
+        const aiResponse = data.choices[0].message.content;
         
         hideLoading();
-        addMessage(response, 'ai');
+        addMessage(aiResponse, 'ai');
         
-        // Update conversation history for context (optional future enhancement)
+        // Update conversation history
         conversationHistory.push({ role: 'user', content: message });
-        conversationHistory.push({ role: 'assistant', content: response });
+        conversationHistory.push({ role: 'assistant', content: aiResponse });
+        
+        // Trim history if it gets too long
+        if (conversationHistory.length > 20) {
+          conversationHistory = conversationHistory.slice(-20);
+        }
         
       } catch (error) {
         hideLoading();
         console.error('AI Error:', error);
-        addMessage(`⚠️ ERROR: Neural link disrupted. ${error.message || 'Please try again.'}`, 'ai');
-        apiStatus.textContent = '● CONNECTION ERROR';
-        apiStatus.className = 'api-status error';
+        addMessage(`⚠️ ERROR: Neural link disrupted. ${error.message}`, 'error');
+        
+        if (error.message.includes('401') || error.message.includes('Invalid')) {
+          apiStatus.textContent = '● AUTH ERROR';
+          apiStatus.className = 'api-status error';
+        }
       } finally {
         isProcessing = false;
         sendButton.disabled = false;
@@ -696,14 +904,9 @@
       updateMuteButton();
       startMatrix();
       document.body.classList.add('fade-in');
-      chatInput.focus();
       
-      // Check Puter.js availability
-      if (typeof puter === 'undefined') {
-        apiStatus.textContent = '● PUTER.JS UNAVAILABLE';
-        apiStatus.className = 'api-status error';
-        addMessage('⚠️ WARNING: Puter.js failed to load. Please check your internet connection.', 'ai');
-      }
+      // Focus API key input on load
+      apiKeyInput.focus();
     };
     
     window.addEventListener('pageshow', () => {
