@@ -8,205 +8,138 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --surface: #13131a; --surface2: #1c1c27;
+    --border: #2a2a3a; --accent: #7c6af7; --accent2: #f76a8a;
+    --text: #e8e8f0; --text2: #8888a8; --radius: 12px;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+  a { color: var(--accent); }
 
-:root {
-–bg: #0a0a0f;
-–surface: #13131a;
-–surface2: #1c1c27;
-–border: #2a2a3a;
-–accent: #7c6af7;
-–accent2: #f76a8a;
-–text: #e8e8f0;
-–text2: #8888a8;
-–radius: 12px;
-}
-
-body { background: var(–bg); color: var(–text); font-family: ‘Syne’, sans-serif; min-height: 100vh; }
-a { color: var(–accent); }
-
-/* Header */
 .app-header {
 display: flex; align-items: center; justify-content: space-between;
-padding: 16px 24px;
-border-bottom: 1px solid var(–border);
-background: rgba(10,10,15,0.95);
-backdrop-filter: blur(12px);
+padding: 16px 24px; border-bottom: 1px solid var(–border);
+background: rgba(10,10,15,0.95); backdrop-filter: blur(12px);
 position: sticky; top: 0; z-index: 100;
 }
 .logo { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.5px; }
 
-/* Buttons */
 .btn-primary {
-background: var(–accent); color: #fff;
-border: none; border-radius: 8px;
-padding: 12px 20px; font-family: ‘Syne’, sans-serif;
-font-weight: 700; font-size: 0.9rem;
-cursor: pointer; transition: opacity 0.15s, transform 0.1s;
-white-space: nowrap;
+background: var(–accent); color: #fff; border: none; border-radius: 8px;
+padding: 12px 20px; font-family: ‘Syne’, sans-serif; font-weight: 700;
+font-size: 0.9rem; cursor: pointer; transition: opacity 0.15s, transform 0.1s; white-space: nowrap;
 }
 .btn-primary:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-export {
-width: 100%; background: var(–accent2); color: #fff;
-border: none; border-radius: 8px;
-padding: 13px; font-family: ‘Syne’, sans-serif;
-font-weight: 700; font-size: 0.9rem;
-cursor: pointer; transition: opacity 0.15s; margin-top: 4px;
+width: 100%; background: var(–accent2); color: #fff; border: none;
+border-radius: 8px; padding: 13px; font-family: ‘Syne’, sans-serif;
+font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: opacity 0.15s; margin-top: 4px;
 }
 .btn-export:hover { opacity: 0.85; }
 
-/* Main */
 .main { padding: 24px; max-width: 1400px; margin: 0 auto; }
-
-/* URL bar */
 .url-section { margin-bottom: 24px; }
 .url-bar { display: flex; gap: 10px; }
 .url-input {
 flex: 1; background: var(–surface); border: 1px solid var(–border);
-border-radius: 10px; padding: 13px 16px;
-color: var(–text); font-family: ‘Syne’, sans-serif; font-size: 0.95rem;
-outline: none; transition: border-color 0.15s;
+border-radius: 10px; padding: 13px 16px; color: var(–text);
+font-family: ‘Syne’, sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.15s;
 }
 .url-input:focus { border-color: var(–accent); }
-.error-msg { color: var(–accent2); font-size: 0.85rem; margin-top: 10px; }
+.error-msg { color: var(–accent2); font-size: 0.85rem; margin-top: 10px; line-height: 1.6; }
 
-/* Loading */
 .loading-state {
 display: flex; flex-direction: column; align-items: center;
 gap: 16px; padding: 80px 0; color: var(–text2);
 }
 .spinner {
-width: 40px; height: 40px;
-border: 3px solid var(–border);
-border-top-color: var(–accent);
-border-radius: 50%;
+width: 40px; height: 40px; border: 3px solid var(–border);
+border-top-color: var(–accent); border-radius: 50%;
 animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Editor layout */
-.editor-layout {
-display: grid;
-grid-template-columns: 1fr 360px;
-gap: 20px;
-align-items: start;
-}
-@media (max-width: 900px) {
-.editor-layout { grid-template-columns: 1fr; }
-}
+.editor-layout { display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .editor-layout { grid-template-columns: 1fr; } }
 
-/* Video */
 .video-col { display: flex; flex-direction: column; gap: 14px; }
 .video-wrap {
-position: relative; width: 100%;
-background: #000; border-radius: var(–radius); overflow: hidden;
-aspect-ratio: 16/9;
+position: relative; width: 100%; background: #000;
+border-radius: var(–radius); overflow: hidden; aspect-ratio: 16/9;
 }
 #yt-player { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
 
 .video-overlay {
 position: absolute; bottom: 60px; left: 0; right: 0;
-display: flex; justify-content: center;
-pointer-events: none; z-index: 10;
+display: none; justify-content: center; pointer-events: none; z-index: 10;
 }
 .overlay-caption {
-background: rgba(0,0,0,0.82);
-color: #fff; font-family: ‘Syne’, sans-serif;
-font-size: 1.1rem; font-weight: 700;
-padding: 7px 18px; border-radius: 6px;
-text-align: center; max-width: 90%;
-text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+background: rgba(0,0,0,0.85); color: #fff; font-family: ‘Syne’, sans-serif;
+font-size: 1.1rem; font-weight: 700; padding: 7px 18px; border-radius: 6px;
+text-align: center; max-width: 90%; text-shadow: 0 1px 4px rgba(0,0,0,0.8);
 }
 
-/* Cards */
 .ai-card, .trim-card, .export-card {
-background: var(–surface); border: 1px solid var(–border);
-border-radius: var(–radius); padding: 16px;
+background: var(–surface); border: 1px solid var(–border); border-radius: var(–radius); padding: 16px;
 }
 .ai-badge {
-display: inline-block; background: var(–accent);
-color: #fff; font-size: 0.72rem; font-weight: 700;
-padding: 3px 8px; border-radius: 4px; margin-bottom: 10px;
-letter-spacing: 0.5px;
+display: inline-block; background: var(–accent); color: #fff; font-size: 0.72rem;
+font-weight: 700; padding: 3px 8px; border-radius: 4px; margin-bottom: 10px; letter-spacing: 0.5px;
 }
 .ai-reason { color: var(–text2); font-size: 0.88rem; line-height: 1.6; margin-bottom: 10px; }
 .clip-range {
 display: flex; justify-content: space-between; align-items: center;
 font-family: ‘DM Mono’, monospace; font-size: 0.82rem; color: var(–text2);
 }
-.clip-len {
-background: var(–surface2); padding: 2px 8px; border-radius: 4px;
-color: var(–accent); font-weight: 500;
-}
-.section-label {
-display: block; font-size: 0.8rem; font-weight: 700;
-color: var(–text2); letter-spacing: 0.5px;
-text-transform: uppercase; margin-bottom: 12px;
-}
+.clip-len { background: var(–surface2); padding: 2px 8px; border-radius: 4px; color: var(–accent); font-weight: 500; }
 
-/* Trim */
+.section-label {
+display: block; font-size: 0.8rem; font-weight: 700; color: var(–text2);
+letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;
+}
 .trim-row {
 display: grid; grid-template-columns: 40px 1fr 44px;
 align-items: center; gap: 10px; margin-bottom: 10px;
 }
 .trim-row label { font-size: 0.8rem; color: var(–text2); }
-.trim-row span {
-font-family: ‘DM Mono’, monospace; font-size: 0.8rem;
-color: var(–accent); text-align: right;
-}
-input[type=range] {
--webkit-appearance: none; width: 100%; height: 4px;
-background: var(–border); border-radius: 2px; outline: none;
-}
-input[type=range]::-webkit-slider-thumb {
--webkit-appearance: none; width: 16px; height: 16px;
-background: var(–accent); border-radius: 50%; cursor: pointer;
-}
+.trim-row span { font-family: ‘DM Mono’, monospace; font-size: 0.8rem; color: var(–accent); text-align: right; }
+input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; background: var(–border); border-radius: 2px; outline: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: var(–accent); border-radius: 50%; cursor: pointer; }
 
-/* Export */
 .export-note { color: var(–text2); font-size: 0.83rem; line-height: 1.6; margin-bottom: 14px; }
-.export-tip {
-margin-top: 10px; font-size: 0.78rem; color: var(–text2);
-font-family: ‘DM Mono’, monospace;
-}
+.export-tip { margin-top: 10px; font-size: 0.78rem; color: var(–text2); font-family: ‘DM Mono’, monospace; }
 
-/* Caption editor */
 .caption-col { position: sticky; top: 80px; }
 .caption-editor {
-background: var(–surface); border: 1px solid var(–border);
-border-radius: var(–radius); overflow: hidden;
-max-height: calc(100vh - 120px); display: flex; flex-direction: column;
+background: var(–surface); border: 1px solid var(–border); border-radius: var(–radius);
+overflow: hidden; max-height: calc(100vh - 120px); display: flex; flex-direction: column;
 }
 .caption-editor-header {
 display: flex; justify-content: space-between; align-items: center;
-padding: 14px 16px; border-bottom: 1px solid var(–border);
-flex-shrink: 0;
+padding: 14px 16px; border-bottom: 1px solid var(–border); flex-shrink: 0;
 }
 .caption-hint { font-size: 0.75rem; color: var(–text2); }
 .caption-list { overflow-y: auto; flex: 1; padding: 8px; }
 
 .caption-row {
-display: flex; align-items: flex-start; gap: 10px;
-padding: 8px; border-radius: 8px;
-transition: background 0.12s; margin-bottom: 4px;
+display: flex; align-items: flex-start; gap: 10px; padding: 8px;
+border-radius: 8px; transition: background 0.12s; margin-bottom: 4px;
 }
 .caption-row.active { background: rgba(124,106,247,0.15); }
 .caption-time {
-font-family: ‘DM Mono’, monospace; font-size: 0.72rem;
-color: var(–text2); padding-top: 10px; min-width: 36px; flex-shrink: 0;
+font-family: ‘DM Mono’, monospace; font-size: 0.72rem; color: var(–text2);
+padding-top: 10px; min-width: 36px; flex-shrink: 0;
 }
 .caption-row.active .caption-time { color: var(–accent); }
 .caption-text {
-flex: 1; background: var(–surface2); border: 1px solid transparent;
-border-radius: 6px; padding: 8px 10px;
-color: var(–text); font-family: ‘Syne’, sans-serif; font-size: 0.88rem;
-line-height: 1.5; outline: none;
-transition: border-color 0.12s; width: 100%;
+flex: 1; background: var(–surface2); border: 1px solid transparent; border-radius: 6px;
+padding: 8px 10px; color: var(–text); font-family: ‘Syne’, sans-serif; font-size: 0.88rem;
+line-height: 1.5; outline: none; transition: border-color 0.12s; width: 100%;
 }
 .caption-text:focus { border-color: var(–accent); }
 .caption-row.active .caption-text { border-color: rgba(124,106,247,0.4); }
-
 .hidden { display: none !important; }
 </style>
 
@@ -218,7 +151,6 @@ transition: border-color 0.12s; width: 100%;
 </header>
 
 <main class="main">
-  <!-- URL Input -->
   <section class="url-section">
     <div class="url-bar">
       <input class="url-input" id="urlInput" placeholder="Paste YouTube URL..." />
@@ -227,26 +159,21 @@ transition: border-color 0.12s; width: 100%;
     <div class="error-msg hidden" id="errorMsg"></div>
   </section>
 
-  <!-- Loading -->
-
   <div class="loading-state hidden" id="loadingState">
     <div class="spinner"></div>
     <p id="loadingMsg">Loading...</p>
   </div>
 
-  <!-- Editor -->
-
   <div class="editor-layout hidden" id="editorLayout">
     <div class="video-col">
       <div class="video-wrap">
         <div id="yt-player"></div>
-        <div class="video-overlay" id="videoOverlay" style="display:none">
+        <div class="video-overlay" id="videoOverlay">
           <div class="overlay-caption" id="overlayText"></div>
         </div>
       </div>
 
 ```
-  <!-- AI card -->
   <div class="ai-card">
     <div class="ai-badge">🤖 AI Pick</div>
     <p class="ai-reason" id="aiReason"></p>
@@ -256,7 +183,6 @@ transition: border-color 0.12s; width: 100%;
     </div>
   </div>
 
-  <!-- Trim -->
   <div class="trim-card">
     <span class="section-label">✂️ Trim Clip</span>
     <div class="trim-row">
@@ -271,16 +197,14 @@ transition: border-color 0.12s; width: 100%;
     </div>
   </div>
 
-  <!-- Export -->
   <div class="export-card">
     <span class="section-label">📤 Export</span>
-    <p class="export-note">Download the .SRT caption file, then import into CapCut or any editor to burn captions onto your clip.</p>
+    <p class="export-note">Download the .SRT caption file, then import into CapCut to burn captions onto your clip.</p>
     <button class="btn-export" onclick="exportSRT()">⬇ Download Captions (.SRT)</button>
     <div class="export-tip" id="exportTip"></div>
   </div>
 </div>
 
-<!-- Captions -->
 <div class="caption-col">
   <div class="caption-editor">
     <div class="caption-editor-header">
@@ -296,313 +220,323 @@ transition: border-color 0.12s; width: 100%;
 </main>
 
 <script>
-  const SUPADATA_KEY = "sd_03a05591355c72ee97497334ad66ff9d";
+const SUPADATA_KEY = "sd_03a05591355c72ee97497334ad66ff9d";
 
-  let ytPlayer = null;
-  let playerReady = false;
-  let captions = [];
-  let clipStart = 0;
-  let clipEnd = 60;
-  let allTranscript = [];
-  let currentVideoId = null;
-  let captionTimer = null;
-  let videoDuration = 3600;
+let ytPlayer = null, playerReady = false;
+let captions = [], allTranscript = [];
+let clipStart = 0, clipEnd = 60;
+let currentVideoId = null, captionTimer = null;
 
-  // ── YouTube IFrame API ──────────────────────────────────────────────────────
-  const tag = document.createElement('script');
-  tag.src = "https://www.youtube.com/iframe_api";
-  document.head.appendChild(tag);
+// ── YouTube IFrame API ────────────────────────────────────────────────────────
+const ytTag = document.createElement('script');
+ytTag.src = "https://www.youtube.com/iframe_api";
+document.head.appendChild(ytTag);
+function onYouTubeIframeAPIReady() {}
 
-  function onYouTubeIframeAPIReady() {
-    // ready, will init on demand
-  }
-
-  function initPlayer(videoId, startSec) {
-    if (ytPlayer) { ytPlayer.destroy(); ytPlayer = null; }
-    playerReady = false;
-
-    ytPlayer = new YT.Player('yt-player', {
-      videoId: videoId,
-      playerVars: { start: Math.floor(startSec), autoplay: 0, controls: 1, modestbranding: 1, rel: 0 },
-      events: {
-        onReady: (e) => {
-          playerReady = true;
-          const dur = e.target.getDuration();
-          if (dur > 0) {
-            videoDuration = dur;
-            document.getElementById('trimEnd').max = dur;
-            document.getElementById('trimStart').max = dur;
-          }
-        },
-        onStateChange: (e) => {
-          if (e.data === YT.PlayerState.PLAYING) {
-            clearInterval(captionTimer);
-            captionTimer = setInterval(updateCaptionOverlay, 100);
-          } else {
-            clearInterval(captionTimer);
-          }
+function initPlayer(videoId, startSec) {
+  if (ytPlayer) { try { ytPlayer.destroy(); } catch(e){} ytPlayer = null; }
+  playerReady = false;
+  document.getElementById('yt-player').innerHTML = '';
+  ytPlayer = new YT.Player('yt-player', {
+    videoId,
+    playerVars: { start: Math.floor(startSec), autoplay: 0, controls: 1, modestbranding: 1, rel: 0 },
+    events: {
+      onReady: (e) => {
+        playerReady = true;
+        const dur = e.target.getDuration();
+        if (dur > 0) {
+          document.getElementById('trimEnd').max = dur;
+          document.getElementById('trimStart').max = dur;
+        }
+      },
+      onStateChange: (e) => {
+        clearInterval(captionTimer);
+        if (e.data === YT.PlayerState.PLAYING) {
+          captionTimer = setInterval(tickCaptions, 100);
         }
       }
-    });
-  }
-
-  // ── Helpers ─────────────────────────────────────────────────────────────────
-  function extractVideoId(url) {
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-      /^([a-zA-Z0-9_-]{11})$/
-    ];
-    for (const p of patterns) {
-      const m = url.match(p);
-      if (m) return m[1];
     }
-    return null;
-  }
-
-  function fmtTime(sec) {
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  }
-
-  function buildCaptions(transcript, start, end) {
-    return transcript
-      .filter(t => {
-        const s = t.offset / 1000;
-        const e = s + t.duration / 1000;
-        return e > start && s < end;
-      })
-      .map(t => ({
-        text: t.text,
-        start: t.offset / 1000,
-        end: t.offset / 1000 + t.duration / 1000,
-        id: t.offset
-      }));
-  }
-
-  // ── API Calls ────────────────────────────────────────────────────────────────
-  async function fetchTranscript(videoId) {
-    const res = await fetch(
-      `https://api.supadata.ai/v1/youtube/transcript?videoId=${videoId}&text=false`,
-      { headers: { 'x-api-key': SUPADATA_KEY } }
-    );
-    if (!res.ok) throw new Error(`Transcript fetch failed (${res.status}). Check the video has captions enabled.`);
-    const data = await res.json();
-    return data.content || [];
-  }
-
-  async function analyzeWithClaude(transcript, duration) {
-    const snippets = transcript
-      .map(t => `[${(t.offset / 1000).toFixed(1)}s] ${t.text}`)
-      .join('\n');
-
-    const prompt = `You are an expert viral short-form video editor for TikTok/Reels/Shorts.
-
-Analyze this YouTube video transcript and find the SINGLE best 30-60 second clip that would perform best as a short-form viral video. Look for: strong hooks, surprising moments, emotional peaks, punchlines, or highly quotable lines.
-
-Transcript (timestamps in seconds):
-${snippets.slice(0, 8000)}
-
-Video duration: ${duration}s
-
-Respond ONLY with valid JSON, no markdown:
-{
-  "clipStart": <number, seconds>,
-  "clipEnd": <number, seconds>,
-  "reason": "<1-2 sentences why this moment is viral-worthy>",
-  "hookLine": "<the opening line or moment that will hook viewers>"
-}`;
-
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        messages: [{ role: "user", content: prompt }]
-      })
-    });
-    const data = await res.json();
-    const text = (data.content?.[0]?.text || '').replace(/```json|```/g, '').trim();
-    return JSON.parse(text);
-  }
-
-  // ── Main Flow ────────────────────────────────────────────────────────────────
-  async function handleProcess() {
-    const url = document.getElementById('urlInput').value.trim();
-    const vid = extractVideoId(url);
-    if (!vid) { showError("Invalid YouTube URL — paste a full youtube.com or youtu.be link."); return; }
-
-    hideError();
-    setLoading(true, "Fetching transcript...");
-
-    try {
-      const transcript = await fetchTranscript(vid);
-      if (!transcript.length) throw new Error("No captions found. Try a video with auto-captions enabled.");
-      allTranscript = transcript;
-
-      const estDuration = (transcript[transcript.length - 1]?.offset || 0) / 1000 + 30;
-
-      setLoading(true, "AI is finding the best viral moment...");
-      const analysis = await analyzeWithClaude(transcript, estDuration);
-
-      clipStart = Math.max(0, analysis.clipStart);
-      clipEnd = Math.min(estDuration, analysis.clipEnd);
-      currentVideoId = vid;
-
-      captions = buildCaptions(transcript, clipStart, clipEnd);
-
-      document.getElementById('aiReason').textContent = analysis.reason;
-      updateClipRangeUI();
-      renderCaptions();
-      updateExportTip();
-
-      // Trim sliders
-      document.getElementById('trimStart').max = clipEnd - 5;
-      document.getElementById('trimStart').value = clipStart;
-      document.getElementById('trimEnd').min = clipStart + 5;
-      document.getElementById('trimEnd').value = clipEnd;
-      document.getElementById('trimStartLabel').textContent = fmtTime(clipStart);
-      document.getElementById('trimEndLabel').textContent = fmtTime(clipEnd);
-
-      setLoading(false);
-      document.getElementById('editorLayout').classList.remove('hidden');
-
-      setTimeout(() => initPlayer(vid, clipStart), 300);
-
-    } catch (e) {
-      setLoading(false);
-      showError(e.message);
-    }
-  }
-
-  // ── Caption Overlay ──────────────────────────────────────────────────────────
-  function updateCaptionOverlay() {
-    if (!ytPlayer || !playerReady) return;
-    const t = ytPlayer.getCurrentTime();
-    const current = captions.find(c => t >= c.start && t < c.end);
-    const overlay = document.getElementById('videoOverlay');
-    const overlayText = document.getElementById('overlayText');
-    if (current) {
-      overlayText.textContent = current.text;
-      overlay.style.display = 'flex';
-    } else {
-      overlay.style.display = 'none';
-    }
-
-    // Highlight active caption row
-    document.querySelectorAll('.caption-row').forEach((row, i) => {
-      if (captions[i] && t >= captions[i].start && t < captions[i].end) {
-        row.classList.add('active');
-        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      } else {
-        row.classList.remove('active');
-      }
-    });
-  }
-
-  // ── Trim ─────────────────────────────────────────────────────────────────────
-  function onTrimStart(val) {
-    clipStart = parseFloat(val);
-    document.getElementById('trimStartLabel').textContent = fmtTime(clipStart);
-    document.getElementById('trimEnd').min = clipStart + 5;
-    rebuildAfterTrim();
-    if (ytPlayer && playerReady) ytPlayer.seekTo(clipStart, true);
-  }
-
-  function onTrimEnd(val) {
-    clipEnd = parseFloat(val);
-    document.getElementById('trimEndLabel').textContent = fmtTime(clipEnd);
-    document.getElementById('trimStart').max = clipEnd - 5;
-    rebuildAfterTrim();
-  }
-
-  function rebuildAfterTrim() {
-    captions = buildCaptions(allTranscript, clipStart, clipEnd);
-    renderCaptions();
-    updateClipRangeUI();
-    updateExportTip();
-  }
-
-  function updateClipRangeUI() {
-    document.getElementById('clipRangeText').textContent = `Clip: ${fmtTime(clipStart)} → ${fmtTime(clipEnd)}`;
-    document.getElementById('clipLen').textContent = `${Math.round(clipEnd - clipStart)}s`;
-  }
-
-  function updateExportTip() {
-    document.getElementById('exportTip').textContent =
-      `Clip timestamps: ${fmtTime(clipStart)} to ${fmtTime(clipEnd)} on the YouTube video`;
-  }
-
-  // ── Render Captions ──────────────────────────────────────────────────────────
-  function renderCaptions() {
-    const list = document.getElementById('captionList');
-    list.innerHTML = '';
-    captions.forEach((c, i) => {
-      const row = document.createElement('div');
-      row.className = 'caption-row';
-      row.dataset.index = i;
-
-      const time = document.createElement('span');
-      time.className = 'caption-time';
-      time.textContent = fmtTime(c.start);
-
-      const input = document.createElement('input');
-      input.className = 'caption-text';
-      input.value = c.text;
-      input.oninput = (e) => { captions[i].text = e.target.value; };
-
-      row.appendChild(time);
-      row.appendChild(input);
-      list.appendChild(row);
-    });
-  }
-
-  // ── Export SRT ───────────────────────────────────────────────────────────────
-  function exportSRT() {
-    function toSRT(s) {
-      const h = Math.floor(s / 3600);
-      const m = Math.floor((s % 3600) / 60);
-      const sec = Math.floor(s % 60);
-      const ms = Math.floor((s % 1) * 1000);
-      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')},${String(ms).padStart(3,'0')}`;
-    }
-
-    const lines = captions.map((c, i) => {
-      const adjStart = Math.max(0, c.start - clipStart);
-      const adjEnd = Math.max(0, c.end - clipStart);
-      return `${i + 1}\n${toSRT(adjStart)} --> ${toSRT(adjEnd)}\n${c.text}`;
-    }).join('\n\n');
-
-    const blob = new Blob([lines], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `clip_${currentVideoId}_captions.srt`;
-    a.click();
-  }
-
-  // ── UI Helpers ───────────────────────────────────────────────────────────────
-  function setLoading(on, msg) {
-    document.getElementById('loadingState').classList.toggle('hidden', !on);
-    document.getElementById('processBtn').disabled = on;
-    if (msg) document.getElementById('loadingMsg').textContent = msg;
-    if (on) document.getElementById('editorLayout').classList.add('hidden');
-  }
-
-  function showError(msg) {
-    const el = document.getElementById('errorMsg');
-    el.textContent = '⚠ ' + msg;
-    el.classList.remove('hidden');
-  }
-
-  function hideError() {
-    document.getElementById('errorMsg').classList.add('hidden');
-  }
-
-  // Enter key on URL input
-  document.getElementById('urlInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleProcess();
   });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function extractVideoId(url) {
+  url = url.trim();
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /^([a-zA-Z0-9_-]{11})$/
+  ];
+  for (const p of patterns) { const m = url.match(p); if (m) return m[1]; }
+  return null;
+}
+
+function fmtTime(sec) {
+  sec = Math.max(0, sec);
+  return `${Math.floor(sec/60)}:${String(Math.floor(sec%60)).padStart(2,'0')}`;
+}
+
+function buildCaptions(transcript, start, end) {
+  return transcript
+    .filter(t => { const s=t.offset/1000, e=s+t.duration/1000; return e>start && s<end; })
+    .map(t => ({ text: t.text, start: t.offset/1000, end: t.offset/1000+t.duration/1000, id: t.offset }));
+}
+
+// ── Fetch transcript via Supadata + CORS proxy fallbacks ─────────────────────
+async function fetchTranscript(videoId) {
+  const apiUrl = `https://api.supadata.ai/v1/youtube/transcript?videoId=${videoId}&text=false`;
+  const proxies = [
+    apiUrl, // direct (works in some environments)
+    `https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
+  ];
+
+  let lastErr = null;
+  for (const url of proxies) {
+    try {
+      const res = await fetch(url, {
+        headers: { 'x-api-key': SUPADATA_KEY },
+        signal: AbortSignal.timeout(10000)
+      });
+      if (!res.ok) { lastErr = `HTTP ${res.status}`; continue; }
+      const data = await res.json();
+      if (data.content && data.content.length > 0) return data.content;
+      lastErr = "Empty transcript returned";
+    } catch(e) { lastErr = e.message; }
+  }
+
+  // Last resort: try fetching YouTube's own caption track directly
+  return await fetchYTCaptionsDirect(videoId, lastErr);
+}
+
+async function fetchYTCaptionsDirect(videoId, prevErr) {
+  const pageProxies = [
+    `https://corsproxy.io/?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`,
+  ];
+
+  for (const url of pageProxies) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+      if (!res.ok) continue;
+      const html = await res.text();
+      const match = html.match(/"captionTracks":\s*(\[.*?\])/);
+      if (!match) continue;
+      const tracks = JSON.parse(match[1]);
+      const track = tracks.find(t => t.languageCode?.startsWith('en')) || tracks[0];
+      if (!track?.baseUrl) continue;
+
+      const capRes = await fetch(
+        `https://corsproxy.io/?url=${encodeURIComponent(track.baseUrl + '&fmt=json3')}`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!capRes.ok) continue;
+      const capData = await capRes.json();
+      if (!capData.events) continue;
+
+      return capData.events
+        .filter(e => e.segs && e.tStartMs != null)
+        .map(e => ({
+          text: e.segs.map(s => s.utf8 || '').join('').replace(/\n/g,' ').trim(),
+          offset: e.tStartMs,
+          duration: e.dDurationMs || 2000
+        }))
+        .filter(e => e.text.length > 0);
+    } catch(e) { continue; }
+  }
+
+  throw new Error(
+    `Could not load captions. Make sure the video has subtitles/captions enabled on YouTube. ` +
+    `(Previous error: ${prevErr})`
+  );
+}
+
+// ── Smart local viral clip finder ─────────────────────────────────────────────
+function findBestClip(transcript) {
+  const duration = (transcript[transcript.length-1].offset / 1000) + 30;
+  if (transcript.length < 4) return { start: 0, end: Math.min(60, duration), reason: "Showing full video — transcript is very short." };
+
+  const hookRx = /\b(actually|secret|truth|never|always|insane|crazy|shocking|wait|but|turns out|real reason|this is why|you won't|didn't know|most people|biggest|worst|best|only|literally|right now|stop|mistake|wrong|hack|trick|impossible|change|life|money|success|fail|discover|reveal|exposed|hidden|proof|fact|myth|warning)\b/gi;
+  const questionRx = /\b(how|why|what|when|who|can|should|would|could|will)\b[^.!?]{3,}\?/gi;
+  const emotionRx = /\b(amazing|incredible|unbelievable|devastating|terrifying|hilarious|heartbreaking|inspiring|shocking|outrageous|brilliant|stupid|perfect|terrible|wonderful|awful|powerful)\b/gi;
+
+  const WIN = 45, STEP = 5;
+  let best = { score: -1, start: 15, end: 60 };
+
+  for (let t = 0; t + WIN <= duration; t += STEP) {
+    const segs = transcript.filter(s => { const ts = s.offset/1000; return ts >= t && ts < t+WIN; });
+    if (segs.length < 3) continue;
+    const text = segs.map(s => s.text).join(' ');
+
+    let score = 0;
+    score += (text.match(hookRx) || []).length * 3;
+    score += (text.match(questionRx) || []).length * 2;
+    score += (text.match(emotionRx) || []).length * 2;
+    score += (text.match(/!/g) || []).length;
+    score += (text.match(/\?/g) || []).length;
+    score += Math.min(text.split(/\s+/).length / 10, 5);
+    if (t < 20) score -= 4; // skip intros
+    if (t > duration * 0.88) score -= 3; // skip outros
+    if (t >= duration * 0.1 && t <= duration * 0.4) score += 2; // early content sweet spot
+
+    if (score > best.score) best = { score, start: t, end: Math.min(t+WIN, duration) };
+  }
+
+  return {
+    start: best.start,
+    end: best.end,
+    reason: "Peak engagement zone detected — highest concentration of hook language, emotional keywords, and rhetorical questions in this segment."
+  };
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function handleProcess() {
+  const url = document.getElementById('urlInput').value.trim();
+  const vid = extractVideoId(url);
+  if (!vid) { showError("Invalid YouTube URL — paste a full youtube.com or youtu.be link."); return; }
+
+  hideError();
+  setLoading(true, "Fetching transcript...");
+
+  try {
+    const transcript = await fetchTranscript(vid);
+    if (!transcript.length) throw new Error("No captions found on this video.");
+    allTranscript = transcript;
+
+    setLoading(true, "Finding best viral moment...");
+    const analysis = findBestClip(transcript);
+    clipStart = Math.max(0, analysis.start);
+    clipEnd = analysis.end;
+    currentVideoId = vid;
+    captions = buildCaptions(transcript, clipStart, clipEnd);
+
+    document.getElementById('aiReason').textContent = analysis.reason;
+    updateClipRangeUI();
+    renderCaptions();
+    updateExportTip();
+
+    const trimS = document.getElementById('trimStart');
+    const trimE = document.getElementById('trimEnd');
+    trimS.max = clipEnd - 5; trimS.value = clipStart;
+    trimE.min = clipStart + 5; trimE.value = clipEnd;
+    document.getElementById('trimStartLabel').textContent = fmtTime(clipStart);
+    document.getElementById('trimEndLabel').textContent = fmtTime(clipEnd);
+
+    setLoading(false);
+    document.getElementById('editorLayout').classList.remove('hidden');
+
+    const tryInit = () => {
+      if (window.YT && window.YT.Player) initPlayer(vid, clipStart);
+      else setTimeout(tryInit, 300);
+    };
+    setTimeout(tryInit, 400);
+
+  } catch(e) {
+    setLoading(false);
+    showError(e.message);
+  }
+}
+
+// ── Caption tick ──────────────────────────────────────────────────────────────
+function tickCaptions() {
+  if (!ytPlayer || !playerReady) return;
+  let t;
+  try { t = ytPlayer.getCurrentTime(); } catch(e) { return; }
+
+  const overlay = document.getElementById('videoOverlay');
+  const cur = captions.find(c => t >= c.start && t < c.end);
+  if (cur) {
+    document.getElementById('overlayText').textContent = cur.text;
+    overlay.style.display = 'flex';
+  } else {
+    overlay.style.display = 'none';
+  }
+
+  document.querySelectorAll('.caption-row').forEach((row, i) => {
+    const active = captions[i] && t >= captions[i].start && t < captions[i].end;
+    row.classList.toggle('active', active);
+    if (active) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+}
+
+// ── Trim ──────────────────────────────────────────────────────────────────────
+function onTrimStart(val) {
+  clipStart = parseFloat(val);
+  document.getElementById('trimStartLabel').textContent = fmtTime(clipStart);
+  document.getElementById('trimEnd').min = clipStart + 5;
+  rebuild();
+  if (ytPlayer && playerReady) try { ytPlayer.seekTo(clipStart, true); } catch(e) {}
+}
+function onTrimEnd(val) {
+  clipEnd = parseFloat(val);
+  document.getElementById('trimEndLabel').textContent = fmtTime(clipEnd);
+  document.getElementById('trimStart').max = clipEnd - 5;
+  rebuild();
+}
+function rebuild() {
+  captions = buildCaptions(allTranscript, clipStart, clipEnd);
+  renderCaptions(); updateClipRangeUI(); updateExportTip();
+}
+function updateClipRangeUI() {
+  document.getElementById('clipRangeText').textContent = `Clip: ${fmtTime(clipStart)} → ${fmtTime(clipEnd)}`;
+  document.getElementById('clipLen').textContent = `${Math.round(clipEnd - clipStart)}s`;
+}
+function updateExportTip() {
+  document.getElementById('exportTip').textContent = `Timestamps: ${fmtTime(clipStart)} → ${fmtTime(clipEnd)} on the YouTube video`;
+}
+
+// ── Render captions ───────────────────────────────────────────────────────────
+function renderCaptions() {
+  const list = document.getElementById('captionList');
+  list.innerHTML = '';
+  captions.forEach((c, i) => {
+    const row = document.createElement('div');
+    row.className = 'caption-row';
+    const time = document.createElement('span');
+    time.className = 'caption-time';
+    time.textContent = fmtTime(c.start);
+    const input = document.createElement('input');
+    input.className = 'caption-text';
+    input.value = c.text;
+    input.oninput = e => { captions[i].text = e.target.value; };
+    row.appendChild(time); row.appendChild(input);
+    list.appendChild(row);
+  });
+}
+
+// ── Export SRT ────────────────────────────────────────────────────────────────
+function exportSRT() {
+  function toSRT(s) {
+    s = Math.max(0, s);
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+    const sec = Math.floor(s%60), ms = Math.floor((s%1)*1000);
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')},${String(ms).padStart(3,'0')}`;
+  }
+  const lines = captions.map((c, i) =>
+    `${i+1}\n${toSRT(c.start-clipStart)} --> ${toSRT(c.end-clipStart)}\n${c.text}`
+  ).join('\n\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines], { type: 'text/plain' }));
+  a.download = `clip_${currentVideoId}.srt`;
+  a.click();
+}
+
+// ── UI utils ──────────────────────────────────────────────────────────────────
+function setLoading(on, msg) {
+  document.getElementById('loadingState').classList.toggle('hidden', !on);
+  document.getElementById('processBtn').disabled = on;
+  if (msg) document.getElementById('loadingMsg').textContent = msg;
+  if (on) document.getElementById('editorLayout').classList.add('hidden');
+}
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = '⚠ ' + msg;
+  el.classList.remove('hidden');
+}
+function hideError() { document.getElementById('errorMsg').classList.add('hidden'); }
+
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleProcess();
+});
 </script>
 
 </body>
