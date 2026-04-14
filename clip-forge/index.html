@@ -1,0 +1,708 @@
+import { useState, useRef, useEffect, useCallback } from “react”;
+
+const SUPADATA_KEY_STORAGE = “clipforge_supadata_key”;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function extractVideoId(url) {
+const patterns = [
+/(?:youtube.com/watch?v=|youtu.be/|youtube.com/embed/)([a-zA-Z0-9_-]{11})/,
+/^([a-zA-Z0-9_-]{11})$/,
+];
+for (const p of patterns) {
+const m = url.match(p);
+if (m) return m[1];
+}
+return null;
+}
+
+function fmtTime(sec) {
+const m = Math.floor(sec / 60);
+const s = Math.floor(sec % 60);
+return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+// ── Caption word-level highlight engine ──────────────────────────────────────
+function buildCaptionBlocks(transcript, clipStart, clipEnd) {
+return transcript
+.filter((t) => {
+const start = t.offset / 1000;
+const end = start + t.duration / 1000;
+return end > clipStart && start < clipEnd;
+})
+.map((t) => ({
+text: t.text,
+start: t.offset / 1000,
+end: t.offset / 1000 + t.duration / 1000,
+id: t.offset,
+}));
+}
+
+// ── API calls ─────────────────────────────────────────────────────────────────
+async function fetchTranscript(videoId, apiKey) {
+const res = await fetch(
+`https://api.supadata.ai/v1/youtube/transcript?videoId=${videoId}&text=false`,
+{ headers: { “x-api-key”: apiKey } }
+);
+if (!res.ok) throw new Error(`Transcript fetch failed: ${res.status}`);
+const data = await res.json();
+return data.content || [];
+}
+
+async function analyzeWithClaude(transcript, duration) {
+const snippets = transcript
+.map((t) => `[${(t.offset / 1000).toFixed(1)}s] ${t.text}`)
+.join(”\n”);
+
+const prompt = `You are an expert viral short-form video editor for TikTok/Reels/Shorts.
+
+Analyze this YouTube video transcript and find the SINGLE best 30-60 second clip that would perform best as a short-form viral video. Look for: strong hooks, surprising moments, emotional peaks, punchlines, or highly quotable lines.
+
+Transcript (timestamps in seconds):
+${snippets.slice(0, 8000)}
+
+Video duration: ${duration}s
+
+Respond ONLY with valid JSON, no markdown:
+{
+“clipStart”: <number, seconds>,
+“clipEnd”: <number, seconds>,
+“reason”: “<1-2 sentences why this moment is viral-worthy>”,
+“hookLine”: “<the opening line or moment that will hook viewers>”
+}`;
+
+const res = await fetch(“https://api.anthropic.com/v1/messages”, {
+method: “POST”,
+headers: { “Content-Type”: “application/json” },
+body: JSON.stringify({
+model: “claude-sonnet-4-20250514”,
+max_tokens: 1000,
+messages: [{ role: “user”, content: prompt }],
+}),
+});
+const data = await res.json();
+const text = data.content?.[0]?.text || “”;
+const clean = text.replace(/`json|`/g, “”).trim();
+return JSON.parse(clean);
+}
+
+// ── Components ────────────────────────────────────────────────────────────────
+function KeySetup({ onSave }) {
+const [key, setKey] = useState(””);
+return (
+<div className="key-setup">
+<div className="key-card">
+<div className="key-icon">🗝</div>
+<h2>Supadata API Key</h2>
+<p>
+Get 100 free transcript credits/month at{” “}
+<a href="https://supadata.ai" target="_blank" rel="noreferrer">
+supadata.ai
+</a>{” “}
+— no credit card needed.
+</p>
+<input
+type=“password”
+placeholder=“sk-sup-…”
+value={key}
+onChange={(e) => setKey(e.target.value)}
+onKeyDown={(e) => e.key === “Enter” && key && onSave(key)}
+/>
+<button
+className=“btn-primary”
+disabled={!key}
+onClick={() => onSave(key)}
+>
+Save & Continue →
+</button>
+</div>
+</div>
+);
+}
+
+function CaptionEditor({ captions, currentTime, onEdit }) {
+const activeRef = useRef(null);
+
+const activeIdx = captions.findIndex(
+(c) => currentTime >= c.start && currentTime < c.end
+);
+
+useEffect(() => {
+if (activeRef.current) {
+activeRef.current.scrollIntoView({ block: “nearest”, behavior: “smooth” });
+}
+}, [activeIdx]);
+
+return (
+<div className="caption-editor">
+<div className="caption-editor-header">
+<span className="section-label">✏️ Caption Editor</span>
+<span className="caption-hint">Click any line to edit</span>
+</div>
+<div className="caption-list">
+{captions.map((c, i) => (
+<div
+key={c.id}
+ref={i === activeIdx ? activeRef : null}
+className={`caption-row ${i === activeIdx ? "active" : ""}`}
+>
+<span className="caption-time">{fmtTime(c.start)}</span>
+<input
+className=“caption-text”
+value={c.text}
+onChange={(e) => onEdit(i, e.target.value)}
+/>
+</div>
+))}
+</div>
+</div>
+);
+}
+
+function VideoOverlay({ captions, currentTime, clipStart }) {
+const current = captions.find(
+(c) => currentTime + clipStart >= c.start && currentTime + clipStart < c.end
+);
+if (!current) return null;
+return (
+<div className="video-overlay">
+<div className="overlay-caption">{current.text}</div>
+</div>
+);
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+export default function ClipForge() {
+const [apiKey, setApiKey] = useState(() => localStorage.getItem(SUPADATA_KEY_STORAGE) || “”);
+const [url, setUrl] = useState(””);
+const [phase, setPhase] = useState(“idle”); // idle | loading | editing
+const [loadingMsg, setLoadingMsg] = useState(””);
+const [error, setError] = useState(””);
+
+const [videoId, setVideoId] = useState(null);
+const [clipStart, setClipStart] = useState(0);
+const [clipEnd, setClipEnd] = useState(60);
+const [reason, setReason] = useState(””);
+const [captions, setCaptions] = useState([]);
+const [allTranscript, setAllTranscript] = useState([]);
+const [videoDuration, setVideoDuration] = useState(0);
+
+const playerRef = useRef(null);
+const playerReadyRef = useRef(false);
+const currentTimeRef = useRef(0);
+const [currentTime, setCurrentTime] = useState(0);
+const timerRef = useRef(null);
+
+// YT Player API
+useEffect(() => {
+if (!window.YT) {
+const tag = document.createElement(“script”);
+tag.src = “https://www.youtube.com/iframe_api”;
+document.head.appendChild(tag);
+}
+}, []);
+
+const initPlayer = useCallback((vid, start) => {
+if (playerRef.current) {
+playerRef.current.destroy();
+}
+playerReadyRef.current = false;
+
+```
+const create = () => {
+  playerRef.current = new window.YT.Player("yt-player", {
+    videoId: vid,
+    playerVars: {
+      start: Math.floor(start),
+      autoplay: 0,
+      controls: 1,
+      modestbranding: 1,
+      rel: 0,
+    },
+    events: {
+      onReady: (e) => {
+        playerReadyRef.current = true;
+        const dur = e.target.getDuration();
+        setVideoDuration(dur);
+      },
+      onStateChange: (e) => {
+        if (e.data === window.YT.PlayerState.PLAYING) {
+          timerRef.current = setInterval(() => {
+            const t = playerRef.current?.getCurrentTime?.() || 0;
+            currentTimeRef.current = t;
+            setCurrentTime(t);
+          }, 100);
+        } else {
+          clearInterval(timerRef.current);
+        }
+      },
+    },
+  });
+};
+
+if (window.YT?.Player) create();
+else window.onYouTubeIframeAPIReady = create;
+```
+
+}, []);
+
+const handleProcess = async () => {
+const vid = extractVideoId(url);
+if (!vid) { setError(“Invalid YouTube URL”); return; }
+setError(””);
+setPhase(“loading”);
+
+```
+try {
+  setLoadingMsg("Fetching transcript...");
+  const transcript = await fetchTranscript(vid, apiKey);
+  if (!transcript.length) throw new Error("No captions found for this video. Try one with auto-captions enabled.");
+  setAllTranscript(transcript);
+
+  const estDuration = (transcript[transcript.length - 1]?.offset || 0) / 1000 + 30;
+
+  setLoadingMsg("AI is finding the best viral moment...");
+  const analysis = await analyzeWithClaude(transcript, estDuration);
+
+  const start = Math.max(0, analysis.clipStart);
+  const end = Math.min(estDuration, analysis.clipEnd);
+
+  setVideoId(vid);
+  setClipStart(start);
+  setClipEnd(end);
+  setReason(analysis.reason);
+  setCaptions(buildCaptionBlocks(transcript, start, end));
+  setPhase("editing");
+
+  setTimeout(() => initPlayer(vid, start), 300);
+} catch (e) {
+  setError(e.message);
+  setPhase("idle");
+}
+```
+
+};
+
+const handleTrimChange = (newStart, newEnd) => {
+setClipStart(newStart);
+setClipEnd(newEnd);
+setCaptions(buildCaptionBlocks(allTranscript, newStart, newEnd));
+if (playerRef.current && playerReadyRef.current) {
+playerRef.current.seekTo(newStart, true);
+}
+};
+
+const handleExportSRT = () => {
+const lines = captions.map((c, i) => {
+const toSRT = (s) => {
+const h = Math.floor(s / 3600);
+const m = Math.floor((s % 3600) / 60);
+const sec = Math.floor(s % 60);
+const ms = Math.floor((s % 1) * 1000);
+return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")},${String(ms).padStart(3,"0")}`;
+};
+const adjStart = c.start - clipStart;
+const adjEnd = c.end - clipStart;
+return `${i + 1}\n${toSRT(adjStart)} --> ${toSRT(adjEnd)}\n${c.text}`;
+}).join(”\n\n”);
+
+```
+const blob = new Blob([lines], { type: "text/plain" });
+const a = document.createElement("a");
+a.href = URL.createObjectURL(blob);
+a.download = `clip_${videoId}_captions.srt`;
+a.click();
+```
+
+};
+
+const saveKey = (k) => {
+localStorage.setItem(SUPADATA_KEY_STORAGE, k);
+setApiKey(k);
+};
+
+if (!apiKey) return (
+<>
+<style>{css}</style>
+<div className="app">
+<header className="app-header">
+<div className="logo">⚡ ClipForge</div>
+</header>
+<KeySetup onSave={saveKey} />
+</div>
+</>
+);
+
+return (
+<>
+<style>{css}</style>
+<div className="app">
+<header className="app-header">
+<div className="logo">⚡ ClipForge</div>
+<button className=“btn-ghost” onClick={() => { localStorage.removeItem(SUPADATA_KEY_STORAGE); setApiKey(””); }}>
+Change Key
+</button>
+</header>
+
+```
+    <main className="main">
+      {/* URL Input */}
+      <section className="url-section">
+        <div className="url-bar">
+          <input
+            className="url-input"
+            placeholder="Paste YouTube URL..."
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && phase === "idle" && handleProcess()}
+            disabled={phase === "loading"}
+          />
+          <button
+            className="btn-primary"
+            onClick={handleProcess}
+            disabled={!url || phase === "loading"}
+          >
+            {phase === "loading" ? "..." : "Find Clip ⚡"}
+          </button>
+        </div>
+        {error && <div className="error-msg">⚠ {error}</div>}
+      </section>
+
+      {/* Loading */}
+      {phase === "loading" && (
+        <div className="loading-state">
+          <div className="spinner" />
+          <p>{loadingMsg}</p>
+        </div>
+      )}
+
+      {/* Editor */}
+      {phase === "editing" && (
+        <div className="editor-layout">
+          {/* Left: Video */}
+          <div className="video-col">
+            <div className="video-wrap">
+              <div id="yt-player" />
+              <VideoOverlay
+                captions={captions}
+                currentTime={currentTime}
+                clipStart={clipStart}
+              />
+            </div>
+
+            {/* AI Reason */}
+            <div className="ai-card">
+              <div className="ai-badge">🤖 AI Pick</div>
+              <p className="ai-reason">{reason}</p>
+              <div className="clip-range">
+                <span>Clip: {fmtTime(clipStart)} → {fmtTime(clipEnd)}</span>
+                <span className="clip-len">{Math.round(clipEnd - clipStart)}s</span>
+              </div>
+            </div>
+
+            {/* Trim Controls */}
+            <div className="trim-card">
+              <div className="section-label">✂️ Trim Clip</div>
+              <div className="trim-row">
+                <label>Start</label>
+                <input
+                  type="range"
+                  min={0}
+                  max={Math.max(0, clipEnd - 5)}
+                  step={0.5}
+                  value={clipStart}
+                  onChange={(e) => handleTrimChange(Number(e.target.value), clipEnd)}
+                />
+                <span>{fmtTime(clipStart)}</span>
+              </div>
+              <div className="trim-row">
+                <label>End</label>
+                <input
+                  type="range"
+                  min={clipStart + 5}
+                  max={videoDuration || clipEnd + 60}
+                  step={0.5}
+                  value={clipEnd}
+                  onChange={(e) => handleTrimChange(clipStart, Number(e.target.value))}
+                />
+                <span>{fmtTime(clipEnd)}</span>
+              </div>
+            </div>
+
+            {/* Export */}
+            <div className="export-card">
+              <div className="section-label">📤 Export</div>
+              <p className="export-note">
+                Download the .SRT caption file, then import into CapCut or any editor to burn captions onto your clip.
+              </p>
+              <button className="btn-export" onClick={handleExportSRT}>
+                ⬇ Download Captions (.SRT)
+              </button>
+              <div className="export-tip">
+                Clip timestamps: <strong>{fmtTime(clipStart)}</strong> to <strong>{fmtTime(clipEnd)}</strong> on YouTube video
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Captions */}
+          <div className="caption-col">
+            <CaptionEditor
+              captions={captions}
+              currentTime={currentTime}
+              onEdit={(i, val) => {
+                const next = [...captions];
+                next[i] = { ...next[i], text: val };
+                setCaptions(next);
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </main>
+  </div>
+</>
+```
+
+);
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+const css = `
+@import url(‘https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap’);
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+–bg: #0a0a0f;
+–surface: #13131a;
+–surface2: #1c1c27;
+–border: #2a2a3a;
+–accent: #7c6af7;
+–accent2: #f76a8a;
+–text: #e8e8f0;
+–text2: #8888a8;
+–active: #7c6af7;
+–radius: 12px;
+}
+
+body { background: var(–bg); color: var(–text); font-family: ‘Syne’, sans-serif; }
+
+a { color: var(–accent); }
+
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+
+/* Header */
+.app-header {
+display: flex; align-items: center; justify-content: space-between;
+padding: 16px 24px;
+border-bottom: 1px solid var(–border);
+background: rgba(10,10,15,0.9);
+backdrop-filter: blur(12px);
+position: sticky; top: 0; z-index: 100;
+}
+.logo { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.5px; color: var(–text); }
+.logo span { color: var(–accent); }
+
+/* Buttons */
+.btn-primary {
+background: var(–accent); color: #fff;
+border: none; border-radius: 8px;
+padding: 12px 20px; font-family: ‘Syne’, sans-serif;
+font-weight: 700; font-size: 0.9rem;
+cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+white-space: nowrap;
+}
+.btn-primary:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+background: transparent; color: var(–text2);
+border: 1px solid var(–border); border-radius: 8px;
+padding: 8px 14px; font-family: ‘Syne’, sans-serif;
+font-size: 0.8rem; cursor: pointer; transition: color 0.15s, border-color 0.15s;
+}
+.btn-ghost:hover { color: var(–text); border-color: var(–accent); }
+
+.btn-export {
+width: 100%; background: var(–accent2); color: #fff;
+border: none; border-radius: 8px;
+padding: 13px; font-family: ‘Syne’, sans-serif;
+font-weight: 700; font-size: 0.9rem;
+cursor: pointer; transition: opacity 0.15s;
+}
+.btn-export:hover { opacity: 0.85; }
+
+/* Key Setup */
+.key-setup {
+flex: 1; display: flex; align-items: center; justify-content: center;
+padding: 40px 24px;
+}
+.key-card {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: 20px; padding: 40px; max-width: 420px; width: 100%;
+text-align: center;
+}
+.key-icon { font-size: 2.5rem; margin-bottom: 16px; }
+.key-card h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 10px; }
+.key-card p { color: var(–text2); font-size: 0.88rem; line-height: 1.6; margin-bottom: 24px; }
+.key-card input {
+width: 100%; background: var(–bg); border: 1px solid var(–border);
+border-radius: 8px; padding: 12px 14px;
+color: var(–text); font-family: ‘DM Mono’, monospace; font-size: 0.85rem;
+margin-bottom: 14px; outline: none;
+transition: border-color 0.15s;
+}
+.key-card input:focus { border-color: var(–accent); }
+
+/* Main */
+.main { flex: 1; padding: 24px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+/* URL bar */
+.url-section { margin-bottom: 24px; }
+.url-bar { display: flex; gap: 10px; }
+.url-input {
+flex: 1; background: var(–surface); border: 1px solid var(–border);
+border-radius: 10px; padding: 13px 16px;
+color: var(–text); font-family: ‘Syne’, sans-serif; font-size: 0.95rem;
+outline: none; transition: border-color 0.15s;
+}
+.url-input:focus { border-color: var(–accent); }
+.error-msg { color: var(–accent2); font-size: 0.85rem; margin-top: 10px; }
+
+/* Loading */
+.loading-state {
+display: flex; flex-direction: column; align-items: center;
+gap: 16px; padding: 80px 0; color: var(–text2);
+}
+.spinner {
+width: 40px; height: 40px;
+border: 3px solid var(–border);
+border-top-color: var(–accent);
+border-radius: 50%;
+animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Editor layout */
+.editor-layout {
+display: grid;
+grid-template-columns: 1fr 360px;
+gap: 20px;
+align-items: start;
+}
+@media (max-width: 900px) {
+.editor-layout { grid-template-columns: 1fr; }
+}
+
+/* Video */
+.video-col { display: flex; flex-direction: column; gap: 14px; }
+.video-wrap {
+position: relative; width: 100%;
+background: #000; border-radius: var(–radius); overflow: hidden;
+aspect-ratio: 16/9;
+}
+#yt-player { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+
+.video-overlay {
+position: absolute; bottom: 60px; left: 0; right: 0;
+display: flex; justify-content: center;
+pointer-events: none;
+}
+.overlay-caption {
+background: rgba(0,0,0,0.82);
+color: #fff; font-family: ‘Syne’, sans-serif;
+font-size: 1.05rem; font-weight: 700;
+padding: 6px 16px; border-radius: 6px;
+text-align: center; max-width: 90%;
+text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+
+/* Cards */
+.ai-card, .trim-card, .export-card {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: var(–radius); padding: 16px;
+}
+.ai-badge {
+display: inline-block; background: var(–accent);
+color: #fff; font-size: 0.72rem; font-weight: 700;
+padding: 3px 8px; border-radius: 4px; margin-bottom: 10px;
+letter-spacing: 0.5px;
+}
+.ai-reason { color: var(–text2); font-size: 0.88rem; line-height: 1.6; margin-bottom: 10px; }
+.clip-range {
+display: flex; justify-content: space-between; align-items: center;
+font-family: ‘DM Mono’, monospace; font-size: 0.82rem; color: var(–text2);
+}
+.clip-len {
+background: var(–surface2); padding: 2px 8px; border-radius: 4px;
+color: var(–accent); font-weight: 500;
+}
+
+.section-label {
+display: block; font-size: 0.8rem; font-weight: 700;
+color: var(–text2); letter-spacing: 0.5px;
+text-transform: uppercase; margin-bottom: 12px;
+}
+
+/* Trim */
+.trim-row {
+display: grid; grid-template-columns: 40px 1fr 44px;
+align-items: center; gap: 10px; margin-bottom: 10px;
+}
+.trim-row label { font-size: 0.8rem; color: var(–text2); }
+.trim-row span {
+font-family: ‘DM Mono’, monospace; font-size: 0.8rem;
+color: var(–accent); text-align: right;
+}
+input[type=range] {
+-webkit-appearance: none; width: 100%; height: 4px;
+background: var(–border); border-radius: 2px; outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+-webkit-appearance: none; width: 16px; height: 16px;
+background: var(–accent); border-radius: 50%; cursor: pointer;
+}
+
+/* Export */
+.export-note { color: var(–text2); font-size: 0.83rem; line-height: 1.6; margin-bottom: 14px; }
+.export-tip {
+margin-top: 10px; font-size: 0.78rem; color: var(–text2);
+font-family: ‘DM Mono’, monospace;
+}
+
+/* Caption editor */
+.caption-col { position: sticky; top: 80px; }
+.caption-editor {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: var(–radius); overflow: hidden;
+max-height: calc(100vh - 120px); display: flex; flex-direction: column;
+}
+.caption-editor-header {
+display: flex; justify-content: space-between; align-items: center;
+padding: 14px 16px; border-bottom: 1px solid var(–border);
+flex-shrink: 0;
+}
+.caption-hint { font-size: 0.75rem; color: var(–text2); }
+.caption-list { overflow-y: auto; flex: 1; padding: 8px; }
+
+.caption-row {
+display: flex; align-items: flex-start; gap: 10px;
+padding: 8px; border-radius: 8px;
+transition: background 0.12s;
+margin-bottom: 4px;
+}
+.caption-row.active { background: rgba(124,106,247,0.15); }
+.caption-time {
+font-family: ‘DM Mono’, monospace; font-size: 0.72rem;
+color: var(–text2); padding-top: 10px; min-width: 36px; flex-shrink: 0;
+}
+.caption-row.active .caption-time { color: var(–accent); }
+.caption-text {
+flex: 1; background: var(–surface2); border: 1px solid transparent;
+border-radius: 6px; padding: 8px 10px;
+color: var(–text); font-family: ‘Syne’, sans-serif; font-size: 0.88rem;
+line-height: 1.5; outline: none; resize: none;
+transition: border-color 0.12s;
+}
+.caption-text:focus { border-color: var(–accent); }
+.caption-row.active .caption-text { border-color: rgba(124,106,247,0.4); }
+`;
