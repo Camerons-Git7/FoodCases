@@ -3,10 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Universal Code Runner</title>
+<title>Universal Code & 3D Model Runner</title>
 <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+<!-- Three.js and loaders -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
   body {
@@ -92,6 +98,134 @@
     background: rgba(15, 23, 42, 0.95);
     border: 1px solid rgba(99, 102, 241, 0.2);
   }
+  
+  /* 3D Viewer specific styles */
+  #model-viewer-container {
+    position: absolute;
+    inset: 0;
+    background: #1a1a2e;
+    display: none;
+    z-index: 5;
+  }
+  
+  #model-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  
+  .viewer-controls {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    color: #e2e8f0;
+    font-size: 12px;
+    max-width: 280px;
+    z-index: 10;
+  }
+  
+  .viewer-controls h3 {
+    margin: 0 0 12px 0;
+    color: #6366f1;
+    font-size: 14px;
+  }
+  
+  .control-group {
+    margin-bottom: 12px;
+  }
+  
+  .control-group label {
+    display: block;
+    margin-bottom: 4px;
+    color: #94a3b8;
+  }
+  
+  .control-group input[type="range"] {
+    width: 100%;
+    accent-color: #6366f1;
+  }
+  
+  .control-group button {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+  }
+  
+  .control-group button:hover {
+    opacity: 0.9;
+  }
+  
+  .back-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    z-index: 20;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  }
+  
+  .back-btn:hover {
+    transform: scale(1.05);
+  }
+  
+  .model-info {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: #e2e8f0;
+    font-size: 12px;
+    z-index: 10;
+  }
+  
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  
+  .loading-overlay.hidden {
+    display: none;
+  }
+  
+  .spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(99, 102, 241, 0.3);
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
 </style>
 </head>
 <body class="flex items-center justify-center relative">
@@ -103,12 +237,12 @@
       Universal Runner
     </h1>
     <p class="text-slate-400 text-lg">
-      Drop, paste, or click to run HTML, ZIP, GitHub repos & more
+      Drop, paste, or click to run HTML, ZIP, 3D Models & more
     </p>
   </div>
 
   <div id="drop-zone" class="drop-zone w-full aspect-square max-w-md rounded-3xl flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group">
-    <input type="file" id="file-input" class="absolute inset-0 opacity-0 cursor-pointer z-20" accept=".html,.htm,.zip,.txt,.js,.css,.json,.md">
+    <input type="file" id="file-input" class="absolute inset-0 opacity-0 cursor-pointer z-20" accept=".html,.htm,.zip,.txt,.js,.css,.json,.md,.glb,.gltf,.obj,.fbx,.blend,.dae,.ply,.stl,.3ds">
     
     <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
     
@@ -118,7 +252,7 @@
       <div class="glow-btn text-white font-bold py-4 px-12 rounded-2xl text-xl shadow-2xl inline-block">
         Import & Run
       </div>
-      <p class="text-slate-500 text-sm mt-4">Supports: HTML, ZIP, GitHub Repos, TXT, JS, CSS, JSON</p>
+      <p class="text-slate-500 text-sm mt-4">Supports: HTML, ZIP, 3D Models (GLB, OBJ, FBX, Blend), TXT, JS</p>
     </div>
     
     <div id="loading-indicator" class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-30">
@@ -153,8 +287,52 @@
 
   <div class="text-center text-xs text-slate-600 max-w-md">
     <p>GitHub repos: Download as ZIP → Import here. Auto-detects index.html, handles templates & assets.</p>
-    <p class="mt-1 text-slate-500">Tip: Enable Auto-run to instantly execute clipboard content</p>
+    <p class="mt-1 text-slate-500">3D Models: Drag GLB, GLTF, OBJ, FBX, or ZIP containing models</p>
   </div>
+</div>
+
+<!-- 3D Model Viewer Container -->
+<div id="model-viewer-container">
+  <button class="back-btn" onclick="closeModelViewer()">✕ Close Viewer</button>
+  
+  <div class="viewer-controls">
+    <h3>🎮 3D Viewer Controls</h3>
+    <div class="control-group">
+      <label>Background</label>
+      <button onclick="setBackground('dark')">Dark</button>
+      <button onclick="setBackground('light')">Light</button>
+      <button onclick="setBackground('grid')">Grid</button>
+    </div>
+    <div class="control-group">
+      <label>Auto Rotate</label>
+      <button onclick="toggleAutoRotate()">Toggle</button>
+    </div>
+    <div class="control-group">
+      <label>Wireframe</label>
+      <button onclick="toggleWireframe()">Toggle</button>
+    </div>
+    <div class="control-group">
+      <label>Light Intensity</label>
+      <input type="range" min="0" max="2" step="0.1" value="1" oninput="updateLightIntensity(this.value)">
+    </div>
+    <div class="control-group">
+      <label>Reset View</label>
+      <button onclick="resetCamera()">Reset Camera</button>
+    </div>
+  </div>
+  
+  <div class="model-info" id="model-info">
+    <div>Model: <span id="model-name">-</span></div>
+    <div>Format: <span id="model-format">-</span></div>
+    <div>Vertices: <span id="model-vertices">-</span></div>
+  </div>
+  
+  <div class="loading-overlay" id="model-loading">
+    <div class="spinner"></div>
+    <p style="margin-top: 16px; color: #6366f1;">Loading 3D Model...</p>
+  </div>
+  
+  <canvas id="model-canvas"></canvas>
 </div>
 
 <div id="preview-container" class="absolute inset-0 bg-white hidden z-0"></div>
@@ -178,11 +356,18 @@
   var clipboardCode = document.getElementById('clipboard-code');
   var autoRunCheckbox = document.getElementById('auto-run-checkbox');
   var clipboardStatus = document.getElementById('clipboard-status');
+  var modelViewerContainer = document.getElementById('model-viewer-container');
+  var modelLoading = document.getElementById('model-loading');
 
   var currentFiles = {};
   var basePath = '';
   var clipboardCheckInterval = null;
   var lastClipboardContent = '';
+  
+  // Three.js variables
+  var scene, camera, renderer, controls, currentModel, ambientLight, directionalLight;
+  var isAutoRotating = false;
+  var animationId;
 
   function showLoading(text) {
     loadingText.textContent = text;
@@ -259,7 +444,7 @@
     
     var isHtml = trimmed.match(/^<!DOCTYPE/i) || 
                  trimmed.match(/^<html/i) || 
-                 trimmed.match(/^<[a-z][\s\S]*>/i) ||
+                 trimmed.match(/^[a-z][\s\S]*>/i) ||
                  (trimmed.indexOf('<') > -1 && trimmed.indexOf('>') > -1 && trimmed.indexOf('</') > -1);
 
     if (isHtml) {
@@ -272,7 +457,7 @@
       }
     } else if (trimmed) {
       if (manual || autoRunCheckbox.checked) {
-        var wrapped = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>Clipboard Content</title>\n  <style>\n    body { \n      font-family: \'JetBrains Mono\', monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n      line-height: 1.6;\n    }\n    pre { \n      background: #1e293b; \n      padding: 1rem; \n      border-radius: 8px; \n      overflow-x: auto;\n      border: 1px solid #334155;\n      white-space: pre-wrap;\n      word-wrap: break-word;\n    }\n    h1 { color: #6366f1; border-bottom: 2px solid #334155; padding-bottom: 0.5rem; }\n    .meta { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }\n  </style>\n</head>\n<body>\n  <h1>📋 Clipboard Content</h1>\n  <div class="meta">Auto-rendered</div>\n  <pre><code>' + escapeHtml(trimmed) + '</code></pre>\n</body>\n</html>';
+        var wrapped = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>Clipboard Content</title>\n  <style>\n    body { \n      font-family: JetBrains Mono, monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n      line-height: 1.6;\n    }\n    pre { \n      background: #1e293b; \n      padding: 1rem;\n      border-radius: 8px;\n      overflow-x: auto;\n      border: 1px solid #334155;\n      white-space: pre-wrap;\n      word-wrap: break-word;\n    }\n    h1 { color: #6366f1; border-bottom: 2px solid #334155; padding-bottom: 0.5rem; }\n    .meta { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }\n  </style>\n</head>\n<body>\n  <h1>📋 Clipboard Content</h1>\n  <div class="meta">Auto-rendered</div>\n  <pre><code>' + escapeHtml(trimmed) + '</code></pre>\n</body>\n</html>';
         clipboardStatus.classList.remove('hidden');
         setTimeout(function() {
           runHtml(wrapped, 'clipboard.txt');
@@ -340,6 +525,8 @@
         processHtml(file);
       } else if (ext === 'txt' || ext === 'js' || ext === 'css' || ext === 'json' || ext === 'md') {
         processTextFile(file);
+      } else if (is3DModel(ext)) {
+        process3DModel(file);
       } else {
         readFileAsText(file).then(function(text) {
           if (text.trim().indexOf('<!DOCTYPE') === 0 || text.trim().indexOf('<html') === 0) {
@@ -354,6 +541,10 @@
       showError('Error: ' + err.message);
       hideLoading();
     }
+  }
+
+  function is3DModel(ext) {
+    return ['glb', 'gltf', 'obj', 'fbx', 'dae', 'ply', 'stl', '3ds', 'blend'].indexOf(ext) !== -1;
   }
 
   function readFileAsText(file) {
@@ -382,6 +573,19 @@
     });
   }
 
+  function readFileAsDataURL(file) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        resolve(e.target.result);
+      };
+      reader.onerror = function(e) {
+        reject(new Error('Failed to read file'));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   function processHtml(file) {
     readFileAsText(file).then(function(content) {
       runHtml(content, file.name);
@@ -390,7 +594,7 @@
 
   function processTextFile(file) {
     readFileAsText(file).then(function(content) {
-      var wrapped = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>' + file.name + '</title>\n  <style>\n    body { \n      font-family: \'JetBrains Mono\', monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n      line-height: 1.6;\n    }\n    pre { \n      background: #1e293b; \n      padding: 1rem; \n      border-radius: 8px; \n      overflow-x: auto;\n      border: 1px solid #334155;\n    }\n    h1 { color: #6366f1; border-bottom: 2px solid #334155; padding-bottom: 0.5rem; }\n    .meta { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }\n  </style>\n</head>\n<body>\n  <h1>📄 ' + file.name + '</h1>\n  <div class="meta">Size: ' + (file.size / 1024).toFixed(2) + ' KB | Type: ' + (file.type || 'text/plain') + '</div>\n  <pre><code>' + escapeHtml(content) + '</code></pre>\n</body>\n</html>';
+      var wrapped = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>' + file.name + '</title>\n  <style>\n    body { \n      font-family: JetBrains Mono, monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n      line-height: 1.6;\n    }\n    pre { \n      background: #1e293b; \n      padding: 1rem;\n      border-radius: 8px;\n      overflow-x: auto;\n      border: 1px solid #334155;\n    }\n    h1 { color: #6366f1; border-bottom: 2px solid #334155; padding-bottom: 0.5rem; }\n    .meta { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }\n  </style>\n</head>\n<body>\n  <h1>📄 ' + file.name + '</h1>\n  <div class="meta">Size: ' + (file.size / 1024).toFixed(2) + ' KB | Type: ' + (file.type || 'text/plain') + '</div>\n  <pre><code>' + escapeHtml(content) + '</code></pre>\n</body>\n</html>';
       runHtml(wrapped);
     });
   }
@@ -400,6 +604,244 @@
     div.textContent = text;
     return div.innerHTML;
   }
+
+  // ==================== 3D MODEL HANDLING ====================
+  
+  function process3DModel(file) {
+    var ext = file.name.split('.').pop().toLowerCase();
+    
+    if (ext === 'blend') {
+      showError('.blend files require conversion. Please export as .glb, .obj, or .fbx from Blender.');
+      hideLoading();
+      return;
+    }
+    
+    readFileAsDataURL(file).then(function(dataURL) {
+      init3DViewer();
+      load3DModel(dataURL, ext, file.name);
+    }).catch(function(err) {
+      showError('Failed to load model: ' + err.message);
+      hideLoading();
+    });
+  }
+
+  function init3DViewer() {
+    hideLoading();
+    mainContainer.classList.add('fade-out');
+    setTimeout(function() {
+      mainContainer.style.display = 'none';
+      modelViewerContainer.style.display = 'block';
+    }, 500);
+    modelLoading.classList.remove('hidden');
+    
+    var canvas = document.getElementById('model-canvas');
+    
+    // Scene
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a2e);
+    
+    // Camera
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 5);
+    
+    // Renderer
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    
+    // Lights
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    
+    directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(5, 10, 7);
+    directionalLight.castShadow = true;
+    scene.add(directionalLight);
+    
+    var fillLight = new THREE.DirectionalLight(0x6366f1, 0.3);
+    fillLight.position.set(-5, 0, -5);
+    scene.add(fillLight);
+    
+    // Controls
+    controls = new THREE.OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = false;
+    
+    // Grid
+    var gridHelper = new THREE.GridHelper(20, 20, 0x6366f1, 0x334155);
+    gridHelper.position.y = -1;
+    gridHelper.visible = false;
+    scene.add(gridHelper);
+    window.gridHelper = gridHelper;
+    
+    // Animation loop
+    function animate() {
+      animationId = requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+    
+    // Resize handler
+    window.addEventListener('resize', onWindowResize);
+  }
+
+  function onWindowResize() {
+    if (!camera || !renderer) return;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  function load3DModel(url, format, filename) {
+    var loader;
+    
+    switch(format) {
+      case 'glb':
+      case 'gltf':
+        loader = new THREE.GLTFLoader();
+        break;
+      case 'obj':
+        loader = new THREE.OBJLoader();
+        break;
+      case 'fbx':
+        loader = new THREE.FBXLoader();
+        break;
+      default:
+        showError('Unsupported 3D format: ' + format);
+        closeModelViewer();
+        return;
+    }
+    
+    loader.load(url, function(object) {
+      modelLoading.classList.add('hidden');
+      
+      if (currentModel) {
+        scene.remove(currentModel);
+      }
+      
+      // Handle different loader return types
+      if (format === 'glb' || format === 'gltf') {
+        currentModel = object.scene;
+      } else {
+        currentModel = object;
+      }
+      
+      // Center and scale model
+      var box = new THREE.Box3().setFromObject(currentModel);
+      var center = box.getCenter(new THREE.Vector3());
+      var size = box.getSize(new THREE.Vector3());
+      
+      var maxDim = Math.max(size.x, size.y, size.z);
+      var scale = 2 / maxDim;
+      currentModel.scale.setScalar(scale);
+      
+      currentModel.position.sub(center.multiplyScalar(scale));
+      currentModel.position.y += 1;
+      
+      scene.add(currentModel);
+      
+      // Update info
+      document.getElementById('model-name').textContent = filename;
+      document.getElementById('model-format').textContent = format.toUpperCase();
+      
+      // Count vertices
+      var vertices = 0;
+      currentModel.traverse(function(child) {
+        if (child.isMesh && child.geometry) {
+          vertices += child.geometry.attributes.position.count;
+        }
+      });
+      document.getElementById('model-vertices').textContent = vertices.toLocaleString();
+      
+      showSuccess('3D Model loaded successfully!');
+      
+    }, function(progress) {
+      // Loading progress
+    }, function(error) {
+      modelLoading.classList.add('hidden');
+      showError('Failed to load model: ' + error.message);
+      console.error(error);
+    });
+  }
+
+  window.closeModelViewer = function() {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+    }
+    if (renderer) {
+      renderer.dispose();
+    }
+    if (currentModel) {
+      scene.remove(currentModel);
+      currentModel = null;
+    }
+    
+    window.removeEventListener('resize', onWindowResize);
+    
+    modelViewerContainer.style.display = 'none';
+    mainContainer.style.display = 'flex';
+    mainContainer.classList.remove('fade-out');
+    clipboardPreview.classList.add('hidden');
+    clipboardStatus.classList.add('hidden');
+  };
+
+  window.setBackground = function(type) {
+    if (!scene) return;
+    
+    switch(type) {
+      case 'dark':
+        scene.background = new THREE.Color(0x1a1a2e);
+        window.gridHelper.visible = false;
+        break;
+      case 'light':
+        scene.background = new THREE.Color(0xf1f5f9);
+        window.gridHelper.visible = false;
+        break;
+      case 'grid':
+        scene.background = new THREE.Color(0x0f172a);
+        window.gridHelper.visible = true;
+        break;
+    }
+  };
+
+  window.toggleAutoRotate = function() {
+    if (!controls) return;
+    isAutoRotating = !isAutoRotating;
+    controls.autoRotate = isAutoRotating;
+  };
+
+  window.toggleWireframe = function() {
+    if (!currentModel) return;
+    currentModel.traverse(function(child) {
+      if (child.isMesh && child.material) {
+        if (Array.isArray(child.material)) {
+          child.material.forEach(function(m) {
+            m.wireframe = !m.wireframe;
+          });
+        } else {
+          child.material.wireframe = !child.material.wireframe;
+        }
+      }
+    });
+  };
+
+  window.updateLightIntensity = function(value) {
+    if (directionalLight) {
+      directionalLight.intensity = parseFloat(value);
+    }
+  };
+
+  window.resetCamera = function() {
+    if (!camera || !controls) return;
+    camera.position.set(0, 0, 5);
+    controls.target.set(0, 0, 0);
+    controls.update();
+  };
+
+  // ==================== ZIP HANDLING WITH 3D MODELS ====================
 
   function processZip(file) {
     showLoading('Extracting ZIP...');
@@ -433,6 +875,7 @@
           }
         }
         
+        // Collect all files
         zip.forEach(function(relativePath, zipEntry) {
           if (!zipEntry.dir) {
             var cleanPath = rootFolder ? relativePath.replace(rootFolder, '') : relativePath;
@@ -442,12 +885,28 @@
                 fullPath: relativePath,
                 entry: zipEntry,
                 name: cleanPath.split('/').pop(),
-                dir: cleanPath.split('/').slice(0, -1).join('/')
+                dir: cleanPath.split('/').slice(0, -1).join('/'),
+                ext: cleanPath.split('.').pop().toLowerCase()
               });
             }
           }
         });
 
+        // Check for 3D models in ZIP
+        var modelFiles = [];
+        for (var f = 0; f < files.length; f++) {
+          if (is3DModel(files[f].ext)) {
+            modelFiles.push(files[f]);
+          }
+        }
+        
+        // If 3D models found, show model selector
+        if (modelFiles.length > 0) {
+          showModelSelector(modelFiles, zip, rootFolder);
+          return;
+        }
+
+        // Otherwise process as regular ZIP (HTML/text files)
         showLoading('Processing files...');
 
         var entryPoint = null;
@@ -460,9 +919,9 @@
         
         for (var p = 0; p < priorities.length; p++) {
           var priority = priorities[p];
-          for (var f = 0; f < files.length; f++) {
-            if (files[f].path.toLowerCase() === priority.toLowerCase()) {
-              entryPoint = files[f];
+          for (var fi = 0; fi < files.length; fi++) {
+            if (files[fi].path.toLowerCase() === priority.toLowerCase()) {
+              entryPoint = files[fi];
               break;
             }
           }
@@ -517,13 +976,65 @@
     });
   }
 
+  function showModelSelector(modelFiles, zip, rootFolder) {
+    hideLoading();
+    
+    var fileList = '';
+    for (var i = 0; i < modelFiles.length; i++) {
+      var model = modelFiles[i];
+      var icon = '🔷';
+      if (model.ext === 'obj') icon = '🟦';
+      else if (model.ext === 'fbx') icon = '🟪';
+      else if (model.ext === 'blend') icon = '🟧';
+      
+      fileList += '<li style="margin: 0.75rem 0; cursor: pointer; color: #6366f1; padding: 8px; background: rgba(99, 102, 241, 0.1); border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background=\'rgba(99, 102, 241, 0.2)\'" onmouseout="this.style.background=\'rgba(99, 102, 241, 0.1)\'" onclick="window.loadZipModel(\'' + model.fullPath + '\', \'' + rootFolder + '\', \'' + model.ext + '\', \'' + model.name + '\')">' + icon + ' ' + model.path + ' <span style="color: #64748b; font-size: 0.8em;">(' + model.ext.toUpperCase() + ')</span></li>';
+    }
+    
+    var html = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>3D Models in ZIP</title>\n  <style>\n    body { \n      font-family: JetBrains Mono, monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n      max-width: 800px;\n      margin: 0 auto;\n    }\n    h1 { color: #6366f1; margin-bottom: 0.5rem; }\n    .subtitle { color: #64748b; margin-bottom: 2rem; }\n    ul { list-style: none; padding: 0; }\n    .info { background: rgba(99, 102, 241, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #6366f1; }\n  </style>\n</head>\n<body>\n  <h1>📦 3D Models Detected</h1>\n  <p class="subtitle">Found ' + modelFiles.length + ' model(s) in this ZIP archive</p>\n  <div class="info">\n    <strong>Note:</strong> .blend files require conversion. Click a model below to view it in the 3D viewer.\n  </div>\n  <ul>' + fileList + '</ul>\n</body>\n</html>';
+    
+    window.currentZip = zip;
+    window.loadZipModel = function(fullPath, root, format, filename) {
+      var ext = format.toLowerCase();
+      
+      if (ext === 'blend') {
+        alert('.blend files cannot be directly viewed. Please export as .glb, .obj, or .fbx from Blender first.');
+        return;
+      }
+      
+      zip.file(fullPath).async('uint8array').then(function(content) {
+        var blob = new Blob([content]);
+        var url = URL.createObjectURL(blob);
+        
+        // Also extract related files (materials, textures) if it's an OBJ
+        if (ext === 'obj') {
+          var baseName = filename.replace('.obj', '');
+          var mtlPath = fullPath.replace('.obj', '.mtl').replace('.OBJ', '.mtl');
+          
+          if (zip.file(mtlPath)) {
+            zip.file(mtlPath).async('uint8array').then(function(mtlContent) {
+              var mtlBlob = new Blob([mtlContent]);
+              var mtlUrl = URL.createObjectURL(mtlBlob);
+              // Store for OBJLoader to use
+              window.currentMtlUrl = mtlUrl;
+            });
+          }
+        }
+        
+        init3DViewer();
+        load3DModel(url, ext, filename);
+      });
+    };
+    
+    runHtml(html);
+  }
+
   function showFileBrowser(files, zip, rootFolder) {
     var fileList = '';
     for (var i = 0; i < files.length; i++) {
       fileList += '<li style="margin: 0.5rem 0; cursor: pointer; color: #6366f1;" onclick="window.viewFile(\'' + files[i].fullPath + '\', \'' + rootFolder + '\')">📄 ' + files[i].path + '</li>';
     }
     
-    var html = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>ZIP Contents</title>\n  <style>\n    body { \n      font-family: \'JetBrains Mono\', monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n    }\n    h1 { color: #6366f1; }\n    ul { list-style: none; padding: 0; }\n    li:hover { text-decoration: underline; }\n  </style>\n</head>\n<body>\n  <h1>📦 ZIP Archive Contents</h1>\n  <p>No HTML entry point found. Click a file to view:</p>\n  <ul>' + fileList + '</ul>\n</body>\n</html>';
+    var html = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>ZIP Contents</title>\n  <style>\n    body { \n      font-family: JetBrains Mono, monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n    }\n    h1 { color: #6366f1; }\n    ul { list-style: none; padding: 0; }\n    li:hover { text-decoration: underline; }\n  </style>\n</head>\n<body>\n  <h1>📦 ZIP Archive Contents</h1>\n  <p>No HTML entry point found. Click a file to view:</p>\n  <ul>' + fileList + '</ul>\n</body>\n</html>';
     
     window.currentZip = zip;
     window.viewFile = function(fullPath, root) {
@@ -547,7 +1058,9 @@
       'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
       'gif': 'image/gif', 'svg': 'image/svg+xml', 'webp': 'image/webp',
       'woff': 'font/woff', 'woff2': 'font/woff2', 'ttf': 'font/ttf', 'otf': 'font/otf',
-      'mp3': 'audio/mpeg', 'mp4': 'video/mp4', 'webm': 'video/webm'
+      'mp3': 'audio/mpeg', 'mp4': 'video/mp4', 'webm': 'video/webm',
+      'glb': 'model/gltf-binary', 'gltf': 'model/gltf+json',
+      'obj': 'text/plain', 'fbx': 'application/octet-stream'
     };
     return types[ext] || 'application/octet-stream';
   }
@@ -695,8 +1208,6 @@
     var blob = new Blob([processedHtml], { type: 'text/html' });
     var url = URL.createObjectURL(blob);
     
-    // CRITICAL FIX: Remove sandbox entirely to avoid Ruffle conflicts
-    // Ruffle needs full access to work properly without polyfill conflicts
     previewContainer.innerHTML = '<iframe id="preview-iframe" src="' + url + '"></iframe>';
     
     hideLoading();
@@ -749,15 +1260,19 @@
   }
 
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && previewContainer.style.display === 'block') {
-      previewContainer.style.display = 'none';
-      previewContainer.innerHTML = '';
-      mainContainer.style.display = 'flex';
-      mainContainer.classList.remove('fade-out');
-      currentFiles = {};
-      basePath = '';
-      clipboardPreview.classList.add('hidden');
-      clipboardStatus.classList.add('hidden');
+    if (e.key === 'Escape') {
+      if (modelViewerContainer.style.display === 'block') {
+        closeModelViewer();
+      } else if (previewContainer.style.display === 'block') {
+        previewContainer.style.display = 'none';
+        previewContainer.innerHTML = '';
+        mainContainer.style.display = 'flex';
+        mainContainer.classList.remove('fade-out');
+        currentFiles = {};
+        basePath = '';
+        clipboardPreview.classList.add('hidden');
+        clipboardStatus.classList.add('hidden');
+      }
     }
   });
 
