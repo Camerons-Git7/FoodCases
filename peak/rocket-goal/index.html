@@ -11,11 +11,8 @@
 
     <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIlJvY2tldEdvYWwiLCAic2hvcnRfbmFtZSI6ICJSb2NrZXRHb2FsIiwgInN0YXJ0X3VybCI6ICJpbmRleC5odG1sIiwgImRpc3BsYXkiOiAiZnVsbHNjcmVlbiIsICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMyMzFGMjAiLCAidGhlbWVfY29sb3IiOiAiIzAwMCIsICJkZXNjcmlwdGlvbiI6ICIiLCAiaWNvbnMiOiBbeyJzcmMiOiAiaHR0cHM6Ly9pLmViYm8uY28vbU1WU1pmM2YvdW5pdHktbG9nby1kYXJrLnBuZyIsICJzaXplcyI6ICIxNDR4MTQ0IiwgInR5cGUiOiAiaW1hZ2UvcG5nIiwgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIn1dfQ==">
 
-    <script src="https://playgama.com/ads/pockethaven.v0.1.js"></script>
-
-    <!-- Firebase Scripts -->
+    <!-- Firebase Scripts (Analytics removed) -->
     <script src="https://www.gstatic.com/firebasejs/10.2.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.2.0/firebase-analytics-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.2.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.2.0/firebase-remote-config-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.2.0/firebase-firestore-compat.js"></script>
@@ -38,36 +35,6 @@
     <meta name="twitter:description" content="Come play and win in the ultimate car soccer game! Drive rocket-powered cars, score incredible goals, and compete against players worldwide in fast-paced vehicle football matches!">
     <meta name="twitter:image" content="https://i.ibb.co/hRjc9QDp/og-image.png">
 
-    <!-- Smartlook Tracking Code -->
-    <script type='text/javascript'>
-        window.smartlook || (function(d) {
-            var o = smartlook = function() {
-                    o.api.push(arguments)
-                },
-                h = d.getElementsByTagName('head')[0];
-            var c = d.createElement('script');
-            o.api = new Array();
-            c.async = true;
-            c.type = 'text/javascript';
-            c.charset = 'utf-8';
-            c.src = 'https://web-sdk.smartlook.com/recorder.js';
-            h.appendChild(c);
-        })(document);
-    </script>
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZN6YDCFCY8"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-
-        function gtag() {
-            dataLayer.push(arguments);
-        }
-        gtag('js', new Date());
-
-        gtag('config', 'G-ZN6YDCFCY8');
-    </script>
-
     <!-- Canonical URL -->
     <link rel="canonical" href="https://marty-games.github.io/game/rocket-goal/">
 
@@ -82,6 +49,7 @@
         #unity-progress-bar-full { width: 0%; height: 18px; margin-top: 10px; background: url('https://i.ibb.co/d05pmFkj/progress-bar-full-dark.png') no-repeat center }
         #unity-warning { position: absolute; left: 50%; top: 5%; transform: translate(-50%); background: white; padding: 10px; display: none }
     </style>
+<base target="_blank">
 </head>
 
 <body>
@@ -119,8 +87,7 @@
               projectId: "rocketball-23c12",
               storageBucket: "rocketball-23c12.firebasestorage.app",
               messagingSenderId: "263108080315",
-              appId: "1:263108080315:web:6e010294b1c6ed3ff42f9e",
-              measurementId: "G-ZN6YDCFCY8"
+              appId: "1:263108080315:web:6e010294b1c6ed3ff42f9e"
             };
             
             const app = firebase.initializeApp(firebaseConfig);
@@ -185,19 +152,6 @@
 
         function getRemoteConfig(){
             return configDict;	
-        }
-
-        function sendGoogleAnalyticsEvent(eventName, parameters) {
-            try {
-                if (firebase.analytics) {
-                    firebase.analytics().logEvent(eventName, parameters);
-                    console.log('Analytics event sent:', eventName, parameters);
-                } else {
-                    console.warn('Firebase Analytics not initialized');
-                }
-            } catch (error) {
-                console.error('Error sending analytics event:', error);
-            }
         }
 
         function setupTokenRefresh() {
@@ -728,31 +682,6 @@
                     displayName: p.displayName
                 }))
             };
-        }
-
-        function setAnalyticsUserId(userId) {
-            try {
-                if (firebase.analytics) {
-                    firebase.analytics().setUserId(userId);
-                } else {
-                    console.warn('Firebase Analytics not initialized');
-                }
-            } catch (error) {
-                console.error('Error setting analytics user ID:', error);
-            }
-        }
-
-        function setAnalyticsUserProperty(name, value) {
-            try {
-                if (firebase.analytics) {
-                    firebase.analytics().setUserProperties({[name]: value});
-                    console.log('Analytics user property set:', name, value);
-                } else {
-                    console.warn('Firebase Analytics not initialized');
-                }
-            } catch (error) {
-                console.error('Error setting user property:', error);
-            }
         }
 
         async function loginWithEmailPassword(email, password) {
