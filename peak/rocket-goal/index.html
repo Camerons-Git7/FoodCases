@@ -48,6 +48,7 @@
         #unity-progress-bar-empty { margin-left: auto; margin-right: auto; width: 141px; height: 18px; margin-top: 10px; background: url('https://i.ibb.co/j9wb0s3t/progress-bar-empty-dark.png') no-repeat center }
         #unity-progress-bar-full { width: 0%; height: 18px; margin-top: 10px; background: url('https://i.ibb.co/d05pmFkj/progress-bar-full-dark.png') no-repeat center }
         #unity-warning { position: absolute; left: 50%; top: 5%; transform: translate(-50%); background: white; padding: 10px; display: none }
+        #fps-counter { position: absolute; top: 5px; right: 10px; color: white; font-family: monospace; font-size: 10px; z-index: 100; pointer-events: none; }
     </style>
 <base target="_blank">
 </head>
@@ -55,6 +56,7 @@
 <body>
     <div id="unity-container">
         <canvas id="unity-canvas" width="960" height="600" tabindex="-1" data-sl="canvas-lq"></canvas>
+        <div id="fps-counter">fps: 0</div>
         <div id="unity-loading-bar">
             <div id="loading-logo"></div>
             <div id="unity-progress-bar-empty">
@@ -65,6 +67,28 @@
     </div>
 
     <script>
+        // ==================== FPS COUNTER ====================
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+        const fpsElement = document.getElementById('fps-counter');
+
+        function updateFPS() {
+            const now = performance.now();
+            frameCount++;
+            
+            if (now - lastTime >= 1000) {
+                fps = frameCount;
+                frameCount = 0;
+                lastTime = now;
+                fpsElement.textContent = 'fps: ' + fps;
+            }
+            
+            requestAnimationFrame(updateFPS);
+        }
+        
+        requestAnimationFrame(updateFPS);
+
         // ==================== FIREBASE.JS ====================
         var configDict;
         var hasFetchedConfig;
