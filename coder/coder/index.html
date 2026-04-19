@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Universal File Combiner & Runner</title>
+<title>Fixed Universal File Combiner & Runner</title>
 <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -257,7 +257,7 @@
   </div>
 
   <div id="drop-zone" class="drop-zone w-full aspect-square max-w-md rounded-3xl flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group">
-    <input type="file" id="file-input" class="absolute inset-0 opacity-0 cursor-pointer z-20" webkitdirectory directory multiple>
+    <input type="file" id="file-input" class="absolute inset-0 opacity-0 cursor-pointer z-20" webkitdirectory directory multiple style="display: block;">
     <input type="file" id="zip-input" class="absolute inset-0 opacity-0 cursor-pointer z-20" accept=".zip" style="display: none;">
     
     <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -445,37 +445,54 @@
     e.preventDefault();
     dropZone.classList.remove('dragover');
     
+    console.log('Drop event triggered');
+    console.log('Items:', e.dataTransfer.items);
+    console.log('Files:', e.dataTransfer.files);
+    
     var items = e.dataTransfer.items;
     var files = e.dataTransfer.files;
     
-    if (items && items.length > 0) {
-      // Check if dropped item is a directory
-      var entry = items[0].webkitGetAsEntry();
-      if (entry && entry.isDirectory) {
-        processDirectory(entry);
-        return;
-      }
-    }
-    
-    // Check for ZIP file
+    // Check if it's a single ZIP file
     if (files.length === 1 && files[0].name.endsWith('.zip')) {
+      console.log('Processing as ZIP');
       processZip(files[0]);
       return;
     }
     
-    // Process multiple files as folder
+    // Check for directory using webkitGetAsEntry
+    if (items && items.length > 0) {
+      var entry = items[0].webkitGetAsEntry();
+      console.log('Entry:', entry);
+      if (entry) {
+        if (entry.isDirectory) {
+          console.log('Processing as directory');
+          processDirectory(entry);
+          return;
+        } else {
+          // Single file dropped
+          console.log('Processing single file');
+          processFileList([files[0]]);
+          return;
+        }
+      }
+    }
+    
+    // Fallback: process as file list
     if (files.length > 0) {
+      console.log('Processing as file list, count:', files.length);
       processFileList(files);
     }
   });
 
   fileInput.addEventListener('change', function(e) {
+    console.log('File input change, files:', e.target.files.length);
     if (e.target.files.length > 0) {
       processFileList(e.target.files);
     }
   });
 
   zipInput.addEventListener('change', function(e) {
+    console.log('ZIP input change');
     if (e.target.files.length > 0) {
       processZip(e.target.files[0]);
     }
@@ -488,7 +505,14 @@
     
     function readEntries() {
       reader.readEntries(function(entries) {
+        console.log('Read entries:', entries.length);
         if (entries.length === 0) {
+          console.log('Finished reading directory, total files:', files.length);
+          if (files.length === 0) {
+            hideLoading();
+            showError('No files found in directory');
+            return;
+          }
           processFilesArray(files);
           return;
         }
@@ -497,7 +521,13 @@
         entries.forEach(function(entry) {
           if (entry.isFile) {
             entry.file(function(file) {
+              // Preserve relative path
+              file.relativePath = entry.fullPath.startsWith('/') ? entry.fullPath.slice(1) : entry.fullPath;
               files.push(file);
+              pending--;
+              if (pending === 0) readEntries();
+            }, function(err) {
+              console.error('Error reading file:', err);
               pending--;
               if (pending === 0) readEntries();
             });
@@ -511,6 +541,10 @@
             if (pending === 0) readEntries();
           }
         });
+      }, function(err) {
+        console.error('Error reading entries:', err);
+        hideLoading();
+        showError('Error reading directory: ' + err.message);
       });
     }
     
@@ -531,9 +565,11 @@
         entries.forEach(function(entry) {
           if (entry.isFile) {
             entry.file(function(file) {
-              // Preserve relative path
-              file.relativePath = entry.fullPath;
+              file.relativePath = entry.fullPath.startsWith('/') ? entry.fullPath.slice(1) : entry.fullPath;
               files.push(file);
+              pending--;
+              if (pending === 0) readEntries();
+            }, function() {
               pending--;
               if (pending === 0) readEntries();
             });
@@ -547,6 +583,8 @@
             if (pending === 0) readEntries();
           }
         });
+      }, function() {
+        callback();
       });
     }
     
@@ -554,11 +592,21 @@
   }
 
   function processFileList(files) {
+    console.log('Processing file list:', files.length, 'files');
     var fileArray = Array.from(files);
+    
+    // Add relative paths if missing
+    fileArray.forEach(function(file) {
+      if (!file.relativePath) {
+        file.relativePath = file.webkitRelativePath || file.name;
+      }
+    });
+    
     processFilesArray(fileArray);
   }
 
   function processFilesArray(files) {
+    console.log('Processing files array:', files.length);
     showLoading('Processing ' + files.length + ' files...', 'Reading file contents');
     currentFiles = {};
     
@@ -571,6 +619,8 @@
       var path = file.relativePath || file.webkitRelativePath || file.name;
       var ext = path.split('.').pop().toLowerCase();
       var name = path.split('/').pop();
+      
+      console.log('Queueing file:', path, 'Type:', file.type, 'Size:', file.size);
       
       pendingFiles.push({
         file: file,
@@ -601,6 +651,8 @@
           var content = e.target.result;
           var mimeType = getMimeType(pf.name);
           
+          console.log('Loaded file:', pf.path, 'Size:', content.length || content.byteLength);
+          
           // Store based on file type
           if (isTextFile(pf.ext)) {
             currentFiles[pf.path] = {
@@ -612,7 +664,14 @@
             };
           } else {
             // Binary - convert to base64
-            var base64 = btoa(content);
+            var bytes = new Uint8Array(content);
+            var binary = '';
+            var len = bytes.byteLength;
+            for (var i = 0; i < len; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            var base64 = btoa(binary);
+            
             currentFiles[pf.path] = {
               type: 'binary',
               content: base64,
@@ -626,7 +685,8 @@
           resolve();
         };
         
-        reader.onerror = function() {
+        reader.onerror = function(err) {
+          console.error('Error reading file:', pf.name, err);
           processed++;
           resolve();
         };
@@ -634,16 +694,29 @@
         if (isTextFile(pf.ext)) {
           reader.readAsText(pf.file);
         } else {
-          reader.readAsBinaryString(pf.file);
+          reader.readAsArrayBuffer(pf.file);
         }
       });
     });
     
     Promise.all(filePromises).then(function() {
+      console.log('All files processed. Total files:', Object.keys(currentFiles).length);
+      console.log('Files:', Object.keys(currentFiles));
+      
+      if (Object.keys(currentFiles).length === 0) {
+        hideLoading();
+        showError('No files could be processed');
+        return;
+      }
+      
       showLoading('Combining files...', 'Inlining assets and creating single file');
       setTimeout(function() {
         combineAndRun();
       }, 100);
+    }).catch(function(err) {
+      console.error('Error processing files:', err);
+      hideLoading();
+      showError('Error processing files: ' + err.message);
     });
   }
 
@@ -743,15 +816,28 @@
             combineAndRun();
           }, 100);
         });
+      }).catch(function(err) {
+        console.error('ZIP error:', err);
+        hideLoading();
+        showError('Error reading ZIP: ' + err.message);
       });
+    };
+    
+    reader.onerror = function() {
+      hideLoading();
+      showError('Error reading ZIP file');
     };
     
     reader.readAsArrayBuffer(file);
   }
 
   function combineAndRun() {
+    console.log('Combining and running...');
+    console.log('Available files:', Object.keys(currentFiles));
+    
     // Find entry point
     var entryPoint = findEntryPoint();
+    console.log('Entry point:', entryPoint);
     
     if (!entryPoint) {
       // Create a combined file from all assets
@@ -783,6 +869,7 @@
   }
 
   function createCombinedFile() {
+    console.log('Creating combined file...');
     // No HTML entry point - create one that includes all assets
     var cssFiles = [];
     var jsFiles = [];
@@ -801,6 +888,8 @@
       }
     });
     
+    console.log('CSS files:', cssFiles.length, 'JS files:', jsFiles.length);
+    
     // Build combined HTML
     var html = '<!DOCTYPE html>\\n<html>\\n<head>\\n  <meta charset="UTF-8">\\n  <title>Combined App</title>';
     
@@ -809,17 +898,19 @@
       html += '\\n  <style>\\n/* ' + file.name + ' */\\n' + file.content + '\\n  </style>';
     });
     
-    // Inline images/fonts as base64 in CSS if referenced
-    html += '\\n  <style>\\n';
+    // Inline images/fonts as base64 in CSS variables
+    var assetCss = '\\n  <style>:root {\\n';
     Object.keys(currentFiles).forEach(function(path) {
       var file = currentFiles[path];
       if (file.type === 'binary') {
-        // Create CSS custom properties for assets
         var varName = '--asset-' + path.replace(/[^a-zA-Z0-9]/g, '-');
-        html += '    ' + varName + ': url(' + file.dataUrl + ');\\n';
+        assetCss += '    ' + varName + ': url(' + file.dataUrl + ');\\n';
       }
     });
-    html += '  </style>\\n</head>\\n<body>';
+    assetCss += '  }</style>';
+    html += assetCss;
+    
+    html += '\\n</head>\\n<body>';
     
     // Create file browser UI for non-HTML files
     html += '\\n  <div style="font-family: system-ui, sans-serif; max-width: 1200px; margin: 0 auto; padding: 2rem;">\\n';
@@ -890,8 +981,10 @@
   }
 
   function inlineAndRun(entryPath) {
+    console.log('Inlining and running:', entryPath);
     var entryFile = currentFiles[entryPath];
     if (!entryFile || entryFile.type !== 'text') {
+      console.log('Entry file not found or not text, creating combined file');
       createCombinedFile();
       return;
     }
@@ -899,13 +992,20 @@
     var html = entryFile.content;
     var baseDir = entryPath.split('/').slice(0, -1).join('/');
     
+    console.log('Base directory:', baseDir);
+    console.log('Original HTML length:', html.length);
+    
     // Inline CSS links
     html = html.replace(/<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/gi, function(match, url) {
+      if (url.match(/^(https?:|\\/\\/)/i)) return match;
       var resolved = resolveUrl(url, baseDir);
+      console.log('Resolving CSS:', url, '->', resolved);
       var file = findFile(resolved);
       if (file && file.type === 'text') {
+        console.log('Inlining CSS:', file.name);
         return '<style>\\n/* Inlined: ' + file.name + ' */\\n' + file.content + '\\n</style>';
       }
+      console.log('CSS file not found:', resolved);
       return match;
     });
     
@@ -913,10 +1013,13 @@
     html = html.replace(/<script[^>]*src=["']([^"']+)["'][^>]*><\\/script>/gi, function(match, url) {
       if (url.match(/^(https?:|\\/\\/)/i)) return match;
       var resolved = resolveUrl(url, baseDir);
+      console.log('Resolving JS:', url, '->', resolved);
       var file = findFile(resolved);
       if (file && file.type === 'text') {
+        console.log('Inlining JS:', file.name);
         return '<script>\\n/* Inlined: ' + file.name + ' */\\n' + file.content + '\\n<\\/script>';
       }
+      console.log('JS file not found:', resolved);
       return match;
     });
     
@@ -926,6 +1029,7 @@
       var resolved = resolveUrl(url, baseDir);
       var file = findFile(resolved);
       if (file && file.type === 'binary') {
+        console.log('Inlining image:', file.name);
         return 'src="' + file.dataUrl + '"';
       }
       return match;
@@ -956,29 +1060,32 @@
     });
     
     // Handle favicon
-    html = html.replace(/<link[^>]*rel=["']icon["'][^>]*href=["']([^"']+)["'][^>]*>/i, function(match, url) {
+    html = html.replace(/<link[^>]*rel=["'](icon|shortcut icon)["'][^>]*href=["']([^"']+)["'][^>]*>/i, function(match, rel, url) {
       if (url.match(/^(https?:|data:)/i)) return match;
       var resolved = resolveUrl(url, baseDir);
       var file = findFile(resolved);
       if (file && file.type === 'binary') {
-        return '<link rel="icon" type="' + file.mime + '" href="' + file.dataUrl + '">';
+        return '<link rel="' + rel + '" type="' + file.mime + '" href="' + file.dataUrl + '">';
       }
       return match;
     });
     
+    console.log('Final HTML length:', html.length);
     runFinalHtml(html);
   }
 
   function resolveUrl(url, baseDir) {
+    // Remove query strings and hashes for resolution
+    url = url.split('?')[0].split('#')[0];
+    
     if (url.startsWith('/')) return url.slice(1);
     if (url.startsWith('./')) url = url.slice(2);
     if (url.startsWith('../')) {
-      // Handle ../ by going up directories
-      var parts = baseDir.split('/');
+      var parts = baseDir ? baseDir.split('/') : [];
       var urlParts = url.split('/');
       urlParts.forEach(function(p) {
         if (p === '..') parts.pop();
-        else parts.push(p);
+        else if (p !== '.') parts.push(p);
       });
       return parts.join('/');
     }
@@ -987,17 +1094,25 @@
   }
 
   function findFile(path) {
+    console.log('Finding file:', path);
+    
     // Try exact match
-    if (currentFiles[path]) return currentFiles[path];
+    if (currentFiles[path]) {
+      console.log('Found exact match');
+      return currentFiles[path];
+    }
     
     // Try case-insensitive
     var lowerPath = path.toLowerCase();
     var found = Object.keys(currentFiles).find(function(p) {
       return p.toLowerCase() === lowerPath;
     });
-    if (found) return currentFiles[found];
+    if (found) {
+      console.log('Found case-insensitive match:', found);
+      return currentFiles[found];
+    }
     
-    // Try common variations
+    // Try variations
     var variations = [
       'assets/' + path,
       'public/' + path,
@@ -1005,23 +1120,34 @@
       'images/' + path,
       'css/' + path,
       'js/' + path,
+      'img/' + path,
+      'fonts/' + path,
+      'media/' + path,
       path.replace(/^\\.\\//, ''),
       path.replace(/^\\//, '')
     ];
     
     for (var i = 0; i < variations.length; i++) {
-      if (currentFiles[variations[i]]) return currentFiles[variations[i]];
+      if (currentFiles[variations[i]]) {
+        console.log('Found in variations:', variations[i]);
+        return currentFiles[variations[i]];
+      }
       var varLower = variations[i].toLowerCase();
       var varFound = Object.keys(currentFiles).find(function(p) {
         return p.toLowerCase() === varLower;
       });
-      if (varFound) return currentFiles[varFound];
+      if (varFound) {
+        console.log('Found case-insensitive variation:', varFound);
+        return currentFiles[varFound];
+      }
     }
     
+    console.log('File not found');
     return null;
   }
 
   function runFinalHtml(html) {
+    console.log('Running final HTML...');
     hideLoading();
     
     mainContainer.classList.add('fade-out');
