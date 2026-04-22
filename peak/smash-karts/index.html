@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en-us">
+   <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+      <link rel="icon" href="https://i.ibb.co/TxXvZ5RB/favicon.png" sizes="16x16">
+      <meta property="og:site_name" content="smashkarts.peytonplayz585.tk">
+      <meta property="og:title" content="Smash Karts" />
+      <meta property="og:url" content="https://smashkarts.peytonplayz585.tk/" />
+      <meta property="og:type" content="website" />
+      <meta property="og:description" content="Smash Karts is a free io Multiplayer Kart Battle Arena game. Drive fast. Fire rockets. Make big explosions." />
+      <meta property="og:image" content="https://i.ibb.co/DDL9DBbT/icon-144.png" />
+      <meta property="og:image:width" content="144" />
+      <meta property="og:image:height" content="144" />
+      <meta itemprop="name" content="Smash Karts" />
+      <meta itemprop="url" content="https://smashkarts.peytonplayz585.tk/" />
+      <meta itemprop="description" content="Smash Karts is a free io Multiplayer Kart Battle Arena game. Drive fast. Fire rockets. Make big explosions." />
+      <meta itemprop="thumbnailUrl" content="https://smashkarts.peytonplayz585.tk/" />
+      <link rel="image_src" href="https://smashkarts.peytonplayz585.tk/" />
+      <meta itemprop="image" content="https://smashkarts.peytonplayz585.tk/" />
+      <meta name="twitter:title" content="Smash Karts" />
+      <meta name="twitter:image" content="https://i.ibb.co/DDL9DBbT/icon-144.png" />
+      <meta name="twitter:url" content="https://smashkarts.peytonplayz585.tk/" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:description" content="Smash Karts is a free io Multiplayer Kart Battle Arena game. Drive fast. Fire rockets. Make big explosions." />
+      <meta name="description" content="Smash Karts is a free io Multiplayer Kart Battle Arena game. Drive fast. Fire rockets. Make big explosions." />
+      <meta name="google-site-verification" content="Kb9JniKgGSfuiJM_DNO2-Va7cSC00GlcBzbDw1Lgw_4" />
+      <meta itemprop="image primaryImageOfPage" content="https://i.ibb.co/TMfmNk9Y/smashkarts.png" />
+      <meta name="viewport" content="user-scalable=no">
+      <meta name="apple-mobile-web-app-title" content="Smash Karts">
+      <meta name="apple-mobile-web-app-capable" content="yes">
+      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+      <link rel="apple-touch-icon" href="https://i.ibb.co/DDL9DBbT/icon-144.png">
+      <script type="text/javascript">
+        window.xmlHTTPRequestLengthComputable = {
+          CONTENT_ENCODING_MULTIPLE: 3.0
+        }
+      </script>
+      <script src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" async=""></script>
+      <script>
+        var OneSignal = window.OneSignal || [];
+        OneSignal.push(function() {
+          OneSignal.init({
+            appId: "e618063a-f56d-448f-9dbf-c1bebb50f935",
+          });
+        });
+      </script> 
+      <script type="application/ld+json">
+         {  
+           "@context": "http://schema.org",
+           "@type":"VideoGame",
+           "publisher": "Tall Team",
+           "name":[{"@language":"en","@value":"Smash Karts"}],
+           "description":[{"@language":"en","@value":"Smash Karts is a free io Multiplayer Kart Battle Arena game. Drive fast. Fire rockets. Make big explosions."}],
+           "applicationCategory":["Game"],
+           "operatingSystem":["WEB"],
+           "genre":["Car Battle","Shooter","Multiplayer"],
+           "url":"https://smashkarts.peytonplayz585.tk/",
+           "image":"https://i.ibb.co/spp92dm2/Smash-Karts-Poster.jpg",
+           "screenshot":"https://i.ibb.co/5Xfb7mZn/Smash-Karts-Background.jpg"
+         }
+      </script>
+      <title>Smash Karts</title>
+      <style>
+         html { box-sizing: border-box; }
+         *, *:before, *:after { box-sizing: inherit; }
+         body {
+         margin: 0;
+         background: #1b70f0;
+         background-image: url("https://i.ibb.co/BKC3mbNs/overlay.png"), url("https://i.ibb.co/Rp1WgtKK/menu-BGTile.png");
+         background-size: cover, 13vw;
+         background-repeat: no-repeat, repeat; 
+         }
+         #gameContainer { position: relative; width: 100vw; height: 100vh; }
+         #adLongContainer { position: absolute; z-index: 100; bottom: 0px; width: 100vw; align-items: center; justify-content: center; }
+         #adContainer { position: absolute; z-index: 100; top: 0px; right: 0px; width: auto; height: auto; }
+         @media screen and (max-width: 600px) { #smashkarts-io_300x250 { display: none; } }
+         #adContainer2 { position: absolute; z-index: 100; top: 0px; right: 0px; width: auto; height: auto; }
+         @media screen and (max-width: 600px) { #smashkarts-io_300x250_2 { display: none; } }
+         canvas { width: 100%; height: 100%; display: block; }
+         canvas + * { z-index: 2; }
+         .logo { display: block; max-width: 90%; max-height: 40vh; }
+         .progress { margin: 1.5em; border: 2px solid ; width: 25vw; display: none; }
+         .progress .full { margin: 2px; background: white; height: 1em; transform-origin: top left; }
+         #loader {
+         position: absolute; left: 0; top: 0; width: 100vw; height: 100vh;
+         display: flex; flex-direction: column; align-items: center; justify-content: center;
+         background: #1b70f0;
+         background-image: url("https://i.ibb.co/BKC3mbNs/overlay.png"), url("https://i.ibb.co/Rp1WgtKK/menu-BGTile.png");
+         background-size: cover, 13vw; background-repeat: no-repeat, repeat; 
+         }
+         .spinner {
+            position:absolute; left: 2vw; bottom: 2vh;
+            border: 10px solid #f3f3f3; border-top: 10px solid #3498db;
+            border-radius: 50%; width: 10vh; height: 10vh;
+            animation: spin 1s linear infinite;
+          }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+         #rotate-landscape {display: none;}
+         @media all and (orientation:portrait) {
+            #rotate-landscape {
+              position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; display: block;
+              background: #1b70f0;
+              background-image: url("https://i.ibb.co/BKC3mbNs/overlay.png"), url("https://i.ibb.co/Rp1WgtKK/menu-BGTile.png");
+              background-size: cover, 13vw; background-repeat: no-repeat, repeat; 
+            }
+         }
+         .center { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; }
+      </style>
+      <meta name="viewport" content="minimal-ui, user-scalable=no, initial-scale=1, maximum-scale=1, width=device-width" />
+      <title>AdinPlay Ads</title>
+      <script>
+      window.aiptag = window.aiptag || {cmd: []};
+      aiptag.cmd.display = aiptag.cmd.display || [];
+      aiptag.gdprShowConsentTool = true;
+      aiptag.gdprConsentToolPosition = "bottom";
+      </script>
+      <script async src="//api.adinplay.com/libs/aiptag/pub/SHK/smashkarts.io/tag.min.js"></script>
+   </head>
+   <body>
+    <div id="mainContainer">
+      <canvas id="gameContainer"></canvas>
+      <div id="loader">
+         <img class="logo" src="https://i.ibb.co/TMfmNk9Y/smashkarts.png">
+         <div class="spinner"></div>
+         <div class="progress"><div class="full"></div></div>
+      </div>
+      <div id="adContainer" style="display: none;"><div id="smashkarts-io_300x250" ></div></div>
+      <div id="adContainer2" style="display: none;"><div id="smashkarts-io_300x250_2" ></div></div>
+      <div id="adLongContainer" style="display: none;">
+        <div id="smashkarts-io_320x100"></div>
+        <div id="smashkarts-io_970x250"></div>
+      </div>
+      <div id="videoAdContainer"><div id="preroll"></div></div>
+    </div>
+    <div id="rotate-landscape"><img src="https://i.ibb.co/NnN9hWrh/r.png" class="center"></div>
+
+<!-- Inlined xmlhttprequest-length-computable.min.js -->
+<script type="text/javascript">
+!function(){var e={CONTENT_ENCODING_MULTIPLE:1.5,DEFAULT_CONTENT_LENGTH:1048576,DECOMPRESSED_CONTENT_LENGTH_HEADER:"x-decompressed-content-length"};if(window.Proxy){var t=XMLHttpRequest,n=function(e,t){var n=0;e["decompressed-content-length"]&&(n=e["decompressed-content-length"]);try{if(!n){var s=t.target.getResponseHeader(e.DECOMPRESSED_CONTENT_LENGTH_HEADER);null!=s&&(n=parseInt(s))}if(!n){var r=t.target.getResponseHeader("content-length");if(r){r=parseInt(r);var l=t.target.getResponseHeader("content-encoding");n=l&&"identity"!=l?r*e.CONTENT_ENCODING_MULTIPLE|0:r*e.CONTENT_ENCODING_MULTIPLE}}}catch(e){}return n||(n=e.DEFAULT_CONTENT_LENGTH),n},s=function(e,t){var s=0;return function(r){if(r&&(r instanceof ProgressEvent||e.no_type_check)&&("progress"==r.type||"load"==r.type||"loadend"==r.type))if(0==r.lengthComputable){var l=r;r=new Proxy(r,{get:function(t,r){return"lengthComputable"==r||("loaded"==r?(s||(s=n(e,l)),e.loadFinished?s:Math.min(l.loaded,s-1)):"total"==r?(s||(s=n(e,l)),s):t[r])}})}else e.lengthComputable=!0;e.latestProgress=r,t&&t(r)}},r={set:function(e,t,n){return e.xmlHTTPRequestLengthComputable&&0==t.indexOf("on")&&e.xmlHTTPRequestLengthComputable.listeners[t.substr(2)]?(e.xmlHTTPRequestLengthComputable.listeners[t.substr(2)].on&&delete e.xmlHTTPRequestLengthComputable.listeners[t.substr(2)].on,n?(e[t]=s(e.xmlHTTPRequestLengthComputable,n),e.xmlHTTPRequestLengthComputable.listeners[t.substr(2)].on=n):e[t]=n):e[t]=n,!0},get:function(e,t){return"addEventListener"==t?function(){if(e.xmlHTTPRequestLengthComputable.listeners[arguments[0]]){var n=s(e.xmlHTTPRequestLengthComputable,arguments[1]);return e.xmlHTTPRequestLengthComputable.listeners[arguments[0]].listeners.push([n,arguments[1]]),e[t].call(e,arguments[0],n,arguments[2],arguments[3])}return e[t].apply(e,arguments)}:"removeEventListener"==t?function(){if(!e.xmlHTTPRequestLengthComputable.listeners[arguments[0]])return e[t].apply(e,arguments);for(var n=e.xmlHTTPRequestLengthComputable.listeners[arguments[0]].listeners,s=0;s<n.length;++s)if(n[s][1]==arguments[1])return n=n.splice(s)[0],e[t].call(e,arguments[0],n[0],arguments[2],arguments[3])}:"function"==typeof e[t]?function(){return e[t].apply(e,arguments)}:e[t]}};for(var l in window.XMLHttpRequest=function(n){var s=new t(n),l=new Proxy(s,r),o=window.xmlHTTPRequestLengthComputable||e;n&&n.xmlHTTPRequestLengthComputable&&(o=n.xmlHTTPRequestLengthComputable);var u={};for(var a in e)u[a]=o[a]||e[a];return o["decompressed-content-length"]&&(u["decompressed-content-length"]=o["decompressed-content-length"]),u.listeners={progress:{listeners:[]},load:{listeners:[]},loadend:{listeners:[]}},s.addEventListener("load",function(e){if(!u.lengthComputable&&(u.loadFinished=!0,u.latestProgress)){u.listeners.progress.on&&u.listeners.progress.on(u.latestProgress),e=u.listeners.progress.listeners;for(var t=0;t<e.length;++t)e[t][1]&&e[t][1](u.latestProgress)}}),u.xmlhttprequest=s,l.xmlHTTPRequestLengthComputable=u,l},t)window.XMLHttpRequest[l]=t[l]}}();
+</script>
+
+<!-- Inlined ad-blocker.js -->
+<script type="text/javascript">
+var e=document.createElement('div');
+e.id='nbAIVXTtpUxM';
+e.style.display='none';
+document.body.appendChild(e);
+</script>
+
+<!-- Inlined main-v2.js -->
+<script type="text/javascript">
+'use strict';
+
+function setV(val2)
+{
+    if(window.unityGame != null)
+    {
+      window.unityGame.SendMessage(unityFirebaseGameOjbectName, "V2", val2);
+    }
+}
+
+function getReferrerUrl()
+{
+  var url = (window.location != window.parent.location)
+    ? document.referrer
+    : document.location.href;
+    return url;
+}
+
+function isMobile()
+{
+  var isMobile = RegExp(/Android|webOS|iPhone|iPod|iPad/i).test(navigator.userAgent);
+  return isMobile || isIpad();
+}
+
+function isTablet()
+{
+  var userAgent = navigator.userAgent.toLowerCase();
+  var isAndroidTablet = ((userAgent.search("android") > -1) && !(userAgent.search("mobile") > -1));
+
+  return isAndroidTablet || isIpad();
+}
+
+function isIpad()
+{
+  var isIpad = RegExp(/iPad/i).test(navigator.userAgent);
+
+  if (!isIpad) 
+  {
+    const isMac = RegExp(/Macintosh/i).test(navigator.userAgent);
+
+    if (isMac && navigator.maxTouchPoints && navigator.maxTouchPoints > 2) 
+    {
+      isIpad = true;
+    }
+  }
+  return isIpad;
+}
+
+function getOS()
+{
+  var detectedOS = "Unknown";
+  if (window.navigator.userAgent.indexOf("Windows") != -1) {  detectedOS = "Windows";}
+  else if (window.navigator.userAgent.indexOf("CrOS") != -1) { detectedOS = "Chrome";}
+  else if (window.navigator.userAgent.indexOf("Mac")            != -1) detectedOS="Mac/iOS";
+  else if (window.navigator.userAgent.indexOf("X11")            != -1) detectedOS="UNIX";
+  else if (window.navigator.userAgent.indexOf("Linux")          != -1) detectedOS="Linux";
+  
+  return detectedOS;
+}
+
+function isIos()
+{
+  var isIos = (/iPhone|iPad|iPod/i.test(navigator.userAgent));
+  return isIos || isIpad();
+}
+
+
+function copyTextToClipboard(text) 
+{
+  var textArea = document.createElement("textarea");
+  textArea.style.position = 'fixed';
+  textArea.style.top = 0;
+  textArea.style.left = 0;
+  textArea.style.width = '2em';
+  textArea.style.height = '2em';
+  textArea.style.padding = 0;
+  textArea.style.border = 'none';
+  textArea.style.outline = 'none';
+  textArea.style.boxShadow = 'none';
+  textArea.style.background = 'transparent';
+  textArea.value = text;
+  document.body.appendChild(textArea);
+  textArea.select();
+  try {
+    var successful = document.execCommand('copy');
+    var msg = successful ? 'successful' : 'unsuccessful';
+    console.log('Copying text command was ' + msg);
+  } catch (err) {
+    console.warn('Unable to copy text');
+  }
+  document.body.removeChild(textArea);
+}
+
+window.copyText = function (text) {
+  var listener = function () {
+
+    copyTextToClipboard(text);
+    if(isMobile())
+    {
+      document.removeEventListener('touchend', listener);
+    }
+    else
+    {
+      document.removeEventListener('mouseup', listener);
+    }
+    
+  };
+
+  if(isMobile())
+  {
+    document.addEventListener('touchend', listener);
+  }
+  else
+  {
+    document.addEventListener('mouseup', listener);
+  }
+};
+
+function firebaseLogEvent(eventName)
+{
+  if(firebaseSupported) firebase.analytics().logEvent(eventName);
+}
+
+function firebaseSetScreen(screenName)
+{
+  if(firebaseSupported) firebase.analytics().setCurrentScreen(screenName);  
+  if(firebaseSupported) firebase.analytics().logEvent("screen_view", { "screen_name": screenName})
+}
+
+function firebaseLogEventWithParam(eventName, p, v)
+{
+  if(firebaseSupported) firebase.analytics().logEvent(eventName, { [p]: v});
+}
+
+var fs = false;
+function toggleFullscreen()
+{
+  if(fs)
+  {
+    console.log("exitFullScreen");
+    exitFullScreen();
+  }
+  else
+  {
+    console.log("setElementFullScreen");    
+    var elem = document.getElementById("mainContainer");
+    setElementFullScreen(elem);
+  }
+  fs = !fs;
+}
+
+function isFullscreen()
+{
+  return fs;
+}
+
+
+  function onNextMouseUp(a)
+  {
+    var listenerName = isMobile() ? 'touchend' : 'mouseup';
+    var listener = function () {
+          a();
+          document.removeEventListener(listenerName, listener);
+        };
+        document.addEventListener(listenerName, listener);
+  }
+
+  function openUrl(url)
+  {
+    onNextMouseUp(function () {
+      console.log("openUrl onNextMouseUp");
+      window.open(url, "_blank");
+    });
+  }
+
+  function setElementFullScreen(el) {
+		onNextMouseUp(function () {
+      var request = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+			request.call(el);
+		});
+	}
+
+	function exitFullScreen() {
+		onNextMouseUp(function () {
+			var exitFS = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+			exitFS.call(document);
+		});
+  }
+   
+  function handleKeyDown(keycode) 
+  {
+    if(window.unityGame) window.unityGame.SendMessage(unityFirebaseGameOjbectName, "HandleKeyDown", keycode);
+  }
+
+  function handleKeyUp(keycode) 
+  {
+    if(window.unityGame) window.unityGame.SendMessage(unityFirebaseGameOjbectName, "HandleKeyUp", keycode);
+  }
+  
+  var source = "notset";
+  function setUrlSource(src)
+  {
+    source = src;
+    console.log("setUrlSource " + src);
+  }
+
+  function reloadPage()
+  {
+    location.reload();
+  }
+</script>
+
+<!-- Inlined auth-v3.js -->
+<script type="text/javascript">
+'use strict';
+
+var unityFirebaseGameOjbectName = 'JavascriptMessageReceiver';
+ 
+function onAuthStateChanged(user) { 
+  if(!user)
+  {
+    signInAnonymously();
+  }
+  else
+  {
+    sendAuthDataToUnity();
+  }
+}
+
+function signInAnonymously()
+{
+  firebase.auth().signInAnonymously().catch(function(error) {
+    var errorCode = error.code;
+    console.log("error logging in " + errorCode);
+    console.error(error);
+  });
+}
+
+function signInWithEmail(email, password)
+{
+  firebase.auth().signInWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      console.log("signInWithEmailAndPassword Success");
+    }) 
+    .catch(function(error) 
+    {
+      console.log("error logging in " + error.code);
+      console.error(error);
+      window.unityGame.SendMessage(unityFirebaseGameOjbectName, "firebaseSignInWithEmailFailed", error.message);
+  });
+}
+
+function linkUserWithEmail(email, password)
+{  
+  if(firebase.auth().currentUser != null && firebase.auth().currentUser.isAnonymous)
+  {
+    var credential = firebase.auth.EmailAuthProvider.credential(email, password);
+    firebase.auth().currentUser.linkWithCredential(credential).then(function(user) {
+      console.log("Anonymous account successfully upgraded", user);
+      sendAuthDataToUnity();
+    }, function(error) {
+      console.log("Error upgrading anonymous account", error);
+      console.error(error);
+      window.unityGame.SendMessage(unityFirebaseGameOjbectName, "firebaseLinkUserWithEmailFailed", error.message);
+    });
+  }
+}
+
+function checkForRedirect()
+{
+  firebase.auth().getRedirectResult().then(function(result) 
+      {
+        console.log("linkOrSignInWithGoogle:success");
+        sendAuthDataToUnity();
+      }, function(error) 
+      {
+        if(error.code == "auth/credential-already-in-use")
+        {
+          console.log("linkOrSignInWithGoogle:fail auth/credential-already-in-use try signInWithCredential");
+          firebase.auth().signInWithCredential(error.credential).catch(function(error) 
+          {
+            console.log("signInWithCredential:: Error logging in " + error.code);
+            console.error(error);
+            window.unityGame.SendMessage(unityFirebaseGameOjbectName, "firebaseSignInWithEmailFailed", error.message);
+           });
+        }
+        else
+        {
+          console.log("linkOrSignInWithGoogle:: Error logging in " + error.code);
+          console.error(error);
+          window.unityGame.SendMessage(unityFirebaseGameOjbectName, "firebaseLinkUserWithEmailFailed", error.message);
+        }
+      });
+}
+
+function linkOrSignInWithGoogle()
+{
+  var provider = new firebase.auth.GoogleAuthProvider();
+
+  if(firebase.auth().currentUser != null && firebase.auth().currentUser.isAnonymous)
+  {
+    var isSafariBrowser = (navigator.userAgent.indexOf('Safari') > -1 && navigator.userAgent.indexOf('Chrome') <= -1);
+    if(isMobile() || isSafariBrowser)
+    {
+      firebase.auth().currentUser.linkWithRedirect(provider);
+    }
+    else
+    {
+      firebase.auth().currentUser.linkWithPopup(provider).then((result) => 
+      {
+        console.log("linkOrSignInWithGoogle:: Success");
+        sendAuthDataToUnity();
+      }).catch((error) => 
+      {
+        if(error.code == "auth/credential-already-in-use")
+        {
+          firebase.auth().signInWithCredential(error.credential).catch(function(error) 
+          {
+            console.log("signInWithCredential:: Error logging in " + error.code);
+            console.error(error);
+            window.unityGame.SendMessage(unityFirebaseGameOjbectName, "firebaseSignInWithEmailFailed", error.message);
+           });
+        }
+        else
+        {
+          console.log("linkOrSignInWithGoogle:: Error logging in " + error.code);
+          console.error(error);
+          window.unityGame.SendMessage(unityFirebaseGameOjbectName, "firebaseLinkUserWithEmailFailed", error.message);
+        }
+      });
+    }
+  }
+}
+
+function signOut()
+{
+  firebase.auth().signOut();
+}
+
+function sendAuthDataToUnity()
+{
+    if(window.unityGame != null && firebase.auth().currentUser != null)
+    {     
+      var firebaseUid = firebase.auth().currentUser.uid;
+      var isAnon = firebase.auth().currentUser.isAnonymous;
+      var data = {authToken:"",uid:firebaseUid,isAnonymous:isAnon};
+      var dataJson = JSON.stringify(data);
+      window.unityGame.SendMessage(unityFirebaseGameOjbectName, 'SetAuthToken', dataJson);
+    }
+}
+
+function sendPasswordResetEmail(emailAddress)
+{
+  firebase.auth().sendPasswordResetEmail(emailAddress).then(function() {
+    console.log("sendPasswordResetEmail:: Success");
+    window.unityGame.SendMessage(unityFirebaseGameOjbectName, "SendPasswordResetEmailSuccess");
+  }).catch(function(error) {
+    console.log("sendPasswordResetEmail:: Failed ");
+    window.unityGame.SendMessage(unityFirebaseGameOjbectName, "SendPasswordResetEmailFailed", error.message);
+    console.error(error);
+  });
+}
+
+function getValueTT(nodeKey) 
+{
+  if(firebase.auth().currentUser != null)
+  {
+    const dbRef = firebase.database().ref();
+    dbRef.child(nodeKey).once('value').then((snapshot) => {
+      if (snapshot.exists()) 
+      {
+        var valJsonStr = JSON.stringify(snapshot.val());
+        SendDataToUnity("OnGetValueSuccess", nodeKey, valJsonStr);
+      } 
+      else 
+      {
+        window.unityGame.SendMessage(unityFirebaseGameOjbectName, "OnGetValueEmptySuccess", nodeKey);
+      }
+    }).catch((error) => 
+    {
+      window.unityGame.SendMessage(unityFirebaseGameOjbectName, "OnGetValueError", nodeKey, error.message);
+      console.error(error);
+    });
+  }
+}
+
+function SendDataToUnity(functionName, nk, ds)
+{
+  var obj = 
+  {
+    nodeKey: nk,
+    dataStr: ds
+  }
+
+  window.unityGame.SendMessage(unityFirebaseGameOjbectName, functionName, JSON.stringify(obj));
+}
+
+function setValueTT(nodeKey, jsonData) 
+{
+  if(firebase.auth().currentUser != null)
+  {
+    const dbRef = firebase.database().ref();
+    var jsonObj = JSON.parse(jsonData);
+    dbRef.child(nodeKey).set(jsonObj, (error) => {
+      if (error) {
+        console.log("auth.js::setValue - Error " + nodeKey);
+        SendDataToUnity("OnSetValueError", nodeKey, error.message);
+      } else {
+        window.unityGame.SendMessage(unityFirebaseGameOjbectName, "OnSetValueSuccess", nodeKey);
+      }
+    });
+  }
+}
+
+function removeValueTT(nodeKey)
+{
+  if(firebase.auth().currentUser != null)
+  {
+    const dbRef = firebase.database().ref();
+    dbRef.child(nodeKey).remove()
+    .then(function(){
+      window.unityGame.SendMessage(unityFirebaseGameOjbectName, "OnRemoveValueSuccess", nodeKey);
+    })
+    .catch(function(error){
+      console.log("auth.js::removeValueTT error");
+      SendDataToUnity("OnRemoveValueError", nodeKey, error.message);
+    });
+  }
+}
+
+function updateValueTT(nodeKey, jsonData)
+{
+  if(firebase.auth().currentUser != null)
+  {
+    const dbRef = firebase.database().ref();
+    var jsonObj = JSON.parse(jsonData);
+    dbRef.child(nodeKey).update(jsonObj, (error) => {
+      if (error) {
+        console.log("auth.js::updateValue Error " + nodeKey);
+        SendDataToUnity( "OnUpdateValueError", nodeKey, error.message);
+      } else {
+        window.unityGame.SendMessage(unityFirebaseGameOjbectName, "OnUpdateValueSuccess", nodeKey);
+      }
+    });
+  }
+}
+
+function getCurrentUserId()
+{
+  if(firebase.auth().currentUser != null)
+  {
+    return firebase.auth().currentUser.uid;
+  }
+  return "";    
+}
+
+function getCurrentUserIsAnon()
+{
+  if(firebase.auth().currentUser != null)
+  {
+    return firebase.auth().currentUser.isAnonymous;
+  }
+  return true;   
+}
+
+window.addEventListener('load', function() {
+  console.log('Init Auth');
+  if (typeof firebase !== 'undefined' && firebase.auth() != null) 
+  {
+    firebase.auth().onAuthStateChanged(onAuthStateChanged);
+    checkForRedirect();
+  }
+}, false);
+</script>
+
+<!-- Inlined ads-v2.js -->
+<script type="text/javascript">
+'use strict';
+
+var gameContainer;
+function updateAdSizes() 
+{
+  if(gameContainer == null)
+  {
+    gameContainer = document.getElementById('gameContainer');
+  }
+
+  if(gameContainer != null)
+  {
+    updateMainMenuBanner();
+    updateLongBanner();
+    updateWinBanner();
+  }
+}
+
+function adBlockerActive()
+{
+  var active = (document.getElementById('nbAIVXTtpUxM') == null);
+  return active;
+}
+
+var mainMenuBanner;
+function updateMainMenuBanner()
+{ 
+  if(mainMenuBanner == null)
+  {
+    mainMenuBanner = document.getElementById('adContainer');
+  }
+
+  if(mainMenuBanner != null && mainMenuBanner.display != "none")
+  {
+    var adContainerW = mainMenuBanner.offsetWidth;
+    var adContainerH = mainMenuBanner.offsetHeight;
+    var gameContainerH = gameContainer.offsetHeight;
+
+    if(adContainerH/gameContainerH > 0.8)
+    {
+      var newHeight = gameContainerH * 0.8;
+      var newScale = newHeight / adContainerH;
+      var scaleString = "scale( " + newScale + "," + newScale + ")";
+      var offsetX = (adContainerW - (adContainerW*newScale))/2 - 10;
+      var offsetY = 10 - (adContainerH - adContainerH*newScale)/2;
+      var translateString = "translate(" + offsetX + "px, " + offsetY + "px)";
+      mainMenuBanner.style.transform = translateString + " " + scaleString;
+    }
+    else
+    {
+      mainMenuBanner.style.transform =  "scale( 1, 1) translate(-10px, 10px)";
+    }
+  }
+}
+
+var winBanner;
+function updateWinBanner()
+{ 
+  if(winBanner == null)
+  {
+    winBanner = document.getElementById('adContainer2');
+  }
+
+  if(winBanner != null && winBanner.display != "none")
+  {
+    var adContainerW = winBanner.offsetWidth;
+    var adContainerH = winBanner.offsetHeight;
+    var gameContainerH = gameContainer.offsetHeight;
+
+    if(adContainerH/gameContainerH > 0.65)
+    {
+      var newHeight = gameContainerH * 0.65;
+      var newScale = newHeight / adContainerH;
+      var scaleString = "scale( " + newScale + "," + newScale + ")";
+      var offsetX = (adContainerW - (adContainerW*newScale))/2 - 10;
+      var offsetY = gameContainerH/2 - adContainerH/2;
+      var translateString = "translate(" + offsetX + "px, " + offsetY + "px)";
+      winBanner.style.transform = translateString + " " + scaleString;
+    }
+    else
+    {
+      var offsetY = gameContainerH/2 - adContainerH/2;
+      winBanner.style.transform =  "scale( 1, 1) translate(-10px, " + offsetY + "px)";
+    }
+  }
+}
+
+var longBanner;
+function updateLongBanner()
+{ 
+  if(longBanner == null)
+  {
+    longBanner = document.getElementById('adLongContainer');
+  }
+
+  if(longBanner != null && longBanner.display != "none")
+  {
+    if(isMobile())
+    {
+      longBanner.style.left = "50%";
+      longBanner.style.marginRight = "-50%";
+      
+      var p = window.innerHeight - longBanner.offsetHeight;
+      
+      longBanner.style.top = p + "px";
+      longBanner.style.transform =  "scale( 1, 1) translate(-50%, -10px)";
+    }
+    else
+    {
+      longBanner.style.bottom = 0 + "px";
+      longBanner.style.width = 100 + "vw";
+
+      var adContainerH = longBanner.offsetHeight;
+      var gameContainerH = gameContainer.offsetHeight;
+
+      if(adContainerH/gameContainerH > 0.3)
+      {
+        var newHeight = gameContainerH * 0.3;
+        var newScale = newHeight / adContainerH;
+        var scaleString = "scale( " + newScale + "," + newScale + ")";
+        var offsetX = 0;
+        var offsetY = (adContainerH - adContainerH*newScale)/2 - 10;
+        var translateString = "translate(" + offsetX + "px, " + offsetY + "px)";
+        longBanner.style.transform = translateString + " " + scaleString;
+      }
+      else
+      {
+        longBanner.style.transform =  "scale( 1, 1) translate(0px, -10px)";
+      }
+    }
+
+    if(isMobile())
+    {
+      var p = window.innerHeight - longBanner.offsetHeight;
+      longBanner.style.top = p + "px";
+    }
+    else
+    {
+      longBanner.style.bottom = 0 + "px";
+    }
+  }
+}
+
+setInterval(updateAdSizes, 500);
+
+function showMainMenuBanner()
+{
+  hideWinCeremonyBanner();
+  hideLongBanner();
+
+  const ad = document.querySelector("#adContainer");
+  ad.style.display = "block";
+  updateAdSizes();
+
+  requestMainMenuBanner();
+}
+
+function hideMainMenuBanner()
+{
+  const ad = document.querySelector("#adContainer");
+  if(ad != null) ad.style.display = "none";
+
+  const ad2 = document.querySelector("#adContainerMainMenu");
+  if(ad2 != null) ad2.style.display = "none";
+}
+
+function showWinCeremonyBanner(interstialRequested)
+{
+  hideLongBanner();
+  hideMainMenuBanner();
+
+  const ad = document.querySelector("#adContainer2");
+  ad.style.display = "block";
+  updateAdSizes();
+
+  requestWinCeremonyBanner(interstialRequested);
+}
+
+
+function hideWinCeremonyBanner()
+{
+  const ad = document.querySelector("#adContainer2");
+  if(ad != null) ad.style.display = "none";
+
+  const ad2 = document.querySelector("#adContainerWin");
+  if(ad2 != null) ad2.style.display = "none";
+}
+
+function showLongBanner()
+{
+  hideWinCeremonyBanner();
+  hideMainMenuBanner();
+
+  const ad = document.querySelector("#adLongContainer");
+  ad.style.display = "flex";
+  updateAdSizes();
+
+  requestLongBanner();
+}
+
+
+function hideLongBanner()
+{
+  const ad = document.querySelector("#adLongContainer");
+  if(ad != null) ad.style.display = "none";
+
+  const ad2 = document.querySelector("#adLongContainer2");
+  if(ad2 != null) ad2.style.display = "none";
+}
+
+function showLongBanner2()
+{
+  hideWinCeremonyBanner();
+  hideMainMenuBanner();
+
+  const ad = document.querySelector("#adLongContainer2");
+  ad.style.position = "absolute";
+  ad.style.display = "block";
+  requestLongBanner2();
+}
+
+function showMainMenuBanner2()
+{
+  hideWinCeremonyBanner();
+  hideLongBanner();
+
+  const ad = document.querySelector("#adContainerMainMenu");
+  ad.style.position = "absolute";
+  ad.style.display = "block";
+  requestMainMenuBanner2();
+}
+
+function showWinCeremonyBanner2(interstialRequested)
+{
+  hideLongBanner();
+  hideMainMenuBanner();
+
+  const ad = document.querySelector("#adContainerWin");
+  ad.style.position = "absolute";
+  ad.style.display = "block";
+  requestWinCeremonyBanner2(interstialRequested);
+}
+
+
+function setElementSize(identifier, x, y, w, h)
+{
+  const el = document.getElementById(identifier);
+  if(el != null)
+  {
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+    el.style.width = w + "px";
+    el.style.height = h + "px";
+  }
+}
+
+function showPreGameInterstitial(audioOn)
+{
+  showInterstitial(audioOn, 'start', 'pregame');
+}
+
+function showWinCeremonyInterstitial(audioOn)
+{
+  showInterstitial(audioOn, 'next', 'winceremony')
+}
+
+function interstitialStart()
+{
+  window.unityGame.SendMessage(unityFirebaseGameOjbectName, "InterstitialStart");
+}
+
+function interstitialError()
+{
+  window.unityGame.SendMessage(unityFirebaseGameOjbectName, "InterstitialFailed");
+}
+
+function interstitialSkipped()
+{
+  window.unityGame.SendMessage(unityFirebaseGameOjbectName, "InterstitialSkipped");
+}
+
+
+function interstitialComplete() 
+{
+  window.unityGame.SendMessage(unityFirebaseGameOjbectName, "InterstitialComplete");
+}
+</script>
+
+<!-- Inlined ads-adsbygoogle-v2.js -->
+<script type="text/javascript">
+'use strict';
+
+function requestMainMenuBanner()
+{
+  if(!isMobile())
+  {
+    aiptag.cmd.display.push(function() { aipDisplayTag.display('smashkarts-io_300x250')});
+  }
+}
+
+function requestWinCeremonyBanner(interstialRequested)
+{
+  if(!isMobile())
+  {
+    aiptag.cmd.display.push(function() { aipDisplayTag.display('smashkarts-io_300x250_2')});
+  }
+}
+
+
+function requestLongBanner()
+{
+  if(!isMobile())
+  {
+      aiptag.cmd.display.push(function() { aipDisplayTag.display('smashkarts-io_970x250')});
+  }
+}
+
+function showInterstitial(unusedParam, interstitialType, interstitialName)
+{
+    if(adBreak != null)
+    {
+      adBreak({
+        type: interstitialType,
+        name: interstitialName,
+        beforeBreak: interstitialStart,
+        afterBreak: interstitialComplete
+      });
+    }
+}
+
+
+var onShowRewardedVideoClicked = null;
+
+function tryInitRewardedInterstitial(unusedParam)
+{
+    if(adBreak != null)
+    {
+      adBreak({
+        type: 'reward',
+        name: 'rewardedxpboost',
+        beforeAd: () => {interstitialStart();},
+        afterAd: () => {console.log("tryInitRewardedInterstitials afterAd");},
+        beforeReward: (showAdFn) => { console.log("set onShowRewardedVideoClicked"); rewardedInterstitialAvailable(); onShowRewardedVideoClicked = showAdFn },
+        adDismissed: () => {interstitialSkipped();},
+        adViewed: () => {interstitialComplete();},
+        adBreakDone: (placementInfo) => {console.log("tryInitRewardedInterstitials adBreakDone");},
+        });
+    }
+}
+
+function tryShowRewardedInterstitial(unusedParam)
+{
+  if(onShowRewardedVideoClicked != null)
+  {
+    onShowRewardedVideoClicked();
+  }
+}
+
+function rewardedInterstitialAvailable()
+{
+  window.unityGame.SendMessage(unityFirebaseGameOjbectName, "RewardedInterstitialAvailable");
+}
+</script>
+
+   <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-app.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-auth.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-database.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-analytics.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase-performance.js"></script>
+
+   <script>
+      var firebaseConfig = {
+			apiKey: "AIzaSyAdY2qq9083amKDS0R8tn2tjIKQB8mocco",
+			authDomain: "webgltest-17af1.firebaseapp.com",
+			databaseURL: "https://webgltest-17af1.firebaseio.com",
+			projectId: "webgltest-17af1",
+			storageBucket: "webgltest-17af1.appspot.com",
+			messagingSenderId: "480659433590",
+			appId: "1:480659433590:web:a01ad1599e963843a0d757",
+			measurementId: "G-1W23DRFHK9"
+		};
+	  firebase.initializeApp(firebaseConfig);
+
+      var firebaseSupported = false;
+      if(firebase.analytics != null)
+      {
+        firebase.analytics.isSupported().then((isSupported) => 
+        {
+          if (isSupported) 
+          {
+            analytics = firebase.analytics();
+            firebaseSupported = true;
+          }
+          else 
+          {
+            console.log("firebase.analytics() not supported ");
+          }
+        })
+      }
+
+      var perf = firebase.performance();
+
+      firebaseSetScreen("loading_start");
+      firebaseLogEvent("loading_page_start");
+
+      var timerStart = Date.now();
+      var sentGameInstanceStartEvent = false;
+      
+      const buildUrl = "https://smashkartsgc.b-cdn.net/Build2020New";
+      const loaderUrl = buildUrl + "/SmashKartsSCPatch4.loader.js";
+      const config = {
+        dataUrl: buildUrl + "/fd9af547cadb72fc4b6e83d56d5da82a.data.br",
+        frameworkUrl: buildUrl + "/44bcce360664b499f9205162a4907044.js.br",
+        codeUrl: buildUrl + "/cf55536d109c6254a3cf1d22e6451618.wasm.br",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "TallTeam",
+        productName: "Smash Karts",
+        productVersion: "1.0.14",
+      };
+
+      var container = document.querySelector("#mainContainer");
+      var canvas = document.querySelector("#gameContainer");
+      var loadingBar = document.querySelector("#loader");
+      var progressBarFull = document.querySelector("#loader .progress .full");
+      var rotateLandscape = document.querySelector("#rotate-landscape");
+
+      if (isMobile()) 
+      {
+        container.className = "unity-mobile";
+      }
+      else
+      {
+        rotateLandscape.id = "rotateLandscapeOff";
+        rotateLandscape.style.display = "none";
+      }
+      const progress = document.querySelector("#loader .progress");
+          progress.style.display = "block";
+          progressBarFull.style.width = "0%";
+      const myTrace = perf.trace('unityLoader');
+      myTrace.start();
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+
+      var progressCreateUnityInstance = 0;
+      var progressPostCreateUnityInstance = 0;
+      var updateProgressInterval = setInterval(updateProgress, 100);
+
+      if(isMobile())
+      {
+        setInterval(updateScreenSize, 100);
+      }
+      var gameInstance;
+      script.onload = () => {
+          createUnityInstance(canvas, config, (progress) => {
+          progressCreateUnityInstance = 100 * progress;
+          setProgressWidth();
+        }).then((unityInstance) => {
+          if(isMobile()) document.body.style.background = "#000000";
+          loadingBar.style.display = "none";
+          window.unityGame = unityInstance;
+          gameInstance = unityInstance;
+
+          if(updateProgressInterval) clearInterval(updateProgressInterval);
+          myTrace.stop();
+          var lt = Date.now() - timerStart;
+          firebaseLogEventWithParam("loading_page_complete", "time", lt);
+          setV(lt);
+        }).catch((message) => {
+          alert("TT UnityLoader Error" + message);
+        });
+      };
+      document.body.appendChild(script);
+
+function updateProgress()
+{
+  if(progressCreateUnityInstance > 85)
+  {
+    progressPostCreateUnityInstance += 1;
+    setProgressWidth();
+  }
+}
+
+var lastInnerHeight;
+function updateScreenSize()
+{
+  if(canvas)
+  {
+    if(!lastInnerHeight || lastInnerHeight != window.innerHeight)
+    {
+      lastInnerHeight = window.innerHeight;
+      canvas.style.height = lastInnerHeight + "px";
+    }
+  }
+}
+
+function setProgressWidth()
+{
+  if(progressCreateUnityInstance == 100.0)
+  {
+    progressBarFull.style.width = "100%";
+  }
+  else
+  {
+    var percent;
+    if(isMobile()) 
+    {
+      percent = progressCreateUnityInstance * 0.6 + (progressPostCreateUnityInstance*0.5*0.2 + progressCreateUnityInstance*0.5*0.2*0.05);
+      percent =  Math.min(percent, 90);
+    }
+    else
+    {
+      percent = progressCreateUnityInstance * 0.9 + progressPostCreateUnityInstance * 0.1;
+      percent = Math.min(percent, 95);
+    }
+    progressBarFull.style.width = percent + "%";
+  }
+}
+   </script>
+</html>
