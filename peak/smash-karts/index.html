@@ -1035,17 +1035,18 @@ function rewardedInterstitialAvailable()
       var timerStart = Date.now();
       var sentGameInstanceStartEvent = false;
       
-      const buildUrl = "https://smashkartsgc.b-cdn.net/Build2020New";
-      const loaderUrl = buildUrl + "/SmashKartsSCPatch4.loader.js";
+            const buildUrl = "https://cdn.jsdelivr.net/gh/Pok12d/ta@main/sma/Build";
+      const loaderUrl = buildUrl + "/76f034cff49013ce85bd6945ebf32347.loader.js";
       const config = {
-        dataUrl: buildUrl + "/fd9af547cadb72fc4b6e83d56d5da82a.data.br",
-        frameworkUrl: buildUrl + "/44bcce360664b499f9205162a4907044.js.br",
-        codeUrl: buildUrl + "/cf55536d109c6254a3cf1d22e6451618.wasm.br",
+        dataUrl: buildUrl + "/cde9b7051535319df292526442914c36.data.br",
+        frameworkUrl: buildUrl + "/ed690d1402dd39fcf7abb15b99effdea.framework.js.br",
+        codeUrl: buildUrl + "/250100c98afece1d27bb09b3a3d618ca.wasm.br",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "TallTeam",
         productName: "Smash Karts",
-        productVersion: "1.0.14",
+        productVersion: "2.9.0",
       };
+
 
       var container = document.querySelector("#mainContainer");
       var canvas = document.querySelector("#gameContainer");
