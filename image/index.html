@@ -193,23 +193,78 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  .preview-img-wrap {
-    width: 100%;
-    max-height: 200px;
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.75rem;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+
+  .preview-grid::-webkit-scrollbar {
+    width: 4px;
+  }
+  .preview-grid::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  .preview-grid::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  .preview-item {
+    position: relative;
     border-radius: var(--radius);
     overflow: hidden;
     border: 1px solid var(--border);
     background: var(--bg);
+    aspect-ratio: 1;
+  }
+
+  .preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .preview-item .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    background: rgba(255,107,53,0.9);
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    font-size: 12px;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    line-height: 1;
+    padding: 0;
+    font-family: 'Space Mono', monospace;
   }
 
-  .preview-img-wrap img {
-    max-width: 100%;
-    max-height: 200px;
-    object-fit: contain;
-    display: block;
+  .preview-item .remove-btn:hover {
+    background: var(--accent2);
+  }
+
+  .preview-item .file-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.7);
+    color: var(--text);
+    font-size: 0.55rem;
+    padding: 0.25rem 0.4rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .file-meta {
@@ -217,6 +272,7 @@
     gap: 1rem;
     font-size: 0.7rem;
     color: var(--muted);
+    flex-wrap: wrap;
   }
 
   .file-meta strong {
@@ -313,9 +369,37 @@
     border-radius: 50%;
   }
 
+  .url-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+
+  .url-list::-webkit-scrollbar {
+    width: 4px;
+  }
+  .url-list::-webkit-scrollbar-track {
+    background: var(--bg);
+  }
+  .url-list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+  }
+
   .url-row {
     display: flex;
     gap: 0.5rem;
+    align-items: center;
+  }
+
+  .url-row .url-num {
+    font-size: 0.65rem;
+    color: var(--muted);
+    min-width: 20px;
+    text-align: right;
   }
 
   .url-input {
@@ -485,7 +569,7 @@
 
 <header>
   <div class="logo">img<span>drop</span></div>
-  <div class="tagline">upload once → get a permanent URL</div>
+  <div class="tagline">upload once → get permanent URLs</div>
 </header>
 
 <div class="card">
@@ -506,19 +590,16 @@
         <path d="M26 6v12M21 9l5-5 5 5" stroke="#e8ff47" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
-    <div class="drop-text">Drop image here</div>
-    <div class="drop-sub">or <span id="browseLink">browse files</span> — PNG, JPG, GIF, WEBP</div>
-    <input type="file" id="fileInput" accept="image/*">
+    <div class="drop-text">Drop images here</div>
+    <div class="drop-sub">or <span id="browseLink">browse files</span> — PNG, JPG, GIF, WEBP (single or bulk)</div>
+    <input type="file" id="fileInput" accept="image/*" multiple>
   </div>
 
   <div class="preview-section" id="previewSection">
-    <div class="preview-img-wrap">
-      <img id="previewImg" src="" alt="Preview">
-    </div>
+    <div class="preview-grid" id="previewGrid"></div>
     <div class="file-meta">
-      <span>File: <strong id="metaName">—</strong></span>
-      <span>Size: <strong id="metaSize">—</strong></span>
-      <span>Type: <strong id="metaType">—</strong></span>
+      <span>Files: <strong id="metaCount">—</strong></span>
+      <span>Total size: <strong id="metaSize">—</strong></span>
     </div>
     <div class="progress-wrap" id="progressWrap">
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
@@ -526,7 +607,7 @@
     </div>
     <button class="upload-btn" id="uploadBtn">
       <div class="spinner" id="spinner"></div>
-      <span id="uploadBtnText">↑ Upload & Get URL</span>
+      <span id="uploadBtnText">↑ Upload & Get URLs</span>
     </button>
   </div>
 
@@ -534,12 +615,9 @@
 
   <div class="result-section" id="resultSection">
     <div class="result-label">Upload successful</div>
-    <div class="url-row">
-      <input type="text" class="url-input" id="urlOutput" readonly>
-      <button class="copy-btn" id="copyBtn">Copy</button>
-    </div>
+    <div class="url-list" id="urlList"></div>
     <div class="actions-row">
-      <a class="action-link" id="openLink" target="_blank">Open ↗</a>
+      <button class="action-link" id="copyAllBtn">Copy All URLs</button>
       <button class="action-link" id="resetBtn">Upload another</button>
     </div>
   </div>
@@ -555,10 +633,9 @@
   const fileInput = document.getElementById('fileInput');
   const browseLink = document.getElementById('browseLink');
   const previewSection = document.getElementById('previewSection');
-  const previewImg = document.getElementById('previewImg');
-  const metaName = document.getElementById('metaName');
+  const previewGrid = document.getElementById('previewGrid');
+  const metaCount = document.getElementById('metaCount');
   const metaSize = document.getElementById('metaSize');
-  const metaType = document.getElementById('metaType');
   const uploadBtn = document.getElementById('uploadBtn');
   const uploadBtnText = document.getElementById('uploadBtnText');
   const spinner = document.getElementById('spinner');
@@ -566,9 +643,8 @@
   const progressFill = document.getElementById('progressFill');
   const progressLabel = document.getElementById('progressLabel');
   const resultSection = document.getElementById('resultSection');
-  const urlOutput = document.getElementById('urlOutput');
-  const copyBtn = document.getElementById('copyBtn');
-  const openLink = document.getElementById('openLink');
+  const urlList = document.getElementById('urlList');
+  const copyAllBtn = document.getElementById('copyAllBtn');
   const resetBtn = document.getElementById('resetBtn');
   const errorMsg = document.getElementById('errorMsg');
   const historySection = document.getElementById('historySection');
@@ -578,7 +654,7 @@
   const API_KEY = '9c96da8cf964e9b1331c5275d0f455c9';
   // ↑ Replace with your own free key from https://api.imgbb.com/
 
-  let currentFile = null;
+  let currentFiles = [];
   let uploadHistory = JSON.parse(localStorage.getItem('imgdrop_history') || '[]');
 
   renderHistory();
@@ -589,38 +665,78 @@
   dropzone.addEventListener('drop', e => {
     e.preventDefault();
     dropzone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) loadFile(file);
-    else showError('Please drop an image file.');
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length === 0) {
+      showError('Please drop image files only.');
+      return;
+    }
+    addFiles(files);
   });
 
   browseLink.addEventListener('click', () => fileInput.click());
   dropzone.addEventListener('click', e => { if (e.target !== browseLink) fileInput.click(); });
   dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
-  fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) addFiles(Array.from(fileInput.files));
+  });
 
-  function loadFile(file) {
-    currentFile = file;
-    const reader = new FileReader();
-    reader.onload = e => {
-      previewImg.src = e.target.result;
-      metaName.textContent = file.name.length > 22 ? file.name.slice(0, 20) + '…' : file.name;
-      metaSize.textContent = formatSize(file.size);
-      metaType.textContent = file.type.split('/')[1].toUpperCase();
-      previewSection.classList.add('visible');
+  function addFiles(files) {
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      showError('Please select image files only.');
+      return;
+    }
+    currentFiles = [...currentFiles, ...imageFiles];
+    renderPreviews();
+    previewSection.classList.add('visible');
+    resultSection.classList.remove('visible');
+    errorMsg.classList.remove('visible');
+    progressWrap.classList.remove('visible');
+    progressFill.style.width = '0%';
+    uploadBtn.disabled = false;
+    spinner.classList.remove('visible');
+    uploadBtnText.textContent = currentFiles.length === 1 ? '↑ Upload & Get URL' : '↑ Upload & Get URLs';
+  }
+
+  function renderPreviews() {
+    previewGrid.innerHTML = '';
+    let totalSize = 0;
+    currentFiles.forEach((file, index) => {
+      totalSize += file.size;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const item = document.createElement('div');
+        item.className = 'preview-item';
+        item.innerHTML = `
+          <img src="${e.target.result}" alt="${file.name}">
+          <button class="remove-btn" data-index="${index}" title="Remove">×</button>
+          <div class="file-name">${file.name}</div>
+        `;
+        item.querySelector('.remove-btn').addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          removeFile(index);
+        });
+        previewGrid.appendChild(item);
+      };
+      reader.readAsDataURL(file);
+    });
+    metaCount.textContent = currentFiles.length;
+    metaSize.textContent = formatSize(totalSize);
+  }
+
+  function removeFile(index) {
+    currentFiles.splice(index, 1);
+    if (currentFiles.length === 0) {
+      previewSection.classList.remove('visible');
       resultSection.classList.remove('visible');
-      errorMsg.classList.remove('visible');
-      progressWrap.classList.remove('visible');
-      progressFill.style.width = '0%';
-      uploadBtn.disabled = false;
-      spinner.classList.remove('visible');
-      uploadBtnText.textContent = '↑ Upload & Get URL';
-    };
-    reader.readAsDataURL(file);
+      fileInput.value = '';
+    } else {
+      renderPreviews();
+    }
   }
 
   uploadBtn.addEventListener('click', async () => {
-    if (!currentFile) return;
+    if (currentFiles.length === 0) return;
     uploadBtn.disabled = true;
     spinner.classList.add('visible');
     uploadBtnText.textContent = 'Uploading…';
@@ -628,73 +744,111 @@
     errorMsg.classList.remove('visible');
     resultSection.classList.remove('visible');
 
-    try {
-      const base64 = await toBase64(currentFile);
-      const formData = new FormData();
-      formData.append('image', base64.split(',')[1]);
-      formData.append('name', currentFile.name.replace(/\.[^.]+$/, ''));
+    const results = [];
+    const errors = [];
 
-      // Animated progress (simulated)
-      let prog = 0;
-      const progInterval = setInterval(() => {
-        prog = Math.min(prog + Math.random() * 18, 85);
-        setProgress(prog);
-      }, 200);
+    for (let i = 0; i < currentFiles.length; i++) {
+      const file = currentFiles[i];
+      try {
+        const base64 = await toBase64(file);
+        const formData = new FormData();
+        formData.append('image', base64.split(',')[1]);
+        formData.append('name', file.name.replace(/\\.[^.]+$/, ''));
 
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}`, {
-        method: 'POST',
-        body: formData
-      });
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}`, {
+          method: 'POST',
+          body: formData
+        });
 
-      clearInterval(progInterval);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error?.message || 'Upload failed');
 
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error?.message || 'Upload failed');
+        const url = data.data.url;
+        results.push({ url, thumb: data.data.thumb?.url || data.data.url, name: file.name });
 
-      setProgress(100);
+        // Save to history
+        uploadHistory.unshift({ url, thumb: data.data.thumb?.url || data.data.url, name: file.name });
+        if (uploadHistory.length > 20) uploadHistory = uploadHistory.slice(0, 20);
 
-      await delay(300);
+      } catch (err) {
+        errors.push(`${file.name}: ${err.message}`);
+      }
 
-      const url = data.data.url;
-      urlOutput.value = url;
-      openLink.href = url;
-      resultSection.classList.add('visible');
-
-      // Save to history
-      uploadHistory.unshift({ url, thumb: data.data.thumb?.url || data.data.url, name: currentFile.name });
-      if (uploadHistory.length > 10) uploadHistory.pop();
-      localStorage.setItem('imgdrop_history', JSON.stringify(uploadHistory));
-      renderHistory();
-
-    } catch (err) {
-      showError('Upload failed: ' + err.message + '. Make sure you have a valid ImgBB API key.');
-    } finally {
-      uploadBtn.disabled = false;
-      spinner.classList.remove('visible');
-      uploadBtnText.textContent = '↑ Upload & Get URL';
+      // Update progress
+      const prog = ((i + 1) / currentFiles.length) * 100;
+      setProgress(prog);
     }
+
+    localStorage.setItem('imgdrop_history', JSON.stringify(uploadHistory));
+    renderHistory();
+
+    if (results.length > 0) {
+      renderResults(results);
+      resultSection.classList.add('visible');
+    }
+
+    if (errors.length > 0) {
+      showError(errors.join(' | '));
+    }
+
+    uploadBtn.disabled = false;
+    spinner.classList.remove('visible');
+    uploadBtnText.textContent = currentFiles.length === 1 ? '↑ Upload & Get URL' : '↑ Upload & Get URLs';
   });
 
-  copyBtn.addEventListener('click', async () => {
+  function renderResults(results) {
+    urlList.innerHTML = '';
+    results.forEach((result, index) => {
+      const row = document.createElement('div');
+      row.className = 'url-row';
+      row.innerHTML = `
+        <span class="url-num">${index + 1}.</span>
+        <input type="text" class="url-input" value="${result.url}" readonly>
+        <button class="copy-btn" data-url="${result.url}">Copy</button>
+      `;
+      row.querySelector('.copy-btn').addEventListener('click', async function() {
+        try {
+          await navigator.clipboard.writeText(this.dataset.url);
+          this.textContent = '✓ Copied!';
+          this.classList.add('copied');
+          setTimeout(() => { this.textContent = 'Copy'; this.classList.remove('copied'); }, 2000);
+        } catch {
+          const input = this.previousElementSibling;
+          input.select();
+          document.execCommand('copy');
+        }
+      });
+      urlList.appendChild(row);
+    });
+  }
+
+  copyAllBtn.addEventListener('click', async () => {
+    const urls = Array.from(urlList.querySelectorAll('.url-input')).map(i => i.value).join('\\n');
+    if (!urls) return;
     try {
-      await navigator.clipboard.writeText(urlOutput.value);
-      copyBtn.textContent = '✓ Copied!';
-      copyBtn.classList.add('copied');
-      setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 2000);
+      await navigator.clipboard.writeText(urls);
+      copyAllBtn.textContent = '✓ All Copied!';
+      copyAllBtn.style.borderColor = 'var(--success)';
+      copyAllBtn.style.color = 'var(--success)';
+      setTimeout(() => {
+        copyAllBtn.textContent = 'Copy All URLs';
+        copyAllBtn.style.borderColor = '';
+        copyAllBtn.style.color = '';
+      }, 2000);
     } catch {
-      urlOutput.select();
-      document.execCommand('copy');
+      // fallback
     }
   });
 
   resetBtn.addEventListener('click', () => {
-    currentFile = null;
+    currentFiles = [];
     fileInput.value = '';
     previewSection.classList.remove('visible');
     resultSection.classList.remove('visible');
     errorMsg.classList.remove('visible');
+    urlList.innerHTML = '';
   });
 
   function renderHistory() {
