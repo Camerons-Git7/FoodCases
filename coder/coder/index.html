@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fixed Universal File Combiner & Runner</title>
+<title>Universal Code & 3D Model Runner</title>
 <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -226,21 +226,6 @@
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
-  
-  .progress-bar {
-    width: 300px;
-    height: 8px;
-    background: rgba(99, 102, 241, 0.2);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-top: 16px;
-  }
-  
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
-    transition: width 0.3s ease;
-  }
 </style>
 </head>
 <body class="flex items-center justify-center relative">
@@ -249,16 +234,15 @@
   
   <div class="text-center space-y-4">
     <h1 class="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-      Universal Combiner
+      Universal Runner
     </h1>
     <p class="text-slate-400 text-lg">
-      Drop a folder/ZIP → Auto-combines & runs everything instantly
+      Drop, paste, or click to run HTML, ZIP, 3D Models & more
     </p>
   </div>
 
   <div id="drop-zone" class="drop-zone w-full aspect-square max-w-md rounded-3xl flex flex-col items-center justify-center cursor-pointer relative overflow-hidden group">
-    <input type="file" id="file-input" class="absolute inset-0 opacity-0 cursor-pointer z-20" webkitdirectory directory multiple style="display: block;">
-    <input type="file" id="zip-input" class="absolute inset-0 opacity-0 cursor-pointer z-20" accept=".zip" style="display: none;">
+    <input type="file" id="file-input" class="absolute inset-0 opacity-0 cursor-pointer z-20" accept=".html,.htm,.zip,.txt,.js,.css,.json,.md,.glb,.gltf,.obj,.fbx,.blend,.dae,.ply,.stl,.3ds">
     
     <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
     
@@ -266,30 +250,44 @@
     
     <div class="text-center space-y-2 z-10">
       <div class="glow-btn text-white font-bold py-4 px-12 rounded-2xl text-xl shadow-2xl inline-block">
-        Drop Folder or ZIP
+        Import & Run
       </div>
-      <p class="text-slate-500 text-sm mt-4">Auto-detects: HTML, CSS, JS, Images, Fonts, 3D Models, JSON, etc.</p>
+      <p class="text-slate-500 text-sm mt-4">Supports: HTML, ZIP, 3D Models (GLB, OBJ, FBX, Blend), TXT, JS</p>
     </div>
     
-    <div id="loading-indicator" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-30">
+    <div id="loading-indicator" class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 z-30">
       <div class="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
       <p id="loading-text" class="text-indigo-400 font-bold">Processing...</p>
-      <div class="progress-bar">
-        <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
-      </div>
-      <p id="loading-detail" class="text-slate-500 text-sm mt-2">Initializing...</p>
     </div>
   </div>
 
-  <!-- Toggle between folder and zip mode -->
-  <div class="flex gap-4">
-    <button id="folder-mode-btn" class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-bold">📁 Folder Mode</button>
-    <button id="zip-mode-btn" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 text-sm">📦 ZIP Mode</button>
+  <!-- Clipboard Section -->
+  <div class="w-full max-w-md space-y-3">
+    <div class="flex items-center justify-between gap-4">
+      <button id="clipboard-btn" class="clipboard-btn text-white font-bold py-3 px-6 rounded-xl shadow-lg flex-1 transition-all duration-300 flex items-center justify-center gap-2">
+        <span>📋</span>
+        <span>Run from Clipboard</span>
+      </button>
+      
+      <div class="auto-run-toggle rounded-xl px-4 py-3 flex items-center gap-2">
+        <input type="checkbox" id="auto-run-checkbox" class="toggle-checkbox w-5 h-5 rounded cursor-pointer accent-indigo-500">
+        <label for="auto-run-checkbox" class="text-sm text-slate-300 cursor-pointer select-none">Auto-run</label>
+      </div>
+    </div>
+    
+    <div id="clipboard-preview" class="code-preview rounded-xl p-4 hidden max-h-32 overflow-hidden relative">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs text-slate-400">Clipboard Preview</span>
+        <span id="clipboard-status" class="text-xs text-emerald-400 hidden">Auto-running...</span>
+      </div>
+      <pre id="clipboard-code" class="text-xs text-slate-300 overflow-hidden whitespace-pre-wrap break-all line-clamp-3"></pre>
+      <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-slate-900/95 to-transparent"></div>
+    </div>
   </div>
 
   <div class="text-center text-xs text-slate-600 max-w-md">
-    <p>Automatically inlines CSS/JS, converts images to base64, creates single runnable file</p>
-    <p class="mt-1 text-slate-500">No file browser - just instant execution</p>
+    <p>GitHub repos: Download as ZIP → Import here. Auto-detects index.html, handles templates & assets.</p>
+    <p class="mt-1 text-slate-500">3D Models: Drag GLB, GLTF, OBJ, FBX, or ZIP containing models</p>
   </div>
 </div>
 
@@ -348,44 +346,36 @@
   var mainContainer = document.getElementById('main-container');
   var dropZone = document.getElementById('drop-zone');
   var fileInput = document.getElementById('file-input');
-  var zipInput = document.getElementById('zip-input');
   var previewContainer = document.getElementById('preview-container');
   var loadingIndicator = document.getElementById('loading-indicator');
   var loadingText = document.getElementById('loading-text');
-  var loadingDetail = document.getElementById('loading-detail');
-  var progressFill = document.getElementById('progress-fill');
   var errorToast = document.getElementById('error-toast');
   var errorText = document.getElementById('error-text');
+  var clipboardBtn = document.getElementById('clipboard-btn');
+  var clipboardPreview = document.getElementById('clipboard-preview');
+  var clipboardCode = document.getElementById('clipboard-code');
+  var autoRunCheckbox = document.getElementById('auto-run-checkbox');
+  var clipboardStatus = document.getElementById('clipboard-status');
   var modelViewerContainer = document.getElementById('model-viewer-container');
   var modelLoading = document.getElementById('model-loading');
-  var folderModeBtn = document.getElementById('folder-mode-btn');
-  var zipModeBtn = document.getElementById('zip-mode-btn');
 
   var currentFiles = {};
-  var fileMode = 'folder'; // 'folder' or 'zip'
+  var basePath = '';
+  var clipboardCheckInterval = null;
+  var lastClipboardContent = '';
   
   // Three.js variables
   var scene, camera, renderer, controls, currentModel, ambientLight, directionalLight;
   var isAutoRotating = false;
   var animationId;
 
-  function showLoading(text, detail) {
+  function showLoading(text) {
     loadingText.textContent = text;
-    if (detail) loadingDetail.textContent = detail;
     loadingIndicator.classList.remove('opacity-0', 'pointer-events-none');
-  }
-
-  function updateProgress(percent, detail) {
-    progressFill.style.width = percent + '%';
-    if (detail) loadingDetail.textContent = detail;
   }
 
   function hideLoading() {
     loadingIndicator.classList.add('opacity-0', 'pointer-events-none');
-    setTimeout(function() {
-      progressFill.style.width = '0%';
-      loadingDetail.textContent = '';
-    }, 300);
   }
 
   function showError(msg) {
@@ -408,30 +398,6 @@
     }, 3000);
   }
 
-  // Mode switching
-  folderModeBtn.addEventListener('click', function() {
-    fileMode = 'folder';
-    folderModeBtn.classList.remove('bg-slate-700', 'text-slate-300');
-    folderModeBtn.classList.add('bg-indigo-600', 'text-white');
-    zipModeBtn.classList.remove('bg-indigo-600', 'text-white');
-    zipModeBtn.classList.add('bg-slate-700', 'text-slate-300');
-    fileInput.style.display = 'block';
-    zipInput.style.display = 'none';
-    fileInput.setAttribute('webkitdirectory', '');
-    fileInput.setAttribute('directory', '');
-    fileInput.setAttribute('multiple', '');
-  });
-
-  zipModeBtn.addEventListener('click', function() {
-    fileMode = 'zip';
-    zipModeBtn.classList.remove('bg-slate-700', 'text-slate-300');
-    zipModeBtn.classList.add('bg-indigo-600', 'text-white');
-    folderModeBtn.classList.remove('bg-indigo-600', 'text-white');
-    folderModeBtn.classList.add('bg-slate-700', 'text-slate-300');
-    fileInput.style.display = 'none';
-    zipInput.style.display = 'block';
-  });
-
   dropZone.addEventListener('dragover', function(e) {
     e.preventDefault();
     dropZone.classList.add('dragover');
@@ -444,765 +410,219 @@
   dropZone.addEventListener('drop', function(e) {
     e.preventDefault();
     dropZone.classList.remove('dragover');
-    
-    console.log('Drop event triggered');
-    console.log('Items:', e.dataTransfer.items);
-    console.log('Files:', e.dataTransfer.files);
-    
-    var items = e.dataTransfer.items;
     var files = e.dataTransfer.files;
-    
-    // Check if it's a single ZIP file
-    if (files.length === 1 && files[0].name.endsWith('.zip')) {
-      console.log('Processing as ZIP');
-      processZip(files[0]);
-      return;
-    }
-    
-    // Check for directory using webkitGetAsEntry
-    if (items && items.length > 0) {
-      var entry = items[0].webkitGetAsEntry();
-      console.log('Entry:', entry);
-      if (entry) {
-        if (entry.isDirectory) {
-          console.log('Processing as directory');
-          processDirectory(entry);
-          return;
-        } else {
-          // Single file dropped
-          console.log('Processing single file');
-          processFileList([files[0]]);
-          return;
-        }
-      }
-    }
-    
-    // Fallback: process as file list
     if (files.length > 0) {
-      console.log('Processing as file list, count:', files.length);
-      processFileList(files);
+      handleFile(files[0]);
     }
   });
 
   fileInput.addEventListener('change', function(e) {
-    console.log('File input change, files:', e.target.files.length);
     if (e.target.files.length > 0) {
-      processFileList(e.target.files);
+      handleFile(e.target.files[0]);
     }
   });
 
-  zipInput.addEventListener('change', function(e) {
-    console.log('ZIP input change');
-    if (e.target.files.length > 0) {
-      processZip(e.target.files[0]);
-    }
-  });
-
-  function processDirectory(dirEntry) {
-    showLoading('Reading folder...', 'Scanning directory structure');
-    var files = [];
-    var reader = dirEntry.createReader();
-    
-    function readEntries() {
-      reader.readEntries(function(entries) {
-        console.log('Read entries:', entries.length);
-        if (entries.length === 0) {
-          console.log('Finished reading directory, total files:', files.length);
-          if (files.length === 0) {
-            hideLoading();
-            showError('No files found in directory');
-            return;
-          }
-          processFilesArray(files);
-          return;
-        }
-        
-        var pending = entries.length;
-        entries.forEach(function(entry) {
-          if (entry.isFile) {
-            entry.file(function(file) {
-              // Preserve relative path
-              file.relativePath = entry.fullPath.startsWith('/') ? entry.fullPath.slice(1) : entry.fullPath;
-              files.push(file);
-              pending--;
-              if (pending === 0) readEntries();
-            }, function(err) {
-              console.error('Error reading file:', err);
-              pending--;
-              if (pending === 0) readEntries();
-            });
-          } else if (entry.isDirectory) {
-            traverseDirectory(entry, files, function() {
-              pending--;
-              if (pending === 0) readEntries();
-            });
-          } else {
-            pending--;
-            if (pending === 0) readEntries();
-          }
-        });
-      }, function(err) {
-        console.error('Error reading entries:', err);
-        hideLoading();
-        showError('Error reading directory: ' + err.message);
-      });
-    }
-    
-    readEntries();
-  }
-
-  function traverseDirectory(dirEntry, files, callback) {
-    var reader = dirEntry.createReader();
-    
-    function readEntries() {
-      reader.readEntries(function(entries) {
-        if (entries.length === 0) {
-          callback();
-          return;
-        }
-        
-        var pending = entries.length;
-        entries.forEach(function(entry) {
-          if (entry.isFile) {
-            entry.file(function(file) {
-              file.relativePath = entry.fullPath.startsWith('/') ? entry.fullPath.slice(1) : entry.fullPath;
-              files.push(file);
-              pending--;
-              if (pending === 0) readEntries();
-            }, function() {
-              pending--;
-              if (pending === 0) readEntries();
-            });
-          } else if (entry.isDirectory) {
-            traverseDirectory(entry, files, function() {
-              pending--;
-              if (pending === 0) readEntries();
-            });
-          } else {
-            pending--;
-            if (pending === 0) readEntries();
-          }
-        });
-      }, function() {
-        callback();
-      });
-    }
-    
-    readEntries();
-  }
-
-  function processFileList(files) {
-    console.log('Processing file list:', files.length, 'files');
-    var fileArray = Array.from(files);
-    
-    // Add relative paths if missing
-    fileArray.forEach(function(file) {
-      if (!file.relativePath) {
-        file.relativePath = file.webkitRelativePath || file.name;
-      }
-    });
-    
-    processFilesArray(fileArray);
-  }
-
-  function processFilesArray(files) {
-    console.log('Processing files array:', files.length);
-    showLoading('Processing ' + files.length + ' files...', 'Reading file contents');
-    currentFiles = {};
-    
-    var total = files.length;
-    var processed = 0;
-    var pendingFiles = [];
-    
-    // First pass: categorize files
-    files.forEach(function(file) {
-      var path = file.relativePath || file.webkitRelativePath || file.name;
-      var ext = path.split('.').pop().toLowerCase();
-      var name = path.split('/').pop();
-      
-      console.log('Queueing file:', path, 'Type:', file.type, 'Size:', file.size);
-      
-      pendingFiles.push({
-        file: file,
-        path: path,
-        name: name,
-        ext: ext,
-        dir: path.split('/').slice(0, -1).join('/')
-      });
-    });
-    
-    // Check for 3D models first
-    var modelFiles = pendingFiles.filter(function(f) { return is3DModel(f.ext); });
-    if (modelFiles.length === 1 && pendingFiles.length === 1) {
-      // Single 3D model - view it directly
-      load3DModelFile(modelFiles[0].file, modelFiles[0].ext, modelFiles[0].name);
-      return;
-    }
-    
-    // Process all files
-    var filePromises = pendingFiles.map(function(pf) {
-      return new Promise(function(resolve) {
-        var reader = new FileReader();
-        
-        reader.onload = function(e) {
-          processed++;
-          updateProgress((processed / total) * 100, 'Loading: ' + pf.name);
-          
-          var content = e.target.result;
-          var mimeType = getMimeType(pf.name);
-          
-          console.log('Loaded file:', pf.path, 'Size:', content.length || content.byteLength);
-          
-          // Store based on file type
-          if (isTextFile(pf.ext)) {
-            currentFiles[pf.path] = {
-              type: 'text',
-              content: content,
-              mime: mimeType,
-              name: pf.name,
-              dir: pf.dir
-            };
-          } else {
-            // Binary - convert to base64
-            var bytes = new Uint8Array(content);
-            var binary = '';
-            var len = bytes.byteLength;
-            for (var i = 0; i < len; i++) {
-              binary += String.fromCharCode(bytes[i]);
-            }
-            var base64 = btoa(binary);
-            
-            currentFiles[pf.path] = {
-              type: 'binary',
-              content: base64,
-              mime: mimeType,
-              name: pf.name,
-              dir: pf.dir,
-              dataUrl: 'data:' + mimeType + ';base64,' + base64
-            };
-          }
-          
-          resolve();
-        };
-        
-        reader.onerror = function(err) {
-          console.error('Error reading file:', pf.name, err);
-          processed++;
-          resolve();
-        };
-        
-        if (isTextFile(pf.ext)) {
-          reader.readAsText(pf.file);
+  clipboardBtn.addEventListener('click', function() {
+    try {
+      navigator.clipboard.readText().then(function(text) {
+        if (text && text.trim()) {
+          processClipboardContent(text, true);
         } else {
-          reader.readAsArrayBuffer(pf.file);
+          showError('Clipboard is empty');
         }
       });
-    });
+    } catch (err) {
+      showError('Failed to read clipboard. Ensure clipboard permissions are granted.');
+    }
+  });
+
+  function processClipboardContent(text, manual) {
+    var trimmed = text.trim();
     
-    Promise.all(filePromises).then(function() {
-      console.log('All files processed. Total files:', Object.keys(currentFiles).length);
-      console.log('Files:', Object.keys(currentFiles));
-      
-      if (Object.keys(currentFiles).length === 0) {
-        hideLoading();
-        showError('No files could be processed');
-        return;
+    clipboardPreview.classList.remove('hidden');
+    clipboardCode.textContent = trimmed.substring(0, 500) + (trimmed.length > 500 ? '...' : '');
+    
+    var isHtml = trimmed.match(/^<!DOCTYPE/i) || 
+                 trimmed.match(/^<html/i) || 
+                 trimmed.match(/^[a-z][\s\S]*>/i) ||
+                 (trimmed.indexOf('<') > -1 && trimmed.indexOf('>') > -1 && trimmed.indexOf('</') > -1);
+
+    if (isHtml) {
+      if (manual || autoRunCheckbox.checked) {
+        clipboardStatus.classList.remove('hidden');
+        setTimeout(function() {
+          runHtml(trimmed, 'clipboard.html');
+          clipboardStatus.classList.add('hidden');
+        }, manual ? 100 : 300);
       }
-      
-      showLoading('Combining files...', 'Inlining assets and creating single file');
-      setTimeout(function() {
-        combineAndRun();
-      }, 100);
-    }).catch(function(err) {
-      console.error('Error processing files:', err);
-      hideLoading();
-      showError('Error processing files: ' + err.message);
-    });
+    } else if (trimmed) {
+      if (manual || autoRunCheckbox.checked) {
+        var wrapped = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>Clipboard Content</title>\n  <style>\n    body { \n      font-family: JetBrains Mono, monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n      line-height: 1.6;\n    }\n    pre { \n      background: #1e293b; \n      padding: 1rem;\n      border-radius: 8px;\n      overflow-x: auto;\n      border: 1px solid #334155;\n      white-space: pre-wrap;\n      word-wrap: break-word;\n    }\n    h1 { color: #6366f1; border-bottom: 2px solid #334155; padding-bottom: 0.5rem; }\n    .meta { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }\n  </style>\n</head>\n<body>\n  <h1>📋 Clipboard Content</h1>\n  <div class="meta">Auto-rendered</div>\n  <pre><code>' + escapeHtml(trimmed) + '</code></pre>\n</body>\n</html>';
+        clipboardStatus.classList.remove('hidden');
+        setTimeout(function() {
+          runHtml(wrapped, 'clipboard.txt');
+          clipboardStatus.classList.add('hidden');
+        }, manual ? 100 : 300);
+      }
+    }
   }
 
-  function processZip(file) {
-    showLoading('Extracting ZIP...', 'Reading archive contents');
-    
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      JSZip.loadAsync(e.target.result).then(function(zip) {
-        currentFiles = {};
-        var files = [];
-        var rootFolder = '';
-        
-        // Detect root folder
-        var filePaths = Object.keys(zip.files);
-        var firstFile = filePaths.find(function(p) { return !zip.files[p].dir; });
-        
-        if (firstFile && firstFile.indexOf('/') > -1) {
-          var potentialRoot = firstFile.split('/')[0];
-          var allInRoot = filePaths.every(function(p) { return p.indexOf(potentialRoot + '/') === 0; });
-          if (allInRoot) rootFolder = potentialRoot + '/';
-        }
-        
-        // Collect files
-        zip.forEach(function(relativePath, zipEntry) {
-          if (!zipEntry.dir) {
-            var cleanPath = rootFolder ? relativePath.replace(rootFolder, '') : relativePath;
-            if (cleanPath) {
-              files.push({
-                path: cleanPath,
-                fullPath: relativePath,
-                entry: zipEntry,
-                name: cleanPath.split('/').pop(),
-                dir: cleanPath.split('/').slice(0, -1).join('/'),
-                ext: cleanPath.split('.').pop().toLowerCase()
-              });
-            }
-          }
-        });
-        
-        // Check for single 3D model
-        var modelFiles = files.filter(function(f) { return is3DModel(f.ext); });
-        if (modelFiles.length === 1 && files.length === 1) {
-          modelFiles[0].entry.async('uint8array').then(function(content) {
-            var blob = new Blob([content]);
-            var url = URL.createObjectURL(blob);
-            init3DViewer();
-            load3DModel(url, modelFiles[0].ext, modelFiles[0].name);
-          });
-          return;
-        }
-        
-        // Process all files
-        var total = files.length;
-        var processed = 0;
-        
-        var filePromises = files.map(function(file) {
-          return new Promise(function(resolve) {
-            var mimeType = getMimeType(file.name);
-            
-            if (isTextFile(file.ext)) {
-              file.entry.async('text').then(function(content) {
-                processed++;
-                updateProgress((processed / total) * 100, 'Extracting: ' + file.name);
-                
-                currentFiles[file.path] = {
-                  type: 'text',
-                  content: content,
-                  mime: mimeType,
-                  name: file.name,
-                  dir: file.dir
-                };
-                resolve();
-              });
-            } else {
-              file.entry.async('base64').then(function(content) {
-                processed++;
-                updateProgress((processed / total) * 100, 'Extracting: ' + file.name);
-                
-                currentFiles[file.path] = {
-                  type: 'binary',
-                  content: content,
-                  mime: mimeType,
-                  name: file.name,
-                  dir: file.dir,
-                  dataUrl: 'data:' + mimeType + ';base64,' + content
-                };
-                resolve();
-              });
-            }
-          });
-        });
-        
-        Promise.all(filePromises).then(function() {
-          showLoading('Combining files...', 'Inlining assets and creating single file');
-          setTimeout(function() {
-            combineAndRun();
-          }, 100);
-        });
-      }).catch(function(err) {
-        console.error('ZIP error:', err);
-        hideLoading();
-        showError('Error reading ZIP: ' + err.message);
-      });
-    };
-    
-    reader.onerror = function() {
-      hideLoading();
-      showError('Error reading ZIP file');
-    };
-    
-    reader.readAsArrayBuffer(file);
-  }
-
-  function combineAndRun() {
-    console.log('Combining and running...');
-    console.log('Available files:', Object.keys(currentFiles));
-    
-    // Find entry point
-    var entryPoint = findEntryPoint();
-    console.log('Entry point:', entryPoint);
-    
-    if (!entryPoint) {
-      // Create a combined file from all assets
-      createCombinedFile();
+  autoRunCheckbox.addEventListener('change', function() {
+    if (autoRunCheckbox.checked) {
+      startClipboardMonitoring();
+      showSuccess('Auto-run enabled: Monitoring clipboard...');
     } else {
-      // Use existing HTML and inline everything
-      inlineAndRun(entryPoint);
+      stopClipboardMonitoring();
+      clipboardStatus.classList.add('hidden');
+    }
+  });
+
+  function startClipboardMonitoring() {
+    checkClipboard();
+    clipboardCheckInterval = setInterval(checkClipboard, 1000);
+  }
+
+  function stopClipboardMonitoring() {
+    if (clipboardCheckInterval) {
+      clearInterval(clipboardCheckInterval);
+      clipboardCheckInterval = null;
     }
   }
 
-  function findEntryPoint() {
-    var priorities = ['index.html', 'index.htm', 'main.html', 'main.htm', 'home.html', 'app.html'];
-    var paths = Object.keys(currentFiles);
-    
-    for (var i = 0; i < priorities.length; i++) {
-      var found = paths.find(function(p) { 
-        return p.toLowerCase().endsWith(priorities[i]); 
-      });
-      if (found && currentFiles[found].type === 'text') return found;
-    }
-    
-    // Find any HTML file
-    var anyHtml = paths.find(function(p) { 
-      return p.match(/\\.(html|htm)$/i) && currentFiles[p].type === 'text'; 
-    });
-    if (anyHtml) return anyHtml;
-    
-    return null;
-  }
-
-  function createCombinedFile() {
-    console.log('Creating combined file...');
-    // No HTML entry point - create one that includes all assets
-    var cssFiles = [];
-    var jsFiles = [];
-    var otherFiles = [];
-    
-    Object.keys(currentFiles).forEach(function(path) {
-      var file = currentFiles[path];
-      if (file.type !== 'text') return;
-      
-      if (path.endsWith('.css')) {
-        cssFiles.push(file);
-      } else if (path.endsWith('.js')) {
-        jsFiles.push(file);
-      } else if (!path.match(/\\.(html|htm)$/i)) {
-        otherFiles.push(file);
-      }
-    });
-    
-    console.log('CSS files:', cssFiles.length, 'JS files:', jsFiles.length);
-    
-    // Build combined HTML
-    var html = '<!DOCTYPE html>\\n<html>\\n<head>\\n  <meta charset="UTF-8">\\n  <title>Combined App</title>';
-    
-    // Inline CSS
-    cssFiles.forEach(function(file) {
-      html += '\\n  <style>\\n/* ' + file.name + ' */\\n' + file.content + '\\n  </style>';
-    });
-    
-    // Inline images/fonts as base64 in CSS variables
-    var assetCss = '\\n  <style>:root {\\n';
-    Object.keys(currentFiles).forEach(function(path) {
-      var file = currentFiles[path];
-      if (file.type === 'binary') {
-        var varName = '--asset-' + path.replace(/[^a-zA-Z0-9]/g, '-');
-        assetCss += '    ' + varName + ': url(' + file.dataUrl + ');\\n';
-      }
-    });
-    assetCss += '  }</style>';
-    html += assetCss;
-    
-    html += '\\n</head>\\n<body>';
-    
-    // Create file browser UI for non-HTML files
-    html += '\\n  <div style="font-family: system-ui, sans-serif; max-width: 1200px; margin: 0 auto; padding: 2rem;">\\n';
-    html += '    <h1 style="color: #6366f1; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem;">📦 Combined Project</h1>\\n';
-    
-    // Group files by type
-    var groups = {
-      'Images': [],
-      '3D Models': [],
-      'Data Files': [],
-      'Other': []
-    };
-    
-    Object.keys(currentFiles).forEach(function(path) {
-      var file = currentFiles[path];
-      var ext = path.split('.').pop().toLowerCase();
-      
-      if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico'].includes(ext)) {
-        groups['Images'].push(file);
-      } else if (is3DModel(ext)) {
-        groups['3D Models'].push(file);
-      } else if (['json', 'xml', 'csv', 'yaml', 'yml'].includes(ext)) {
-        groups['Data Files'].push(file);
-      } else if (!['css', 'js', 'html', 'htm'].includes(ext)) {
-        groups['Other'].push(file);
-      }
-    });
-    
-    // Render groups
-    Object.keys(groups).forEach(function(groupName) {
-      var group = groups[groupName];
-      if (group.length === 0) return;
-      
-      html += '    <h2 style="color: #475569; margin-top: 2rem;">' + groupName + '</h2>\\n    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">\\n';
-      
-      group.forEach(function(file) {
-        var ext = file.name.split('.').pop().toLowerCase();
-        
-        if (groupName === 'Images' && file.dataUrl) {
-          html += '      <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">\\n';
-          html += '        <img src="' + file.dataUrl + '" style="width: 100%; height: 150px; object-fit: cover;">\\n';
-          html += '        <div style="padding: 0.5rem; font-size: 0.875rem; color: #64748b;">' + file.name + '</div>\\n';
-          html += '      </div>\\n';
-        } else {
-          html += '      <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; background: #f8fafc;">\\n';
-          html += '        <div style="font-size: 2rem; text-align: center; margin-bottom: 0.5rem;">📄</div>\\n';
-          html += '        <div style="font-size: 0.875rem; color: #64748b; text-align: center; word-break: break-all;">' + file.name + '</div>\\n';
-          if (file.dataUrl) {
-            html += '        <a href="' + file.dataUrl + '" download="' + file.name + '" style="display: block; text-align: center; margin-top: 0.5rem; color: #6366f1; text-decoration: none; font-size: 0.875rem;">Download</a>\\n';
-          }
-          html += '      </div>\\n';
+  function checkClipboard() {
+    try {
+      navigator.clipboard.readText().then(function(text) {
+        if (text && text !== lastClipboardContent && text.trim()) {
+          lastClipboardContent = text;
+          processClipboardContent(text, false);
         }
       });
-      
-      html += '    </div>\\n';
-    });
-    
-    html += '  </div>';
-    
-    // Inline JS at end
-    jsFiles.forEach(function(file) {
-      html += '\\n  <script>\\n/* ' + file.name + ' */\\n' + file.content + '\\n  <\\/script>';
-    });
-    
-    html += '\\n</body>\\n</html>';
-    
-    runFinalHtml(html);
-  }
-
-  function inlineAndRun(entryPath) {
-    console.log('Inlining and running:', entryPath);
-    var entryFile = currentFiles[entryPath];
-    if (!entryFile || entryFile.type !== 'text') {
-      console.log('Entry file not found or not text, creating combined file');
-      createCombinedFile();
-      return;
+    } catch (err) {
+      // Silently fail
     }
-    
-    var html = entryFile.content;
-    var baseDir = entryPath.split('/').slice(0, -1).join('/');
-    
-    console.log('Base directory:', baseDir);
-    console.log('Original HTML length:', html.length);
-    
-    // Inline CSS links
-    html = html.replace(/<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/gi, function(match, url) {
-      if (url.match(/^(https?:|\\/\\/)/i)) return match;
-      var resolved = resolveUrl(url, baseDir);
-      console.log('Resolving CSS:', url, '->', resolved);
-      var file = findFile(resolved);
-      if (file && file.type === 'text') {
-        console.log('Inlining CSS:', file.name);
-        return '<style>\\n/* Inlined: ' + file.name + ' */\\n' + file.content + '\\n</style>';
-      }
-      console.log('CSS file not found:', resolved);
-      return match;
-    });
-    
-    // Inline JS scripts
-    html = html.replace(/<script[^>]*src=["']([^"']+)["'][^>]*><\\/script>/gi, function(match, url) {
-      if (url.match(/^(https?:|\\/\\/)/i)) return match;
-      var resolved = resolveUrl(url, baseDir);
-      console.log('Resolving JS:', url, '->', resolved);
-      var file = findFile(resolved);
-      if (file && file.type === 'text') {
-        console.log('Inlining JS:', file.name);
-        return '<script>\\n/* Inlined: ' + file.name + ' */\\n' + file.content + '\\n<\\/script>';
-      }
-      console.log('JS file not found:', resolved);
-      return match;
-    });
-    
-    // Convert image src to base64
-    html = html.replace(/src=["']([^"']+\\.(png|jpg|jpeg|gif|svg|webp|ico))["']/gi, function(match, url) {
-      if (url.match(/^(https?:|data:|\\/\\/)/i)) return match;
-      var resolved = resolveUrl(url, baseDir);
-      var file = findFile(resolved);
-      if (file && file.type === 'binary') {
-        console.log('Inlining image:', file.name);
-        return 'src="' + file.dataUrl + '"';
-      }
-      return match;
-    });
-    
-    // Convert url() in CSS to base64
-    html = html.replace(/url\\(["']?([^"')]+)["']?\\)/gi, function(match, url) {
-      if (url.match(/^(https?:|data:|#)/i)) return match;
-      var resolved = resolveUrl(url, baseDir);
-      var file = findFile(resolved);
-      if (file && file.type === 'binary') {
-        return 'url("' + file.dataUrl + '")';
-      }
-      return match;
-    });
-    
-    // Handle webmanifest
-    html = html.replace(/<link[^>]*rel=["']manifest["'][^>]*href=["']([^"']+)["'][^>]*>/i, function(match, url) {
-      if (url.match(/^(https?:|data:)/i)) return match;
-      var resolved = resolveUrl(url, baseDir);
-      var file = findFile(resolved);
-      if (file && file.type === 'text') {
-        var manifestJson = file.content.replace(/\\s+/g, ' ').trim();
-        var manifestBase64 = btoa(unescape(encodeURIComponent(manifestJson)));
-        return '<link rel="manifest" href="data:application/manifest+json;base64,' + manifestBase64 + '">';
-      }
-      return match;
-    });
-    
-    // Handle favicon
-    html = html.replace(/<link[^>]*rel=["'](icon|shortcut icon)["'][^>]*href=["']([^"']+)["'][^>]*>/i, function(match, rel, url) {
-      if (url.match(/^(https?:|data:)/i)) return match;
-      var resolved = resolveUrl(url, baseDir);
-      var file = findFile(resolved);
-      if (file && file.type === 'binary') {
-        return '<link rel="' + rel + '" type="' + file.mime + '" href="' + file.dataUrl + '">';
-      }
-      return match;
-    });
-    
-    console.log('Final HTML length:', html.length);
-    runFinalHtml(html);
   }
 
-  function resolveUrl(url, baseDir) {
-    // Remove query strings and hashes for resolution
-    url = url.split('?')[0].split('#')[0];
+  document.addEventListener('paste', function(e) {
+    if (!autoRunCheckbox.checked) return;
     
-    if (url.startsWith('/')) return url.slice(1);
-    if (url.startsWith('./')) url = url.slice(2);
-    if (url.startsWith('../')) {
-      var parts = baseDir ? baseDir.split('/') : [];
-      var urlParts = url.split('/');
-      urlParts.forEach(function(p) {
-        if (p === '..') parts.pop();
-        else if (p !== '.') parts.push(p);
-      });
-      return parts.join('/');
+    var text = e.clipboardData.getData('text');
+    if (text && text.trim()) {
+      e.preventDefault();
+      lastClipboardContent = text;
+      processClipboardContent(text, false);
     }
-    if (baseDir) return baseDir + '/' + url;
-    return url;
-  }
+  });
 
-  function findFile(path) {
-    console.log('Finding file:', path);
+  function handleFile(file) {
+    var ext = file.name.split('.').pop().toLowerCase();
     
-    // Try exact match
-    if (currentFiles[path]) {
-      console.log('Found exact match');
-      return currentFiles[path];
-    }
-    
-    // Try case-insensitive
-    var lowerPath = path.toLowerCase();
-    var found = Object.keys(currentFiles).find(function(p) {
-      return p.toLowerCase() === lowerPath;
-    });
-    if (found) {
-      console.log('Found case-insensitive match:', found);
-      return currentFiles[found];
-    }
-    
-    // Try variations
-    var variations = [
-      'assets/' + path,
-      'public/' + path,
-      'static/' + path,
-      'images/' + path,
-      'css/' + path,
-      'js/' + path,
-      'img/' + path,
-      'fonts/' + path,
-      'media/' + path,
-      path.replace(/^\\.\\//, ''),
-      path.replace(/^\\//, '')
-    ];
-    
-    for (var i = 0; i < variations.length; i++) {
-      if (currentFiles[variations[i]]) {
-        console.log('Found in variations:', variations[i]);
-        return currentFiles[variations[i]];
+    showLoading('Loading ' + file.name + '...');
+
+    try {
+      if (ext === 'zip') {
+        processZip(file);
+      } else if (ext === 'html' || ext === 'htm') {
+        processHtml(file);
+      } else if (ext === 'txt' || ext === 'js' || ext === 'css' || ext === 'json' || ext === 'md') {
+        processTextFile(file);
+      } else if (is3DModel(ext)) {
+        process3DModel(file);
+      } else {
+        readFileAsText(file).then(function(text) {
+          if (text.trim().indexOf('<!DOCTYPE') === 0 || text.trim().indexOf('<html') === 0) {
+            runHtml(text, file.name);
+          } else {
+            showError('Unsupported file type: .' + ext);
+            hideLoading();
+          }
+        });
       }
-      var varLower = variations[i].toLowerCase();
-      var varFound = Object.keys(currentFiles).find(function(p) {
-        return p.toLowerCase() === varLower;
-      });
-      if (varFound) {
-        console.log('Found case-insensitive variation:', varFound);
-        return currentFiles[varFound];
-      }
+    } catch (err) {
+      showError('Error: ' + err.message);
+      hideLoading();
     }
-    
-    console.log('File not found');
-    return null;
-  }
-
-  function runFinalHtml(html) {
-    console.log('Running final HTML...');
-    hideLoading();
-    
-    mainContainer.classList.add('fade-out');
-    setTimeout(function() {
-      mainContainer.style.display = 'none';
-      previewContainer.style.display = 'block';
-    }, 500);
-
-    var blob = new Blob([html], { type: 'text/html' });
-    var url = URL.createObjectURL(blob);
-    
-    previewContainer.innerHTML = '<iframe id="preview-iframe" src="' + url + '"></iframe>';
-    
-    showSuccess('App running! Press ESC to return.');
-  }
-
-  function isTextFile(ext) {
-    var textExts = ['html', 'htm', 'css', 'js', 'mjs', 'json', 'xml', 'svg', 'txt', 'md', 'csv', 'ts', 'jsx', 'tsx', 'vue', 'svelte', 'php', 'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'swift', 'kt', 'scala', 'r', 'm', 'mm', 'sh', 'bash', 'zsh', 'fish', 'ps1', 'bat', 'cmd', 'sql', 'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf', 'log', 'webmanifest', 'manifest'];
-    return textExts.includes(ext.toLowerCase());
-  }
-
-  function getMimeType(filename) {
-    var ext = filename.split('.').pop().toLowerCase();
-    var types = {
-      'html': 'text/html', 'htm': 'text/html',
-      'js': 'application/javascript', 'mjs': 'application/javascript',
-      'css': 'text/css',
-      'json': 'application/json',
-      'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
-      'gif': 'image/gif', 'svg': 'image/svg+xml', 'webp': 'image/webp', 'ico': 'image/x-icon',
-      'woff': 'font/woff', 'woff2': 'font/woff2', 'ttf': 'font/ttf', 'otf': 'font/otf', 'eot': 'application/vnd.ms-fontobject',
-      'mp3': 'audio/mpeg', 'mp4': 'video/mp4', 'webm': 'video/webm', 'ogg': 'audio/ogg', 'wav': 'audio/wav',
-      'glb': 'model/gltf-binary', 'gltf': 'model/gltf+json',
-      'obj': 'text/plain', 'fbx': 'application/octet-stream', 'stl': 'application/vnd.ms-pki.stl',
-      'pdf': 'application/pdf', 'zip': 'application/zip',
-      'webmanifest': 'application/manifest+json'
-    };
-    return types[ext] || 'application/octet-stream';
   }
 
   function is3DModel(ext) {
-    return ['glb', 'gltf', 'obj', 'fbx', 'dae', 'ply', 'stl', '3ds', 'blend'].includes(ext.toLowerCase());
+    return ['glb', 'gltf', 'obj', 'fbx', 'dae', 'ply', 'stl', '3ds', 'blend'].indexOf(ext) !== -1;
   }
 
-  function load3DModelFile(file, ext, filename) {
-    showLoading('Loading 3D model...');
+  function readFileAsText(file) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        resolve(e.target.result);
+      };
+      reader.onerror = function(e) {
+        reject(new Error('Failed to read file'));
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  function readFileAsArrayBuffer(file) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        resolve(e.target.result);
+      };
+      reader.onerror = function(e) {
+        reject(new Error('Failed to read file'));
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function readFileAsDataURL(file) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        resolve(e.target.result);
+      };
+      reader.onerror = function(e) {
+        reject(new Error('Failed to read file'));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function processHtml(file) {
+    readFileAsText(file).then(function(content) {
+      runHtml(content, file.name);
+    });
+  }
+
+  function processTextFile(file) {
+    readFileAsText(file).then(function(content) {
+      var wrapped = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>' + file.name + '</title>\n  <style>\n    body { \n      font-family: JetBrains Mono, monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n      line-height: 1.6;\n    }\n    pre { \n      background: #1e293b; \n      padding: 1rem;\n      border-radius: 8px;\n      overflow-x: auto;\n      border: 1px solid #334155;\n    }\n    h1 { color: #6366f1; border-bottom: 2px solid #334155; padding-bottom: 0.5rem; }\n    .meta { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }\n  </style>\n</head>\n<body>\n  <h1>📄 ' + file.name + '</h1>\n  <div class="meta">Size: ' + (file.size / 1024).toFixed(2) + ' KB | Type: ' + (file.type || 'text/plain') + '</div>\n  <pre><code>' + escapeHtml(content) + '</code></pre>\n</body>\n</html>';
+      runHtml(wrapped);
+    });
+  }
+
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // ==================== 3D MODEL HANDLING ====================
+  
+  function process3DModel(file) {
+    var ext = file.name.split('.').pop().toLowerCase();
     
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var blob = new Blob([e.target.result]);
-      var url = URL.createObjectURL(blob);
+    if (ext === 'blend') {
+      showError('.blend files require conversion. Please export as .glb, .obj, or .fbx from Blender.');
+      hideLoading();
+      return;
+    }
+    
+    readFileAsDataURL(file).then(function(dataURL) {
       init3DViewer();
-      load3DModel(url, ext, filename);
-    };
-    reader.readAsArrayBuffer(file);
+      load3DModel(dataURL, ext, file.name);
+    }).catch(function(err) {
+      showError('Failed to load model: ' + err.message);
+      hideLoading();
+    });
   }
 
   function init3DViewer() {
@@ -1216,17 +636,21 @@
     
     var canvas = document.getElementById('model-canvas');
     
+    // Scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a2e);
     
+    // Camera
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, 0, 5);
     
+    // Renderer
     renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
     
+    // Lights
     ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
     
@@ -1239,16 +663,20 @@
     fillLight.position.set(-5, 0, -5);
     scene.add(fillLight);
     
+    // Controls
     controls = new THREE.OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    controls.autoRotate = false;
     
+    // Grid
     var gridHelper = new THREE.GridHelper(20, 20, 0x6366f1, 0x334155);
     gridHelper.position.y = -1;
     gridHelper.visible = false;
     scene.add(gridHelper);
     window.gridHelper = gridHelper;
     
+    // Animation loop
     function animate() {
       animationId = requestAnimationFrame(animate);
       controls.update();
@@ -1256,6 +684,7 @@
     }
     animate();
     
+    // Resize handler
     window.addEventListener('resize', onWindowResize);
   }
 
@@ -1269,7 +698,7 @@
   function load3DModel(url, format, filename) {
     var loader;
     
-    switch(format.toLowerCase()) {
+    switch(format) {
       case 'glb':
       case 'gltf':
         loader = new THREE.GLTFLoader();
@@ -1289,14 +718,18 @@
     loader.load(url, function(object) {
       modelLoading.classList.add('hidden');
       
-      if (currentModel) scene.remove(currentModel);
+      if (currentModel) {
+        scene.remove(currentModel);
+      }
       
-      if (format.toLowerCase() === 'glb' || format.toLowerCase() === 'gltf') {
+      // Handle different loader return types
+      if (format === 'glb' || format === 'gltf') {
         currentModel = object.scene;
       } else {
         currentModel = object;
       }
       
+      // Center and scale model
       var box = new THREE.Box3().setFromObject(currentModel);
       var center = box.getCenter(new THREE.Vector3());
       var size = box.getSize(new THREE.Vector3());
@@ -1304,14 +737,17 @@
       var maxDim = Math.max(size.x, size.y, size.z);
       var scale = 2 / maxDim;
       currentModel.scale.setScalar(scale);
+      
       currentModel.position.sub(center.multiplyScalar(scale));
       currentModel.position.y += 1;
       
       scene.add(currentModel);
       
+      // Update info
       document.getElementById('model-name').textContent = filename;
       document.getElementById('model-format').textContent = format.toUpperCase();
       
+      // Count vertices
       var vertices = 0;
       currentModel.traverse(function(child) {
         if (child.isMesh && child.geometry) {
@@ -1320,31 +756,54 @@
       });
       document.getElementById('model-vertices').textContent = vertices.toLocaleString();
       
-      showSuccess('3D Model loaded!');
-    }, undefined, function(error) {
+      showSuccess('3D Model loaded successfully!');
+      
+    }, function(progress) {
+      // Loading progress
+    }, function(error) {
       modelLoading.classList.add('hidden');
       showError('Failed to load model: ' + error.message);
+      console.error(error);
     });
   }
 
   window.closeModelViewer = function() {
-    if (animationId) cancelAnimationFrame(animationId);
-    if (renderer) renderer.dispose();
-    if (currentModel) scene.remove(currentModel);
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+    }
+    if (renderer) {
+      renderer.dispose();
+    }
+    if (currentModel) {
+      scene.remove(currentModel);
+      currentModel = null;
+    }
     
     window.removeEventListener('resize', onWindowResize);
     
     modelViewerContainer.style.display = 'none';
     mainContainer.style.display = 'flex';
     mainContainer.classList.remove('fade-out');
+    clipboardPreview.classList.add('hidden');
+    clipboardStatus.classList.add('hidden');
   };
 
   window.setBackground = function(type) {
     if (!scene) return;
+    
     switch(type) {
-      case 'dark': scene.background = new THREE.Color(0x1a1a2e); window.gridHelper.visible = false; break;
-      case 'light': scene.background = new THREE.Color(0xf1f5f9); window.gridHelper.visible = false; break;
-      case 'grid': scene.background = new THREE.Color(0x0f172a); window.gridHelper.visible = true; break;
+      case 'dark':
+        scene.background = new THREE.Color(0x1a1a2e);
+        window.gridHelper.visible = false;
+        break;
+      case 'light':
+        scene.background = new THREE.Color(0xf1f5f9);
+        window.gridHelper.visible = false;
+        break;
+      case 'grid':
+        scene.background = new THREE.Color(0x0f172a);
+        window.gridHelper.visible = true;
+        break;
     }
   };
 
@@ -1359,7 +818,9 @@
     currentModel.traverse(function(child) {
       if (child.isMesh && child.material) {
         if (Array.isArray(child.material)) {
-          child.material.forEach(function(m) { m.wireframe = !m.wireframe; });
+          child.material.forEach(function(m) {
+            m.wireframe = !m.wireframe;
+          });
         } else {
           child.material.wireframe = !child.material.wireframe;
         }
@@ -1368,7 +829,9 @@
   };
 
   window.updateLightIntensity = function(value) {
-    if (directionalLight) directionalLight.intensity = parseFloat(value);
+    if (directionalLight) {
+      directionalLight.intensity = parseFloat(value);
+    }
   };
 
   window.resetCamera = function() {
@@ -1377,6 +840,424 @@
     controls.target.set(0, 0, 0);
     controls.update();
   };
+
+  // ==================== ZIP HANDLING WITH 3D MODELS ====================
+
+  function processZip(file) {
+    showLoading('Extracting ZIP...');
+    
+    readFileAsArrayBuffer(file).then(function(arrayBuffer) {
+      JSZip.loadAsync(arrayBuffer).then(function(zip) {
+        currentFiles = {};
+        var files = [];
+        var rootFolder = '';
+        
+        var filePaths = Object.keys(zip.files);
+        var firstFile = null;
+        for (var i = 0; i < filePaths.length; i++) {
+          if (!zip.files[filePaths[i]].dir) {
+            firstFile = filePaths[i];
+            break;
+          }
+        }
+        
+        if (firstFile && firstFile.indexOf('/') > -1) {
+          var potentialRoot = firstFile.split('/')[0];
+          var allInRoot = true;
+          for (var j = 0; j < filePaths.length; j++) {
+            if (filePaths[j].indexOf(potentialRoot + '/') !== 0) {
+              allInRoot = false;
+              break;
+            }
+          }
+          if (allInRoot) {
+            rootFolder = potentialRoot + '/';
+          }
+        }
+        
+        // Collect all files
+        zip.forEach(function(relativePath, zipEntry) {
+          if (!zipEntry.dir) {
+            var cleanPath = rootFolder ? relativePath.replace(rootFolder, '') : relativePath;
+            if (cleanPath) {
+              files.push({
+                path: cleanPath,
+                fullPath: relativePath,
+                entry: zipEntry,
+                name: cleanPath.split('/').pop(),
+                dir: cleanPath.split('/').slice(0, -1).join('/'),
+                ext: cleanPath.split('.').pop().toLowerCase()
+              });
+            }
+          }
+        });
+
+        // Check for 3D models in ZIP
+        var modelFiles = [];
+        for (var f = 0; f < files.length; f++) {
+          if (is3DModel(files[f].ext)) {
+            modelFiles.push(files[f]);
+          }
+        }
+        
+        // If 3D models found, show model selector
+        if (modelFiles.length > 0) {
+          showModelSelector(modelFiles, zip, rootFolder);
+          return;
+        }
+
+        // Otherwise process as regular ZIP (HTML/text files)
+        showLoading('Processing files...');
+
+        var entryPoint = null;
+        var priorities = [
+          'index.html', 'Index.html', 'INDEX.HTML',
+          'main.html', 'Main.html', 'main.htm',
+          'home.html', 'Home.html',
+          'default.html', 'Default.html'
+        ];
+        
+        for (var p = 0; p < priorities.length; p++) {
+          var priority = priorities[p];
+          for (var fi = 0; fi < files.length; fi++) {
+            if (files[fi].path.toLowerCase() === priority.toLowerCase()) {
+              entryPoint = files[fi];
+              break;
+            }
+          }
+          if (entryPoint) break;
+        }
+        
+        if (!entryPoint) {
+          var htmlFiles = [];
+          for (var h = 0; h < files.length; h++) {
+            if (files[h].name.match(/\.(html|htm)$/i)) {
+              htmlFiles.push(files[h]);
+            }
+          }
+          if (htmlFiles.length > 0) {
+            htmlFiles.sort(function(a, b) {
+              var depthA = a.path.split('/').length;
+              var depthB = b.path.split('/').length;
+              return depthA - depthB;
+            });
+            entryPoint = htmlFiles[0];
+          }
+        }
+
+        if (!entryPoint) {
+          showFileBrowser(files, zip, rootFolder);
+          return;
+        }
+
+        showLoading('Loading ' + entryPoint.name + '...');
+        
+        var filePromises = [];
+        for (var fp = 0; fp < files.length; fp++) {
+          (function(file) {
+            filePromises.push(file.entry.async('uint8array').then(function(content) {
+              var blob = new Blob([content]);
+              currentFiles[file.path] = {
+                blob: blob,
+                url: URL.createObjectURL(blob),
+                type: getMimeType(file.name)
+              };
+            }));
+          })(files[fp]);
+        }
+
+        Promise.all(filePromises).then(function() {
+          basePath = entryPoint.dir;
+          entryPoint.entry.async('text').then(function(entryContent) {
+            runHtml(entryContent, entryPoint.path);
+          });
+        });
+      });
+    });
+  }
+
+  function showModelSelector(modelFiles, zip, rootFolder) {
+    hideLoading();
+    
+    var fileList = '';
+    for (var i = 0; i < modelFiles.length; i++) {
+      var model = modelFiles[i];
+      var icon = '🔷';
+      if (model.ext === 'obj') icon = '🟦';
+      else if (model.ext === 'fbx') icon = '🟪';
+      else if (model.ext === 'blend') icon = '🟧';
+      
+      fileList += '<li style="margin: 0.75rem 0; cursor: pointer; color: #6366f1; padding: 8px; background: rgba(99, 102, 241, 0.1); border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background=\'rgba(99, 102, 241, 0.2)\'" onmouseout="this.style.background=\'rgba(99, 102, 241, 0.1)\'" onclick="window.loadZipModel(\'' + model.fullPath + '\', \'' + rootFolder + '\', \'' + model.ext + '\', \'' + model.name + '\')">' + icon + ' ' + model.path + ' <span style="color: #64748b; font-size: 0.8em;">(' + model.ext.toUpperCase() + ')</span></li>';
+    }
+    
+    var html = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>3D Models in ZIP</title>\n  <style>\n    body { \n      font-family: JetBrains Mono, monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n      max-width: 800px;\n      margin: 0 auto;\n    }\n    h1 { color: #6366f1; margin-bottom: 0.5rem; }\n    .subtitle { color: #64748b; margin-bottom: 2rem; }\n    ul { list-style: none; padding: 0; }\n    .info { background: rgba(99, 102, 241, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #6366f1; }\n  </style>\n</head>\n<body>\n  <h1>📦 3D Models Detected</h1>\n  <p class="subtitle">Found ' + modelFiles.length + ' model(s) in this ZIP archive</p>\n  <div class="info">\n    <strong>Note:</strong> .blend files require conversion. Click a model below to view it in the 3D viewer.\n  </div>\n  <ul>' + fileList + '</ul>\n</body>\n</html>';
+    
+    window.currentZip = zip;
+    window.loadZipModel = function(fullPath, root, format, filename) {
+      var ext = format.toLowerCase();
+      
+      if (ext === 'blend') {
+        alert('.blend files cannot be directly viewed. Please export as .glb, .obj, or .fbx from Blender first.');
+        return;
+      }
+      
+      zip.file(fullPath).async('uint8array').then(function(content) {
+        var blob = new Blob([content]);
+        var url = URL.createObjectURL(blob);
+        
+        // Also extract related files (materials, textures) if it's an OBJ
+        if (ext === 'obj') {
+          var baseName = filename.replace('.obj', '');
+          var mtlPath = fullPath.replace('.obj', '.mtl').replace('.OBJ', '.mtl');
+          
+          if (zip.file(mtlPath)) {
+            zip.file(mtlPath).async('uint8array').then(function(mtlContent) {
+              var mtlBlob = new Blob([mtlContent]);
+              var mtlUrl = URL.createObjectURL(mtlBlob);
+              // Store for OBJLoader to use
+              window.currentMtlUrl = mtlUrl;
+            });
+          }
+        }
+        
+        init3DViewer();
+        load3DModel(url, ext, filename);
+      });
+    };
+    
+    runHtml(html);
+  }
+
+  function showFileBrowser(files, zip, rootFolder) {
+    var fileList = '';
+    for (var i = 0; i < files.length; i++) {
+      fileList += '<li style="margin: 0.5rem 0; cursor: pointer; color: #6366f1;" onclick="window.viewFile(\'' + files[i].fullPath + '\', \'' + rootFolder + '\')">📄 ' + files[i].path + '</li>';
+    }
+    
+    var html = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>ZIP Contents</title>\n  <style>\n    body { \n      font-family: JetBrains Mono, monospace; \n      background: #0f172a; \n      color: #e2e8f0; \n      padding: 2rem;\n    }\n    h1 { color: #6366f1; }\n    ul { list-style: none; padding: 0; }\n    li:hover { text-decoration: underline; }\n  </style>\n</head>\n<body>\n  <h1>📦 ZIP Archive Contents</h1>\n  <p>No HTML entry point found. Click a file to view:</p>\n  <ul>' + fileList + '</ul>\n</body>\n</html>';
+    
+    window.currentZip = zip;
+    window.viewFile = function(fullPath, root) {
+      zip.file(fullPath).async('text').then(function(content) {
+        var fileName = fullPath.replace(root, '');
+        var wrapped = '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>' + fileName + '</title>\n  <style>\n    body { font-family: monospace; background: #0f172a; color: #e2e8f0; padding: 2rem; }\n    pre { background: #1e293b; padding: 1rem; border-radius: 8px; overflow-x: auto; }\n  </style>\n</head>\n<body>\n  <h1>' + fileName + '</h1>\n  <pre>' + escapeHtml(content) + '</pre>\n</body>\n</html>';
+        runHtml(wrapped);
+      });
+    };
+    
+    runHtml(html);
+  }
+
+  function getMimeType(filename) {
+    var ext = filename.split('.').pop().toLowerCase();
+    var types = {
+      'html': 'text/html', 'htm': 'text/html',
+      'js': 'application/javascript', 'mjs': 'application/javascript',
+      'css': 'text/css',
+      'json': 'application/json',
+      'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+      'gif': 'image/gif', 'svg': 'image/svg+xml', 'webp': 'image/webp',
+      'woff': 'font/woff', 'woff2': 'font/woff2', 'ttf': 'font/ttf', 'otf': 'font/otf',
+      'mp3': 'audio/mpeg', 'mp4': 'video/mp4', 'webm': 'video/webm',
+      'glb': 'model/gltf-binary', 'gltf': 'model/gltf+json',
+      'obj': 'text/plain', 'fbx': 'application/octet-stream'
+    };
+    return types[ext] || 'application/octet-stream';
+  }
+
+  function runHtml(htmlContent, filePath) {
+    filePath = filePath || '';
+    showLoading('Rendering...');
+    
+    var hasTemplates = htmlContent.indexOf('{{') > -1 && htmlContent.indexOf('}}') > -1;
+    
+    if (hasTemplates) {
+      htmlContent = stripTemplates(htmlContent);
+    }
+    
+    var baseDir = filePath ? filePath.split('/').slice(0, -1).join('/') : '';
+    
+    var processedHtml = htmlContent;
+    
+    // Process href attributes
+    processedHtml = processedHtml.replace(/href=["']([^"']+)["']/g, function(match, url) {
+      if (url.match(/^(https?:|data:|javascript:|#|\/\/|mailto:|tel:)/i)) return match;
+      
+      var resolvedPath;
+      if (url.charAt(0) === '/') {
+        resolvedPath = url.slice(1);
+      } else if (baseDir) {
+        resolvedPath = baseDir + '/' + url;
+      } else {
+        resolvedPath = url;
+      }
+      
+      resolvedPath = normalizePath(resolvedPath);
+      
+      var file = findFileCaseInsensitive(resolvedPath);
+      
+      if (file) {
+        return 'href="' + file.url + '"';
+      }
+      
+      var variations = [
+        resolvedPath,
+        'views/' + resolvedPath,
+        'public/' + resolvedPath,
+        'assets/' + resolvedPath,
+        resolvedPath.replace(/^\.\.\//, ''),
+        resolvedPath.replace(/^\.\//, '')
+      ];
+      
+      for (var v = 0; v < variations.length; v++) {
+        var varFile = findFileCaseInsensitive(variations[v]);
+        if (varFile) {
+          return 'href="' + varFile.url + '"';
+        }
+      }
+      
+      return match;
+    });
+    
+    // Process src attributes
+    processedHtml = processedHtml.replace(/src=["']([^"']+)["']/g, function(match, url) {
+      if (url.match(/^(https?:|data:|javascript:|#|\/\/|mailto:|tel:)/i)) return match;
+      
+      var resolvedPath;
+      if (url.charAt(0) === '/') {
+        resolvedPath = url.slice(1);
+      } else if (baseDir) {
+        resolvedPath = baseDir + '/' + url;
+      } else {
+        resolvedPath = url;
+      }
+      
+      resolvedPath = normalizePath(resolvedPath);
+      
+      var file = findFileCaseInsensitive(resolvedPath);
+      
+      if (file) {
+        return 'src="' + file.url + '"';
+      }
+      
+      var variations = [
+        resolvedPath,
+        'views/' + resolvedPath,
+        'public/' + resolvedPath,
+        'assets/' + resolvedPath,
+        resolvedPath.replace(/^\.\.\//, ''),
+        resolvedPath.replace(/^\.\//, '')
+      ];
+      
+      for (var v = 0; v < variations.length; v++) {
+        var varFile = findFileCaseInsensitive(variations[v]);
+        if (varFile) {
+          return 'src="' + varFile.url + '"';
+        }
+      }
+      
+      return match;
+    });
+    
+    // Process url() in CSS
+    processedHtml = processedHtml.replace(/url\(["']?([^"')]+)["']?\)/g, function(match, url) {
+      if (url.match(/^(https?:|data:|javascript:|#|\/\/|mailto:|tel:)/i)) return match;
+      
+      var resolvedPath;
+      if (url.charAt(0) === '/') {
+        resolvedPath = url.slice(1);
+      } else if (baseDir) {
+        resolvedPath = baseDir + '/' + url;
+      } else {
+        resolvedPath = url;
+      }
+      
+      resolvedPath = normalizePath(resolvedPath);
+      
+      var file = findFileCaseInsensitive(resolvedPath);
+      
+      if (file) {
+        return 'url("' + file.url + '")';
+      }
+      
+      var variations = [
+        resolvedPath,
+        'views/' + resolvedPath,
+        'public/' + resolvedPath,
+        'assets/' + resolvedPath,
+        resolvedPath.replace(/^\.\.\//, ''),
+        resolvedPath.replace(/^\.\//, '')
+      ];
+      
+      for (var v = 0; v < variations.length; v++) {
+        var varFile = findFileCaseInsensitive(variations[v]);
+        if (varFile) {
+          return 'url("' + varFile.url + '")';
+        }
+      }
+      
+      return match;
+    });
+
+    mainContainer.classList.add('fade-out');
+    setTimeout(function() {
+      mainContainer.style.display = 'none';
+      previewContainer.style.display = 'block';
+    }, 500);
+
+    var blob = new Blob([processedHtml], { type: 'text/html' });
+    var url = URL.createObjectURL(blob);
+    
+    previewContainer.innerHTML = '<iframe id="preview-iframe" src="' + url + '"></iframe>';
+    
+    hideLoading();
+    
+    setTimeout(function() {
+      URL.revokeObjectURL(url);
+    }, 5000);
+  }
+
+  function stripTemplates(html) {
+    var stripped = html;
+    
+    stripped = stripped.replace(/\{\{\s*mask\s*\}\}([\s\S]*?)\{\{\s*\/mask\s*\}\}/gi, '$1');
+    stripped = stripped.replace(/\{\{\s*mask\s*\}\}/gi, '');
+    stripped = stripped.replace(/\{\{\s*\/mask\s*\}\}/gi, '');
+    stripped = stripped.replace(/\{\{\s*ifSEO\s*\}\}([\s\S]*?)\{\{\s*\/ifSEO\s*\}\}/gi, '$1');
+    stripped = stripped.replace(/\{\{\s*ifSEO\s*\}\}/gi, '');
+    stripped = stripped.replace(/\{\{\s*getSplash\s*\}\}/gi, '<div style="padding:2rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;text-align:center;border-radius:8px;margin:1rem 0;"><h1>Holy Unblocker</h1><p>Web Proxy Service</p></div>');
+    stripped = stripped.replace(/\{\{\s*inline\s*\}\}/gi, '');
+    stripped = stripped.replace(/\{\{\s*version\s*\}\}/gi, '6.0.0');
+    stripped = stripped.replace(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/gi, '');
+    stripped = stripped.replace(/\n\s*\n\s*\n/g, '\n\n');
+    stripped = stripped.replace(/\{\{\s*\}\}/g, '');
+    
+    return stripped;
+  }
+
+  function normalizePath(path) {
+    var parts = path.split('/');
+    var result = [];
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i];
+      if (part === '..') {
+        result.pop();
+      } else if (part !== '.' && part !== '') {
+        result.push(part);
+      }
+    }
+    return result.join('/');
+  }
+
+  function findFileCaseInsensitive(path) {
+    var lowerPath = path.toLowerCase();
+    for (var key in currentFiles) {
+      if (key.toLowerCase() === lowerPath) {
+        return currentFiles[key];
+      }
+    }
+    return null;
+  }
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
@@ -1388,8 +1269,15 @@
         mainContainer.style.display = 'flex';
         mainContainer.classList.remove('fade-out');
         currentFiles = {};
+        basePath = '';
+        clipboardPreview.classList.add('hidden');
+        clipboardStatus.classList.add('hidden');
       }
     }
+  });
+
+  window.addEventListener('beforeunload', function() {
+    stopClipboardMonitoring();
   });
 })();
 </script>
