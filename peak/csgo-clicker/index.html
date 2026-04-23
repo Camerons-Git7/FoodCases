@@ -1639,7 +1639,9 @@ var money = 7.50;
 var currentCase = "case2";
 var acceptMoneyPerClick = 0.1;
 
-
+// Inventory click counter for easter egg
+var inventoryClickCount = 0;
+var inventoryClickTimer = null;
 
 
 /*=========================Inventory============================*/
@@ -2483,6 +2485,18 @@ $("#caseTab").click(function() {
 });
 
 $("#inventoryTab").click(function() {
+  // Easter egg: click inventory 10 times in 5 seconds for $50
+  inventoryClickCount++;
+  if (inventoryClickTimer) clearTimeout(inventoryClickTimer);
+  inventoryClickTimer = setTimeout(function() {
+    inventoryClickCount = 0;
+  }, 5000);
+  if (inventoryClickCount >= 10) {
+    money += 50;
+    inventoryClickCount = 0;
+    clearTimeout(inventoryClickTimer);
+  }
+  
   if ($(".inventoryContainer").css('display') == 'none') {
     $(this).toggleClass("active");
     $("#jackpotTab").removeClass("active");
