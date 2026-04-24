@@ -217,7 +217,7 @@
     }
     .bottom-note {
       position: fixed;
-      bottom: 1rem;
+      bottom: 3.2rem;
       left: 50%;
       transform: translateX(-50%);
       font-family: 'Nunito', sans-serif;
@@ -296,6 +296,22 @@
       background: rgba(0, 50, 0, 0.9);
     }
     .request-button:active { transform: scale(0.95); }
+    .users-online {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 0.9rem;
+      color: var(--accent);
+      text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+      animation: textPulse 2s infinite alternate;
+      user-select: none;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 10;
+    }
     @media (max-width: 600px) {
       .header {
         padding: 0.75rem 1rem;
@@ -497,6 +513,7 @@
     <button class="game-button" data-url="https://menist.free.nf/core/zombierush/" aria-label="zombierush"><div class="emoji">🧟‍♂️</div><div class="game-name">zombierush</div></button>
   </div>
   <div class="bottom-note">ⓘ Don't Forget to Refresh Before Gameplay To Ensure You're Playing Latest Updates ⓘ</div>
+  <div class="users-online" id="usersOnline">• Loading Users...</div>
   <button class="mute-button" id="muteBtn" aria-label="Toggle mute">🔈</button>
   <a class="request-button" href="https://forms.gle/tcMZUPfym8Y7zPsm8" target="_blank" rel="noopener noreferrer" aria-label="Request a game">↗ Report Bugs ↗</a>
   
@@ -508,6 +525,7 @@
     <source src="https://www.dropbox.com/scl/fi/m6bhb54qxs186fc8vcr8f/onlymp3.io-Charlie-Kirky-Funk-320-1775831564958.mp3?rlkey=yl3awn2kz3dqllapu2ukdrfp8&st=64t9b1ul&dl=1" type="audio/mpeg">
   </audio>
   
+  <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
   <script>
     let isMuted = true, volumeFadeInterval = null, hasStartedPlaying = false;
     let isSecretTrack = false;
@@ -713,38 +731,6 @@
       });
     });
     
-    // Initialize - Start Matrix and fade in together
-    window.onload = () => {
-      updateMuteButton();
-      fitTextToButton();
-      // Start Matrix rain AND fade in at the same time
-      startMatrix();
-      document.body.classList.add('fade-in');
-    };
-    
-    window.addEventListener('resize', fitTextToButton);
-    
-    window.addEventListener('pageshow', () => {
-      document.body.classList.remove('fade-out', 'fade-in');
-      void document.body.offsetWidth;
-      document.body.classList.add('fade-in');
-      if (isMuted) {
-        currentAudio.volume = 0;
-        if (isSecretTrack) {
-          secretAudioVolume = 0;
-        }
-      } else {
-        currentAudio.volume = 1;
-        if (isSecretTrack) {
-          secretAudioVolume = 1;
-        }
-        if (!hasStartedPlaying) {
-          currentAudio.play().catch(e => console.log('Audio play failed:', e));
-          hasStartedPlaying = true;
-        }
-      }
-    });
-    
     // Search functionality
     const searchInput = document.getElementById('searchInput');
     const searchDropdown = document.getElementById('searchDropdown');
@@ -761,7 +747,6 @@
     });
 
     function isEmojiQuery(query) {
-      // Match if the string contains only emoji characters (and optional whitespace)
       return /^\s*[\p{Emoji}\u200d\uFE0F\u20E3\u{1F1E0}-\u{1F1FF}]+\s*$/u.test(query);
     }
     
@@ -788,11 +773,9 @@
       let results;
 
       if (isEmojiQuery(query)) {
-        // Emoji mode: return all games whose button emoji matches the query exactly
         const trimmed = query.trim();
         results = gamesData.filter(game => game.emoji === trimmed);
       } else {
-        // Text mode: fuzzy match on game name, same as before
         const scoredGames = gamesData.map(game => ({
           ...game,
           score: calculateSimilarity(game.name, query)
@@ -836,6 +819,94 @@
     
     searchDropdown.addEventListener('click', (e) => {
       e.stopPropagation();
+    });
+    
+    // ========== ACTIVE USERS COUNTER (ABLY) ==========
+    const ABLY_API_KEY = 'E7uPfA.VKjoBw:eoF15v0FyraepQnL9qK2HqZ4fe5I5-vk3x2YQDXtYb0'; // <-- REPLACE THIS
+    const CHANNEL_NAME = 'seamlessgames:presence';
+    let ablyClient = null;
+    let presenceChannel = null;
+    
+    async function initActiveUsersCounter() {
+      try {
+        ablyClient = new Ably.Realtime(ABLY_API_KEY);
+        
+        ablyClient.connection.on('connected', () => {
+          console.log('Ably connected');
+        });
+        
+        presenceChannel = ablyClient.channels.get(CHANNEL_NAME);
+        
+        // Enter presence (mark self as online)
+        await presenceChannel.presence.enter({ page: 'core' });
+        
+        // Listen for presence updates
+        presenceChannel.presence.subscribe(['enter', 'leave', 'update'], updateUserCount);
+        
+        // Initial count
+        updateUserCount();
+        
+        // Heartbeat to keep presence alive
+        setInterval(() => {
+          presenceChannel.presence.update({ page: 'core', ts: Date.now() });
+        }, 30000);
+        
+      } catch (e) {
+        console.error('Ably init failed:', e);
+        document.getElementById('usersOnline').textContent = '• Offline';
+      }
+    }
+    
+    async function updateUserCount() {
+      try {
+        const members = await presenceChannel.presence.get();
+        const count = members.length;
+        document.getElementById('usersOnline').textContent = `• ${count} Users Online`;
+      } catch (e) {
+        console.error('Count update failed:', e);
+      }
+    }
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (presenceChannel) {
+        presenceChannel.presence.leave();
+      }
+      if (ablyClient) {
+        ablyClient.close();
+      }
+    });
+    
+    // Initialize
+    window.onload = () => {
+      updateMuteButton();
+      fitTextToButton();
+      startMatrix();
+      document.body.classList.add('fade-in');
+      initActiveUsersCounter();
+    };
+    
+    window.addEventListener('resize', fitTextToButton);
+    
+    window.addEventListener('pageshow', () => {
+      document.body.classList.remove('fade-out', 'fade-in');
+      void document.body.offsetWidth;
+      document.body.classList.add('fade-in');
+      if (isMuted) {
+        currentAudio.volume = 0;
+        if (isSecretTrack) secretAudioVolume = 0;
+      } else {
+        currentAudio.volume = 1;
+        if (isSecretTrack) secretAudioVolume = 1;
+        if (!hasStartedPlaying) {
+          currentAudio.play().catch(e => console.log('Audio play failed:', e));
+          hasStartedPlaying = true;
+        }
+      }
+      // Re-enter presence if coming back
+      if (presenceChannel && ablyClient && ablyClient.connection.state === 'connected') {
+        presenceChannel.presence.enter({ page: 'core' });
+      }
     });
   </script>
 </body>
