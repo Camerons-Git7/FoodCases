@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Folder → Single HTML Inliner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --border: #222222;
+  --accent: #e8ff47;
+  --text: #f0f0f0;
+  --muted: #555;
+  --success: #47ffb8;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 3.5rem;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.5rem;
+}
+.logo span { color: var(--accent); }
+.card {
+  width: 100%;
+  max-width: 620px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.dropzone {
+  padding: 4rem 2rem;
+  text-align: center;
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+.dropzone.drag-over {
+  border-color: var(--accent);
+  background: rgba(232,255,71,0.05);
+}
+.file-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 1rem;
+  background: #0a0a0a;
+  font-size: 0.8rem;
+}
+.file-item {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #222;
+  display: flex;
+  justify-content: space-between;
+}
+.status { font-size: 0.75rem; color: var(--muted); }
+button {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 1rem 2rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 4px;
+  width: 100%;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+button:disabled {
+  background: #444;
+  cursor: not-allowed;
+}
+.progress {
+  height: 4px;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.2s;
+}
+.result {
+  padding: 1.5rem;
+  display: none;
+  flex-direction: column;
+  gap: 1rem;
+}
+a.download {
+  background: var(--success);
+  color: #000;
+  padding: 1rem;
+  text-align: center;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 700;
+}
+</style>
+</head>
+<body>
+
+<div class="logo">FOLDER<span>2HTML</span></div>
+<p style="color:var(--muted);margin-bottom:2rem;">Drop a game folder → Get one single playable HTML file</p>
+
+<div class="card">
+  <div class="dropzone" id="dropzone">
+    <strong>Drop folder here</strong>
+    <p style="color:var(--muted);font-size:0.85rem;">or click to browse</p>
+    <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none">
+  </div>
+
+  <div id="preview" style="display:none">
+    <div class="file-list" id="fileList"></div>
+    <div style="padding:0 1rem 1rem">
+      <div class="progress" id="progress"></div>
+      <button id="generateBtn">Generate Single HTML File</button>
+    </div>
+  </div>
+
+  <div id="result" class="result">
+    <div style="color:var(--success);font-weight:700">✅ Single HTML created successfully!</div>
+    <a id="downloadLink" class="download" download>⬇️ Download your-game.html</a>
+    <button onclick="location.reload()">Process Another Folder</button>
+  </div>
+</div>
+
+<script>
+// ==================== CONFIG ====================
+const AUDIO_VIDEO_CDN = "https://assets.3kh0.net"; // You can replace with your own free CDN later
+// ===============================================
+
+let allFiles = new Map(); // path → File object
+
+const dropzone = document.getElementById('dropzone');
+const folderInput = document.getElementById('folderInput');
+const fileListEl = document.getElementById('fileList');
+const generateBtn = document.getElementById('generateBtn');
+const progressBar = document.getElementById('progress');
+const resultSection = document.getElementById('result');
+const downloadLink = document.getElementById('downloadLink');
+
+dropzone.addEventListener('click', () => folderInput.click());
+folderInput.addEventListener('change', handleFiles);
+
+dropzone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropzone.classList.add('drag-over');
+});
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  handleFiles(e.dataTransfer);
+});
+
+async function handleFiles(source) {
+  allFiles.clear();
+  const files = source.files || source.items ? await getAllFilesFromDrop(source) : Array.from(source.files);
+
+  for (const file of files) {
+    const relativePath = file.webkitRelativePath || file.name;
+    if (relativePath) {
+      allFiles.set(relativePath, file);
+    }
+  }
+
+  renderFileList();
+  document.getElementById('preview').style.display = 'block';
+}
+
+async function getAllFilesFromDrop(dataTransfer) {
+  const files = [];
+  const items = dataTransfer.items || [];
+
+  for (const item of items) {
+    const entry = item.webkitGetAsEntry();
+    if (entry) await traverseEntry(entry, files);
+  }
+  return files;
+}
+
+async function traverseEntry(entry, files) {
+  if (entry.isFile) {
+    const file = await new Promise(r => entry.file(r));
+    files.push(file);
+  } else if (entry.isDirectory) {
+    const reader = entry.createReader();
+    const entries = await new Promise(r => reader.readEntries(r));
+    for (const e of entries) await traverseEntry(e, files);
+  }
+}
+
+function renderFileList() {
+  fileListEl.innerHTML = '';
+  allFiles.forEach((file, path) => {
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    div.innerHTML = `
+      <span>${path}</span>
+      <span class="status">${(file.size/1024).toFixed(1)} KB</span>
+    `;
+    fileListEl.appendChild(div);
+  });
+}
+
+// ====================== MAIN INLINER ======================
+generateBtn.addEventListener('click', async () => {
+  generateBtn.disabled = true;
+  generateBtn.textContent = "Inlining files...";
+
+  const mainHtmlPath = Array.from(allFiles.keys()).find(p => p.endsWith('index.html') || p.endsWith('Index.html'));
+  if (!mainHtmlPath) {
+    alert("No index.html found in the folder!");
+    generateBtn.disabled = false;
+    return;
+  }
+
+  const mainFile = allFiles.get(mainHtmlPath);
+  let html = await mainFile.text();
+
+  // Process all files
+  let processed = 0;
+  const total = allFiles.size;
+
+  for (const [path, file] of allFiles) {
+    processed++;
+    progressBar.style.width = `${(processed/total)*100}%`;
+
+    const ext = path.split('.').pop().toLowerCase();
+
+    if (['png','jpg','jpeg','gif','webp','svg','ico'].includes(ext)) {
+      const base64 = await fileToBase64(file);
+      const mime = ext === 'svg' ? 'image/svg+xml' : `image/${ext}`;
+      const dataUrl = `data:${mime};base64,${base64}`;
+      html = replaceAssetReferences(html, path, dataUrl);
+    }
+    else if (['css'].includes(ext)) {
+      let css = await file.text();
+      css = await inlineCSSAssets(css, path);
+      html = html.replace(new RegExp(`href=["']?${escapeRegExp(path)}["']?`, 'gi'), `data:text/css,${encodeURIComponent(css)}`);
+    }
+    else if (['js'].includes(ext)) {
+      let js = await file.text();
+      html = html.replace(new RegExp(`src=["']?${escapeRegExp(path)}["']?`, 'gi'), `data:text/javascript,${encodeURIComponent(js)}`);
+    }
+    else if (['mp3','ogg','wav','webm','mp4'].includes(ext)) {
+      // For audio/video, we'll use a placeholder that you can replace with your CDN
+      const url = `${AUDIO_VIDEO_CDN}/${path}`;
+      html = replaceAssetReferences(html, path, url);
+    }
+  }
+
+  // Final touches
+  html = html.replace(/<\/head>/i, `
+    <style>
+      /* Inlined styles can go here if needed */
+    </style>
+  </head>`);
+
+  // Create downloadable file
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+
+  downloadLink.href = url;
+  downloadLink.download = mainHtmlPath.replace(/.*\//, '') || 'game.html';
+  resultSection.style.display = 'flex';
+
+  generateBtn.textContent = "Done!";
+});
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function replaceAssetReferences(html, originalPath, newUrl) {
+  const escaped = escapeRegExp(originalPath);
+  return html.replace(new RegExp(escaped, 'gi'), newUrl);
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function inlineCSSAssets(css, cssPath) {
+  // Basic support for url() in CSS
+  const urlRegex = /url\(['"]?([^'")]+)['"]?\)/gi;
+  let match;
+  while ((match = urlRegex.exec(css)) !== null) {
+    const assetPath = match[1];
+    if (assetPath.startsWith('http') || assetPath.startsWith('data:')) continue;
+
+    // Try to resolve relative path
+    const fullPath = resolveRelativePath(cssPath, assetPath);
+    const file = allFiles.get(fullPath);
+    if (file && (fullPath.endsWith('.png') || fullPath.endsWith('.jpg') || fullPath.endsWith('.gif') || fullPath.endsWith('.webp'))) {
+      const base64 = await fileToBase64(file);
+      const dataUrl = `data:image/${fullPath.split('.').pop()};base64,${base64}`;
+      css = css.replace(match[0], `url('${dataUrl}')`);
+    }
+  }
+  return css;
+}
+
+function resolveRelativePath(cssPath, assetPath) {
+  const dir = cssPath.substring(0, cssPath.lastIndexOf('/'));
+  if (assetPath.startsWith('/')) return assetPath.substring(1);
+  return dir ? dir + '/' + assetPath : assetPath;
+}
+</script>
+
+</body>
+</html>
