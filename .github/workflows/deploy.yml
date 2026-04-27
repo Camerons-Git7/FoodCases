@@ -55,14 +55,14 @@ jobs:
           log-level: standard
 
       # ─── SECOND WEBSITE ────────────────────────────
-      - name: Replace "menist" with "menis" for Site 2 deploy
+      - name: Replace "menist" with "seamless" for Site 2 deploy
         run: |
           find . -type f \
             ! -path './.git/*' \
             ! -path './.github/*' \
             ! -name '.ftp-sync-state-1.json' \
             ! -name '.ftp-sync-state-2.json' \
-            -exec sed -i 's/menist/menis/g' {} +
+            -exec sed -i 's/menist/seamless/g' {} +
 
       - name: Deploy to InfinityFree Site 2
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
