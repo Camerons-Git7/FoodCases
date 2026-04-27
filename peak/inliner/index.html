@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Folder → Single HTML Inliner</title>
+<title>Folder → Single HTML Inliner (Fixed)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
@@ -181,6 +181,17 @@ body {
   border-radius: 6px;
   display: none;
 }
+
+.warn-box {
+  color: #ffd700;
+  background: rgba(255,215,0,0.08);
+  border: 1px solid rgba(255,215,0,0.25);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  display: none;
+}
 </style>
 </head>
 <body>
@@ -194,7 +205,7 @@ body {
   <div class="dropzone" id="dropzone">
     <div style="font-size:3rem;margin-bottom:1rem">📁</div>
     <strong style="font-size:1.1rem">Drop your game folder here</strong>
-    <p style="color:var(--muted);max-width:320px">Supports full folders with images, JS, CSS, audio, etc.<br>Works with 2048, Wolf3D, Among Us, etc.</p>
+    <p style="color:var(--muted);max-width:320px">Supports full folders with images, JS, CSS, audio, WASM, etc.<br>Works with 2048, Wolf3D, Unity WebGL, etc.</p>
     <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none">
   </div>
 
@@ -209,6 +220,7 @@ body {
         <div style="font-size:0.8rem;color:var(--muted);text-align:right" id="progressText">0%</div>
       </div>
       
+      <div class="warn-box" id="warnBox"></div>
       <button class="btn" id="generateBtn">Generate Single HTML File</button>
     </div>
   </div>
@@ -236,8 +248,9 @@ const progressText = document.getElementById('progressText');
 const resultSection = document.getElementById('resultSection');
 const downloadLink = document.getElementById('downloadLink');
 const errorMsg = document.getElementById('errorMsg');
+const warnBox = document.getElementById('warnBox');
 
-let allFiles = new Map(); // relativePath → File
+let allFiles = new Map(); // normalizedPath → {file, originalPath}
 
 // Drag & Drop handlers
 dropzone.addEventListener('dragover', e => {
@@ -304,9 +317,31 @@ async function traverseEntry(entry, fileArray) {
   }
 }
 
+function normalizePath(p) {
+  // Remove query strings and hashes
+  p = p.split('?')[0].split('#')[0];
+  
+  // Remove leading ./
+  while (p.startsWith('./')) p = p.substring(2);
+  
+  // Remove leading /
+  if (p.startsWith('/')) p = p.substring(1);
+  
+  // Resolve ../ and ./
+  const parts = p.split('/');
+  const result = [];
+  for (const part of parts) {
+    if (part === '' || part === '.') continue;
+    if (part === '..') result.pop();
+    else result.push(part);
+  }
+  return result.join('/');
+}
+
 async function processFiles(files) {
   allFiles.clear();
   errorMsg.style.display = 'none';
+  warnBox.style.display = 'none';
 
   for (const file of files) {
     if (!file) continue;
@@ -316,8 +351,10 @@ async function processFiles(files) {
     // Clean path
     if (relativePath.startsWith('/')) relativePath = relativePath.slice(1);
     
-    if (relativePath) {
-      allFiles.set(relativePath, file);
+    const normalized = normalizePath(relativePath);
+    
+    if (normalized) {
+      allFiles.set(normalized, { file, originalPath: relativePath });
     }
   }
 
@@ -335,7 +372,7 @@ function renderFileList() {
   fileListEl.innerHTML = '';
   
   Array.from(allFiles.keys()).sort().forEach(path => {
-    const file = allFiles.get(path);
+    const { file } = allFiles.get(path);
     const div = document.createElement('div');
     div.className = 'file-item';
     div.innerHTML = `
@@ -355,6 +392,11 @@ function formatBytes(bytes) {
 function showError(msg) {
   errorMsg.textContent = msg;
   errorMsg.style.display = 'block';
+}
+
+function showWarn(msg) {
+  warnBox.textContent = msg;
+  warnBox.style.display = 'block';
 }
 
 // ====================== CORE INLINER ======================
@@ -378,12 +420,16 @@ generateBtn.addEventListener('click', async () => {
   }
 
   const mainHtmlPath = indexPaths[0];
-  let htmlContent = await allFiles.get(mainHtmlPath).text();
+  let htmlContent = await allFiles.get(mainHtmlPath).file.text();
 
   let processed = 0;
   const total = allFiles.size;
+  const warnings = [];
 
-  for (const [path, file] of allFiles) {
+  // First pass: build a map of all replacements we need
+  const replacementMap = new Map(); // normalizedPath -> dataUrl
+
+  for (const [path, {file}] of allFiles) {
     processed++;
     const percent = Math.round((processed / total) * 100);
     progressFill.style.width = percent + '%';
@@ -392,37 +438,79 @@ generateBtn.addEventListener('click', async () => {
     const ext = path.split('.').pop().toLowerCase();
 
     try {
-      if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico'].includes(ext)) {
+      if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico', 'bmp'].includes(ext)) {
         const base64 = await fileToBase64(file);
-        const mime = ext === 'svg' ? 'image/svg+xml' : `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-        const dataUrl = `data:${mime};base64,${base64}`;
-        
-        htmlContent = replaceReferences(htmlContent, path, dataUrl);
+        const mime = ext === 'svg' ? 'image/svg+xml' : 
+                     ext === 'ico' ? 'image/x-icon' :
+                     ext === 'bmp' ? 'image/bmp' :
+                     `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        replacementMap.set(path, `data:${mime};base64,${base64}`);
       } 
       else if (ext === 'css') {
         let css = await file.text();
-        css = await inlineCSSAssets(css, path);
-        htmlContent = replaceReferences(htmlContent, path, `data:text/css;charset=utf-8,${encodeURIComponent(css)}`);
+        css = await inlineCSSAssets(css, path, replacementMap);
+        replacementMap.set(path, `data:text/css;charset=utf-8,${encodeURIComponent(css)}`);
       } 
-      else if (ext === 'js') {
+      else if (['js', 'mjs'].includes(ext)) {
         const js = await file.text();
-        htmlContent = replaceReferences(htmlContent, path, `data:text/javascript;charset=utf-8,${encodeURIComponent(js)}`);
-      } 
-      else if (['mp3','wav','ogg','m4a','webm','mp4'].includes(ext)) {
-        // For media files: you can host them or use base64 (but base64 is heavy)
-        // For now we use a placeholder. Replace with your own CDN later.
-        const mediaUrl = `https://your-cdn.com/${path}`; 
-        htmlContent = replaceReferences(htmlContent, path, mediaUrl);
+        replacementMap.set(path, `data:text/javascript;charset=utf-8,${encodeURIComponent(js)}`);
+      }
+      else if (['wasm'].includes(ext)) {
+        const base64 = await fileToBase64(file);
+        replacementMap.set(path, `data:application/wasm;base64,${base64}`);
+      }
+      else if (['json'].includes(ext)) {
+        const text = await file.text();
+        replacementMap.set(path, `data:application/json;charset=utf-8,${encodeURIComponent(text)}`);
+      }
+      else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext)) {
+        const base64 = await fileToBase64(file);
+        const mime = ext === 'mp3' ? 'audio/mpeg' : `audio/${ext}`;
+        replacementMap.set(path, `data:${mime};base64,${base64}`);
+      }
+      else if (['mp4', 'webm', 'ogv', 'mov'].includes(ext)) {
+        const base64 = await fileToBase64(file);
+        const mime = ext === 'mp4' ? 'video/mp4' : 
+                     ext === 'ogv' ? 'video/ogg' :
+                     ext === 'mov' ? 'video/quicktime' : `video/${ext}`;
+        replacementMap.set(path, `data:${mime};base64,${base64}`);
+      }
+      else if (['ttf', 'otf', 'woff', 'woff2'].includes(ext)) {
+        const base64 = await fileToBase64(file);
+        const mime = ext === 'woff2' ? 'font/woff2' :
+                     ext === 'woff' ? 'font/woff' :
+                     ext === 'otf' ? 'font/otf' : 'font/ttf';
+        replacementMap.set(path, `data:${mime};base64,${base64}`);
+      }
+      else if (['data', 'unityweb'].includes(ext)) {
+        // Unity data files can be huge; warn but still inline
+        const base64 = await fileToBase64(file);
+        replacementMap.set(path, `data:application/octet-stream;base64,${base64}`);
+        if (file.size > 10 * 1024 * 1024) {
+          warnings.push(`${path} is ${formatBytes(file.size)} — output will be very large`);
+        }
       }
     } catch (err) {
       console.warn(`Failed to process ${path}:`, err);
     }
   }
 
+  if (warnings.length > 0) {
+    showWarn('⚠️ ' + warnings.join('; '));
+  }
+
+  // Second pass: context-aware replacement in HTML
+  htmlContent = replaceReferencesInHTML(htmlContent, replacementMap);
+
+  // Also inline CSS assets referenced from HTML style tags
+  htmlContent = await inlineStyleTags(htmlContent, replacementMap);
+
   // Final cleanup
-  htmlContent = htmlContent.replace(/<\/head>/i, `
+  if (!htmlContent.includes('<meta name="viewport"')) {
+    htmlContent = htmlContent.replace(/<\/head>/i, `
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>`);
+  }
 
   // Create downloadable blob
   const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
@@ -445,44 +533,102 @@ function fileToBase64(file) {
   });
 }
 
-function replaceReferences(content, originalPath, replacement) {
-  const escaped = originalPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(escaped, 'gi');
-  return content.replace(regex, replacement);
+/**
+ * Context-aware replacement: only replaces inside src="", href="", url()
+ */
+function replaceReferencesInHTML(content, replacementMap) {
+  // Build a regex that matches any of our known paths in specific contexts
+  const paths = Array.from(replacementMap.keys()).sort((a, b) => b.length - a.length); // longest first
+  
+  for (const path of paths) {
+    const replacement = replacementMap.get(path);
+    if (!replacement) continue;
+    
+    // Match the path in various contexts:
+    // 1. src="path" or src='path' (with optional query string in original)
+    // 2. href="path" or href='path'
+    // 3. url(path) or url('path') or url("path")
+    
+    const escapedPath = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+    // For src/href: match the path possibly followed by ?... or #... before the closing quote
+    const attrPattern = new RegExp(
+      `(?<=(?:src|href)=["\\'])(?:\\.\\/|\\/)?${escapedPath}(?:\\?[^"\\']*)?(?=["\\'])`,
+      'gi'
+    );
+    
+    content = content.replace(attrPattern, replacement);
+    
+    // For url(): match the path inside url() with optional quotes
+    const urlPattern = new RegExp(
+      `(?<=url\\(["\\']?(?:\\.\\/|\\/)?)${escapedPath}(?:\\?[^"\\')]*)?(?=["\\']?\\))`,
+      'gi'
+    );
+    
+    content = content.replace(urlPattern, replacement);
+  }
+  
+  return content;
 }
 
-async function inlineCSSAssets(css, cssPath) {
+async function inlineCSSAssets(css, cssPath, replacementMap) {
   const urlRegex = /url\s*\(\s*['"]?([^'")]+)['"]?\s*\)/gi;
   let match;
+  const promises = [];
 
   while ((match = urlRegex.exec(css)) !== null) {
     let asset = match[1].trim();
-    if (asset.startsWith('http') || asset.startsWith('data:')) continue;
+    if (asset.startsWith('http') || asset.startsWith('data:') || asset.startsWith('#')) continue;
 
     // Resolve relative path
     const resolvedPath = resolveRelative(cssPath, asset);
-    const assetFile = allFiles.get(resolvedPath);
+    const entry = allFiles.get(resolvedPath);
 
-    if (assetFile) {
+    if (entry && !replacementMap.has(resolvedPath)) {
       const ext = resolvedPath.split('.').pop().toLowerCase();
-      if (['png','jpg','jpeg','gif','webp','svg'].includes(ext)) {
-        const base64 = await fileToBase64(assetFile);
-        const mime = ext === 'svg' ? 'image/svg+xml' : `image/${ext}`;
-        const dataUrl = `data:${mime};base64,${base64}`;
-        css = css.replace(match[0], `url('${dataUrl}')`);
+      if (['png','jpg','jpeg','gif','webp','svg','ico','bmp','ttf','otf','woff','woff2'].includes(ext)) {
+        promises.push((async () => {
+          const base64 = await fileToBase64(entry.file);
+          let mime;
+          if (['ttf','otf','woff','woff2'].includes(ext)) {
+            mime = ext === 'woff2' ? 'font/woff2' : ext === 'woff' ? 'font/woff' : ext === 'otf' ? 'font/otf' : 'font/ttf';
+          } else {
+            mime = ext === 'svg' ? 'image/svg+xml' : ext === 'ico' ? 'image/x-icon' : `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+          }
+          const dataUrl = `data:${mime};base64,${base64}`;
+          replacementMap.set(resolvedPath, dataUrl);
+          css = css.replace(match[0], `url('${dataUrl}')`);
+        })());
       }
+    } else if (replacementMap.has(resolvedPath)) {
+      css = css.replace(match[0], `url('${replacementMap.get(resolvedPath)}')`);
     }
   }
+  
+  await Promise.all(promises);
   return css;
 }
 
+async function inlineStyleTags(htmlContent, replacementMap) {
+  const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+  let match;
+  let result = htmlContent;
+  
+  while ((match = styleRegex.exec(htmlContent)) !== null) {
+    const originalCss = match[1];
+    const inlinedCss = await inlineCSSAssets(originalCss, 'style.css', replacementMap);
+    result = result.replace(originalCss, inlinedCss);
+  }
+  
+  return result;
+}
+
 function resolveRelative(basePath, relative) {
-  if (relative.startsWith('/')) return relative.substring(1);
+  if (relative.startsWith('/')) return normalizePath(relative);
   
-  const baseDir = basePath.substring(0, basePath.lastIndexOf('/'));
-  if (!baseDir) return relative;
+  const baseDir = basePath.includes('/') ? basePath.substring(0, basePath.lastIndexOf('/')) : '';
   
-  const parts = [...baseDir.split('/'), ...relative.split('/')];
+  const parts = [...(baseDir ? baseDir.split('/') : []), ...relative.split('/')];
   const result = [];
   
   for (const part of parts) {
