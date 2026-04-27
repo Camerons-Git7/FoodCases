@@ -23,16 +23,17 @@ jobs:
       - name: Get latest code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensure full history for better change detection
+          fetch-depth: 0
       
       - name: Clear sync state (Force Full Sync)
         if: github.event.inputs.force_full_sync == 'true'
         run: |
           echo "Force full sync requested - will delete local sync state if it exists"
-          rm -f .ftp-sync-state.json
+          rm -f .ftp-sync-state.json .ftp-sync-state-2.json
           echo "Sync state cleared. All files will be re-uploaded."
-      
-      - name: Deploy all files to InfinityFree
+
+      # ─── FIRST WEBSITE ─────────────────────────────
+      - name: Deploy to InfinityFree Site 1
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -42,14 +43,35 @@ jobs:
           port: 21
           server-dir: htdocs/
           local-dir: ./
-          state-name: .ftp-sync-state.json
+          state-name: .ftp-sync-state-1.json
           exclude: |
             **/.git*
             **/.git*/**
             **/.github/**
             README.md
             .gitignore
-            .ftp-sync-state.json
+            .ftp-sync-state-1.json
+            .ftp-sync-state-2.json
           log-level: standard
-          # Note: dangerous-clean-slate is NOT used to avoid deleting untracked files on server
-          # Instead we rely on deleting the state file to force re-upload
+
+      # ─── SECOND WEBSITE ────────────────────────────
+      - name: Deploy to InfinityFree Site 2
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER_2 }}
+          username: ${{ secrets.FTP_USERNAME_2 }}
+          password: ${{ secrets.FTP_PASSWORD_2 }}
+          protocol: ftp
+          port: 21
+          server-dir: htdocs/
+          local-dir: ./
+          state-name: .ftp-sync-state-2.json
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            README.md
+            .gitignore
+            .ftp-sync-state-1.json
+            .ftp-sync-state-2.json
+          log-level: standard
