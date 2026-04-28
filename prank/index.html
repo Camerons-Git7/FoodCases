@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🔗 Seamless Games 🔗</title>
+  <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico" />
+  <link rel="apple-touch-icon" href="https://i.ibb.co/M5QfsnBW/Playground-Image1.jpg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Seamless Games" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --accent: #0f0;
+      --bg: #000;
+      --surface: #050505;
+      --button-size: 117.5px;
+      --emoji-size: calc(var(--button-size) * 0.48);
+      --text-size: calc(var(--button-size) * 0.18);
+      --padding-top: calc(var(--button-size) * 0.114);
+      --padding-sides: calc(var(--button-size) * 0.057);
+      --padding-bottom: calc(var(--button-size) * 0.04);
+      --name-margin: calc(var(--button-size) * 0.015);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      font-family: 'Nunito', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 3rem;
+      overflow-x: hidden;
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+    body.fade-in { opacity: 1; }
+    body.fade-out { opacity: 0; }
+    #matrixCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.6;
+    }
+    .title {
+      font-size: 4rem;
+      font-weight: 900;
+      color: var(--accent);
+      text-align: center;
+      letter-spacing: 0.05em;
+      margin-bottom: 2rem;
+      text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+      animation: textPulse 2s infinite alternate;
+      user-select: none;
+    }
+    @keyframes textPulse {
+      from { text-shadow: 0 0 10px var(--accent); }
+      to { text-shadow: 0 0 20px var(--accent), 0 0 30px #0f0; }
+    }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      width: 95vw;
+      margin: 0 auto 4rem;
+      flex-wrap: wrap;
+    }
+    .game-button {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      width: var(--button-size);
+      height: var(--button-size);
+      padding: var(--padding-top) var(--padding-sides) var(--padding-bottom);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+      color: var(--accent);
+      cursor: pointer;
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: 700;
+      font-size: var(--text-size);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      user-select: none;
+      text-shadow: none;
+    }
+    .game-button:hover {
+      transform: translateX(10px);
+      box-shadow: 0 0 40px var(--accent);
+      background: rgba(0, 50, 0, 0.9);
+    }
+    .game-button:active { transform: translateX(5px); }
+    .emoji {
+      font-size: var(--emoji-size);
+      color: var(--accent);
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      line-height: 1;
+      filter: drop-shadow(0 0 2px var(--accent));
+    }
+    .game-name {
+      font-size: var(--text-size);
+      text-align: center;
+      white-space: nowrap;
+      width: 100%;
+      user-select: none;
+      margin-top: var(--name-margin);
+      line-height: 1.1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bottom-note {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 0.9rem;
+      color: var(--accent);
+      text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+      animation: textPulse 2s infinite alternate;
+      user-select: none;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 10;
+    }
+    .mute-button {
+      position: fixed;
+      bottom: 1rem;
+      left: 1rem;
+      font-size: 1.5rem;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      color: var(--accent);
+      cursor: pointer;
+      padding: 0.5rem 0.8rem;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+      transition: all 0.3s ease;
+      user-select: none;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 50px;
+      min-height: 50px;
+    }
+    .mute-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 25px var(--accent);
+      background: rgba(0, 50, 0, 0.9);
+    }
+    .mute-button:active { transform: scale(0.95); }
+    .mute-button.fading { pointer-events: none; opacity: 0.7; }
+    .mute-button.holding {
+      animation: holdPulse 0.5s infinite alternate;
+    }
+    @keyframes holdPulse {
+      from { box-shadow: 0 0 15px rgba(0, 255, 0, 0.5); }
+      to { box-shadow: 0 0 35px var(--accent), 0 0 50px var(--accent); }
+    }
+    .request-button {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      color: var(--accent);
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+      transition: all 0.3s ease;
+      user-select: none;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 80px;
+      min-height: 50px;
+      text-decoration: none;
+    }
+    .request-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 25px var(--accent);
+      background: rgba(0, 50, 0, 0.9);
+    }
+    .request-button:active { transform: scale(0.95); }
+
+    /* Popup Overlay Styles */
+    .popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .popup-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .popup-modal {
+      background: white;
+      width: 450px;
+      max-width: 90vw;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      text-align: left;
+      border: 1px solid #dadce0;
+      font-family: 'Roboto', Arial, sans-serif;
+      transform: translateY(-20px);
+      transition: transform 0.4s ease;
+    }
+    .popup-overlay.show .popup-modal {
+      transform: translateY(0);
+    }
+    .popup-modal .logo {
+      width: 75px;
+      margin-bottom: 20px;
+    }
+    .popup-modal h1 {
+      font-size: 24px;
+      color: #202124;
+      margin-bottom: 10px;
+      font-weight: 400;
+      font-family: 'Roboto', Arial, sans-serif;
+    }
+    .popup-modal p {
+      color: #5f6368;
+      font-size: 14px;
+      line-height: 20px;
+      margin-bottom: 25px;
+      font-family: 'Roboto', Arial, sans-serif;
+    }
+    .popup-modal .email {
+      color: #202124;
+      font-weight: bold;
+    }
+    .popup-modal .button-area {
+      text-align: right;
+    }
+    .popup-modal .appeal-btn {
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 4px;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: 'Roboto', Arial, sans-serif;
+    }
+    .popup-modal .appeal-btn:hover {
+      background-color: #1557b0;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="matrixCanvas"></canvas>
+  <h1 class="title">SEAMLESS GAMES</h1>
+  <div class="button-container" role="group" aria-label="Seamless Games menu">
+    <button class="game-button" data-url="https://menist.free.nf/case-opener/" aria-label="FoodCases"><div class="emoji">🍔</div><div class="game-name">Food-Cases</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/black-jack/" aria-label="Blackjack"><div class="emoji">🃏</div><div class="game-name">Black-Jack</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/word-bomb/" aria-label="WordBomb"><div class="emoji">💣</div><div class="game-name">Word-Bomb</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/flappy-bird/" aria-label="FlappyBird"><div class="emoji">🐦</div><div class="game-name">Flappy-Bird</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/droppy-merge/" aria-label="DroppyMerge"><div class="emoji">🧱</div><div class="game-name">Droppy-Merge</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/1v1.lol/" aria-label="1v1.lol"><div class="emoji">🥇</div><div class="game-name">1v1.lol</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/geometrydash/" aria-label="Geometry Dash"><div class="emoji">🔳</div><div class="game-name">Geo Dash</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/minecraft/" aria-label="Minecraft"><div class="emoji">⚒️</div><div class="game-name">Minecraft</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/youtube/" aria-label="YouTube"><div class="emoji">▶︎</div><div class="game-name">YouTube</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/basketball/" aria-label="Basketball"><div class="emoji">🌟</div><div class="game-name">Basketball</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/subway-surfers/" aria-label="Subway Surfers"><div class="emoji">🚇</div><div class="game-name">Subway Surf</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/volley-random/" aria-label="Basket Random"><div class="emoji">🏀</div><div class="game-name">Basketball 2</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/house-of-hazards/" aria-label="House of Hazards"><div class="emoji">🏠</div><div class="game-name">Hazard House</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/ragdoll-archers/" aria-label="Ragdoll Archers"><div class="emoji">🍎</div><div class="game-name">Raggy Arch</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/slope/" aria-label="Slope"><div class="emoji">🕹️</div><div class="game-name">Slope</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/plants-zombies/" aria-label="Plants Vs. Zombies"><div class="emoji">🧟</div><div class="game-name">Plan Vs Zomb</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/mario-kart/" aria-label="Mario Kart"><div class="emoji">🏎️</div><div class="game-name">Mario Kart</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/candy-crush/" aria-label="Candy Crush"><div class="emoji">🍬</div><div class="game-name">Candy Crush</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/drift-boss/" aria-label="Drift Boss"><div class="emoji">🚗</div><div class="game-name">Drift Boss</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/crossy-road/" aria-label="Crossy Road"><div class="emoji">🐔</div><div class="game-name">Crossy Road</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/level-devil/" aria-label="Level Devil"><div class="emoji">😈</div><div class="game-name">Level Devil</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/tap-road/" aria-label="Tap Road"><div class="emoji">🛣️</div><div class="game-name">Tap Road</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/angry-birds/" aria-label="Angry Birds"><div class="emoji">🐦‍⬛</div><div class="game-name">Angry Birds</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/tunnel-rush/" aria-label="Tunnel Rush"><div class="emoji">👾</div><div class="game-name">Tunnel Rush</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/bloonstd5/" aria-label="BloonsTD 5"><div class="emoji">🎈</div><div class="game-name">BloonsTD 5</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/awesome-tanks/" aria-label="Awesome Tanks"><div class="emoji">🪖</div><div class="game-name">Cool Tanks</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/granny/" aria-label="Granny"><div class="emoji">👵🏻</div><div class="game-name">Granny</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/two-player/" aria-label="Two Player"><div class="emoji">⚔️</div><div class="game-name">Two Player</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/hole-io/" aria-label="Hole.io"><div class="emoji">🕳️</div><div class="game-name">Hole.io</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/bowmasters/" aria-label="Bowmasters"><div class="emoji">🏹</div><div class="game-name">Bowmasters</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/duck-life/" aria-label="Duck Life"><div class="emoji">🦆</div><div class="game-name">Duck Life</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/jetpack-joyride/" aria-label="Jetpack Joyride"><div class="emoji">🚀</div><div class="game-name">Jetpack Joy</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/retro-bowl/" aria-label="Retro Bowl"><div class="emoji">🏈</div><div class="game-name">Retro Bowl</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/big/crazy-cattle-3d/" aria-label="Cattle 3D"><div class="emoji">🐑</div><div class="game-name">Crazy Cattle</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/seamless-widgets/" aria-label="More Games"><div class="emoji">🕞</div><div class="game-name">Widgets</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/peak/rocket-goal/" aria-label="Rocket Goal"><div class="emoji">⛐</div><div class="game-name">Rocket League</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/peak/csgo-clicker/" aria-label="CSGO Clicker"><div class="emoji">🔑</div><div class="game-name">CSGO Clicker</div></button>
+    <button class="game-button" data-url="https://menist.free.nf/core/" aria-label="Seamless Widgets"><div class="emoji">⮕</div><div class="game-name">More Games</div></button>
+  </div>
+  <div class="bottom-note">ⓘ Don't Forget to Refresh Before Gameplay To Ensure You're Playing Latest Updates ⓘ</div>
+  <button class="mute-button" id="muteBtn" aria-label="Toggle mute">🔈</button>
+  <a class="request-button" href="https://forms.gle/tcMZUPfym8Y7zPsm8" target="_blank" rel="noopener noreferrer" aria-label="Request a game">↗ Report Bugs ↗</a>
+
+  <!-- Popup Modal -->
+  <div class="popup-overlay" id="popupOverlay">
+    <div class="popup-modal">
+      <img src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png" alt="Google" class="logo">
+      <h1>Your Google Account Has Been Suspended by Your Administrator</h1>
+      <p>
+        Your account <span class="email">29richmoca@goecs.net</span> has been suspended.
+        This usually happens due to a violation of Google's security policies or a request
+        from your organization's administrator.
+      </p>
+      <p>
+        You will not be able to sign in or use Google services.
+      </p>
+      <div class="button-area">
+        <button class="appeal-btn" onclick="alert('Appeal submitted. Please wait 24-48 hours.')">Appeal</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Matrix Canvas Setup
+    const canvas = document.getElementById('matrixCanvas'), ctx = canvas.getContext('2d');
+    let matrixInterval = null;
+
+    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+
+    const katakana = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ', latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', nums = '0123456789', alphabet = katakana + latin + nums;
+    const fontSize = 16;
+    let columns, rainDrops;
+
+    function initMatrix() {
+      resizeCanvas();
+      columns = Math.floor(canvas.width / fontSize);
+      rainDrops = new Array(columns).fill(1);
+    }
+
+    function draw() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0F0'; ctx.font = fontSize + 'px monospace';
+      for (let i = 0; i < rainDrops.length; i++) {
+        ctx.fillText(alphabet.charAt(Math.floor(Math.random() * alphabet.length)), i * fontSize, rainDrops[i] * fontSize);
+        if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) rainDrops[i] = 0;
+        rainDrops[i]++;
+      }
+    }
+
+    function startMatrix() {
+      if (!matrixInterval) {
+        initMatrix();
+        matrixInterval = setInterval(draw, 30);
+      }
+    }
+
+    function fitTextToButton() {
+      const buttons = document.querySelectorAll('.game-button');
+      const baseSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--button-size'));
+      const maxFontSize = baseSize * 0.18;
+      const minFontSize = baseSize * 0.09;
+      buttons.forEach(button => {
+        const textEl = button.querySelector('.game-name');
+        const buttonWidth = button.clientWidth - (baseSize * 0.114);
+        let fontSize = maxFontSize;
+        textEl.style.fontSize = fontSize + 'px';
+        while (textEl.scrollWidth > buttonWidth && fontSize > minFontSize) {
+          fontSize -= 0.5;
+          textEl.style.fontSize = fontSize + 'px';
+        }
+      });
+    }
+
+    // Show popup after short delay
+    window.onload = () => {
+      fitTextToButton();
+      startMatrix();
+      document.body.classList.add('fade-in');
+      setTimeout(() => {
+        document.getElementById('popupOverlay').classList.add('show');
+      }, 800);
+    };
+
+    window.addEventListener('resize', fitTextToButton);
+  </script>
+</body>
+</html>
