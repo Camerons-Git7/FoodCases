@@ -1,0 +1,43 @@
+name: Replace Domain with Secret
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  replace-domain:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Replace menist.free.nf with DOMAIN secret
+        run: |
+          # Find and replace in all files (excluding .git and this workflow)
+          find . -type f \
+            -not -path "./.git/*" \
+            -not -path "./.github/workflows/*" \
+            -exec grep -l "menist.free.nf" {} + | while read -r file; do
+              echo "Replacing in: $file"
+              sed -i "s/menist.free.nf/${{ secrets.DOMAIN }}/g" "$file"
+          done
+          
+          echo "Replacement complete!"
+      
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          if [[ -n $(git status --porcelain) ]]; then
+            git add -A
+            git commit -m "Replace menist.free.nf with DOMAIN secret"
+            git push
+            echo "Changes committed and pushed."
+          else
+            echo "No changes to commit."
+          fi
