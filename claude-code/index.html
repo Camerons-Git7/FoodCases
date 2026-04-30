@@ -1,0 +1,3173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code — OpenRouter Studio</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/rust.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/markdown.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --bg-hover: #30363d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #484f58;
+            --accent: #d97706;
+            --accent-hover: #f59e0b;
+            --accent-glow: rgba(217, 119, 6, 0.3);
+            --success: #238636;
+            --warning: #f0883e;
+            --error: #da3633;
+            --info: #58a6ff;
+            --code-bg: #0d1117;
+            --shadow: 0 8px 24px rgba(0,0,0,0.4);
+            --radius: 12px;
+            --radius-sm: 6px;
+            --font-mono: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --sidebar-width: 280px;
+            --header-height: 56px;
+            --input-height: 120px;
+        }
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --bg-tertiary: #eaeef2;
+            --bg-hover: #d0d7de;
+            --border-color: #d0d7de;
+            --text-primary: #1f2328;
+            --text-secondary: #656d76;
+            --text-muted: #8c959f;
+            --accent: #0969da;
+            --accent-hover: #0550ae;
+            --accent-glow: rgba(9, 105, 218, 0.2);
+            --success: #1a7f37;
+            --warning: #9a6700;
+            --error: #cf222e;
+            --info: #0969da;
+            --code-bg: #f6f8fa;
+            --shadow: 0 8px 24px rgba(31,35,40,0.12);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background 0.3s, color 0.3s;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--bg-hover); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        ::selection { background: var(--accent-glow); color: var(--text-primary); }
+
+        /* Layout */
+        .app { display: flex; height: 100vh; width: 100vw; }
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+        .sidebar.collapsed { transform: translateX(-100%); width: 0; border: none; }
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .logo {
+            width: 32px; height: 32px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0;
+        }
+        .sidebar-title { font-weight: 700; font-size: 16px; }
+        .sidebar-subtitle { font-size: 11px; color: var(--text-secondary); }
+        .new-chat-btn {
+            margin: 12px 16px;
+            padding: 10px 16px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex; align-items: center; gap: 8px;
+            transition: all 0.2s;
+        }
+        .new-chat-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .chat-list { flex: 1; overflow-y: auto; padding: 0 8px; }
+        .chat-item {
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 13px;
+            display: flex; align-items: center; gap: 8px;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+            margin-bottom: 2px;
+            position: relative;
+        }
+        .chat-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .chat-item.active { background: var(--accent-glow); color: var(--accent); }
+        .chat-item.pinned::before {
+            content: '📌'; position: absolute; left: 2px; top: 50%; transform: translateY(-50%);
+            font-size: 10px;
+        }
+        .chat-item.pinned { padding-left: 20px; }
+        .chat-item-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chat-item-actions { display: none; gap: 4px; }
+        .chat-item:hover .chat-item-actions { display: flex; }
+        .chat-item-btn {
+            background: none; border: none; color: var(--text-muted);
+            cursor: pointer; padding: 2px 4px; border-radius: 4px;
+            font-size: 12px;
+        }
+        .chat-item-btn:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+        .sidebar-footer {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-color);
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .sidebar-section {
+            padding: 8px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 8px;
+        }
+
+        /* Main Content */
+        .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .header {
+            height: var(--header-height);
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 16px;
+            gap: 12px;
+        }
+        .header-left, .header-right { display: flex; align-items: center; gap: 8px; }
+        .header-btn {
+            background: none; border: none; color: var(--text-secondary);
+            cursor: pointer; padding: 8px; border-radius: var(--radius-sm);
+            font-size: 14px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .header-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .model-selector {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 13px;
+            min-width: 200px;
+            max-width: 400px;
+            position: relative;
+        }
+        .model-selector:hover { border-color: var(--accent); }
+        .model-badge {
+            font-size: 10px; padding: 2px 6px;
+            border-radius: 4px; background: var(--accent-glow);
+            color: var(--accent); font-weight: 600;
+        }
+        .model-dropdown {
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 200;
+            display: none;
+            box-shadow: var(--shadow);
+        }
+        .model-dropdown.open { display: block; }
+        .model-search {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky; top: 0; background: var(--bg-secondary);
+        }
+        .model-search input {
+            width: 100%; padding: 6px 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+        }
+        .model-search input:focus { border-color: var(--accent); }
+        .model-group { padding: 4px 0; }
+        .model-group-header {
+            padding: 4px 12px;
+            font-size: 11px; font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .model-option {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex; align-items: center; justify-content: space-between;
+            transition: background 0.1s;
+        }
+        .model-option:hover { background: var(--bg-hover); }
+        .model-option.selected { background: var(--accent-glow); }
+        .model-option-name { font-weight: 500; }
+        .model-option-meta { font-size: 11px; color: var(--text-muted); }
+        .model-capabilities { display: flex; gap: 4px; }
+        .cap-badge {
+            font-size: 9px; padding: 1px 5px;
+            border-radius: 3px;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+        .cap-badge.tool { background: rgba(35, 134, 54, 0.2); color: var(--success); }
+        .cap-badge.vision { background: rgba(88, 166, 255, 0.2); color: var(--info); }
+        .cap-badge.reasoning { background: rgba(217, 119, 6, 0.2); color: var(--accent); }
+        .cap-badge.json { background: rgba(240, 136, 62, 0.2); color: var(--warning); }
+
+        /* Chat Area */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+        .welcome-screen {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            flex: 1; gap: 24px;
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .welcome-logo {
+            width: 64px; height: 64px;
+            background: var(--accent);
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px;
+            box-shadow: 0 0 40px var(--accent-glow);
+        }
+        .welcome-title { font-size: 28px; font-weight: 700; }
+        .welcome-subtitle { font-size: 15px; color: var(--text-secondary); line-height: 1.6; }
+        .welcome-features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+            margin-top: 16px;
+        }
+        .welcome-feature {
+            padding: 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .welcome-feature:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        .welcome-feature-icon { font-size: 24px; margin-bottom: 8px; }
+        .welcome-feature-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+        .welcome-feature-desc { font-size: 12px; color: var(--text-secondary); }
+
+        .message {
+            display: flex; gap: 12px;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            animation: messageIn 0.3s ease;
+        }
+        @keyframes messageIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+            margin-top: 4px;
+        }
+        .message-avatar.user { background: var(--accent); }
+        .message-avatar.assistant { background: var(--bg-tertiary); }
+        .message-avatar.system { background: var(--info); }
+        .message-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .message-header {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 4px;
+        }
+        .message-author { font-weight: 600; font-size: 13px; }
+        .message-time { font-size: 11px; color: var(--text-muted); }
+        .message-actions {
+            display: flex; gap: 4px;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .message:hover .message-actions { opacity: 1; }
+        .message-action-btn {
+            background: none; border: none;
+            color: var(--text-muted); cursor: pointer;
+            padding: 2px 6px; border-radius: 4px;
+            font-size: 12px;
+        }
+        .message-action-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+        .message-body {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-primary);
+            word-wrap: break-word;
+        }
+        .message-body p { margin-bottom: 12px; }
+        .message-body p:last-child { margin-bottom: 0; }
+        .message-body pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            overflow-x: auto;
+            margin: 12px 0;
+            position: relative;
+        }
+        .message-body code {
+            font-family: var(--font-mono);
+            font-size: 13px;
+        }
+        .message-body pre code { background: none; padding: 0; }
+        .message-body :not(pre) > code {
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .message-body ul, .message-body ol { margin: 8px 0; padding-left: 24px; }
+        .message-body li { margin: 4px 0; }
+        .message-body blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 16px;
+            margin: 12px 0;
+            color: var(--text-secondary);
+        }
+        .message-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 13px;
+        }
+        .message-body th, .message-body td {
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .message-body th { background: var(--bg-secondary); font-weight: 600; }
+        .message-body img { max-width: 100%; border-radius: var(--radius-sm); margin: 8px 0; }
+        .message-body h1, .message-body h2, .message-body h3, .message-body h4 {
+            margin: 16px 0 8px;
+            font-weight: 600;
+        }
+        .message-body hr { border: none; border-top: 1px solid var(--border-color); margin: 16px 0; }
+
+        .code-block-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .code-block-header + pre {
+            border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+            margin-top: 0;
+        }
+        .copy-code-btn {
+            background: none; border: none;
+            color: var(--text-muted); cursor: pointer;
+            font-size: 11px;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .copy-code-btn:hover { color: var(--text-primary); }
+
+        .reasoning-block {
+            background: rgba(217, 119, 6, 0.08);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            margin: 8px 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .reasoning-block summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--accent);
+            list-style: none;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .reasoning-block summary::before { content: '▼'; font-size: 10px; }
+        .reasoning-block[open] summary::before { content: '▲'; }
+
+        .tool-call-block {
+            background: rgba(35, 134, 54, 0.08);
+            border: 1px solid rgba(35, 134, 54, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            margin: 8px 0;
+        }
+        .tool-call-header {
+            font-weight: 600;
+            color: var(--success);
+            font-size: 13px;
+            margin-bottom: 8px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .tool-call-content {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            background: var(--code-bg);
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            overflow-x: auto;
+        }
+
+        .image-attachment, .file-attachment {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            margin: 4px 4px 4px 0;
+            font-size: 13px;
+        }
+        .image-attachment img {
+            width: 48px; height: 48px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .attachments-bar {
+            display: flex; flex-wrap: wrap; gap: 4px;
+            padding: 8px 16px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        /* Input Area */
+        .input-area {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 12px 16px 16px;
+        }
+        .input-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-container:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .input-toolbar {
+            display: flex; align-items: center; gap: 4px;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .toolbar-btn {
+            background: none; border: none;
+            color: var(--text-secondary); cursor: pointer;
+            padding: 6px; border-radius: var(--radius-sm);
+            font-size: 14px;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .toolbar-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .toolbar-btn.active { color: var(--accent); background: var(--accent-glow); }
+        .toolbar-separator {
+            width: 1px; height: 20px;
+            background: var(--border-color);
+            margin: 0 4px;
+        }
+        .input-textarea {
+            width: 100%;
+            min-height: 56px;
+            max-height: 200px;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+        }
+        .input-textarea::placeholder { color: var(--text-muted); }
+        .input-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px;
+        }
+        .input-hint { font-size: 11px; color: var(--text-muted); }
+        .send-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex; align-items: center; gap: 6px;
+            transition: all 0.2s;
+        }
+        .send-btn:hover { background: var(--accent-hover); }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .stop-btn {
+            background: var(--error);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            display: none;
+            align-items: center; gap: 6px;
+        }
+        .stop-btn.visible { display: flex; }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex; gap: 4px;
+            padding: 8px 0;
+        }
+        .typing-dot {
+            width: 8px; height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Panels */
+        .panel-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 300;
+            display: none;
+            align-items: center; justify-content: center;
+        }
+        .panel-overlay.open { display: flex; }
+        .panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            width: 90%; max-width: 700px;
+            max-height: 85vh;
+            display: flex; flex-direction: column;
+            box-shadow: var(--shadow);
+            animation: panelIn 0.2s ease;
+        }
+        @keyframes panelIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .panel-title { font-weight: 700; font-size: 16px; }
+        .panel-close {
+            background: none; border: none;
+            color: var(--text-muted); cursor: pointer;
+            font-size: 20px; padding: 4px;
+        }
+        .panel-close:hover { color: var(--text-primary); }
+        .panel-body {
+            flex: 1; overflow-y: auto;
+            padding: 20px;
+        }
+        .panel-footer {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex; justify-content: flex-end; gap: 8px;
+        }
+
+        /* Settings Form */
+        .form-group { margin-bottom: 16px; }
+        .form-label {
+            display: block;
+            font-size: 13px; font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+        .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+        .form-textarea { min-height: 80px; resize: vertical; font-family: var(--font-mono); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .slider-group { display: flex; align-items: center; gap: 12px; }
+        .slider-group input[type="range"] { flex: 1; }
+        .slider-value {
+            min-width: 50px; text-align: right;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .checkbox-group {
+            display: flex; align-items: center; gap: 8px;
+            cursor: pointer;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: 16px; height: 16px;
+            accent-color: var(--accent);
+        }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-color); margin-bottom: 16px; }
+        .tab {
+            padding: 8px 16px;
+            background: none; border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 13px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: all 0.15s;
+        }
+        .tab:hover { color: var(--text-primary); }
+        .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+        /* Image Generation Gallery */
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .gallery-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .gallery-item:hover { transform: scale(1.02); }
+        .gallery-item img { width: 100%; height: 200px; object-fit: cover; }
+        .gallery-item-info { padding: 8px; font-size: 11px; color: var(--text-secondary); }
+
+        /* Toast */
+        .toast-container {
+            position: fixed; bottom: 24px; right: 24px;
+            z-index: 400;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .toast {
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: white;
+            display: flex; align-items: center; gap: 8px;
+            animation: toastIn 0.3s ease;
+            box-shadow: var(--shadow);
+            max-width: 400px;
+        }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--error); }
+        .toast.info { background: var(--info); }
+        .toast.warning { background: var(--warning); }
+
+        /* Usage Stats */
+        .usage-bar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .usage-stat { display: flex; align-items: center; gap: 4px; }
+        .usage-stat strong { color: var(--text-primary); }
+
+        /* Diff Viewer */
+        .diff-viewer {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            line-height: 1.6;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        .diff-line {
+            padding: 2px 12px;
+            display: flex;
+        }
+        .diff-line.add { background: rgba(35, 134, 54, 0.15); }
+        .diff-line.remove { background: rgba(218, 54, 51, 0.15); }
+        .diff-line-num {
+            min-width: 40px;
+            color: var(--text-muted);
+            text-align: right;
+            padding-right: 12px;
+            border-right: 1px solid var(--border-color);
+            margin-right: 12px;
+            user-select: none;
+        }
+
+        /* Terminal */
+        .terminal {
+            background: #0d1117;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            color: #e6edf3;
+            min-height: 200px;
+            overflow-y: auto;
+        }
+        .terminal-line { margin: 2px 0; }
+        .terminal-prompt { color: var(--success); }
+        .terminal-output { color: var(--text-secondary); }
+        .terminal-error { color: var(--error); }
+
+        /* File Tree */
+        .file-tree {
+            font-family: var(--font-mono);
+            font-size: 13px;
+        }
+        .file-tree-item {
+            padding: 4px 8px;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 6px;
+            border-radius: var(--radius-sm);
+        }
+        .file-tree-item:hover { background: var(--bg-hover); }
+        .file-tree-item.folder { font-weight: 600; }
+        .file-tree-indent { margin-left: 20px; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; height: 100vh; }
+            .sidebar.collapsed + .main { margin-left: 0; }
+            .welcome-features { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+            .model-selector { min-width: 140px; }
+        }
+
+        /* Drag Overlay */
+        .drag-overlay {
+            position: fixed; inset: 0;
+            background: rgba(217, 119, 6, 0.1);
+            border: 3px dashed var(--accent);
+            z-index: 500;
+            display: none;
+            align-items: center; justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            font-size: 18px;
+            color: var(--accent);
+            pointer-events: none;
+        }
+        .drag-overlay.active { display: flex; }
+
+        /* Branching */
+        .branch-indicator {
+            display: flex; align-items: center; gap: 8px;
+            padding: 4px 12px;
+            background: var(--accent-glow);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        /* Search in chat */
+        .chat-search {
+            position: absolute; top: var(--header-height); right: 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 8px;
+            z-index: 150;
+            display: none;
+            box-shadow: var(--shadow);
+        }
+        .chat-search.open { display: block; }
+        .chat-search input {
+            padding: 6px 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+            width: 250px;
+        }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-hover) 50%, var(--bg-tertiary) 75%);
+            background-size: 200% 100%;
+            animation: skeleton 1.5s infinite;
+            border-radius: 4px;
+        }
+        @keyframes skeleton {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* JSON Schema Builder */
+        .schema-builder {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            background: var(--bg-tertiary);
+        }
+        .schema-field {
+            display: grid;
+            grid-template-columns: 1fr 1fr 80px 30px;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        .schema-field input, .schema-field select {
+            padding: 6px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 12px;
+        }
+
+        /* Tool Builder */
+        .tool-def {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            margin-bottom: 12px;
+            background: var(--bg-tertiary);
+        }
+        .tool-def-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 8px;
+        }
+
+        /* Provider preferences */
+        .provider-pref {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            margin-bottom: 6px;
+        }
+        .provider-pref select {
+            flex: 1;
+            padding: 6px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 12px;
+        }
+
+        /* Pinned messages sidebar section */
+        .pinned-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .pinned-item {
+            padding: 6px 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .pinned-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+        /* Status indicators */
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-dot.busy { background: var(--warning); }
+        .status-dot.offline { background: var(--error); }
+
+        /* Clock */
+        .header-clock {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 4px 8px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+        }
+
+        /* Rate limit bar */
+        .rate-limit-bar {
+            height: 3px;
+            background: var(--bg-tertiary);
+            position: relative;
+            overflow: hidden;
+        }
+        .rate-limit-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">🧠</div>
+                <div>
+                    <div class="sidebar-title">Claude Code</div>
+                    <div class="sidebar-subtitle">OpenRouter Studio</div>
+                </div>
+            </div>
+            <button class="new-chat-btn" onclick="newChat()">
+                <span>+</span> New Chat
+            </button>
+            <div class="sidebar-section">Conversations</div>
+            <div class="chat-list" id="chatList"></div>
+            <div class="sidebar-section">Pinned</div>
+            <div class="pinned-list" id="pinnedList"></div>
+            <div class="sidebar-footer">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                    <span class="status-dot online"></span>
+                    <span>API Connected</span>
+                </div>
+                <div id="sidebarUsage">0 tokens used</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="header-btn" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
+                    <div class="model-selector" id="modelSelector" onclick="toggleModelDropdown(event)">
+                        <span id="currentModel">anthropic/claude-3.5-sonnet</span>
+                        <span class="model-badge" id="modelBadge">Sonnet</span>
+                        <div class="model-dropdown" id="modelDropdown" onclick="event.stopPropagation()">
+                            <div class="model-search">
+                                <input type="text" placeholder="Search models..." id="modelSearch" oninput="filterModels()">
+                            </div>
+                            <div id="modelList"></div>
+                        </div>
+                    </div>
+                    <button class="header-btn" onclick="openSettings()" title="Settings">⚙️</button>
+                    <button class="header-btn" onclick="toggleToolsPanel()" title="Tools">🔧</button>
+                </div>
+                <div class="header-right">
+                    <span class="header-clock" id="clock">00:00:00</span>
+                    <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme">🌓</button>
+                    <button class="header-btn" onclick="toggleSearch()" title="Search">🔍</button>
+                    <button class="header-btn" onclick="exportChat()" title="Export">💾</button>
+                    <button class="header-btn" onclick="clearChat()" title="Clear">🗑️</button>
+                </div>
+            </header>
+
+            <!-- Chat Search -->
+            <div class="chat-search" id="chatSearch">
+                <input type="text" placeholder="Search messages..." id="searchInput" oninput="searchMessages()">
+            </div>
+
+            <!-- Chat Container -->
+            <div class="chat-container" id="chatContainer">
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-logo">🧠</div>
+                    <div class="welcome-title">Claude Code</div>
+                    <div class="welcome-subtitle">
+                        Powered by OpenRouter. Access 300+ models with unified API.<br>
+                        Chat, generate images, video, audio, embeddings, and more.
+                    </div>
+                    <div class="welcome-features">
+                        <div class="welcome-feature" onclick="setMode('chat')">
+                            <div class="welcome-feature-icon">💬</div>
+                            <div class="welcome-feature-title">Chat</div>
+                            <div class="welcome-feature-desc">Multimodal conversations with reasoning</div>
+                        </div>
+                        <div class="welcome-feature" onclick="setMode('image')">
+                            <div class="welcome-feature-icon">🎨</div>
+                            <div class="welcome-feature-title">Generate Image</div>
+                            <div class="welcome-feature-desc">Create images from text descriptions</div>
+                        </div>
+                        <div class="welcome-feature" onclick="setMode('audio')">
+                            <div class="welcome-feature-icon">🔊</div>
+                            <div class="welcome-feature-title">Text to Speech</div>
+                            <div class="welcome-feature-desc">Convert text to natural audio</div>
+                        </div>
+                        <div class="welcome-feature" onclick="setMode('embeddings')">
+                            <div class="welcome-feature-icon">📊</div>
+                            <div class="welcome-feature-title">Embeddings</div>
+                            <div class="welcome-feature-desc">Generate vector representations</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Bar -->
+            <div class="usage-bar" id="usageBar" style="display:none;">
+                <div class="usage-stat">💰 Cost: <strong id="totalCost">$0.0000</strong></div>
+                <div class="usage-stat">📝 Tokens: <strong id="totalTokens">0</strong></div>
+                <div class="usage-stat">⚡ Context: <strong id="contextTokens">0</strong>/<span id="maxContext">200K</span></div>
+                <div class="usage-stat" id="modelPricing" style="margin-left:auto;"></div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area" id="inputArea">
+                <div class="attachments-bar" id="attachmentsBar" style="display:none;"></div>
+                <div class="input-container">
+                    <div class="input-toolbar">
+                        <button class="toolbar-btn" onclick="document.getElementById('fileInput').click()" title="Upload file">📎</button>
+                        <input type="file" id="fileInput" style="display:none" multiple accept="image/*,.pdf,.txt,.js,.py,.json,.md" onchange="handleFileUpload(event)">
+                        <button class="toolbar-btn" id="imgGenBtn" onclick="toggleMode('image')" title="Image generation">🎨</button>
+                        <button class="toolbar-btn" id="audioBtn" onclick="toggleMode('audio')" title="Audio/TTS">🔊</button>
+                        <button class="toolbar-btn" id="videoBtn" onclick="toggleMode('video')" title="Video generation">🎬</button>
+                        <button class="toolbar-btn" onclick="toggleMode('embeddings')" title="Embeddings">📊</button>
+                        <button class="toolbar-btn" onclick="toggleMode('rerank')" title="Rerank">📈</button>
+                        <div class="toolbar-separator"></div>
+                        <button class="toolbar-btn" id="streamBtn" onclick="toggleStreaming()" title="Toggle streaming">📡</button>
+                        <button class="toolbar-btn" id="reasoningBtn" onclick="toggleReasoning()" title="Toggle reasoning">🧩</button>
+                        <button class="toolbar-btn" id="jsonBtn" onclick="toggleJSON()" title="JSON mode">📋</button>
+                        <button class="toolbar-btn" id="toolsBtn" onclick="toggleTools()" title="Tools">🔧</button>
+                        <div class="toolbar-separator"></div>
+                        <button class="toolbar-btn" onclick="openSettings()" title="Parameters">⚙️</button>
+                    </div>
+                    <textarea class="input-textarea" id="messageInput" placeholder="Message Claude Code... (Shift+Enter for new line)" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+                    <div class="input-footer">
+                        <span class="input-hint" id="inputHint">Enter to send • Shift+Enter for newline</span>
+                        <button class="stop-btn" id="stopBtn" onclick="stopGeneration()">⏹ Stop</button>
+                        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤ Send</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Drag Overlay -->
+    <div class="drag-overlay" id="dragOverlay">
+        <div style="font-size:48px;">📁</div>
+        <div>Drop files here to upload</div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Settings Panel -->
+    <div class="panel-overlay" id="settingsPanel">
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">⚙️ Settings & Parameters</div>
+                <button class="panel-close" onclick="closeSettings()">×</button>
+            </div>
+            <div class="panel-body">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab(this, 'general')">General</button>
+                    <button class="tab" onclick="switchTab(this, 'sampling')">Sampling</button>
+                    <button class="tab" onclick="switchTab(this, 'tools')">Tools</button>
+                    <button class="tab" onclick="switchTab(this, 'providers')">Providers</button>
+                    <button class="tab" onclick="switchTab(this, 'advanced')">Advanced</button>
+                </div>
+                
+                <div id="tab-general">
+                    <div class="form-group">
+                        <label class="form-label">System Prompt</label>
+                        <textarea class="form-textarea" id="systemPrompt" placeholder="Enter system instructions...">You are Claude Code, an advanced AI coding assistant. You help with programming, debugging, architecture, and software development tasks. Be concise but thorough.</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Assistant Prefill</label>
+                        <input type="text" class="form-input" id="assistantPrefill" placeholder="Force assistant to start with...">
+                        <div class="form-hint">Forces the model to begin its response with specific text</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Max Tokens</label>
+                            <div class="slider-group">
+                                <input type="range" min="1" max="8192" value="4096" id="maxTokens" oninput="updateSlider('maxTokensVal', this.value)">
+                                <span class="slider-value" id="maxTokensVal">4096</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Verbosity</label>
+                            <select class="form-select" id="verbosity">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="xhigh">X-High</option>
+                                <option value="max">Max</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="includeUsage" checked>
+                            <span>Include usage statistics in streaming</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="allowDataCollection">
+                            <span>Allow data collection for model training</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="tab-sampling" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Temperature</label>
+                            <div class="slider-group">
+                                <input type="range" min="0" max="20" value="10" id="temperature" oninput="updateSlider('tempVal', this.value/10)">
+                                <span class="slider-value" id="tempVal">1.0</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Top P</label>
+                            <div class="slider-group">
+                                <input type="range" min="0" max="10" value="10" id="topP" oninput="updateSlider('topPVal', this.value/10)">
+                                <span class="slider-value" id="topPVal">1.0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Top K</label>
+                            <input type="number" class="form-input" id="topK" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Min P</label>
+                            <div class="slider-group">
+                                <input type="range" min="0" max="10" value="0" id="minP" oninput="updateSlider('minPVal', this.value/10)">
+                                <span class="slider-value" id="minPVal">0.0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Top A</label>
+                            <div class="slider-group">
+                                <input type="range" min="0" max="10" value="0" id="topA" oninput="updateSlider('topAVal', this.value/10)">
+                                <span class="slider-value" id="topAVal">0.0</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Seed</label>
+                            <input type="number" class="form-input" id="seed" placeholder="Random">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Frequency Penalty</label>
+                            <div class="slider-group">
+                                <input type="range" min="-20" max="20" value="0" id="freqPenalty" oninput="updateSlider('freqVal', this.value/10)">
+                                <span class="slider-value" id="freqVal">0.0</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Presence Penalty</label>
+                            <div class="slider-group">
+                                <input type="range" min="-20" max="20" value="0" id="presPenalty" oninput="updateSlider('presVal', this.value/10)">
+                                <span class="slider-value" id="presVal">0.0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Repetition Penalty</label>
+                        <div class="slider-group">
+                            <input type="range" min="0" max="20" value="10" id="repPenalty" oninput="updateSlider('repVal', this.value/10)">
+                            <span class="slider-value" id="repVal">1.0</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Stop Sequences (comma-separated)</label>
+                        <input type="text" class="form-input" id="stopSequences" placeholder="e.g. END,STOP">
+                    </div>
+                </div>
+
+                <div id="tab-tools" style="display:none;">
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="enableTools">
+                            <span>Enable Function Calling</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tool Choice</label>
+                        <select class="form-select" id="toolChoice">
+                            <option value="auto">Auto</option>
+                            <option value="none">None</option>
+                            <option value="required">Required</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="parallelTools" checked>
+                            <span>Allow parallel tool calls</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Defined Tools</label>
+                        <div id="toolsList"></div>
+                        <button class="new-chat-btn" style="margin:8px 0;width:100%;" onclick="addTool()">+ Add Tool</button>
+                    </div>
+                </div>
+
+                <div id="tab-providers" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label">Provider Order</label>
+                        <div class="provider-pref">
+                            <select id="providerOrder">
+                                <option value="">Default</option>
+                                <option value="anthropic">Anthropic</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="google">Google</option>
+                                <option value="meta">Meta</option>
+                                <option value="mistral">Mistral</option>
+                                <option value="cohere">Cohere</option>
+                                <option value="amazon">Amazon</option>
+                                <option value="azure">Azure</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="allowFallbacks" checked>
+                            <span>Allow fallback providers</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="requireParameters">
+                            <span>Require parameters (skip providers without all params)</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Data Collection</label>
+                        <select class="form-select" id="dataCollection">
+                            <option value="allow">Allow</option>
+                            <option value="deny">Deny</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="tab-advanced" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label">Response Format</label>
+                        <select class="form-select" id="responseFormat" onchange="toggleSchemaBuilder()">
+                            <option value="text">Text</option>
+                            <option value="json_object">JSON Object</option>
+                            <option value="json_schema">JSON Schema</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="schemaBuilder" style="display:none;">
+                        <label class="form-label">JSON Schema</label>
+                        <div class="schema-builder" id="schemaFields">
+                            <div class="schema-field">
+                                <input type="text" placeholder="Field name" class="schema-name">
+                                <select class="schema-type">
+                                    <option value="string">string</option>
+                                    <option value="number">number</option>
+                                    <option value="boolean">boolean</option>
+                                    <option value="array">array</option>
+                                    <option value="object">object</option>
+                                </select>
+                                <input type="text" placeholder="Description" class="schema-desc">
+                                <button class="header-btn" onclick="this.parentElement.remove()">×</button>
+                            </div>
+                        </div>
+                        <button class="new-chat-btn" style="margin-top:8px;width:100%;" onclick="addSchemaField()">+ Add Field</button>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="logprobs">
+                            <span>Return log probabilities</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Top Logprobs</label>
+                        <input type="number" class="form-input" id="topLogprobs" value="0" min="0" max="20">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Logit Bias (JSON)</label>
+                        <textarea class="form-textarea" id="logitBias" placeholder='{"token_id": -100}'></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="structuredOutputs">
+                            <span>Use structured outputs (json_schema)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button class="header-btn" onclick="resetSettings()">Reset</button>
+                <button class="send-btn" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Generation Panel -->
+    <div class="panel-overlay" id="imagePanel">
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">🎨 Image Generation</div>
+                <button class="panel-close" onclick="closePanel('imagePanel')">×</button>
+            </div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <label class="form-label">Prompt</label>
+                    <textarea class="form-textarea" id="imagePrompt" placeholder="Describe the image you want to generate..." rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Model</label>
+                        <select class="form-select" id="imageModel">
+                            <option value="openai/dall-e-3">DALL-E 3</option>
+                            <option value="stabilityai/stable-diffusion-xl">Stable Diffusion XL</option>
+                            <option value="recraft-ai/recraft-v3">Recraft V3</option>
+                            <option value="black-forest-labs/flux-schnell">FLUX Schnell</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Size</label>
+                        <select class="form-select" id="imageSize">
+                            <option value="1024x1024">1024×1024</option>
+                            <option value="1024x1792">1024×1792</option>
+                            <option value="1792x1024">1792×1024</option>
+                            <option value="512x512">512×512</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Quality</label>
+                    <select class="form-select" id="imageQuality">
+                        <option value="standard">Standard</option>
+                        <option value="hd">HD</option>
+                    </select>
+                </div>
+                <button class="send-btn" style="width:100%;" onclick="generateImage()">Generate Image</button>
+                <div class="image-gallery" id="imageGallery"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio/TTS Panel -->
+    <div class="panel-overlay" id="audioPanel">
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">🔊 Text to Speech</div>
+                <button class="panel-close" onclick="closePanel('audioPanel')">×</button>
+            </div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <label class="form-label">Text</label>
+                    <textarea class="form-textarea" id="ttsText" placeholder="Enter text to convert to speech..." rows="4"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Model</label>
+                        <select class="form-select" id="ttsModel">
+                            <option value="openai/tts-1">TTS-1</option>
+                            <option value="openai/tts-1-hd">TTS-1 HD</option>
+                            <option value="elevenlabs/eleven-multilingual-v2">ElevenLabs Multilingual</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Voice</label>
+                        <select class="form-select" id="ttsVoice">
+                            <option value="alloy">Alloy</option>
+                            <option value="echo">Echo</option>
+                            <option value="fable">Fable</option>
+                            <option value="onyx">Onyx</option>
+                            <option value="nova">Nova</option>
+                            <option value="shimmer">Shimmer</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Speed</label>
+                    <div class="slider-group">
+                        <input type="range" min="25" max="40" value="10" id="ttsSpeed" oninput="updateSlider('ttsSpeedVal', this.value/10)">
+                        <span class="slider-value" id="ttsSpeedVal">1.0</span>
+                    </div>
+                </div>
+                <button class="send-btn" style="width:100%;" onclick="generateAudio()">Generate Audio</button>
+                <div id="audioResults" style="margin-top:16px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Generation Panel -->
+    <div class="panel-overlay" id="videoPanel">
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">🎬 Video Generation</div>
+                <button class="panel-close" onclick="closePanel('videoPanel')">×</button>
+            </div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <label class="form-label">Prompt</label>
+                    <textarea class="form-textarea" id="videoPrompt" placeholder="Describe the video you want to generate..." rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Model</label>
+                    <select class="form-select" id="videoModel">
+                        <option value="luma-ai/dream-machine">Luma Dream Machine</option>
+                        <option value="runway/gen-3">Runway Gen-3</option>
+                        <option value="kling/kling-v1">Kling V1</option>
+                    </select>
+                </div>
+                <button class="send-btn" style="width:100%;" onclick="generateVideo()">Generate Video</button>
+                <div id="videoJobs" style="margin-top:16px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Embeddings Panel -->
+    <div class="panel-overlay" id="embeddingsPanel">
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">📊 Embeddings</div>
+                <button class="panel-close" onclick="closePanel('embeddingsPanel')">×</button>
+            </div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <label class="form-label">Input Text</label>
+                    <textarea class="form-textarea" id="embedText" placeholder="Enter text to embed..." rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Model</label>
+                    <select class="form-select" id="embedModel">
+                        <option value="openai/text-embedding-3-small">text-embedding-3-small</option>
+                        <option value="openai/text-embedding-3-large">text-embedding-3-large</option>
+                        <option value="cohere/embed-english-v3">Cohere Embed English</option>
+                        <option value="sentence-transformers/all-MiniLM-L6-v2">MiniLM-L6</option>
+                    </select>
+                </div>
+                <button class="send-btn" style="width:100%;" onclick="generateEmbedding()">Generate Embedding</button>
+                <div id="embedResults" style="margin-top:16px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rerank Panel -->
+    <div class="panel-overlay" id="rerankPanel">
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">📈 Rerank</div>
+                <button class="panel-close" onclick="closePanel('rerankPanel')">×</button>
+            </div>
+            <div class="panel-body">
+                <div class="form-group">
+                    <label class="form-label">Query</label>
+                    <input type="text" class="form-input" id="rerankQuery" placeholder="Enter search query...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Documents (one per line)</label>
+                    <textarea class="form-textarea" id="rerankDocs" placeholder="Document 1&#10;Document 2&#10;Document 3" rows="6"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Model</label>
+                    <select class="form-select" id="rerankModel">
+                        <option value="cohere/rerank-english-v3">Cohere Rerank English</option>
+                        <option value="cohere/rerank-multilingual-v3">Cohere Rerank Multilingual</option>
+                    </select>
+                </div>
+                <button class="send-btn" style="width:100%;" onclick="rerankDocuments()">Rerank</button>
+                <div id="rerankResults" style="margin-top:16px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const API_KEY = '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';
+        const API_BASE = 'https://openrouter.ai/api/v1';
+        const APP_NAME = 'Claude Code';
+        
+        // ==================== STATE ====================
+        let state = {
+            chats: [],
+            currentChatId: null,
+            messages: [],
+            isStreaming: false,
+            abortController: null,
+            currentModel: 'anthropic/claude-3.5-sonnet',
+            settings: {
+                temperature: 1.0,
+                top_p: 1.0,
+                top_k: 0,
+                min_p: 0,
+                top_a: 0,
+                frequency_penalty: 0,
+                presence_penalty: 0,
+                repetition_penalty: 1.0,
+                max_tokens: 4096,
+                seed: null,
+                stop: [],
+                stream: true,
+                include_usage: true,
+                reasoning: false,
+                json_mode: false,
+                structured_outputs: false,
+                logprobs: false,
+                top_logprobs: 0,
+                logit_bias: {},
+                verbosity: 'medium',
+                tools: [],
+                tool_choice: 'auto',
+                parallel_tool_calls: true,
+                provider_order: [],
+                allow_fallbacks: true,
+                require_parameters: false,
+                data_collection: 'allow',
+                response_format: { type: 'text' },
+                system_prompt: '',
+                assistant_prefill: ''
+            },
+            models: [],
+            totalTokens: 0,
+            totalCost: 0,
+            mode: 'chat',
+            attachments: [],
+            pinnedMessages: [],
+            videoJobs: []
+        };
+
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            initClock();
+            fetchModels();
+            setupDragDrop();
+            setupKeyboardShortcuts();
+            if (!state.currentChatId) newChat();
+            else loadChat(state.currentChatId);
+            updateUI();
+        });
+
+        function loadState() {
+            const saved = localStorage.getItem('claudeCode_state');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                state.chats = parsed.chats || [];
+                state.currentChatId = parsed.currentChatId || null;
+                state.settings = { ...state.settings, ...(parsed.settings || {}) };
+                state.totalTokens = parsed.totalTokens || 0;
+                state.totalCost = parsed.totalCost || 0;
+                state.pinnedMessages = parsed.pinnedMessages || [];
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem('claudeCode_state', JSON.stringify({
+                chats: state.chats,
+                currentChatId: state.currentChatId,
+                settings: state.settings,
+                totalTokens: state.totalTokens,
+                totalCost: state.totalCost,
+                pinnedMessages: state.pinnedMessages
+            }));
+        }
+
+        // ==================== CLOCK ====================
+        function initClock() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('clock').textContent = now.toLocaleTimeString();
+            }, 1000);
+        }
+
+        // ==================== CHAT MANAGEMENT ====================
+        function newChat() {
+            const chat = {
+                id: Date.now().toString(),
+                title: 'New Chat',
+                createdAt: new Date().toISOString(),
+                messages: [],
+                model: state.currentModel
+            };
+            state.chats.unshift(chat);
+            state.currentChatId = chat.id;
+            state.messages = [];
+            saveState();
+            renderChatList();
+            renderMessages();
+            showToast('New chat created', 'success');
+        }
+
+        function loadChat(chatId) {
+            const chat = state.chats.find(c => c.id === chatId);
+            if (!chat) return;
+            state.currentChatId = chatId;
+            state.messages = chat.messages || [];
+            state.currentModel = chat.model || state.currentModel;
+            document.getElementById('currentModel').textContent = state.currentModel;
+            updateModelBadge();
+            saveState();
+            renderChatList();
+            renderMessages();
+        }
+
+        function deleteChat(chatId, event) {
+            event.stopPropagation();
+            if (!confirm('Delete this chat?')) return;
+            state.chats = state.chats.filter(c => c.id !== chatId);
+            if (state.currentChatId === chatId) {
+                state.currentChatId = state.chats.length > 0 ? state.chats[0].id : null;
+                state.messages = state.currentChatId ? state.chats[0].messages : [];
+            }
+            saveState();
+            renderChatList();
+            if (!state.currentChatId) {
+                document.getElementById('chatContainer').innerHTML = document.getElementById('welcomeScreen').outerHTML;
+            } else {
+                renderMessages();
+            }
+        }
+
+        function pinChat(chatId, event) {
+            event.stopPropagation();
+            const chat = state.chats.find(c => c.id === chatId);
+            if (chat) {
+                chat.pinned = !chat.pinned;
+                saveState();
+                renderChatList();
+            }
+        }
+
+        function renameChat(chatId, event) {
+            event.stopPropagation();
+            const chat = state.chats.find(c => c.id === chatId);
+            if (!chat) return;
+            const name = prompt('Rename chat:', chat.title);
+            if (name) {
+                chat.title = name;
+                saveState();
+                renderChatList();
+            }
+        }
+
+        function clearChat() {
+            if (!confirm('Clear all messages?')) return;
+            const chat = state.chats.find(c => c.id === state.currentChatId);
+            if (chat) {
+                chat.messages = [];
+                state.messages = [];
+                saveState();
+                renderMessages();
+                showToast('Chat cleared', 'info');
+            }
+        }
+
+        function renderChatList() {
+            const list = document.getElementById('chatList');
+            const pinnedList = document.getElementById('pinnedList');
+            const sorted = [...state.chats].sort((a, b) => {
+                if (a.pinned && !b.pinned) return -1;
+                if (!a.pinned && b.pinned) return 1;
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            });
+            
+            list.innerHTML = sorted.filter(c => !c.pinned).map(chat => chatItemHTML(chat)).join('');
+            pinnedList.innerHTML = sorted.filter(c => c.pinned).map(chat => chatItemHTML(chat)).join('');
+        }
+
+        function chatItemHTML(chat) {
+            const isActive = chat.id === state.currentChatId;
+            return `
+                <div class="chat-item ${isActive ? 'active' : ''} ${chat.pinned ? 'pinned' : ''}" onclick="loadChat('${chat.id}')">
+                    <span class="chat-item-text">${escapeHtml(chat.title)}</span>
+                    <div class="chat-item-actions">
+                        <button class="chat-item-btn" onclick="pinChat('${chat.id}', event)" title="${chat.pinned ? 'Unpin' : 'Pin'}">📌</button>
+                        <button class="chat-item-btn" onclick="renameChat('${chat.id}', event)" title="Rename">✏️</button>
+                        <button class="chat-item-btn" onclick="deleteChat('${chat.id}', event)" title="Delete">🗑️</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateChatTitle(content) {
+            const chat = state.chats.find(c => c.id === state.currentChatId);
+            if (chat && chat.title === 'New Chat') {
+                chat.title = content.slice(0, 50) + (content.length > 50 ? '...' : '');
+                saveState();
+                renderChatList();
+            }
+        }
+
+        // ==================== MESSAGE RENDERING ====================
+        function renderMessages() {
+            const container = document.getElementById('chatContainer');
+            if (state.messages.length === 0) {
+                container.innerHTML = `
+                    <div class="welcome-screen">
+                        <div class="welcome-logo">🧠</div>
+                        <div class="welcome-title">Claude Code</div>
+                        <div class="welcome-subtitle">
+                            Powered by OpenRouter. Access 300+ models with unified API.<br>
+                            Chat, generate images, video, audio, embeddings, and more.
+                        </div>
+                        <div class="welcome-features">
+                            <div class="welcome-feature" onclick="setMode('chat')">
+                                <div class="welcome-feature-icon">💬</div>
+                                <div class="welcome-feature-title">Chat</div>
+                                <div class="welcome-feature-desc">Multimodal conversations with reasoning</div>
+                            </div>
+                            <div class="welcome-feature" onclick="setMode('image')">
+                                <div class="welcome-feature-icon">🎨</div>
+                                <div class="welcome-feature-title">Generate Image</div>
+                                <div class="welcome-feature-desc">Create images from text descriptions</div>
+                            </div>
+                            <div class="welcome-feature" onclick="setMode('audio')">
+                                <div class="welcome-feature-icon">🔊</div>
+                                <div class="welcome-feature-title">Text to Speech</div>
+                                <div class="welcome-feature-desc">Convert text to natural audio</div>
+                            </div>
+                            <div class="welcome-feature" onclick="setMode('embeddings')">
+                                <div class="welcome-feature-icon">📊</div>
+                                <div class="welcome-feature-title">Embeddings</div>
+                                <div class="welcome-feature-desc">Generate vector representations</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = state.messages.map((msg, idx) => messageHTML(msg, idx)).join('');
+            container.querySelectorAll('pre code').forEach(block => {
+                hljs.highlightElement(block);
+            });
+            scrollToBottom();
+        }
+
+        function messageHTML(msg, idx) {
+            const isUser = msg.role === 'user';
+            const isSystem = msg.role === 'system';
+            let content = msg.content || '';
+            
+            // Handle multimodal content
+            if (Array.isArray(content)) {
+                content = content.map(part => {
+                    if (part.type === 'text') return escapeHtml(part.text);
+                    if (part.type === 'image_url') return `<img src="${part.image_url.url}" style="max-width:300px;border-radius:8px;">`;
+                    return '';
+                }).join('');
+            } else {
+                content = formatMessageContent(content);
+            }
+
+            let reasoningHTML = '';
+            if (msg.reasoning) {
+                reasoningHTML = `
+                    <details class="reasoning-block">
+                        <summary>🧩 Reasoning (${msg.reasoning.length} chars)</summary>
+                        <div>${escapeHtml(msg.reasoning)}</div>
+                    </details>
+                `;
+            }
+
+            let toolsHTML = '';
+            if (msg.tool_calls?.length) {
+                toolsHTML = msg.tool_calls.map(tc => `
+                    <div class="tool-call-block">
+                        <div class="tool-call-header">🔧 ${tc.function.name}</div>
+                        <div class="tool-call-content">${escapeHtml(JSON.stringify(JSON.parse(tc.function.arguments), null, 2))}</div>
+                    </div>
+                `).join('');
+            }
+
+            let attachmentsHTML = '';
+            if (msg.attachments?.length) {
+                attachmentsHTML = '<div style="margin-top:8px;">' + msg.attachments.map(att => {
+                    if (att.type.startsWith('image/')) {
+                        return `<img src="${att.data}" style="max-width:200px;border-radius:8px;border:1px solid var(--border-color);">`;
+                    }
+                    return `<div class="file-attachment">📄 ${escapeHtml(att.name)}</div>`;
+                }).join('') + '</div>';
+            }
+
+            let usageHTML = '';
+            if (msg.usage) {
+                usageHTML = `<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">
+                    ${msg.usage.prompt_tokens || 0} in / ${msg.usage.completion_tokens || 0} out 
+                    ${msg.usage.cost ? `• $${msg.usage.cost.toFixed(6)}` : ''}
+                </div>`;
+            }
+
+            const avatar = isUser ? '👤' : (isSystem ? '⚙️' : '🤖');
+            const author = isUser ? 'You' : (isSystem ? 'System' : 'Claude');
+
+            return `
+                <div class="message" data-index="${idx}">
+                    <div class="message-avatar ${msg.role}">${avatar}</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-author">${author}</span>
+                            <span class="message-time">${formatTime(msg.timestamp)}</span>
+                            <div class="message-actions">
+                                <button class="message-action-btn" onclick="copyMessage(${idx})" title="Copy">📋</button>
+                                <button class="message-action-btn" onclick="pinMessage(${idx})" title="Pin">📌</button>
+                                <button class="message-action-btn" onclick="editMessage(${idx})" title="Edit">✏️</button>
+                                ${!isUser ? `<button class="message-action-btn" onclick="regenerateMessage(${idx})" title="Regenerate">🔄</button>` : ''}
+                            </div>
+                        </div>
+                        ${reasoningHTML}
+                        <div class="message-body">${content}</div>
+                        ${toolsHTML}
+                        ${attachmentsHTML}
+                        ${usageHTML}
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatMessageContent(content) {
+            // Simple markdown-like formatting
+            content = escapeHtml(content);
+            
+            // Code blocks
+            content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                const language = lang || 'plaintext';
+                return `<div class="code-block-header">
+                    <span>${language}</span>
+                    <button class="copy-code-btn" onclick="copyCode(this)">📋 Copy</button>
+                </div><pre><code class="language-${language}">${code.trim()}</code></pre>`;
+            });
+            
+            // Inline code
+            content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+            // Bold
+            content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            
+            // Italic
+            content = content.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            
+            // Links
+            content = content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent);">$1</a>');
+            
+            // Lists
+            content = content.replace(/^- (.+)$/gm, '<li>$1</li>');
+            content = content.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+            
+            // Blockquotes
+            content = content.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+            
+            // Line breaks
+            content = content.replace(/\n/g, '<br>');
+            
+            return content;
+        }
+
+        function addMessage(msg) {
+            state.messages.push(msg);
+            const chat = state.chats.find(c => c.id === state.currentChatId);
+            if (chat) {
+                chat.messages = state.messages;
+                saveState();
+            }
+            renderMessages();
+        }
+
+        function updateMessage(idx, updates) {
+            if (state.messages[idx]) {
+                Object.assign(state.messages[idx], updates);
+                const chat = state.chats.find(c => c.id === state.currentChatId);
+                if (chat) {
+                    chat.messages = state.messages;
+                    saveState();
+                }
+                renderMessages();
+            }
+        }
+
+        // ==================== API CALLS ====================
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text && !state.attachments.length) return;
+
+            const userMsg = {
+                role: 'user',
+                content: text,
+                timestamp: new Date().toISOString(),
+                attachments: state.attachments.length ? [...state.attachments] : undefined
+            };
+
+            // Build multimodal content if attachments exist
+            if (state.attachments.length > 0) {
+                const parts = [{ type: 'text', text: text || 'Analyze this:' }];
+                for (const att of state.attachments) {
+                    if (att.type.startsWith('image/')) {
+                        parts.push({ type: 'image_url', image_url: { url: att.data } });
+                    }
+                }
+                userMsg.content = parts;
+            }
+
+            addMessage(userMsg);
+            updateChatTitle(text);
+            
+            input.value = '';
+            input.style.height = 'auto';
+            state.attachments = [];
+            document.getElementById('attachmentsBar').style.display = 'none';
+            document.getElementById('attachmentsBar').innerHTML = '';
+
+            // Show typing indicator
+            const typingId = 'typing-' + Date.now();
+            const container = document.getElementById('chatContainer');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message';
+            typingDiv.id = typingId;
+            typingDiv.innerHTML = `
+                <div class="message-avatar assistant">🤖</div>
+                <div class="message-content">
+                    <div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
+                </div>
+            `;
+            container.appendChild(typingDiv);
+            scrollToBottom();
+
+            try {
+                await callAPI();
+            } finally {
+                const el = document.getElementById(typingId);
+                if (el) el.remove();
+            }
+        }
+
+        async function callAPI() {
+            const headers = {
+                'Authorization': `Bearer ${API_KEY}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': window.location.href,
+                'X-Title': APP_NAME
+            };
+
+            const body = {
+                model: state.currentModel,
+                messages: buildMessages(),
+                stream: state.settings.stream
+            };
+
+            // Add all parameters
+            if (state.settings.temperature !== 1.0) body.temperature = state.settings.temperature;
+            if (state.settings.top_p !== 1.0) body.top_p = state.settings.top_p;
+            if (state.settings.top_k !== 0) body.top_k = state.settings.top_k;
+            if (state.settings.min_p !== 0) body.min_p = state.settings.min_p;
+            if (state.settings.top_a !== 0) body.top_a = state.settings.top_a;
+            if (state.settings.frequency_penalty !== 0) body.frequency_penalty = state.settings.frequency_penalty;
+            if (state.settings.presence_penalty !== 0) body.presence_penalty = state.settings.presence_penalty;
+            if (state.settings.repetition_penalty !== 1.0) body.repetition_penalty = state.settings.repetition_penalty;
+            if (state.settings.max_tokens) body.max_tokens = state.settings.max_tokens;
+            if (state.settings.seed) body.seed = state.settings.seed;
+            if (state.settings.stop?.length) body.stop = state.settings.stop;
+            if (state.settings.verbosity !== 'medium') body.verbosity = state.settings.verbosity;
+            if (state.settings.include_usage) body.include_usage = true;
+            if (state.settings.reasoning) body.include_reasoning = true;
+            if (state.settings.logprobs) {
+                body.logprobs = true;
+                if (state.settings.top_logprobs > 0) body.top_logprobs = state.settings.top_logprobs;
+            }
+            if (Object.keys(state.settings.logit_bias).length) body.logit_bias = state.settings.logit_bias;
+
+            // Response format
+            if (state.settings.json_mode) {
+                body.response_format = { type: 'json_object' };
+            } else if (state.settings.structured_outputs && state.settings.response_format?.type === 'json_schema') {
+                body.response_format = state.settings.response_format;
+                body.structured_outputs = true;
+            }
+
+            // Tools
+            if (state.settings.tools?.length && document.getElementById('enableTools')?.checked) {
+                body.tools = state.settings.tools;
+                body.tool_choice = state.settings.tool_choice;
+                body.parallel_tool_calls = state.settings.parallel_tool_calls;
+            }
+
+            // Provider preferences
+            const provider = {};
+            if (!state.settings.allow_fallbacks) provider.allow_fallbacks = false;
+            if (state.settings.require_parameters) provider.require_parameters = true;
+            if (state.settings.data_collection === 'deny') provider.data_collection = 'deny';
+            if (state.settings.provider_order?.length) provider.order = state.settings.provider_order;
+            if (Object.keys(provider).length) body.provider = provider;
+
+            // Assistant prefill
+            if (state.settings.assistant_prefill) {
+                body.messages.push({
+                    role: 'assistant',
+                    content: state.settings.assistant_prefill
+                });
+            }
+
+            state.abortController = new AbortController();
+            document.getElementById('sendBtn').style.display = 'none';
+            document.getElementById('stopBtn').classList.add('visible');
+
+            try {
+                const response = await fetch(`${API_BASE}/chat/completions`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(body),
+                    signal: state.abortController.signal
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error?.message || `HTTP ${response.status}`);
+                }
+
+                if (state.settings.stream) {
+                    await handleStream(response);
+                } else {
+                    await handleNonStream(response);
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    showToast(err.message, 'error');
+                    addMessage({
+                        role: 'assistant',
+                        content: `**Error:** ${err.message}`,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            } finally {
+                document.getElementById('sendBtn').style.display = 'flex';
+                document.getElementById('stopBtn').classList.remove('visible');
+                state.abortController = null;
+            }
+        }
+
+        function buildMessages() {
+            const msgs = [];
+            if (state.settings.system_prompt) {
+                msgs.push({ role: 'system', content: state.settings.system_prompt });
+            }
+            for (const msg of state.messages) {
+                const m = { role: msg.role };
+                if (Array.isArray(msg.content)) {
+                    m.content = msg.content;
+                } else {
+                    m.content = msg.content;
+                }
+                msgs.push(m);
+            }
+            return msgs;
+        }
+
+        async function handleStream(response) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let content = '';
+            let reasoning = '';
+            let usage = null;
+            let toolCalls = [];
+            const msgId = Date.now().toString();
+
+            const assistantMsg = {
+                id: msgId,
+                role: 'assistant',
+                content: '',
+                reasoning: '',
+                timestamp: new Date().toISOString()
+            };
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const data = line.slice(6);
+                    if (data === '[DONE]') continue;
+
+                    try {
+                        const chunk = JSON.parse(data);
+                        const delta = chunk.choices?.[0]?.delta;
+                        if (!delta) {
+                            if (chunk.usage) usage = chunk.usage;
+                            continue;
+                        }
+
+                        if (delta.content) content += delta.content;
+                        if (delta.reasoning) reasoning += delta.reasoning;
+                        if (delta.tool_calls) {
+                            delta.tool_calls.forEach((tc, i) => {
+                                if (!toolCalls[i]) toolCalls[i] = { id: tc.id || '', type: 'function', function: { name: tc.function?.name || '', arguments: '' } };
+                                if (tc.function?.arguments) toolCalls[i].function.arguments += tc.function.arguments;
+                            });
+                        }
+
+                        // Update UI in real-time
+                        assistantMsg.content = content;
+                        assistantMsg.reasoning = reasoning || undefined;
+                        if (toolCalls.length) assistantMsg.tool_calls = toolCalls;
+                        
+                        // Replace last message or add new
+                        if (state.messages[state.messages.length - 1]?.role === 'assistant' && state.messages[state.messages.length - 1]?.id === msgId) {
+                            state.messages[state.messages.length - 1] = assistantMsg;
+                        } else {
+                            state.messages.push(assistantMsg);
+                        }
+                        
+                        // Quick render for streaming effect
+                        quickRenderLastMessage(content, reasoning, toolCalls);
+                    } catch (e) {}
+                }
+            }
+
+            // Finalize
+            if (usage) {
+                assistantMsg.usage = {
+                    prompt_tokens: usage.prompt_tokens,
+                    completion_tokens: usage.completion_tokens,
+                    total_tokens: usage.total_tokens,
+                    cost: usage.cost
+                };
+                state.totalTokens += usage.total_tokens || 0;
+                if (usage.cost) state.totalCost += usage.cost;
+                updateUsageDisplay();
+            }
+
+            const chat = state.chats.find(c => c.id === state.currentChatId);
+            if (chat) {
+                chat.messages = state.messages;
+                saveState();
+            }
+            renderMessages();
+        }
+
+        function quickRenderLastMessage(content, reasoning, toolCalls) {
+            const container = document.getElementById('chatContainer');
+            let lastMsg = container.querySelector('.message:last-child');
+            
+            if (!lastMsg || !lastMsg.querySelector('.message-avatar.assistant')) {
+                // Remove typing indicator if exists
+                const typing = container.querySelector('.typing-indicator');
+                if (typing) typing.closest('.message').remove();
+                
+                const div = document.createElement('div');
+                div.className = 'message';
+                div.innerHTML = `
+                    <div class="message-avatar assistant">🤖</div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-author">Claude</span>
+                        </div>
+                        <div class="message-body">${formatMessageContent(content)}<span style="display:inline-block;width:8px;height:16px;background:var(--accent);animation:blink 1s infinite;vertical-align:middle;margin-left:4px;"></span></div>
+                    </div>
+                `;
+                container.appendChild(div);
+                scrollToBottom();
+            } else {
+                const body = lastMsg.querySelector('.message-body');
+                if (body) {
+                    body.innerHTML = formatMessageContent(content) + '<span style="display:inline-block;width:8px;height:16px;background:var(--accent);animation:blink 1s infinite;vertical-align:middle;margin-left:4px;"></span>';
+                }
+            }
+        }
+
+        async function handleNonStream(response) {
+            const data = await response.json();
+            const choice = data.choices?.[0];
+            const msg = choice?.message;
+
+            const assistantMsg = {
+                role: 'assistant',
+                content: msg?.content || '',
+                reasoning: msg?.reasoning,
+                tool_calls: msg?.tool_calls,
+                usage: data.usage ? {
+                    prompt_tokens: data.usage.prompt_tokens,
+                    completion_tokens: data.usage.completion_tokens,
+                    total_tokens: data.usage.total_tokens,
+                    cost: data.usage.cost
+                } : undefined,
+                timestamp: new Date().toISOString()
+            };
+
+            if (data.usage) {
+                state.totalTokens += data.usage.total_tokens || 0;
+                if (data.usage.cost) state.totalCost += data.usage.cost;
+                updateUsageDisplay();
+            }
+
+            addMessage(assistantMsg);
+        }
+
+        function stopGeneration() {
+            if (state.abortController) {
+                state.abortController.abort();
+                state.abortController = null;
+            }
+        }
+
+        // ==================== MODEL MANAGEMENT ====================
+        async function fetchModels() {
+            try {
+                const response = await fetch(`${API_BASE}/models`, {
+                    headers: { 'Authorization': `Bearer ${API_KEY}` }
+                });
+                if (!response.ok) throw new Error('Failed to fetch models');
+                const data = await response.json();
+                state.models = data.data || [];
+                populateModelDropdown();
+            } catch (err) {
+                showToast('Failed to load models: ' + err.message, 'error');
+            }
+        }
+
+        function populateModelDropdown() {
+            const list = document.getElementById('modelList');
+            const providers = {};
+            
+            for (const model of state.models) {
+                const provider = model.id.split('/')[0];
+                if (!providers[provider]) providers[provider] = [];
+                providers[provider].push(model);
+            }
+
+            let html = '';
+            for (const [provider, models] of Object.entries(providers)) {
+                html += `<div class="model-group">
+                    <div class="model-group-header">${provider}</div>
+                    ${models.map(m => {
+                        const caps = [];
+                        if (m.architecture?.modality?.includes('text')) caps.push('text');
+                        if (m.architecture?.modality?.includes('image')) caps.push('vision');
+                        if (m.architecture?.modality?.includes('audio')) caps.push('audio');
+                        if (m.architecture?.modality?.includes('video')) caps.push('video');
+                        return `
+                        <div class="model-option ${m.id === state.currentModel ? 'selected' : ''}" onclick="selectModel('${m.id}')">
+                            <div>
+                                <div class="model-option-name">${m.name || m.id}</div>
+                                <div class="model-option-meta">${m.id} • ${m.context_length ? (m.context_length/1000)+'K ctx' : ''}</div>
+                            </div>
+                            <div class="model-capabilities">
+                                ${caps.map(c => `<span class="cap-badge ${c}">${c}</span>`).join('')}
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+            }
+            list.innerHTML = html;
+        }
+
+        function toggleModelDropdown(event) {
+            event.stopPropagation();
+            document.getElementById('modelDropdown').classList.toggle('open');
+        }
+
+        function selectModel(modelId) {
+            state.currentModel = modelId;
+            document.getElementById('currentModel').textContent = modelId;
+            updateModelBadge();
+            document.getElementById('modelDropdown').classList.remove('open');
+            
+            const chat = state.chats.find(c => c.id === state.currentChatId);
+            if (chat) {
+                chat.model = modelId;
+                saveState();
+            }
+            showToast(`Model: ${modelId}`, 'success');
+        }
+
+        function updateModelBadge() {
+            const parts = state.currentModel.split('/');
+            const name = parts[parts.length - 1];
+            document.getElementById('modelBadge').textContent = name.length > 12 ? name.slice(0, 12) + '...' : name;
+        }
+
+        function filterModels() {
+            const search = document.getElementById('modelSearch').value.toLowerCase();
+            const options = document.querySelectorAll('.model-option');
+            options.forEach(opt => {
+                const text = opt.textContent.toLowerCase();
+                opt.style.display = text.includes(search) ? 'flex' : 'none';
+            });
+        }
+
+        // ==================== FILE UPLOAD ====================
+        function handleFileUpload(event) {
+            const files = Array.from(event.target.files);
+            processFiles(files);
+        }
+
+        function processFiles(files) {
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    state.attachments.push({
+                        name: file.name,
+                        type: file.type,
+                        data: e.target.result
+                    });
+                    renderAttachments();
+                };
+                if (file.type.startsWith('image/')) {
+                    reader.readAsDataURL(file);
+                } else {
+                    reader.readAsText(file);
+                }
+            }
+        }
+
+        function renderAttachments() {
+            const bar = document.getElementById('attachmentsBar');
+            if (!state.attachments.length) {
+                bar.style.display = 'none';
+                return;
+            }
+            bar.style.display = 'flex';
+            bar.innerHTML = state.attachments.map((att, i) => `
+                <div class="image-attachment">
+                    ${att.type.startsWith('image/') ? `<img src="${att.data}">` : '📄'}
+                    <span>${escapeHtml(att.name)}</span>
+                    <button class="header-btn" onclick="removeAttachment(${i})" style="margin-left:4px;">×</button>
+                </div>
+            `).join('');
+        }
+
+        function removeAttachment(idx) {
+            state.attachments.splice(idx, 1);
+            renderAttachments();
+        }
+
+        function setupDragDrop() {
+            const overlay = document.getElementById('dragOverlay');
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            document.body.addEventListener('dragenter', () => overlay.classList.add('active'));
+            document.body.addEventListener('dragleave', (e) => {
+                if (e.relatedTarget === null) overlay.classList.remove('active');
+            });
+            document.body.addEventListener('drop', (e) => {
+                overlay.classList.remove('active');
+                const files = Array.from(e.dataTransfer.files);
+                processFiles(files);
+            });
+        }
+
+        // ==================== MODE SWITCHING ====================
+        function setMode(mode) {
+            state.mode = mode;
+            if (mode === 'chat') {
+                closeAllPanels();
+            } else if (mode === 'image') {
+                openPanel('imagePanel');
+            } else if (mode === 'audio') {
+                openPanel('audioPanel');
+            } else if (mode === 'video') {
+                openPanel('videoPanel');
+            } else if (mode === 'embeddings') {
+                openPanel('embeddingsPanel');
+            } else if (mode === 'rerank') {
+                openPanel('rerankPanel');
+            }
+            updateToolbar();
+        }
+
+        function toggleMode(mode) {
+            setMode(state.mode === mode ? 'chat' : mode);
+        }
+
+        function updateToolbar() {
+            document.getElementById('imgGenBtn').classList.toggle('active', state.mode === 'image');
+            document.getElementById('audioBtn').classList.toggle('active', state.mode === 'audio');
+            document.getElementById('videoBtn').classList.toggle('active', state.mode === 'video');
+        }
+
+        // ==================== IMAGE GENERATION ====================
+        async function generateImage() {
+            const prompt = document.getElementById('imagePrompt').value.trim();
+            if (!prompt) return showToast('Enter a prompt', 'warning');
+
+            const model = document.getElementById('imageModel').value;
+            const size = document.getElementById('imageSize').value;
+            const quality = document.getElementById('imageQuality').value;
+
+            showToast('Generating image...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/images/generations`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': APP_NAME
+                    },
+                    body: JSON.stringify({
+                        model,
+                        prompt,
+                        n: 1,
+                        size,
+                        quality
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                
+                const gallery = document.getElementById('imageGallery');
+                for (const img of data.data || []) {
+                    const div = document.createElement('div');
+                    div.className = 'gallery-item';
+                    div.innerHTML = `
+                        <img src="${img.url}" alt="Generated">
+                        <div class="gallery-item-info">${model} • ${size}</div>
+                    `;
+                    div.onclick = () => {
+                        state.attachments.push({
+                            name: 'generated-image.png',
+                            type: 'image/png',
+                            data: img.url
+                        });
+                        renderAttachments();
+                        closePanel('imagePanel');
+                        showToast('Image added to chat', 'success');
+                    };
+                    gallery.appendChild(div);
+                }
+                showToast('Image generated!', 'success');
+            } catch (err) {
+                showToast('Image generation failed: ' + err.message, 'error');
+            }
+        }
+
+        // ==================== AUDIO/TTS ====================
+        async function generateAudio() {
+            const text = document.getElementById('ttsText').value.trim();
+            if (!text) return showToast('Enter text', 'warning');
+
+            const model = document.getElementById('ttsModel').value;
+            const voice = document.getElementById('ttsVoice').value;
+            const speed = parseFloat(document.getElementById('ttsSpeed').value) / 10;
+
+            showToast('Generating audio...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/audio/speech`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': APP_NAME
+                    },
+                    body: JSON.stringify({
+                        model,
+                        input: text,
+                        voice,
+                        speed
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                const results = document.getElementById('audioResults');
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <audio controls style="width:100%;margin-top:8px;">
+                        <source src="${url}" type="audio/mpeg">
+                    </audio>
+                    <a href="${url}" download="speech.mp3" class="send-btn" style="display:inline-block;margin-top:8px;text-decoration:none;">Download MP3</a>
+                `;
+                results.appendChild(div);
+                showToast('Audio generated!', 'success');
+            } catch (err) {
+                showToast('Audio generation failed: ' + err.message, 'error');
+            }
+        }
+
+        // ==================== VIDEO GENERATION ====================
+        async function generateVideo() {
+            const prompt = document.getElementById('videoPrompt').value.trim();
+            if (!prompt) return showToast('Enter a prompt', 'warning');
+
+            const model = document.getElementById('videoModel').value;
+            showToast('Submitting video job...', 'info');
+
+            try {
+                // Note: Video generation APIs vary; this is a generalized approach
+                const response = await fetch(`${API_BASE}/video/generations`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': APP_NAME
+                    },
+                    body: JSON.stringify({
+                        model,
+                        prompt,
+                        duration: 5
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                
+                const jobId = data.id || Date.now().toString();
+                state.videoJobs.push({ id: jobId, status: 'pending', model });
+                
+                const jobsDiv = document.getElementById('videoJobs');
+                const div = document.createElement('div');
+                div.className = 'tool-call-block';
+                div.id = `video-job-${jobId}`;
+                div.innerHTML = `
+                    <div class="tool-call-header">🎬 Video Job #${jobId.slice(-8)}</div>
+                    <div>Status: <span class="status-dot busy"></span> Processing...</div>
+                    <button class="send-btn" style="margin-top:8px;" onclick="checkVideoJob('${jobId}')">Check Status</button>
+                `;
+                jobsDiv.appendChild(div);
+                
+                showToast('Video job submitted', 'success');
+            } catch (err) {
+                showToast('Video generation failed: ' + err.message, 'error');
+            }
+        }
+
+        async function checkVideoJob(jobId) {
+            showToast('Checking video status...', 'info');
+            // Poll for status (implementation depends on provider)
+            setTimeout(() => {
+                const el = document.getElementById(`video-job-${jobId}`);
+                if (el) {
+                    el.innerHTML = `
+                        <div class="tool-call-header">🎬 Video Job #${jobId.slice(-8)}</div>
+                        <div>Status: <span class="status-dot online"></span> Complete</div>
+                        <div style="margin-top:8px;color:var(--text-secondary);">Video URL would appear here from provider response</div>
+                    `;
+                }
+            }, 3000);
+        }
+
+        // ==================== EMBEDDINGS ====================
+        async function generateEmbedding() {
+            const text = document.getElementById('embedText').value.trim();
+            if (!text) return showToast('Enter text', 'warning');
+
+            const model = document.getElementById('embedModel').value;
+            showToast('Generating embedding...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/embeddings`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': APP_NAME
+                    },
+                    body: JSON.stringify({
+                        model,
+                        input: text
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                
+                const embedding = data.data?.[0]?.embedding;
+                const results = document.getElementById('embedResults');
+                results.innerHTML = `
+                    <div class="tool-call-block">
+                        <div class="tool-call-header">📊 Embedding Result</div>
+                        <div style="font-size:12px;color:var(--text-secondary);">
+                            Dimensions: ${embedding?.length || 'unknown'}<br>
+                            Model: ${model}<br>
+                            <details style="margin-top:8px;">
+                                <summary>View vector (first 10 values)</summary>
+                                <div class="tool-call-content">${JSON.stringify(embedding?.slice(0, 10))}</div>
+                            </details>
+                        </div>
+                    </div>
+                `;
+                showToast('Embedding generated!', 'success');
+            } catch (err) {
+                showToast('Embedding failed: ' + err.message, 'error');
+            }
+        }
+
+        // ==================== RERANK ====================
+        async function rerankDocuments() {
+            const query = document.getElementById('rerankQuery').value.trim();
+            const docsText = document.getElementById('rerankDocs').value.trim();
+            if (!query || !docsText) return showToast('Fill in all fields', 'warning');
+
+            const documents = docsText.split('\n').filter(d => d.trim());
+            const model = document.getElementById('rerankModel').value;
+            showToast('Reranking...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/rerank`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': APP_NAME
+                    },
+                    body: JSON.stringify({
+                        model,
+                        query,
+                        documents,
+                        top_n: documents.length
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                
+                const results = document.getElementById('rerankResults');
+                results.innerHTML = `
+                    <div class="tool-call-block">
+                        <div class="tool-call-header">📈 Rerank Results</div>
+                        ${(data.results || []).map((r, i) => `
+                            <div style="padding:8px;margin:4px 0;background:var(--bg-secondary);border-radius:4px;">
+                                <div style="font-weight:600;">#${i+1} Score: ${r.relevance_score?.toFixed(4)}</div>
+                                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">${escapeHtml(documents[r.index])}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                showToast('Reranking complete!', 'success');
+            } catch (err) {
+                showToast('Rerank failed: ' + err.message, 'error');
+            }
+        }
+
+        // ==================== SETTINGS PANEL ====================
+        function openSettings() {
+            document.getElementById('settingsPanel').classList.add('open');
+            loadSettingsToForm();
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsPanel').classList.remove('open');
+        }
+
+        function switchTab(btn, tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+            document.getElementById('tab-' + tabId).style.display = 'block';
+        }
+
+        function loadSettingsToForm() {
+            const s = state.settings;
+            document.getElementById('systemPrompt').value = s.system_prompt;
+            document.getElementById('assistantPrefill').value = s.assistant_prefill || '';
+            document.getElementById('temperature').value = s.temperature * 10;
+            document.getElementById('tempVal').textContent = s.temperature.toFixed(1);
+            document.getElementById('topP').value = s.top_p * 10;
+            document.getElementById('topPVal').textContent = s.top_p.toFixed(1);
+            document.getElementById('topK').value = s.top_k;
+            document.getElementById('minP').value = s.min_p * 10;
+            document.getElementById('minPVal').textContent = s.min_p.toFixed(1);
+            document.getElementById('topA').value = s.top_a * 10;
+            document.getElementById('topAVal').textContent = s.top_a.toFixed(1);
+            document.getElementById('freqPenalty').value = s.frequency_penalty * 10;
+            document.getElementById('freqVal').textContent = s.frequency_penalty.toFixed(1);
+            document.getElementById('presPenalty').value = s.presence_penalty * 10;
+            document.getElementById('presVal').textContent = s.presence_penalty.toFixed(1);
+            document.getElementById('repPenalty').value = s.repetition_penalty * 10;
+            document.getElementById('repVal').textContent = s.repetition_penalty.toFixed(1);
+            document.getElementById('maxTokens').value = s.max_tokens;
+            document.getElementById('maxTokensVal').textContent = s.max_tokens;
+            document.getElementById('seed').value = s.seed || '';
+            document.getElementById('stopSequences').value = (s.stop || []).join(',');
+            document.getElementById('verbosity').value = s.verbosity;
+            document.getElementById('enableTools').checked = s.tools?.length > 0;
+            document.getElementById('toolChoice').value = s.tool_choice;
+            document.getElementById('parallelTools').checked = s.parallel_tool_calls;
+            document.getElementById('allowFallbacks').checked = s.allow_fallbacks;
+            document.getElementById('requireParameters').checked = s.require_parameters;
+            document.getElementById('dataCollection').value = s.data_collection;
+            document.getElementById('includeUsage').checked = s.include_usage;
+            document.getElementById('logprobs').checked = s.logprobs;
+            document.getElementById('topLogprobs').value = s.top_logprobs;
+            document.getElementById('logitBias').value = Object.keys(s.logit_bias).length ? JSON.stringify(s.logit_bias) : '';
+            document.getElementById('structuredOutputs').checked = s.structured_outputs;
+        }
+
+        function saveSettings() {
+            const s = state.settings;
+            s.system_prompt = document.getElementById('systemPrompt').value;
+            s.assistant_prefill = document.getElementById('assistantPrefill').value;
+            s.temperature = parseFloat(document.getElementById('tempVal').textContent);
+            s.top_p = parseFloat(document.getElementById('topPVal').textContent);
+            s.top_k = parseInt(document.getElementById('topK').value) || 0;
+            s.min_p = parseFloat(document.getElementById('minPVal').textContent);
+            s.top_a = parseFloat(document.getElementById('topAVal').textContent);
+            s.frequency_penalty = parseFloat(document.getElementById('freqVal').textContent);
+            s.presence_penalty = parseFloat(document.getElementById('presVal').textContent);
+            s.repetition_penalty = parseFloat(document.getElementById('repVal').textContent);
+            s.max_tokens = parseInt(document.getElementById('maxTokens').value);
+            s.seed = document.getElementById('seed').value ? parseInt(document.getElementById('seed').value) : null;
+            s.stop = document.getElementById('stopSequences').value.split(',').map(s => s.trim()).filter(Boolean);
+            s.verbosity = document.getElementById('verbosity').value;
+            s.tool_choice = document.getElementById('toolChoice').value;
+            s.parallel_tool_calls = document.getElementById('parallelTools').checked;
+            s.allow_fallbacks = document.getElementById('allowFallbacks').checked;
+            s.require_parameters = document.getElementById('requireParameters').checked;
+            s.data_collection = document.getElementById('dataCollection').value;
+            s.include_usage = document.getElementById('includeUsage').checked;
+            s.logprobs = document.getElementById('logprobs').checked;
+            s.top_logprobs = parseInt(document.getElementById('topLogprobs').value) || 0;
+            
+            const biasText = document.getElementById('logitBias').value;
+            if (biasText) {
+                try { s.logit_bias = JSON.parse(biasText); } catch(e) { s.logit_bias = {}; }
+            }
+            
+            s.structured_outputs = document.getElementById('structuredOutputs').checked;
+            
+            saveState();
+            closeSettings();
+            showToast('Settings saved', 'success');
+        }
+
+        function resetSettings() {
+            state.settings = {
+                temperature: 1.0, top_p: 1.0, top_k: 0, min_p: 0, top_a: 0,
+                frequency_penalty: 0, presence_penalty: 0, repetition_penalty: 1.0,
+                max_tokens: 4096, seed: null, stop: [], stream: true,
+                include_usage: true, reasoning: false, json_mode: false,
+                structured_outputs: false, logprobs: false, top_logprobs: 0,
+                logit_bias: {}, verbosity: 'medium', tools: [], tool_choice: 'auto',
+                parallel_tool_calls: true, provider_order: [], allow_fallbacks: true,
+                require_parameters: false, data_collection: 'allow',
+                response_format: { type: 'text' }, system_prompt: '', assistant_prefill: ''
+            };
+            loadSettingsToForm();
+            showToast('Settings reset', 'info');
+        }
+
+        function updateSlider(id, value) {
+            document.getElementById(id).textContent = parseFloat(value).toFixed(1);
+        }
+
+        function toggleSchemaBuilder() {
+            const format = document.getElementById('responseFormat').value;
+            document.getElementById('schemaBuilder').style.display = format === 'json_schema' ? 'block' : 'none';
+        }
+
+        function addSchemaField() {
+            const container = document.getElementById('schemaFields');
+            const div = document.createElement('div');
+            div.className = 'schema-field';
+            div.innerHTML = `
+                <input type="text" placeholder="Field name" class="schema-name">
+                <select class="schema-type">
+                    <option value="string">string</option>
+                    <option value="number">number</option>
+                    <option value="boolean">boolean</option>
+                    <option value="array">array</option>
+                    <option value="object">object</option>
+                </select>
+                <input type="text" placeholder="Description" class="schema-desc">
+                <button class="header-btn" onclick="this.parentElement.remove()">×</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function addTool() {
+            const name = prompt('Tool name:');
+            if (!name) return;
+            const desc = prompt('Tool description:') || '';
+            state.settings.tools.push({
+                type: 'function',
+                function: {
+                    name,
+                    description: desc,
+                    parameters: { type: 'object', properties: {} }
+                }
+            });
+            renderToolsList();
+        }
+
+        function renderToolsList() {
+            const list = document.getElementById('toolsList');
+            list.innerHTML = state.settings.tools.map((t, i) => `
+                <div class="tool-def">
+                    <div class="tool-def-header">
+                        <span>🔧 ${t.function.name}</span>
+                        <button class="header-btn" onclick="removeTool(${i})">×</button>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-secondary);">${t.function.description}</div>
+                </div>
+            `).join('');
+        }
+
+        function removeTool(idx) {
+            state.settings.tools.splice(idx, 1);
+            renderToolsList();
+        }
+
+        // ==================== TOGGLES ====================
+        function toggleStreaming() {
+            state.settings.stream = !state.settings.stream;
+            document.getElementById('streamBtn').classList.toggle('active', state.settings.stream);
+            showToast(state.settings.stream ? 'Streaming enabled' : 'Streaming disabled', 'info');
+        }
+
+        function toggleReasoning() {
+            state.settings.reasoning = !state.settings.reasoning;
+            document.getElementById('reasoningBtn').classList.toggle('active', state.settings.reasoning);
+            showToast(state.settings.reasoning ? 'Reasoning enabled' : 'Reasoning disabled', 'info');
+        }
+
+        function toggleJSON() {
+            state.settings.json_mode = !state.settings.json_mode;
+            document.getElementById('jsonBtn').classList.toggle('active', state.settings.json_mode);
+            showToast(state.settings.json_mode ? 'JSON mode enabled' : 'JSON mode disabled', 'info');
+        }
+
+        function toggleTools() {
+            const enabled = !document.getElementById('enableTools').checked;
+            document.getElementById('enableTools').checked = enabled;
+            document.getElementById('toolsBtn').classList.toggle('active', enabled);
+            showToast(enabled ? 'Tools enabled' : 'Tools disabled', 'info');
+        }
+
+        function toggleToolsPanel() {
+            openSettings();
+            switchTab(document.querySelectorAll('.tab')[2], 'tools');
+        }
+
+        // ==================== UI HELPERS ====================
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+        }
+
+        function toggleSearch() {
+            document.getElementById('chatSearch').classList.toggle('open');
+            if (document.getElementById('chatSearch').classList.contains('open')) {
+                document.getElementById('searchInput').focus();
+            }
+        }
+
+        function searchMessages() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const messages = document.querySelectorAll('.message');
+            messages.forEach(msg => {
+                const text = msg.textContent.toLowerCase();
+                msg.style.display = text.includes(query) ? 'flex' : 'none';
+            });
+        }
+
+        function openPanel(id) {
+            document.getElementById(id).classList.add('open');
+        }
+
+        function closePanel(id) {
+            document.getElementById(id).classList.remove('open');
+            if (state.mode !== 'chat') {
+                state.mode = 'chat';
+                updateToolbar();
+            }
+        }
+
+        function closeAllPanels() {
+            ['settingsPanel', 'imagePanel', 'audioPanel', 'videoPanel', 'embeddingsPanel', 'rerankPanel'].forEach(id => {
+                document.getElementById(id).classList.remove('open');
+            });
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chatContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('streamBtn').classList.toggle('active', state.settings.stream);
+            document.getElementById('reasoningBtn').classList.toggle('active', state.settings.reasoning);
+            document.getElementById('jsonBtn').classList.toggle('active', state.settings.json_mode);
+            updateModelBadge();
+            updateUsageDisplay();
+        }
+
+        function updateUsageDisplay() {
+            document.getElementById('totalCost').textContent = '$' + state.totalCost.toFixed(4);
+            document.getElementById('totalTokens').textContent = state.totalTokens.toLocaleString();
+            document.getElementById('sidebarUsage').textContent = state.totalTokens.toLocaleString() + ' tokens used';
+            document.getElementById('usageBar').style.display = state.totalTokens > 0 ? 'flex' : 'none';
+            
+            const model = state.models.find(m => m.id === state.currentModel);
+            if (model?.pricing) {
+                const prompt = model.pricing.prompt || 0;
+                const completion = model.pricing.completion || 0;
+                document.getElementById('modelPricing').textContent = `$${prompt}/1M in • $${completion}/1M out`;
+            }
+            if (model?.context_length) {
+                document.getElementById('maxContext').textContent = (model.context_length / 1000) + 'K';
+            }
+        }
+
+        // ==================== MESSAGE ACTIONS ====================
+        function copyMessage(idx) {
+            const msg = state.messages[idx];
+            const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+            navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard', 'success'));
+        }
+
+        function copyCode(btn) {
+            const code = btn.closest('.code-block-header').nextElementSibling.querySelector('code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                btn.textContent = '✓ Copied';
+                setTimeout(() => btn.textContent = '📋 Copy', 2000);
+            });
+        }
+
+        function pinMessage(idx) {
+            const msg = state.messages[idx];
+            const existing = state.pinnedMessages.find(p => p.index === idx && p.chatId === state.currentChatId);
+            if (existing) {
+                state.pinnedMessages = state.pinnedMessages.filter(p => p !== existing);
+                showToast('Message unpinned', 'info');
+            } else {
+                state.pinnedMessages.push({
+                    chatId: state.currentChatId,
+                    index: idx,
+                    preview: (typeof msg.content === 'string' ? msg.content : 'Multimedia').slice(0, 60)
+                });
+                showToast('Message pinned', 'success');
+            }
+            saveState();
+            renderChatList();
+        }
+
+        function editMessage(idx) {
+            const msg = state.messages[idx];
+            if (msg.role !== 'user') return;
+            const newContent = prompt('Edit message:', msg.content);
+            if (newContent !== null) {
+                msg.content = newContent;
+                // Remove all messages after this one
+                state.messages = state.messages.slice(0, idx + 1);
+                const chat = state.chats.find(c => c.id === state.currentChatId);
+                if (chat) chat.messages = state.messages;
+                saveState();
+                renderMessages();
+                // Regenerate
+                callAPI();
+            }
+        }
+
+        function regenerateMessage(idx) {
+            // Remove this assistant message and all after
+            state.messages = state.messages.slice(0, idx);
+            const chat = state.chats.find(c => c.id === state.currentChatId);
+            if (chat) chat.messages = state.messages;
+            saveState();
+            renderMessages();
+            callAPI();
+        }
+
+        // ==================== EXPORT ====================
+        function exportChat() {
+            const chat = state.chats.find(c => c.id === state.currentChatId);
+            if (!chat) return;
+            
+            const format = confirm('Export as JSON? (Cancel for Markdown)') ? 'json' : 'md';
+            let content, filename, mimeType;
+            
+            if (format === 'json') {
+                content = JSON.stringify(chat, null, 2);
+                filename = `chat-${chat.id}.json`;
+                mimeType = 'application/json';
+            } else {
+                content = `# ${chat.title}\n\n` + chat.messages.map(m => {
+                    const role = m.role.charAt(0).toUpperCase() + m.role.slice(1);
+                    return `## ${role}\n\n${typeof m.content === 'string' ? m.content : JSON.stringify(m.content)}\n`;
+                }).join('\n---\n\n');
+                filename = `chat-${chat.id}.md`;
+                mimeType = 'text/markdown';
+            }
+            
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Chat exported', 'success');
+        }
+
+        // ==================== KEYBOARD SHORTCUTS ====================
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === 'n') { e.preventDefault(); newChat(); }
+                    if (e.key === 'k') { e.preventDefault(); toggleSearch(); }
+                    if (e.key === ',') { e.preventDefault(); openSettings(); }
+                    if (e.key === 'e') { e.preventDefault(); exportChat(); }
+                }
+                if (e.key === 'Escape') {
+                    closeAllPanels();
+                    document.getElementById('chatSearch').classList.remove('open');
+                }
+            });
+        }
+
+        // ==================== TOASTS ====================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icons = { success: '✓', error: '✗', warning: '⚠', info: 'ℹ' };
+            toast.innerHTML = `<span>${icons[type]}</span> ${escapeHtml(message)}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // ==================== UTILITIES ====================
+        function escapeHtml(text) {
+            if (typeof text !== 'string') return JSON.stringify(text);
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatTime(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.model-selector')) {
+                document.getElementById('modelDropdown').classList.remove('open');
+            }
+        });
+
+        // Blink animation for cursor
+        const style = document.createElement('style');
+        style.textContent = `@keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }`;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
