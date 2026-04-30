@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>imgdrop — instant image URLs</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
-<!-- JSZip for reading .zip files -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root {
@@ -36,7 +35,6 @@
     overflow-x: hidden;
   }
 
-  /* Grid background */
   body::before {
     content: '';
     position: fixed;
@@ -166,15 +164,22 @@
     color: var(--muted);
     position: relative;
     z-index: 1;
+    text-align: center;
+    line-height: 1.6;
   }
 
-  .drop-sub span {
+  .drop-sub .link {
     color: var(--accent);
     text-decoration: underline;
     cursor: pointer;
   }
 
-  #fileInput { display: none; }
+  .drop-sub .sep {
+    color: var(--border);
+    margin: 0 0.4rem;
+  }
+
+  #fileInput, #folderInput { display: none; }
 
   /* Preview */
   .preview-section {
@@ -601,7 +606,7 @@
     <div class="dot active"></div>
     <div class="dot"></div>
     <div class="dot"></div>
-    <span class="card-title">imgbb / streamable upload</span>
+    <span class="card-title">imgbb / file.io upload</span>
   </div>
 
   <div class="dropzone" id="dropzone" tabindex="0">
@@ -615,8 +620,16 @@
       </svg>
     </div>
     <div class="drop-text">Drop images, videos, zips, or folders here</div>
-    <div class="drop-sub">or <span id="browseLink">browse files</span> — images, videos, .zip, or folders</div>
-    <input type="file" id="fileInput" accept=".zip,image/*,video/*" multiple webkitdirectory directory>
+    <div class="drop-sub">
+      <span class="link" id="browseLink">browse files</span>
+      <span class="sep">|</span>
+      <span class="link" id="folderLink">select folder</span>
+      <br>images, videos, .zip, or folders
+    </div>
+    <!-- File input for individual files (no directory attribute) -->
+    <input type="file" id="fileInput" accept=".zip,image/*,video/*" multiple>
+    <!-- Separate input for folder selection only -->
+    <input type="file" id="folderInput" accept="image/*,video/*" webkitdirectory directory multiple>
   </div>
 
   <div class="preview-section" id="previewSection">
@@ -655,7 +668,9 @@
 <script>
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
+  const folderInput = document.getElementById('folderInput');
   const browseLink = document.getElementById('browseLink');
+  const folderLink = document.getElementById('folderLink');
   const previewSection = document.getElementById('previewSection');
   const previewGrid = document.getElementById('previewGrid');
   const metaCount = document.getElementById('metaCount');
@@ -674,31 +689,24 @@
   const historySection = document.getElementById('historySection');
   const historyList = document.getElementById('historyList');
 
-  // ImgBB free API key (public demo key)
   const API_KEY = '9c96da8cf964e9b1331c5275d0f455c9';
-  // ↑ Replace with your own free key from https://api.imgbb.com/
 
   let currentFiles = [];
   let uploadHistory = JSON.parse(localStorage.getItem('imgdrop_history') || '[]');
 
   renderHistory();
 
-  // Image extensions to accept
   const IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg', '.ico', '.avif'];
   const VIDEO_EXTS = ['.mp4', '.webm', '.mov', '.mkv', '.avi', '.flv', '.wmv', '.m4v', '.ogv', '.3gp'];
 
   function isImageFile(file) {
-    // Check MIME type
     if (file.type && file.type.startsWith('image/')) return true;
-    // Fallback: check extension
     const name = (file.name || '').toLowerCase();
     return IMAGE_EXTS.some(ext => name.endsWith(ext));
   }
 
   function isVideoFile(file) {
-    // Check MIME type
     if (file.type && file.type.startsWith('video/')) return true;
-    // Fallback: check extension
     const name = (file.name || '').toLowerCase();
     return VIDEO_EXTS.some(ext => name.endsWith(ext));
   }
@@ -708,7 +716,6 @@
            (file.name || '').toLowerCase().endsWith('.zip');
   }
 
-  // Extract media (images + videos) from a zip file
   async function extractMediaFromZip(file) {
     const zip = await JSZip.loadAsync(file);
     const mediaFiles = [];
@@ -716,7 +723,6 @@
 
     zip.forEach((relativePath, zipEntry) => {
       if (zipEntry.dir) return;
-      const lowerName = relativePath.toLowerCase();
       const isImage = isImageFile({ name: relativePath });
       const isVideo = isVideoFile({ name: relativePath });
       if (!isImage && !isVideo) return;
@@ -740,7 +746,6 @@
     return mediaFiles;
   }
 
-  // Process incoming files (flat images, videos, zips, or folders)
   async function processFiles(files) {
     const allFiles = [];
     const skipped = [];
@@ -775,7 +780,6 @@
     e.preventDefault();
     dropzone.classList.remove('drag-over');
 
-    // Try to get files from items (handles folders via webkitGetAsEntry)
     const items = e.dataTransfer.items;
     const files = [];
 
@@ -797,7 +801,6 @@
     await processFiles(files);
   });
 
-  // Recursively traverse FileSystemEntry (folder or file)
   async function traverseEntry(entry, fileList) {
     if (entry.isFile) {
       const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
@@ -810,7 +813,6 @@
             resolve();
           } else {
             await Promise.all(entries.map(e => traverseEntry(e, fileList)));
-            // Keep reading until no more entries
             resolve(readEntries());
           }
         }, reject);
@@ -819,11 +821,34 @@
     }
   }
 
-  browseLink.addEventListener('click', () => fileInput.click());
-  dropzone.addEventListener('click', e => { if (e.target !== browseLink) fileInput.click(); });
-  dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+  // Click handlers for the two separate links
+  browseLink.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.click();
+  });
+
+  folderLink.addEventListener('click', (e) => {
+    e.stopPropagation();
+    folderInput.click();
+  });
+
+  // Click on dropzone (but not the links) triggers file browser
+  dropzone.addEventListener('click', e => {
+    if (e.target !== browseLink && e.target !== folderLink) {
+      fileInput.click();
+    }
+  });
+
+  dropzone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') fileInput.click();
+  });
+
   fileInput.addEventListener('change', async () => {
     if (fileInput.files.length) await processFiles(Array.from(fileInput.files));
+  });
+
+  folderInput.addEventListener('change', async () => {
+    if (folderInput.files.length) await processFiles(Array.from(folderInput.files));
   });
 
   function addFiles(files) {
@@ -855,7 +880,6 @@
       item.className = 'preview-item';
       
       if (isVideo) {
-        // For videos, create a video element with a poster frame
         const videoUrl = URL.createObjectURL(file);
         item.innerHTML = `
           <video src="${videoUrl}" muted playsinline preload="metadata"></video>
@@ -863,7 +887,6 @@
           <button class="remove-btn" data-index="${index}" title="Remove">×</button>
           <div class="file-name">${file.name}</div>
         `;
-        // Auto-seek to get a thumbnail frame
         const video = item.querySelector('video');
         video.addEventListener('loadedmetadata', () => {
           video.currentTime = 0.5;
@@ -901,6 +924,7 @@
       previewSection.classList.remove('visible');
       resultSection.classList.remove('visible');
       fileInput.value = '';
+      folderInput.value = '';
     } else {
       renderPreviews();
     }
@@ -924,7 +948,6 @@
         let url, thumbUrl;
         
         if (isVideoFile(file)) {
-          // Upload video to file.io (temporary hosting, 14 days)
           const videoForm = new FormData();
           videoForm.append('file', file);
           
@@ -940,7 +963,6 @@
           url = data.link;
           thumbUrl = url;
         } else {
-          // Upload image to imgbb
           const base64 = await toBase64(file);
           const formData = new FormData();
           formData.append('image', base64.split(',')[1]);
@@ -961,8 +983,6 @@
         }
 
         results.push({ url, thumb: thumbUrl, name: file.name });
-
-        // Save to history
         uploadHistory.unshift({ url, thumb: thumbUrl, name: file.name });
         if (uploadHistory.length > 20) uploadHistory = uploadHistory.slice(0, 20);
 
@@ -970,7 +990,6 @@
         errors.push(`${file.name}: ${err.message}`);
       }
 
-      // Update progress
       const prog = ((i + 1) / currentFiles.length) * 100;
       setProgress(prog);
     }
@@ -1039,6 +1058,7 @@
   resetBtn.addEventListener('click', () => {
     currentFiles = [];
     fileInput.value = '';
+    folderInput.value = '';
     previewSection.classList.remove('visible');
     resultSection.classList.remove('visible');
     errorMsg.classList.remove('visible');
