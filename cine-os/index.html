@@ -1,0 +1,2608 @@
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cine-OS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+@font-face {
+    font-family: 'Azonix';
+    src: url('https://db.onlinewebfonts.com/t/04e1f7fb2b58d60eb24df50a9807fa36.woff2') format('woff2');
+}
+
+:root {
+    --glass-bg: rgba(20, 20, 20, 0.6);
+    --glass-border: #333;
+    --accent-main: #fff;
+    --font-main: 'Rajdhani', sans-serif;
+    --font-header: 'Azonix', 'Orbitron', sans-serif;
+    --z-bg: 0;
+    --z-snow: 1;
+    --z-desktop: 10;
+    --z-windows: 500;
+    --z-dock: 1000;
+    --z-triggers: 2000;
+    --z-modal: 3000;
+    --z-noti: 8000;
+    --z-lock: 90000;
+    --z-ciri: 95000;
+    --z-boot: 99999;
+    --bg-page: #000;
+    --bg-window: rgba(15, 15, 15, 0.95);
+    --dark-gray: #111;
+    --mid-gray: #222;
+    --user-gray: #333;
+    --text-white: #fff;
+    --text-muted: #888;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-drag: none;
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+::selection { background: #444; color: #fff; }
+::-moz-selection { background: #444; color: #fff; }
+
+body {
+    background: #000;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    font-family: var(--font-main);
+    color: white;
+}
+
+#mobile-warning {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 999999;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: none;
+}
+
+#mobile-warning.show-warning { display: flex; }
+
+.mobile-box {
+    background: #111;
+    border: 2px solid #333;
+    border-radius: 16px;
+    padding: 30px;
+    text-align: center;
+    max-width: 80%;
+    box-shadow: 0 10px 40px rgba(255,255,255,0.05);
+}
+
+.mobile-box i { font-size: 3rem; color: #fff; margin-bottom: 15px; }
+.mobile-box h2 { font-family: var(--font-header); font-size: 1.2rem; color: #fff; margin-bottom: 10px; }
+.mobile-box p { color: #888; font-size: 1rem; font-weight: 600; }
+
+#boot-layer {
+    position: fixed; inset: 0; background: #000; z-index: var(--z-boot);
+    display: none; transition: opacity 0.6s ease;
+}
+
+#boot-content { 
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; z-index: 2; width: 100%;
+}
+
+.boot-logo {
+    font-family: var(--font-header);
+    font-size: 3rem;
+    color: #fff;
+    letter-spacing: 10px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 30px rgba(255,255,255,0.2);
+}
+
+.boot-sub {
+    font-family: var(--font-main);
+    color: #888;
+    font-size: 1.2rem;
+    letter-spacing: 4px;
+    margin-bottom: 50px;
+    text-transform: uppercase;
+}
+
+.boot__hint {
+    margin-top: 20px; font-size: 0.8rem; color: #555;
+}
+
+#boot-btn {
+    padding: 15px 50px;
+    background: transparent;
+    border: 1px solid #555;
+    color: #fff;
+    font-family: var(--font-header);
+    font-size: 18px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: 0.3s;
+    border-radius: 4px;
+    box-shadow: 0 0 15px rgba(255,255,255,0.1);
+}
+
+#boot-btn:hover { background: #fff; color: #000; box-shadow: 0 0 30px rgba(255,255,255,0.4); }
+
+#boot-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+    z-index: 1;
+}
+
+#bg-video, #bg-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: var(--z-bg);
+    opacity: 0.9;
+}
+
+#snow-fx {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: var(--z-snow);
+}
+
+#lock-screen {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-lock);
+    background: #000;
+    display: flex;
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.6s cubic-bezier(0.7,0,0.3,1), opacity 0.4s;
+}
+
+#lock-screen.active { opacity: 1; pointer-events: all; transform: translateY(0); }
+#lock-screen.slide-up { transform: translateY(-100%); opacity: 1; pointer-events: none; }
+
+#lock-video, #lock-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+}
+
+#lock-ui {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    width: 100%;
+}
+
+.lock-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    text-shadow: 0 5px 25px rgba(0,0,0,0.9);
+}
+
+.l-day, .l-date, .l-time {
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+#lock-screen.active .l-day { animation: slideUpTxt 0.6s cubic-bezier(0.2,0.8,0.2,1) forwards 0.2s; }
+#lock-screen.active .l-date { animation: slideUpTxt 0.6s cubic-bezier(0.2,0.8,0.2,1) forwards 0.35s; }
+#lock-screen.active .l-time { animation: slideUpTxt 0.6s cubic-bezier(0.2,0.8,0.2,1) forwards 0.5s; }
+
+@keyframes slideUpTxt {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.l-day { font-family: 'Azonix', sans-serif; font-size: 5rem; letter-spacing: 12px; color: #fff; margin: 0 0 10px 0; text-transform: uppercase; font-weight: normal; }
+.l-date { font-family: var(--font-main); font-size: 1.3rem; letter-spacing: 4px; font-weight: 700; color: #fff; margin-bottom: 8px; text-transform: uppercase; }
+.l-time { font-family: var(--font-main); font-size: 1.1rem; letter-spacing: 3px; font-weight: 700; color: #fff; }
+
+#hud-top {
+    position: absolute;
+    top: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 5;
+    pointer-events: none;
+    text-shadow: 0 10px 40px rgba(0,0,0,0.8);
+}
+
+.hud-day { font-family: 'Azonix', sans-serif; font-size: 3rem; color: rgba(255,255,255,0.7); letter-spacing: 10px; text-transform: uppercase; }
+
+#right-sidebar {
+    position: fixed;
+    right: 25px;
+    top: 8%;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 50;
+}
+
+.sidebar__section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sidebar__title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+}
+
+.sidebar__card {
+    background: rgba(15, 15, 15, 0.75);
+    backdrop-filter: blur(15px);
+    border: 1px solid #333;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.sidebar__card:hover {
+    background: rgba(30, 30, 30, 0.9);
+    border-color: #fff;
+    transform: translateX(-5px) scale(1.02);
+}
+
+.sidebar__info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar__info strong {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar__info small {
+    font-size: 11px;
+    color: #aaa;
+    font-weight: 600;
+}
+
+#last-game-icon, #spotify-album-art {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    object-fit: cover;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.play-overlay {
+    position: absolute;
+    right: 15px;
+    color: #fff;
+    font-size: 16px;
+    opacity: 0;
+    transition: 0.3s;
+}
+
+.sidebar__card:hover .play-overlay {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.txt-highlight { font-weight: bold; color: #fff; }
+.sidebar__chevron { color: #888; }
+
+#fps-counter { position: fixed; bottom: 24px; left: 24px; background: #111; border: 1px solid #333; padding: 6px 12px; border-radius: 8px; font-family: var(--font-main); font-size: 12px; font-weight: bold; color: #fff; z-index: 99999; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.9); }
+
+#dock-container {
+    position: fixed;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 52px;
+    background: rgba(10,10,10,0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid #333;
+    border-radius: 18px;
+    z-index: var(--z-dock);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    transition: transform 0.4s;
+    padding: 0 15px;
+}
+
+.dock-hidden { transform: translate(-50%, 150%) !important; }
+
+.dock-item {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.dock-item:hover { background: rgba(255,255,255,0.1); transform: translateY(-5px); }
+.dock-item img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
+.dock-sep { width: 1px; height: 24px; background: #555; margin: 0 4px; }
+
+.desktop-app {
+    position: absolute;
+    width: 80px;
+    height: 95px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    z-index: var(--z-desktop);
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), 
+                width 0.3s ease, height 0.3s ease, 
+                background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.desktop-app:hover { transform: scale(1.05); }
+
+.d-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    pointer-events: none;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+    transition: all 0.3s;
+}
+
+.d-label {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    pointer-events: none;
+    text-shadow: 0 2px 5px #000, 0 0 2px #000;
+    width: 90px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: all 0.3s;
+}
+
+.name-hidden .d-label { opacity: 0 !important; display: none !important; }
+
+.desktop-app.expanded-folder {
+    transform: scale(1) !important;
+    background: rgba(15, 15, 15, 0.98);
+    border: 1px solid #444;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+    cursor: default;
+    z-index: 900 !important;
+    padding: 15px;
+    display: block; 
+}
+
+.folder-header {
+    font-family: var(--font-main);
+    color: #fff;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.folder-header i { color: #888; transition: 0.2s; cursor: pointer; }
+.folder-header i:hover { color: #fff; transform: scale(1.2); }
+
+.folder-grid-expanded {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.folder-grid-expanded::-webkit-scrollbar { width: 4px; }
+.folder-grid-expanded::-webkit-scrollbar-thumb { background: #555; border-radius: 5px; }
+
+.f-app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.f-app:hover { transform: scale(1.1); }
+.f-app img { width: 38px; height: 38px; border-radius: 8px; }
+.f-app span { font-size: 11px; color: #ccc; max-width: 50px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;}
+
+.desktop-large-mode .desktop-app { width: 90px; height: 90px; }
+.desktop-large-mode .d-icon { width: 70px; height: 70px; }
+.desktop-large-mode .d-label { opacity: 0; pointer-events: none; }
+
+.d-folder-grid {
+    width: 50px;
+    height: 50px;
+    background: rgba(20, 20, 20, 0.8);
+    border: 1px solid #555;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 2px;
+    padding: 4px;
+    pointer-events: none;
+    backdrop-filter: blur(5px);
+}
+
+.desktop-large-mode .d-folder-grid { width: 70px; height: 70px; padding: 6px; gap: 4px; }
+.d-folder-grid img { width: 100%; height: 100%; object-fit: contain; border-radius: 4px; }
+
+#drag-proxy { position: fixed; z-index: 9999; pointer-events: none; opacity: 0.8; display: none; width: 50px; height: 50px; }
+#drag-proxy img { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; }
+.hidden-badge { position: absolute; top: -5px; right: -5px; background: #fff; color: #000; font-weight: bold; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; align-items: center; justify-content: center; z-index: 2; }
+
+.os-menu {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    width: 550px;
+    height: 600px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 16px;
+    z-index: var(--z-modal);
+    display: none;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.2,0.8,0.2,1);
+    flex-direction: column;
+    padding: 25px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+}
+
+.os-menu.open { display: flex; opacity: 1; transform: translateX(-50%) translateY(0); }
+.start-search-bar, .drawer-search-wrap { width: 100%; padding: 12px 15px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: white; font-family: var(--font-main); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.start-search-bar input, .drawer-search-input { background: transparent; border: none; color: white; width: 100%; outline: none; }
+.start-search-bar input::placeholder, .drawer-search-input::placeholder { color: #666; }
+
+.pinned-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.pinned-header h3 { font-size: 15px; color: #fff; font-weight: 600; }
+.pinned-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 30px; }
+.pinned-item { display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; padding: 12px; border-radius: 12px; transition: 0.2s; }
+.pinned-item:hover { background: #222; }
+.pinned-item img { width: 38px; height: 38px; object-fit: contain; border-radius: 10px; }
+.pinned-item span { font-size: 12px; color: #aaa; }
+.start-footer { margin-top: auto; padding-top: 15px; border-top: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+.user-profile { display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 30px; height: 30px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.user-role { font-size: 12px; color: #ddd; }
+.power-btn { cursor: pointer; color: #fff; font-size: 18px; }
+
+#app-drawer {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+    backdrop-filter: blur(20px);
+    z-index: var(--z-modal);
+    display: none;
+    opacity: 0;
+    transition: 0.3s ease;
+    padding: 80px;
+    align-content: flex-start;
+    border: none; width: 100%; height: 100%;
+}
+
+#app-drawer.open { display: block; opacity: 1; }
+.drawer-search-wrap { max-width: 600px; margin: 0 auto 40px auto; }
+.drawer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 30px; max-width: 900px; margin: 0 auto; }
+.drawer-item { display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
+.drawer-item:hover { transform: scale(1.1); }
+.drawer-item img { width: 60px; height: 60px; border-radius: 16px; object-fit: contain; }
+.drawer-item span { color: #fff; font-size: 13px; font-weight: 600; }
+
+.window {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    z-index: var(--z-windows);
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.95);
+    transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.window.active { opacity: 1; pointer-events: auto; transform: scale(1); z-index: var(--z-windows); }
+.window.minimized { transform: translateY(100%) scale(0.5); opacity: 0; pointer-events: none; }
+.win-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 45px;
+    background: #111;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 100;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+
+.header-visible .win-header { transform: translateY(0); }
+.win-title { font-family: var(--font-header); font-size: 13px; color: #aaa; letter-spacing: 2px; }
+.win-controls { display: flex; gap: 15px; align-items: center; }
+.win-btn {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: transparent;
+}
+.win-btn:hover { color: #fff; }
+.btn-min { background: #444; border: 1px solid #666; }
+.btn-min:hover { background: #888; transform: scale(1.15); }
+.btn-min::before { content: ''; width: 8px; height: 2px; background: currentColor; border-radius: 2px; }
+.btn-close { background: #555; border: 1px solid #777; }
+.btn-close:hover { transform: scale(1.15); box-shadow: 0 0 8px #fff; background: #fff; color: #000; }
+.btn-close::before, .btn-close::after { content: ''; position: absolute; width: 8px; height: 2px; background: currentColor; border-radius: 2px; }
+.btn-close::before { transform: rotate(45deg); }
+.btn-close::after { transform: rotate(-45deg); }
+.win-body { width: 100%; height: 100%; overflow: hidden; position: relative; background: #000; }
+iframe { width: 100%; height: 100%; border: none; display: block; }
+
+#top-trigger { position: fixed; top: 0; left: 0; width: 100%; height: 20px; z-index: var(--z-triggers); }
+#bottom-trigger { position: fixed; bottom: 0; left: 0; width: 100%; height: 30px; z-index: var(--z-triggers); }
+
+.os-context-menu {
+    position: fixed;
+    display: none;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 8px;
+    min-width: 220px;
+     z-index: 9999999 !important;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.9);
+    font-family: var(--font-main);
+    list-style: none; margin: 0;
+}
+.ctx-item { padding: 10px 15px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.2s; border-radius: 6px; }
+.ctx-item i { color: #888; font-size: 16px; transition: 0.2s; width: 20px; text-align: center; }
+.ctx-item:hover { background: #222; }
+.ctx-item:hover i { color: #fff; }
+.ctx-separator { height: 1px; background: #333; margin: 6px 0; }
+.ctx-row { display: flex; gap: 8px; padding: 0 4px; }
+.ctx-btn { flex: 1; background: #222; border: 1px solid #444; color: #ccc; border-radius: 6px; padding: 8px 0; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+.ctx-btn:hover { background: #fff; color: #000; border-color: #fff; }
+
+#ciri-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); opacity: 0; pointer-events: none; transition: opacity 0.5s ease; z-index: var(--z-ciri); }
+#ciri-window {
+    position: fixed;
+    bottom: 8vh;
+    left: 50%;
+    transform: translate(-50%, 40px) scale(0.92);
+    width: 90%;
+    max-width: 740px;
+    height: 85vh;
+    max-height: 820px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 32px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.5s cubic-bezier(0.2,0.8,0.2,1);
+    z-index: calc(var(--z-ciri) + 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    box-sizing: border-box;
+    overflow: hidden;
+    color: white;
+}
+body.ciri-active #ciri-backdrop { opacity: 1; pointer-events: all; }
+body.ciri-active #ciri-window { opacity: 1; pointer-events: all; transform: translate(-50%, 0) scale(1); }
+#ciri-boot-screen { position: absolute; inset: 0; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; transition: opacity 0.8s ease, filter 0.8s ease; border-radius: 32px; }
+.boot-ciri { font-size: 42px; font-weight: 800; color: #fff; font-family: monospace; border-right: 3px solid #fff; white-space: nowrap; overflow: hidden; width: 0; letter-spacing: -1px; }
+.boot-ciri.typing { animation: typeCiri 0.5s steps(5, end) forwards, blinkCiri 0.8s step-end infinite; }
+.boot-sub { font-size: 12px; font-weight: 700; color: #888; letter-spacing: 3px; margin-top: 16px; opacity: 0; transform: translateY(20px) scale(0.95); transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.boot-sub.show { opacity: 1; transform: translateY(0) scale(1); }
+.boot-loader { margin-top: 40px; display: flex; flex-direction: column; align-items: center; opacity: 0; transition: opacity 0.6s ease; }
+.spinner { width: 24px; height: 24px; border: 3px solid #333; border-top-color: #fff; border-radius: 50%; animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-bottom: 16px; }
+.boot-status { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 8px; letter-spacing: 0.5px; }
+.boot-warning { font-size: 11px; color: #666; max-width: 280px; text-align: center; line-height: 1.5; font-weight: 500; }
+@keyframes typeCiri { from { width: 0; } to { width: 115px; } }
+@keyframes blinkCiri { 50% { border-color: transparent; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#status-pill { background: #1a1a1a; border-radius: 20px; padding: 8px 18px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #333; font-size: 11px; font-weight: 700; color: #fff; letter-spacing: 0.5px; margin-bottom: 10px; flex-shrink: 0; text-transform: uppercase; }
+.status-icon svg { width: 14px; height: 14px; }
+.secure { color: #fff; } .secure-svg { stroke: #fff; }
+.unstable { color: #888; } .unstable-svg { stroke: #888; }
+#chat-history { width: 100%; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; overflow-x: hidden; flex-grow: 1; padding: 20px 10px; }
+#chat-history::-webkit-scrollbar { width: 4px; }
+#chat-history::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+.message { max-width: 85%; padding: 18px 24px; border-radius: 18px; font-size: 15px; line-height: 1.6; word-wrap: break-word; font-weight: 500; animation: slideUp 0.4s cubic-bezier(0.2,0.8,0.2,1); }
+.message p { margin: 0 0 12px 0; } .message p:last-child { margin: 0; }
+.message pre { background: #0a0a0a; padding: 12px; border-radius: 10px; overflow-x: auto; border: 1px solid #222; }
+.message code { font-family: monospace; font-size: 13.5px; color: #ccc; }
+.message.user { background: #333; color: #fff; align-self: flex-end; border-bottom-right-radius: 6px; border: 1px solid #444; }
+.message.ciri { background: #1a1a1a; color: #fff; align-self: flex-start; position: relative; padding-right: 24px; border-bottom-left-radius: 6px; border: 1px solid #333; }
+details.thought-process { background: #0a0a0a; border-radius: 12px; padding: 12px; margin-bottom: 16px; font-size: 13.5px; border: 1px solid #222; }
+details.thought-process summary { cursor: pointer; font-weight: 600; color: #888; display: flex; align-items: center; gap: 8px; outline: none; }
+details.thought-process summary:hover { color: #fff; }
+details.thought-process summary::before { content: "🧠"; font-size: 15px; }
+.thought-content { margin-top: 12px; color: #888; font-family: monospace; line-height: 1.6; border-top: 1px solid #222; padding-top: 12px; white-space: pre-wrap; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+#bottom-wrapper { width: 100%; display: flex; align-items: center; gap: 12px; margin-top: 10px; position: relative; flex-shrink: 0; background: #1a1a1a; padding: 12px 16px; border-radius: 24px; border: 1px solid #333; }
+.icon-btn { background: none; border: none; color: #888; cursor: pointer; display: flex; justify-content: center; align-items: center; padding: 8px; border-radius: 50%; transition: 0.2s; }
+.icon-btn:hover { background: #333; color: #fff; }
+#chat-input { flex: 1; background: transparent; border: none; color: #fff; font-size: 15.5px; font-family: var(--font-main); padding: 0 5px; outline: none; resize: none; max-height: 120px; line-height: 1.4; font-weight: 600; }
+#chat-input::placeholder { color: #888; font-weight: 500; }
+#mode-toggle { background: #222; color: #888; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; cursor: pointer; padding: 8px 14px; border-radius: 14px; transition: all 0.2s; border: 1px solid #444; }
+#mode-toggle:hover { background: #fff; color: #000; border-color: #fff; }
+#mode-toggle.live-active { background: #fff; color: #000; border-color: #fff; animation: pulseWhite 2s infinite; }
+@keyframes pulseWhite { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); } 70% { box-shadow: 0 0 0 8px rgba(255,255,255,0); } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } }
+#action-orb { width: 48px; height: 48px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff 0%, #aaa 20%, #444 60%, #111 100%); box-shadow: 0 8px 20px rgba(0,0,0,0.8), inset -4px -4px 10px rgba(0,0,0,0.9), inset 2px 2px 8px rgba(255,255,255,0.4); transition: all 0.3s cubic-bezier(0.2,0.8,0.2,1); flex-shrink: 0; cursor: pointer; }
+#action-orb:hover { transform: scale(1.08); box-shadow: 0 12px 25px rgba(255,255,255,0.1); }
+#action-orb.thinking { animation: orbAlive 2s infinite ease-in-out; filter: contrast(1.2) brightness(1.1); }
+@keyframes orbAlive { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255,255,255,0.1); } 50% { transform: scale(1.05); box-shadow: 0 0 20px 5px rgba(255,255,255,0.3); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255,255,255,0.1); } }
+#img-preview-box { position: absolute; bottom: 85px; left: 10px; background: #1a1a1a; padding: 6px; border-radius: 12px; display: none; align-items: center; gap: 10px; box-shadow: 0 8px 25px rgba(0,0,0,0.8); border: 1px solid #333; }
+#img-preview-box img { height: 44px; border-radius: 8px; }
+#img-preview-box span { color: #fff; font-size: 13px; cursor: pointer; padding-right: 10px; font-weight: 800; }
+.hidden-media { display: none; }
+.hidden-input { display: none; }
+
+#restore-btn { position: fixed; bottom: 24px; right: 0; background: #111; border: 1px solid #444; border-right: none; padding: 14px; border-radius: 16px 0 0 16px; color: #fff; cursor: pointer; transform: translateX(100%); transition: transform 0.5s cubic-bezier(0.2,0.8,0.2,1); z-index: 9998; display: flex; align-items: center; justify-content: center; }
+#restore-btn.visible { transform: translateX(0); }
+#restore-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
+#cine-noti { position: fixed; bottom: 24px; right: 24px; width: 320px; background: #111; border: 1px solid #333; border-radius: 20px; padding: 16px; box-shadow: 0 24px 48px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.05); color: #fff; transform: translateY(150%) scale(0.9); opacity: 0; transition: transform 0.6s cubic-bezier(0.2,0.8,0.2,1), opacity 0.5s ease; z-index: var(--z-noti); display: flex; flex-direction: column; gap: 12px; pointer-events: none; }
+#cine-noti.active { transform: translateY(0) scale(1); opacity: 1; pointer-events: all; }
+#cine-noti.minimized { transform: translateX(150%) scale(0.9); opacity: 0; pointer-events: none; }
+.window-actions { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: -4px; }
+.action-btn { background: #222; border: 1px solid #444; width: 24px; height: 24px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #888; transition: all 0.2s ease; }
+.action-btn:hover { background: #fff; color: #000; }
+.action-btn svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.player-main { display: flex; align-items: center; gap: 14px; }
+.album-art { width: 54px; height: 54px; border-radius: 12px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.8); border: 1px solid #333; }
+.track-info { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+.title { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; margin-bottom: 2px; }
+.artist { font-size: 13px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#visualizer { width: 100%; height: 14px; margin-top: 6px; }
+.time-wrapper { display: flex; align-items: center; gap: 10px; font-size: 11px; color: #888; font-variant-numeric: tabular-nums; font-weight: 600; }
+.progress-hit-area { flex-grow: 1; height: 16px; display: flex; align-items: center; cursor: pointer; outline: none; }
+.progress-bg { width: 100%; height: 5px; background: #333; border-radius: 5px; position: relative; overflow: hidden; pointer-events: none; }
+.progress-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #fff; border-radius: 5px; }
+.controls { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 4px; }
+.ctrl-btn { background: none; border: none; padding: 0; cursor: pointer; display: flex; justify-content: center; align-items: center; color: #888; transition: transform 0.15s ease, color 0.2s; }
+.ctrl-btn:hover { color: #fff; }
+.ctrl-btn:active { transform: scale(0.85); }
+.ctrl-btn svg { width: 20px; height: 20px; fill: currentColor; }
+.play-pause-btn { background: #fff; color: #000; width: 36px; height: 36px; border-radius: 50%; }
+.play-pause-btn:hover { color: #000; transform: scale(1.05); background: #ccc; }
+.play-pause-btn:active { transform: scale(0.95); }
+.hidden-svg { display: none; }
+.visible-svg { display: block; }
+
+.modal__backdrop {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 999999;
+  align-items: center; justify-content: center; backdrop-filter: blur(10px); border: none;
+  width: 100%; height: 100%;
+}
+.modal__content {
+  background: #111; border: 1px solid #333; border-radius: 16px; padding: 30px;
+  width: 400px; max-width: 90%; font-family: var(--font-main);
+}
+.modal__header {
+  margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; font-family: 'Orbitron', sans-serif; color: #fff;
+}
+.modal__list {
+  color: #ccc; font-size: 14px; margin-left: 20px; line-height: 1.8; margin-bottom: 20px;
+}
+.modal__btn {
+  width: 100%; padding: 12px; background: #fff; color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+}
+
+#wallpaper-menu { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(0.95); width: 800px; max-height: 80vh; background: #111; border: 1px solid #333; border-radius: 16px; z-index: var(--z-modal); display: none; opacity: 0; transition: all 0.3s ease; flex-direction: column; padding: 30px; box-shadow: 0 30px 80px rgba(0,0,0,0.9); }
+#wallpaper-menu.open { display: flex; opacity: 1; transform: translate(-50%,-50%) scale(1); }
+.wp-modal-header { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+.wp-modal-header h2 { font-family: 'Orbitron'; color: #fff; letter-spacing: 2px; margin: 0; }
+.wp-controls-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.segmented-control { display: flex; background: #222; border: 1px solid #333; border-radius: 8px; padding: 4px; gap: 4px; border-style: solid; }
+.segmented-control label { flex: 1; text-align: center; cursor: pointer; }
+.segmented-control input[type="radio"] { display: none; }
+.segmented-control span { display: block; padding: 8px 16px; border-radius: 6px; font-family: var(--font-main); font-weight: bold; color: #888; transition: 0.3s; }
+.segmented-control input[type="radio"]:checked + span { background: #fff; color: #000; }
+.loop-toggle-container { display: flex; align-items: center; gap: 10px; background: #222; border: 1px solid #333; padding: 6px 16px; border-radius: 8px; }
+.loop-label { color: #fff; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+
+.switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background-color: #444; transition: .3s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: #fff; transition: .3s; border-radius: 50%; }
+input:checked + .slider { background-color: #fff; }
+input:checked + .slider:before { transform: translateX(20px); background-color: #000; }
+
+.wp-grid-container { overflow-y: auto; flex: 1; padding-right: 10px; }
+.wp-grid-container::-webkit-scrollbar { width: 6px; }
+.wp-grid-container::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.wp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }
+.wp-section-title { font-size: 12px; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.wp-card { background: #000; border: 1px solid #333; border-radius: 10px; overflow: hidden; cursor: pointer; transition: 0.3s; position: relative; aspect-ratio: 16/9; }
+.wp-card:hover { border-color: #fff; transform: translateY(-4px); }
+.wp-card.active-wp { border: 2px solid #fff; box-shadow: 0 0 15px rgba(255,255,255,0.3); }
+.wp-card video, .wp-card img { width: 100%; height: 100%; object-fit: cover; }
+.wp-info { position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); padding: 10px; font-size: 12px; font-weight: bold; text-shadow: 0 1px 3px black; color: #fff; }
+.wp-locked { filter: grayscale(1) brightness(0.4); pointer-events: none; border-style: dashed; }
+.close-icon { cursor: pointer; font-size: 1.5rem; color: #fff; }
+
+#toast-container { position: fixed; bottom: 70px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.toast-notification { background: #111; border: 1px solid #333; border-radius: 8px; width: 340px; padding: 15px; color: #fff; box-shadow: 0 8px 25px rgba(0,0,0,0.9); transform: translateX(120%); transition: transform 0.4s cubic-bezier(0.2,0.8,0.2,1); pointer-events: auto; cursor: pointer; }
+.toast-notification.show { transform: translateX(0); }
+.toast-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.toast-app-info { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #888; font-weight: 700; }
+.toast-icon { width: 16px; height: 16px; background: #333; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; }
+.toast-close { color: #888; font-size: 14px; cursor: pointer; transition: 0.2s; }
+.toast-close:hover { color: #fff; }
+.toast-title { font-family: var(--font-main); font-weight: bold; font-size: 15px; margin-bottom: 4px; letter-spacing: 0.5px; }
+.toast-body { font-family: var(--font-main); font-size: 13px; color: #ccc; line-height: 1.4; }
+
+.faq-box {
+  background: #111; border: 1px solid #333; border-radius: 16px; padding: 30px;
+  width: 500px; max-width: 90%; font-family: var(--font-main); color: #fff;
+}
+.faq-header {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px;
+}
+.faq-header h2 { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+.faq-item { margin-bottom: 20px; }
+.faq-item h3 { font-size: 16px; color: #fff; margin-bottom: 5px; }
+.faq-item p { font-size: 13px; color: #aaa; line-height: 1.5; }
+
+.config__main-header {
+  color: #fff; border-bottom: 2px solid #333; padding-bottom: 10px; font-weight: 700; font-family: 'Orbitron', sans-serif; letter-spacing: 1px;
+}
+.config__category {
+  color: #fff; font-weight: bold; margin-top: 25px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.config__card {
+  background: #111; border: 1px solid #333; padding: 15px; border-radius: 10px; margin-bottom: 12px;
+  display: flex; justify-content: space-between; align-items: center; transition: 0.2s;
+}
+.config__card--clickable { cursor: pointer; }
+.config__card--clickable:hover { background: #1a1a1a; border-color: #555; transform: translateX(5px); }
+.config__info { display: flex; gap: 15px; align-items: center; }
+.config__icon { color: #888; font-size: 1.5rem; width: 30px; text-align: center; }
+.config__text { display: flex; flex-direction: column; }
+.config__text strong { color: #fff; font-size: 15px; }
+.config__text small { color: #888; font-size: 13px; }
+.config__select {
+  background: #222; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 6px; outline: none; font-family: inherit;
+}
+.config__input-sm {
+  width: 40px; height: 30px; color: #fff; background: #222; border: 1px solid #555; text-align: center;
+  font-size: 1.2rem; font-weight: bold; outline: none; border-radius: 4px;
+}
+.config__input-sm:focus, .config__select:focus { border-color: #888; }
+</style>
+</head>
+
+<body id="desktop-area" role="application">
+
+<!-- accessibility wrapper for screen readers -->
+<div id="fps-counter" aria-live="polite"><span id="fps-val">60</span> FPS</div>
+
+<dialog id="mobile-warning" aria-modal="true">
+  <div class="mobile-box">
+    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+    <h2>Device is not fully supported</h2>
+    <p>Double tap anywhere to continue</p>
+  </div>
+</dialog>
+
+<div id="top-trigger" aria-hidden="true"></div>
+<div id="bottom-trigger" aria-hidden="true"></div>
+
+<section id="boot-layer" aria-label="System Boot Sequence">
+  <div id="boot-content">
+    <h1 class="boot-logo">CINE-OS</h1>
+    <p class="boot-sub">Cine-Hub Softwares // V2</p>
+    <button id="boot-btn" onclick="startBootSequence()" tabindex="1">Enter CINE</button>
+    <div class="boot__hint">Double-Tap ENTER to skip sequence</div>
+  </div>
+  <video id="boot-video" playsinline aria-hidden="true"><source src="Videos/Boot.mp4" type="video/mp4"></video>
+</section>
+
+<main id="lock-screen" onclick="unlockSystem()" role="presentation">
+  <video id="lock-video" autoplay loop muted playsinline aria-hidden="true"></video>
+  <img id="lock-img" class="media__fallback" alt="Lockscreen Background">
+  
+ <article id="lock-ui">
+    <div class="lock-content">
+      <div class="l-day" id="lock-day-large">FRIDAY</div>
+      <div class="l-date" id="lock-date">03 APRIL, 2026.</div>
+      <div class="l-time" id="lock-time">- 08:43 -</div>
+    </div>
+  </article>
+</main>
+
+<!-- Base OS Backgrounds -->
+<video id="bg-video" loop muted playsinline aria-hidden="true"></video>
+<img id="bg-img" class="media__fallback" alt="Desktop Background">
+<canvas id="snow-fx" aria-hidden="true"></canvas>
+
+<header id="hud-top">
+  <div class="hud-day" id="lbl-day">FRIDAY</div>
+</header>
+
+<!-- Right Sidebar refactored with BEM and Semantic tags -->
+<aside id="right-sidebar" aria-label="Quick Access Widget">
+  <section class="sidebar__section">
+    <h3 class="sidebar__title">Jump Back In!</h3>
+    <div class="sidebar__card" id="last-played-game" onclick="launchLastPlayed()" role="button" tabindex="0">
+      <img id="last-game-icon" src="https://cdn-icons-png.flaticon.com/512/732/732244.png" alt="Game Icon">
+      <div class="sidebar__info">
+        <strong id="last-game-name">No Recent Game</strong>
+        <small>PS5 Emu</small>
+      </div>
+    </div>
+  </section>
+
+  <section class="sidebar__section">
+    <h3 class="sidebar__title">Quick Play</h3>
+    <div class="sidebar__card" id="spotify-quick-play" onclick="resumeSpotify()" role="button" tabindex="0">
+      <img id="spotify-album-art" src="https://cdn.pixabay.com/photo/2016/10/22/00/15/spotify-1759471_1280.jpg" alt="Album Cover">
+      <div class="sidebar__info">
+        <strong id="spotify-track-name">Not Playing</strong>
+        <small>Spotify</small>
+      </div>
+      <i class="fas fa-play play-overlay" aria-hidden="true"></i>
+    </div>
+  </section>
+
+  <section class="sidebar__section">
+    <h3 class="sidebar__title">System Status</h3>
+    <div class="sidebar__card update-card" onclick="openUpdateLog()" role="button" tabindex="0">
+      <div class="sidebar__info">
+        <strong class="txt-highlight">Update Log</strong>
+        <small>View latest patches</small>
+      </div>
+      <i class="fas fa-chevron-right sidebar__chevron" aria-hidden="true"></i>
+    </div>
+  </section>
+</aside>
+
+<div id="drag-proxy" aria-hidden="true">
+  <div id="folder-badge" class="hidden-badge">2</div>
+  <img id="proxy-img" src="" alt="Dragging">
+</div>
+
+<!-- Taskbar -->
+<nav id="dock-container" aria-label="System Taskbar"></nav>
+<section id="windows-layer" aria-live="assertive"></section>
+
+<!-- Modals -->
+<dialog id="wallpaper-menu" aria-label="Wallpaper Settings">
+  <header class="wp-modal-header">
+    <h2>WALLPAPER PROTOCOLS</h2>
+    <i class="fas fa-times close-icon" role="button" tabindex="0" onclick="var menu = document.getElementById('wallpaper-menu'); menu.classList.remove('open'); if (menu.close) { menu.close(); }"></i>
+  </header>
+  
+  <div class="wp-controls-row">
+    <fieldset class="segmented-control">
+      <label><input type="radio" name="wpmd" value="both" checked onclick="window.wpMode='both'"><span>Both</span></label>
+      <label><input type="radio" name="wpmd" value="home" onclick="window.wpMode='home'"><span>Homescreen</span></label>
+      <label><input type="radio" name="wpmd" value="lock" onclick="window.wpMode='lock'"><span>Lockscreen</span></label>
+    </fieldset>
+    
+    <div class="loop-toggle-container">
+      <span class="loop-label">Loop Wallpaper</span>
+      <label class="switch wp-loop-switch">
+        <input type="checkbox" id="wp-loop-chk">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="wp-grid-container">
+    <div id="wp-grid-unlocked" class="wp-grid"></div>
+    <h3 class="wp-section-title">Encrypted</h3>
+    <div id="wp-grid-locked" class="wp-grid"></div>
+  </div>
+</dialog>
+
+<aside id="start-menu" class="os-menu" aria-label="Start Menu">
+  <div class="start-search-bar">
+    <i class="fas fa-search search-icon" aria-hidden="true"></i>
+    <input type="text" id="start-search-input" placeholder="Type secret code to unlock papers..." aria-label="Search Settings">
+  </div>
+  <header class="pinned-header">
+    <h3>Pinned</h3>
+  </header>
+  <div class="pinned-grid" id="pinned-grid"></div>
+  <footer class="start-footer">
+    <div class="user-profile">
+      <div class="user-avatar"><i class="fas fa-user" aria-hidden="true"></i></div>
+      <span class="user-role">Administrator</span>
+    </div>
+    <i class="fas fa-power-off power-btn" role="button" tabindex="0" onclick="location.reload()" aria-label="Restart OS"></i>
+  </footer>
+</aside>
+
+<dialog id="app-drawer" aria-label="All Applications" onclick="if(event.target.id==='app-drawer')toggleAppDrawer()">
+  <div class="drawer-search-wrap">
+    <i class="fas fa-search search-icon" aria-hidden="true"></i>
+    <input type="text" class="drawer-search-input" placeholder="Search apps..." onkeyup="filterDrawer(this.value)">
+  </div>
+  <div class="drawer-grid" id="drawer-grid"></div>
+</dialog>
+
+<!-- Context Menus (Refactored to semantic <menu> tags) -->
+<menu id="app-context-menu" class="os-context-menu" role="menu"></menu>
+
+<menu id="drawer-ctx-menu" class="os-context-menu" role="menu">
+    <li class="ctx-item" id="ctx-pin-app" role="menuitem" tabindex="0"><i class="fas fa-thumbtack fa-fw" aria-hidden="true"></i> Pin to Taskbar</li>
+</menu>
+
+<menu id="dock-ctx-menu" class="os-context-menu" role="menu">
+    <li class="ctx-item" id="ctx-unpin-app" role="menuitem" tabindex="0"><i class="fas fa-unlink fa-fw" aria-hidden="true"></i> Unpin from Taskbar</li>
+</menu>
+
+<menu id="desktop-context-menu" class="os-context-menu" role="menu">
+  <li class="ctx-item" role="menuitem" tabindex="0" onclick="openWallpaperMenu(); document.getElementById('desktop-context-menu').style.display='none';"><i class="fas fa-image fa-fw"></i> Change Wallpaper</li>
+  <li class="ctx-separator" role="separator"></li>
+  <li class="ctx-row" role="none">
+    <button class="ctx-btn" onclick="toggleDesktopSize(true)" title="Large Icons (Hide Names)"><i class="fas fa-expand-arrows-alt"></i></button>
+    <button class="ctx-btn" onclick="toggleDesktopSize(false)" title="Default Size"><i class="fas fa-compress-arrows-alt"></i></button>
+  </li>
+  <li class="ctx-separator" role="separator"></li>
+  <li class="ctx-item" role="menuitem" tabindex="0" onclick="location.reload()"><i class="fas fa-sync fa-fw"></i> Refresh System</li>
+</menu>
+
+<div id="toast-container" aria-live="polite"></div>
+
+<!-- Assistant -->
+<div id="ciri-backdrop" onclick="closeCiri()" aria-hidden="true"></div>
+<aside id="ciri-window" aria-label="Ciri AI Assistant">
+  <div id="ciri-boot-screen">
+    <div id="boot-ciri-text" class="boot-ciri">CIRI.</div>
+    <div id="boot-sub-text" class="boot-sub">Cine-Hub SOFTWARES</div>
+    <div id="boot-loader" class="boot-loader">
+      <div id="boot-spinner" class="spinner"></div>
+      <div id="boot-status-text" class="boot-status">Connecting To Gemini...</div>
+      <div class="boot-warning">If network restricts Gemini, This webOS needs to be launched through a proxy giving up LIVE mode.</div>
+    </div>
+  </div>
+
+  <header id="status-pill">
+    <span>CIRI</span>
+    <div id="status-icon" class="status-icon"></div>
+    <span id="status-text"></span>
+  </header>
+  <main id="chat-history" aria-live="polite"></main>
+
+  <footer id="bottom-wrapper">
+    <div id="img-preview-box">
+      <img id="img-preview" src="" alt="preview">
+      <span onclick="clearImage()" role="button" tabindex="0">✕</span>
+    </div>
+    <input type="file" id="file-upload" accept="image/*" class="hidden-input" onchange="handleFileUpload(event)">
+    <button class="icon-btn" onclick="document.getElementById('file-upload').click()" aria-label="Upload Image">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+    </button>
+    <textarea id="chat-input" placeholder="Message Ciri..." rows="1" oninput="autoGrow(this)" aria-label="Chat Input"></textarea>
+    <div id="mode-toggle" onclick="cycleMode()" role="button" tabindex="0">FAST</div>
+    <div id="action-orb" onclick="handleSend()" role="button" tabindex="0" aria-label="Send Message"></div>
+  </footer>
+</aside>
+
+<video id="screen-video" autoplay playsinline class="hidden-media"></video>
+<canvas id="screen-canvas" class="hidden-media"></canvas>
+
+<!-- Media Player -->
+<button id="restore-btn" title="Restore Player" aria-label="Restore Media Player">
+  <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+</button>
+
+<aside id="cine-noti" aria-label="Now Playing">
+  <header class="window-actions">
+    <button class="action-btn" id="minimize-noti-btn" title="Minimize" aria-label="Minimize Player">
+      <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </button>
+    <button class="action-btn" id="close-noti-btn" title="Close" aria-label="Close Player">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </header>
+  <div class="player-main">
+    <img class="album-art" id="noti-album-art" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop" alt="Album Art">
+    <div class="track-info">
+      <strong class="title" id="noti-title">System Audio</strong>
+      <span class="artist" id="noti-artist">Now Playing</span>
+      <canvas id="visualizer" aria-hidden="true"></canvas>
+    </div>
+  </div>
+  <div class="time-wrapper">
+    <span id="current-time">0:00</span>
+    <div class="progress-hit-area" id="progress-hit-area" role="slider" tabindex="0">
+      <div class="progress-bg">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+    <span id="total-time">LIVE</span>
+  </div>
+  <nav class="controls" aria-label="Media Controls">
+    <button class="ctrl-btn" id="skip-back" title="Back 15s" aria-label="Rewind">
+      <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C20.48 10.9 16.85 8 12.5 8z"/></svg>
+    </button>
+    <button class="ctrl-btn play-pause-btn" id="play-pause" aria-label="Play or Pause">
+      <svg id="icon-play" class="hidden-svg" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="icon-pause" class="visible-svg" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <button class="ctrl-btn" id="skip-forward" title="Skip 15s" aria-label="Fast Forward">
+      <svg viewBox="0 0 24 24"><path d="M11.5 8c-4.35 0-7.98 2.9-9.98 7.22l2.37.78c1.05-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6c-1.84-1.61-4.24-2.6-6.9-2.6z"/></svg>
+    </button>
+  </nav>
+</aside>
+
+<!-- Update Modal (Inline styles stripped out) -->
+<dialog id="update-modal" class="modal__backdrop" aria-modal="true">
+  <article class="modal__content">
+    <h2 class="modal__header">UPDATE LOG v3.0</h2>
+    <ul class="modal__list">
+      <li>Added Right Sidebar for quick game & music access.</li>
+      <li>Dynamic image-based lock screen days.</li>
+      <li>Smooth slide-out lock screen animations.</li>
+      <li>Fixed desktop folder expansion physics.</li>
+      <li>Wallpaper engine now fully supports PNG, MOV, and MP4.</li>
+      <li>Added Taskbar Pin/Unpin capability for all apps.</li>
+    </ul>
+    <button class="modal__btn" onclick="document.getElementById('update-modal').style.display='none'">Dismiss</button>
+  </article>
+</dialog>
+
+<!-- Settings Iframe Template (Inline styles stripped out) -->
+<template id="code-settings">
+  <dialog id="faq-modal" class="modal__backdrop">
+    <div class="faq-box">
+      <header class="faq-header">
+        <h2>SYSTEM FAQ</h2>
+        <i class="fas fa-times faq-close" role="button" tabindex="0" onclick="toggleFaq()"></i>
+      </header>
+      <article class="faq-item">
+        <h3>MOVIE NOT WORKING!</h3>
+        <p>If the movies do not work for you, open the Browser app, click on Ultraviolet, and search for anything. This will fix the issue. Go back to Movies and they should play!</p>
+      </article>
+      <article class="faq-item">
+        <h3>TOO MANY GAMES</h3>
+        <p>If you downloaded too many games and want to start fresh, open a new tab in your normal browser, press Ctrl + H, and clear your cache. This resets your saved data so you can start over.</p>
+      </article>
+    </div>
+  </dialog>
+  
+  <h2 class="config__main-header">SYSTEM CONFIG</h2>
+  
+  <section class="config__category"><i class="fas fa-microchip"></i> PERFORMANCE</section>
+  
+  <div class="config__card">
+    <div class="config__info">
+      <i class="fas fa-film config__icon"></i>
+      <div class="config__text"><strong>Optimized Background</strong><small>Disables video background to save resources</small></div>
+    </div>
+    <label class="switch"><input type="checkbox" id="chk-bg" onchange="window.parent.updateSysSetting('optBg',this.checked)"><span class="slider"></span></label>
+  </div>
+  
+  <div class="config__card">
+    <div class="config__info">
+      <i class="fas fa-bolt config__icon"></i>
+      <div class="config__text"><strong>Fast Boot</strong><small>Skips the startup sequence</small></div>
+    </div>
+    <label class="switch"><input type="checkbox" id="chk-boot" onchange="window.parent.updateSysSetting('shortBoot',this.checked)"><span class="slider"></span></label>
+  </div>
+  
+  <div class="config__card">
+    <div class="config__info">
+      <i class="fas fa-lock config__icon"></i>
+      <div class="config__text"><strong>Idle Lock Screen</strong><small>Locks system when away for 3 minutes</small></div>
+    </div>
+    <label class="switch"><input type="checkbox" id="chk-idle" onchange="window.parent.updateSysSetting('idleLock',this.checked)"><span class="slider"></span></label>
+  </div>
+  
+  <div class="config__card">
+    <div class="config__info">
+      <i class="fas fa-shield-alt config__icon"></i>
+      <div class="config__text"><strong>Redirect Confirmation</strong><small>Helps protect against GoGuardian</small></div>
+    </div>
+    <label class="switch"><input type="checkbox" id="chk-redir" onchange="window.parent.updateSysSetting('redirectConfirm',this.checked)"><span class="slider"></span></label>
+  </div>
+
+  <section class="config__category"><i class="fas fa-user-secret"></i> CLOAKING & STEALTH</section>
+  
+  <div class="config__card">
+    <div class="config__info">
+      <i class="fas fa-mask config__icon"></i>
+      <div class="config__text"><strong>Tab Cloak</strong><small>Disguises the OS tab name and icon</small></div>
+    </div>
+    <select class="config__select" id="cloak-select" onchange="window.parent.updateCloak(this.value)">
+      <option value="none">None (Cine-OS)</option>
+      <option value="google">Google</option>
+      <option value="drive">Google Drive</option>
+      <option value="canvas">Canvas</option>
+      <option value="classroom">Google Classroom</option>
+    </select>
+  </div>
+
+  <section class="config__category"><i class="fas fa-keyboard"></i> SHORTCUTS & LINKS</section>
+  
+  <div class="config__card">
+    <div class="config__info">
+      <i class="fas fa-exclamation-triangle config__icon"></i>
+      <div class="config__text"><strong>Panic Key</strong><small>Quick close tab key</small></div>
+    </div>
+    <input type="text" id="panic-input" class="config__input-sm" maxlength="1" onkeyup="window.parent.updateSysSetting('panicKey',this.value)">
+  </div>
+  
+  <div class="config__card config__card--clickable" onclick="window.open('https://discord.gg/bQCRJgtC74','_blank')" role="button" tabindex="0">
+    <div class="config__info">
+      <i class="fab fa-discord config__icon"></i>
+      <div class="config__text"><strong>Join Discord</strong><small>Official Community Hub</small></div>
+    </div>
+  </div>
+  
+  <div class="config__card config__card--clickable" onclick="toggleFaq()" role="button" tabindex="0">
+    <div class="config__info">
+      <i class="fas fa-question-circle config__icon"></i>
+      <div class="config__text"><strong>System FAQ</strong><small>Troubleshooting & Help</small></div>
+    </div>
+  </div>
+</template>
+
+<script>
+var _SYSTEM_PATHS = ["C:/Windows/System32/kernel32.dll", "/var/www/html/cine-os/", "https://cine-os.local/api/v1/auth"];
+var _devBuildVer = "3.0.1";
+
+var APPS = {
+    'cine': {title: 'CINE // HUB', path: 'script/Apps/Cine/index.html', icon: 'https://cdn.worldvectorlogo.com/logos/netflix-logo-icon.svg', pinned: true},
+    'term': {title: 'Spotify', path: 'script/Apps/Spotify/index.html', icon: 'https://cdn.pixabay.com/photo/2016/10/22/00/15/spotify-1759471_1280.jpg', pinned: true},
+    'files': {title: 'PS5 Emu', path: 'script/Apps/Ps5/index.html', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ-OeL_be7RFaoHi3PswkuAR5XcMgBNRDynsg&s', pinned: true},
+    'web': {title: 'Cine-Web', path: 'script/Apps/Web/index.html', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSeD89ZcX5W1FBtal7RerasT27q-OmZqnBixQ&s', pinned: true},
+    'settings': {title: 'CONFIG', internal: true, icon: 'https://cdn.iconscout.com/icon/free/png-256/free-apple-settings-icon-svg-download-png-493162.png', pinned: true},
+    'discord': {title: 'Discord', path: 'script/Apps/Discord/index.html', icon: 'https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png', pinned: false},
+    'roblox': {title: 'Roblox', path: 'script/Apps/Roblox/index.html', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS9KvNyFWMg_bjo_q_1IVLKFWbfCeonn2qDow&s', pinned: false},
+    'android': {title: 'Android', path: 'script/Apps/Android/index.html', icon: 'https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/android-icon.png', pinned: false},
+    'ciniai': {title: 'Cini AI', path: 'script/Apps/Cini/index.html', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkLXhvns5Rrdf-XBNlWcPIRh0hlJfWnEtBWg&s', pinned: false},
+    'VM': {title: 'Windows Virtual-Machine', path: 'script/Apps/VM/index.html', icon: 'https://static1.squarespace.com/static/68e69c83884dc82cc035a923/69454e29c6db7516b2566fca/69454e32c6db7516b256749a/1766149682532/Virtualbox_logo.png?format=original', pinned: false},
+    'crunchyroll': {title: 'CrunchyRoll', path: 'script/Apps/Crunchy/index.html', icon: 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/a0a4547a-06c5-4740-b87a-ca9c4fa0171e/dduaesk-2b3e85d2-3116-4eb5-8260-f413d1fc670e.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiIvZi9hMGE0NTQ3YS0wNmM1LTQ3NDAtYjg3YS1jYTljNGZhMDE3MWUvZGR1YWVzay0yYjNlODVkMi0zMTE2LTRlYjUtODI2MC1mNDEzZDFmYzY3MGUucG5nIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.vReffTSSKpde4w8EwFxz_CttxlLay8fXOq0goYh6rsg', pinned: false},
+    'Geforce': {title: 'GEFORCE NOW', path: 'script/Apps/Geforce/index.html', icon: 'https://play-lh.googleusercontent.com/_-b_HQXrVyyhZSHj_BoE9u_-cxkcHDH_yLX5rDjJsFMIfsCNQs9F3QP4JvEFcWaSIz0=w240-h480-rw', pinned: false},
+    'Fortnite': {title: 'Fortnite', path: 'script/Apps/Fortnite/index.html', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShiXrQ-cvZeDyQNPIZCv_hsaUCAe5j_rXJ7Q&s', pinned: false},
+    'RocketL': {title: 'Rocket League', path: 'script/Apps/RocketL/index.html', icon: 'https://ygo-assets-entities-us.yougov.net/87bb7a16-2b62-11e8-82b1-37bb0d207ced.jpg?zcw=518&zch=518&zct=10&zcl=0', pinned: false},
+    'Xbox': {title: 'Xbox', path: 'script/Apps/Xbox/index.html', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRknRQh-WRK4F75YB3EAlfrsqAk66Xjn45sBg&s', pinned: false},
+};
+
+var savedPins = localStorage.getItem('c_pins_v2');
+if(savedPins) {
+    let p = JSON.parse(savedPins);
+    for(let k in p) {
+        if(APPS[k]) APPS[k].pinned = p[k];
+    }
+}
+
+function syncPins() {
+    let obj = {};
+    for(let k in APPS) obj[k] = APPS[k].pinned;
+    localStorage.setItem('c_pins_v2', JSON.stringify(obj));
+}
+
+var wallpaperRegistry = {
+    "Default": {id: "Default", name: "Snake Skeleton", url: "Videos/default.mp4", locked: false},
+    "green": {id: "green", name: "Green Anime", url: "Videos/green.mp4", locked: false},
+    "33A56": {id: "hunt_trait", name: "Hunt Showdown", url: "Videos/33A56.mp4", locked: true},
+    "45E33": {id: "45E33", name: "45E33", url: "Videos/45E33.mp4", locked: false},
+    "55Cine": {id: "55Cine", name: "Cine 55", url: "Videos/55Cine.PNG", locked: false},
+    "99Med": {id: "99Med", name: "99 Med", url: "Videos/99Med.mp4", locked: false},
+    "Brother": {id: "Brother", name: "Brother", url: "Videos/Brother.mp4", locked: false},
+    "F-1": {id: "F-1", name: "F-1 Formula", url: "Videos/F-1.mp4", locked: false},
+    "Gojo-Sukuna": {id: "Gojo-Sukuna", name: "Gojo vs Sukuna", url: "Videos/Gojo-Sukuna.mp4", locked: false},
+    "Hunt": {id: "Hunt", name: "Hunt Showdown 2", url: "Videos/Hunt.mp4", locked: false},
+    "Minecraft01": {id: "Minecraft01", name: "Minecraft 01", url: "Videos/Minecraft01.mp4", locked: false},
+    "Minecraft02": {id: "Minecraft02", name: "Minecraft 02", url: "Videos/Minecraft02.mp4", locked: false},
+    "Minecraft03": {id: "Minecraft03", name: "Minecraft 03", url: "Videos/Minecraft03.mp4", locked: false},
+    "Monkey": {id: "Monkey", name: "Monkey", url: "Videos/Monkey.mp4", locked: false},
+    "Skello": {id: "Skello", name: "Skello", url: "Videos/Skello.MP4", locked: false},
+    "SnowFox": {id: "SnowFox", name: "Snow Fox", url: "Videos/SnowFox.mp4", locked: false},
+    "Supra": {id: "Supra", name: "Supra Drift", url: "Videos/Supra.PNG", locked: false},
+    "Yuji52": {id: "Yuji52", name: "Yuji 52", url: "Videos/Yuji52.mp4", locked: false},
+    "sukuna-fire": {id: "sukuna-fire", name: "Sukuna Fire", url: "Videos/sukuna-fire.mp4", locked: false},
+    "CozyFox": {id: "CozyFox", name: "Cozy Fox", url: "Videos/CozyFox.mp4", locked: false},
+    "RainyCity": {id: "RainyCity", name: "Rainy City", url: "Videos/RainyCity.mp4", locked: false},
+    "Gojo": {id: "Gojo", name: "Gojo", url: "Videos/Gojo.mp4", locked: false},
+    "BlackHole": {id: "BlackHole", name: "Black Hole", url: "Videos/BlackHole.mp4", locked: false},
+    "Yuta": {id: "Yuta", name: "Yuta", url: "Videos/Yuta.mp4", locked: false},
+    "Desktop": {id: "Desktop", name: "Desktop Lines", url: "Videos/Desktop.mp4", locked: false}
+};
+
+var sysConfig = JSON.parse(localStorage.getItem('cine_sys_config')) || {};
+if(sysConfig.optBg === undefined) sysConfig.optBg = false;
+if(sysConfig.shortBoot === undefined) sysConfig.shortBoot = false;
+if(sysConfig.wpLoop === undefined) sysConfig.wpLoop = false;
+if(sysConfig.idleLock === undefined) sysConfig.idleLock = false; 
+if(sysConfig.redirectConfirm === undefined) sysConfig.redirectConfirm = false; 
+if(!sysConfig.panicKey) sysConfig.panicKey = '`';
+if(!sysConfig.homeWallpaper) sysConfig.homeWallpaper = 'Default';
+if(!sysConfig.lockWallpaper) sysConfig.lockWallpaper = 'green';
+if(!sysConfig.cloak) sysConfig.cloak = 'none';
+
+window.updateSysSetting = function(key, value) {
+    sysConfig[key] = value;
+    localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
+    if(key === 'optBg') applySystemSettings();
+    if(key === 'wpLoop') updateWallpaperLoop();
+};
+
+var cloaks = {
+    none: {title: "Cine-OS", icon: ""},
+    google: {title: "Google", icon: "https://www.google.com/favicon.ico"},
+    drive: {title: "My Drive - Google Drive", icon: "https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png"},
+    canvas: {title: "Dashboard", icon: "https://du11hjcvx0uqb.cloudfront.net/br/dist/images/favicon-e10d657a73.ico"},
+    classroom: {title: "Classes", icon: "https://ssl.gstatic.com/classroom/favicon.png"}
+};
+
+window.updateCloak = function(key) {
+    sysConfig.cloak = key;
+    localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
+    applyCloak();
+};
+
+function applyCloak() {
+    var k = sysConfig.cloak || 'none';
+    var sel = cloaks[k];
+    var icons = document.querySelectorAll("link[rel*='icon']");
+    for(var i=0; i<icons.length; i++) icons[i].remove();
+    
+    if(sel && k !== 'none') {
+        document.title = sel.title;
+        let n = document.createElement('link');
+        n.type = 'image/x-icon';
+        n.rel = 'shortcut icon';
+        n.href = sel.icon;
+        document.getElementsByTagName('head')[0].appendChild(n);
+    } else {
+        document.title = "Cine-OS";
+    }
+}
+setInterval(applyCloak, 2000);
+
+var isDesktopActive = false;
+var bootActive = true;
+var enterCount = 0;
+var highestZ = 500;
+var activeWindowId = null;
+var isMediaPlaying = false;
+var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+var activeCtxId = null;
+
+if(isMobile) {
+    var mobWarn = document.getElementById('mobile-warning');
+    if(mobWarn && mobWarn.showModal) mobWarn.showModal();
+    else if(mobWarn) mobWarn.style.display = 'flex';
+    
+    var lastTap = 0;
+    document.addEventListener('touchstart', function(e) {
+        let t = new Date().getTime();
+        let tl = t - lastTap;
+        if(tl < 500 && tl > 0) {
+            if(mobWarn && mobWarn.close) mobWarn.close();
+            else if(mobWarn) mobWarn.style.display = 'none';
+        }
+        lastTap = t;
+    });
+}
+
+async function loadDynamicResources() {
+    renderUI();
+    initWallpapers();
+    setupAppContextMenu();
+}
+
+window.onbeforeunload = function(e) {
+    if(sysConfig.redirectConfirm) {
+        let msg = "Are you sure you want to leave? This helps block GoGuardian redirects.";
+        e.returnValue = msg;
+        return msg;
+    }
+};
+
+document.addEventListener("DOMContentLoaded", function() {
+    applyCloak();
+    loadDynamicResources();
+    document.getElementById('boot-layer').style.display = 'block';
+    loadDesktop();
+    updateSidebarData();
+});
+
+function renderUI() {
+    let dock = document.getElementById('dock-container');
+    let dHTML = '<div class="dock-item" onclick="toggleStartMenu()"><img src="https://missionsupport.archden.org/wp-content/uploads/2022/02/windows11-icon.png"></div><div class="dock-sep"></div><div class="dock-item" onclick="toggleAppDrawer()"><svg width="24" height="24" viewBox="0 0 24 24" fill="#aaa"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg></div><div class="dock-sep"></div>';
+    
+    let pGrid = document.getElementById('pinned-grid');
+    let pHTML = '';
+    
+    for(let id in APPS) {
+        if(APPS[id].pinned) {
+            dHTML += '<div class="dock-item" data-id="'+id+'" onmousedown="DragSystem.start(event,this,\'dock\',\''+id+'\')" onclick="toggleApp(\''+id+'\')" oncontextmenu="openDockCtx(event, \''+id+'\')"><img src="'+APPS[id].icon+'"></div>';
+            pHTML += '<div class="pinned-item" onclick="toggleApp(\''+id+'\')"><img src="'+APPS[id].icon+'"><span>'+APPS[id].title+'</span></div>';
+        }
+    }
+    
+    dock.innerHTML = dHTML;
+    pGrid.innerHTML = pHTML;
+    populateDrawer();
+}
+
+function openDockCtx(e, id) {
+    e.preventDefault(); e.stopPropagation();
+    hideAllCtx();
+    activeCtxId = id;
+    let m = document.getElementById('dock-ctx-menu');
+    if(m) {
+        m.style.display = 'block';
+        m.style.left = e.pageX + 'px';
+        m.style.top = e.pageY + 'px';
+    }
+}
+
+function openDrawerCtx(e, id) {
+    e.preventDefault(); 
+  e.stopPropagation();
+    hideAllCtx();
+    activeCtxId = id;
+    let m = document.getElementById('drawer-ctx-menu');
+    if(m) {
+        m.style.display = 'block';
+        m.style.left = e.pageX + 'px';
+        m.style.top = e.pageY + 'px';
+    }
+}
+
+document.getElementById('ctx-pin-app').onclick = function() {
+    if(activeCtxId && APPS[activeCtxId]) {
+        APPS[activeCtxId].pinned = true;
+        syncPins();
+        renderUI();
+    }
+    hideAllCtx();
+}
+
+document.getElementById('ctx-unpin-app').onclick = function() {
+    if(activeCtxId && APPS[activeCtxId]) {
+        APPS[activeCtxId].pinned = false;
+        syncPins();
+        renderUI();
+    }
+    hideAllCtx();
+}
+
+function hideAllCtx() {
+    let menus = ['app-context-menu','desktop-context-menu','drawer-ctx-menu','dock-ctx-menu'];
+    for(let i=0; i<menus.length; i++) {
+        let m = document.getElementById(menus[i]);
+        if(m) m.style.display = 'none';
+    }
+}
+document.addEventListener('click', hideAllCtx);
+
+document.addEventListener('keydown', function(e) {
+    if(bootActive && e.key === 'Enter' && document.getElementById('boot-layer').style.display !== 'none') {
+        enterCount++;
+        if(enterCount >= 2) skipBootSequence();
+        setTimeout(function(){ enterCount = 0; }, 500);
+    }
+    if(e.key && sysConfig.panicKey && e.key.toLowerCase() === sysConfig.panicKey.toLowerCase()) {
+        window.location.href = "https://google.com";
+    }
+});
+
+function startBootSequence() {
+    let cb = document.getElementById('boot-content');
+    let bv = document.getElementById('boot-video');
+    cb.style.display = 'none';
+    bv.style.display = 'block';
+    bv.muted = false;
+    bv.volume = 1.0;
+    
+    if(sysConfig.shortBoot) {
+        bv.src = "Videos/QuickBoot.mp4";
+        bv.load();
+    }
+    
+    let p = bv.play();
+    if(p !== undefined) {
+        p.catch(function() {
+            bv.muted = true;
+            bv.play();
+        });
+    }
+    bv.onended = function() {
+        if(bootActive) skipBootSequence();
+    };
+}
+
+function skipBootSequence() {
+    if(!bootActive) return;
+    bootActive = false;
+    let lay = document.getElementById('boot-layer');
+    let bv = document.getElementById('boot-video');
+    if(bv) bv.pause();
+    
+    if(lay) {
+        lay.style.opacity = '0';
+        document.getElementById('lock-screen').classList.add('active');
+        
+        let lv = document.getElementById('lock-video');
+        if(lv.style.display !== 'none') {
+            lv.play().catch(function(e) {});
+        }
+        
+        setTimeout(function() { lay.style.display = 'none'; }, 600);
+        updateClock();
+    }
+}
+
+function showNotification(title, msg) {
+    let c = document.getElementById('toast-container');
+    let t = document.createElement('div');
+    t.className = 'toast-notification';
+    t.innerHTML = '<div class="toast-header"><div class="toast-app-info"><div class="toast-icon"><i class="fas fa-bell"></i></div><span>System</span></div><i class="fas fa-times toast-close"></i></div><div class="toast-title">' + title + '</div><div class="toast-body">' + msg + '</div>';
+    c.appendChild(t);
+    
+    setTimeout(function(){ t.classList.add('show'); }, 100);
+    t.onclick = function() {
+        t.classList.remove('show');
+        setTimeout(function(){ t.remove(); }, 400);
+    };
+    setTimeout(t.onclick, 6000);
+}
+
+var welcomeShown = false;
+window.unlockSystem = function() {
+    let scr = document.getElementById('lock-screen');
+    scr.classList.add('slide-up');
+    setTimeout(function() {
+        scr.classList.remove('active');
+        isDesktopActive = true;
+        document.getElementById('lock-video').pause();
+        
+        if(!sysConfig.optBg) {
+            let bV = document.getElementById('bg-video');
+            if(bV.style.display !== 'none') bV.play().catch(function(e){});
+        }
+        if(!welcomeShown) {
+            showNotification("Welcome To Cine V2", "Checkout Settings for FAQ!");
+            welcomeShown = true;
+        }
+    }, 600);
+    resetIdle();
+};
+
+function applyMediaToElements(url, vidEl, imgEl, isBg) {
+    if(!url) return;
+    let isImg = url.match(/\.(png|jpg|jpeg|gif)$/i);
+    if(isImg) {
+        vidEl.style.display = 'none';
+        vidEl.pause();
+        imgEl.style.display = 'block';
+        imgEl.src = url;
+    } else {
+        imgEl.style.display = 'none';
+        vidEl.style.display = 'block';
+        vidEl.src = url;
+        vidEl.load();
+        if(isBg && isDesktopActive && !sysConfig.optBg) vidEl.play().catch(function(e){});
+        if(!isBg && document.getElementById('lock-screen').classList.contains('active')) vidEl.play().catch(function(e){});
+    }
+}
+
+function initWallpapers() {
+    let bV = document.getElementById('bg-video');
+    let bI = document.getElementById('bg-img');
+    let lV = document.getElementById('lock-video');
+    let lI = document.getElementById('lock-img');
+    
+    if(wallpaperRegistry[sysConfig.homeWallpaper]) {
+        applyMediaToElements(wallpaperRegistry[sysConfig.homeWallpaper].url, bV, bI, true);
+    }
+    if(wallpaperRegistry[sysConfig.lockWallpaper]) {
+        applyMediaToElements(wallpaperRegistry[sysConfig.lockWallpaper].url, lV, lI, false);
+    } else {
+        applyMediaToElements("Videos/green.mp4", lV, lI, false);
+    }
+    
+    updateWallpaperLoop();
+    let wChk = document.getElementById('wp-loop-chk');
+    if(wChk) wChk.checked = sysConfig.wpLoop;
+}
+
+function updateWallpaperLoop() {
+    let bV = document.getElementById('bg-video');
+    let lV = document.getElementById('lock-video');
+    if(bV) bV.loop = sysConfig.wpLoop;
+    if(lV) lV.loop = sysConfig.wpLoop;
+    if(!sysConfig.optBg && isDesktopActive && bV && bV.paused && bV.style.display !== 'none') {
+        bV.play().catch(function(e){});
+    }
+}
+
+function updateClock() {
+    let n = new Date();
+    let dArr = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+    let mArr = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+    
+    let hrs = n.getHours().toString().padStart(2, '0');
+    let min = n.getMinutes().toString().padStart(2, '0');
+    let dNum = n.getDate().toString().padStart(2, '0');
+    let dName = dArr[n.getDay()];
+    let yr = n.getFullYear();
+    
+    let lDay = document.getElementById('lock-day-large');
+    let lDat = document.getElementById('lock-date');
+    let lTim = document.getElementById('lock-time');
+    let hDay = document.getElementById('lbl-day');
+    
+    if(lDay) lDay.innerText = dName;
+    if(hDay) hDay.innerText = dName;
+    if(lDat) lDat.innerText = dNum + ' ' + mArr[n.getMonth()] + ', ' + yr + '.';
+    if(lTim) lTim.innerText = '- ' + hrs + ':' + min + ' -';
+}
+setInterval(updateClock, 1000);
+
+var idleTime = 0;
+function resetIdle() { idleTime = 0; }
+document.addEventListener('mousemove', resetIdle);
+document.addEventListener('keypress', resetIdle);
+
+setInterval(function() {
+    idleTime++;
+    let scr = document.getElementById('lock-screen');
+    if(sysConfig.idleLock && idleTime >= 180 && !scr.classList.contains('active') && !bootActive) {
+        if(isMediaPlaying) {
+            idleTime = 0; 
+        } else {
+            isDesktopActive = false;
+            scr.classList.remove('slide-up');
+            scr.classList.add('active');
+            document.getElementById('bg-video').pause();
+            let lv = document.getElementById('lock-video');
+            if(lv.style.display !== 'none') lv.play().catch(function(e){});
+        }
+    }
+}, 1000);
+
+window.launchLastPlayed = function() { toggleApp('files'); };
+window.resumeSpotify = function() { toggleApp('term'); };
+window.openUpdateLog = function() {
+    let u = document.getElementById('update-modal');
+    if(u && u.showModal) u.showModal();
+    else if(u) u.style.display = 'flex';
+};
+
+function updateSidebarData() {
+    try {
+        let ps = JSON.parse(localStorage.getItem('ps_purchased'));
+        if(ps && ps.length > 0) document.getElementById('last-game-name').innerText = "PS5 Library Ready";
+        let sp = JSON.parse(localStorage.getItem('cinify_cache'));
+        if(sp) {
+            let k = Object.keys(sp);
+            if(k.length > 0) {
+                document.getElementById('spotify-track-name').innerText = sp[k[k.length-1]].title || "Liked Song";
+                if(sp[k[k.length-1]].cover) document.getElementById('spotify-album-art').src = sp[k[k.length-1]].cover;
+            }
+        }
+    } catch(e) {}
+}
+setInterval(updateSidebarData, 5000);
+
+function populateDrawer() {
+    let g = document.getElementById('drawer-grid');
+    g.innerHTML = '';
+    for(let key in APPS) {
+        let a = APPS[key];
+        let d = document.createElement('div');
+        d.className = 'drawer-item';
+        d.dataset.id = key;
+        d.innerHTML = '<img src="' + a.icon + '" style="pointer-events:none;"><span>' + a.title + '</span>';
+        
+        d.onmousedown = function(e) { DragSystem.start(e, this, 'drawer', this.dataset.id); };
+        d.onclick = function(e) {
+            if(!DragSystem.isDragMove) {
+                toggleApp(this.dataset.id);
+                toggleAppDrawer();
+            }
+        };
+        d.oncontextmenu = function(e) { openDrawerCtx(e, this.dataset.id); }
+        g.appendChild(d);
+    }
+}
+
+function filterDrawer(val) {
+    let items = document.querySelectorAll('.drawer-item');
+    let q = val.toLowerCase();
+    for(let i=0; i<items.length; i++) {
+        let txt = items[i].innerText.toLowerCase();
+        if(txt.includes(q)) items[i].style.display = 'flex';
+        else items[i].style.display = 'none';
+    }
+}
+
+function toggleAppDrawer() {
+    let d = document.getElementById('app-drawer');
+    if(d.classList.contains('open')) {
+        d.classList.remove('open');
+        setTimeout(function(){ d.style.display='none'; }, 300);
+    } else {
+        d.style.display = 'block';
+        setTimeout(function(){ d.classList.add('open'); }, 10);
+    }
+}
+
+function toggleApp(id) {
+    let w = document.getElementById('win-' + id);
+    if(w) {
+        if(w.classList.contains('minimized')) {
+            w.classList.remove('minimized');
+            w.classList.add('active');
+            w.style.zIndex = ++highestZ;
+            activeWindowId = id;
+            startImmersiveMode(w);
+        } else if(activeWindowId === id) {
+            minimizeWindow(id);
+        } else {
+            w.style.zIndex = ++highestZ;
+            activeWindowId = id;
+            startImmersiveMode(w);
+        }
+    } else {
+        openWindow(id);
+    }
+}
+
+function openWindow(id) {
+    let m = document.getElementById('start-menu');
+    if(m) {
+        m.classList.remove('open');
+        setTimeout(function(){ m.style.display='none'; }, 300);
+    }
+    
+    let layer = document.getElementById('windows-layer');
+    let win = document.getElementById('win-' + id);
+    
+    if(!win) {
+        let dat = APPS[id] || {title: 'APP', path: 'about:blank'};
+        win = document.createElement('div');
+        win.id = 'win-' + id;
+        win.className = 'window active header-visible';
+        win.style.zIndex = ++highestZ;
+        
+        let iframeStr = dat.internal ? '<iframe id="frame-' + id + '"></iframe>' : '<iframe id="frame-' + id + '" src="' + dat.path + '"></iframe>';
+        
+        win.innerHTML = '<div class="win-header" onmousedown="DragSystem.startWinDrag(event, \'' + id + '\')"><div class="win-title">' + dat.title + '</div><div class="win-controls"><div class="win-btn btn-min" onclick="minimizeWindow(\'' + id + '\')"></div><div class="win-btn btn-close" onclick="closeWindow(\'' + id + '\')"></div></div></div><div class="win-body">' + iframeStr + '</div>';
+        
+        layer.appendChild(win);
+        
+        if(dat.internal && id === 'settings') {
+            let f = document.getElementById('frame-' + id);
+            if(f) {
+                let html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+                    <style>
+                        body { background: #000; color: #fff; font-family: 'Rajdhani', sans-serif; padding: 25px; margin: 0; outline: none; }
+                        * { outline: none; -webkit-tap-highlight-color: transparent; }
+                        h2 { border-bottom: 2px solid #333; padding-bottom: 10px; font-weight: 700; letter-spacing: 1px; }
+                        .setting-card { background: #111; border: 1px solid #333; padding: 15px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+                        .setting-text { display: flex; flex-direction: column; }
+                        .setting-text b { color: #fff; font-size: 15px; }
+                        .setting-text small { color: #888; font-size: 13px; }
+                        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+                        .switch input { opacity: 0; width: 0; height: 0; }
+                        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #444; transition: .3s; border-radius: 34px; }
+                        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: #fff; transition: .3s; border-radius: 50%; }
+                        input:checked + .slider { background-color: #fff; }
+                        input:checked + .slider:before { transform: translateX(20px); background-color: #000; }
+                        input[type="text"], select { background: #222; color: #fff; border: 1px solid #444; padding: 6px; border-radius: 6px; }
+                        input:focus, select:focus { border-color: #888; }
+                    </style>
+                </head>
+                <body>
+                    <h2>SYSTEM CONFIGURATION</h2>
+                    <div class="setting-card">
+                        <div class="setting-text"><b>Optimized Background</b><small>Disables video background</small></div>
+                        <label class="switch"><input type="checkbox" id="chk-bg" onchange="window.parent.updateSysSetting('optBg',this.checked)"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-card">
+                        <div class="setting-text"><b>Fast Boot</b><small>Skips the startup sequence</small></div>
+                        <label class="switch"><input type="checkbox" id="chk-boot" onchange="window.parent.updateSysSetting('shortBoot',this.checked)"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-card">
+                        <div class="setting-text"><b>Idle Lock Screen</b><small>Locks system when away for 3 minutes</small></div>
+                        <label class="switch"><input type="checkbox" id="chk-idle" onchange="window.parent.updateSysSetting('idleLock',this.checked)"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-card">
+                        <div class="setting-text"><b>Redirect Confirmation</b><small>Helps Protect Against GoGuardian tracking!</small></div>
+                        <label class="switch"><input type="checkbox" id="chk-redir" onchange="window.parent.updateSysSetting('redirectConfirm',this.checked)"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-card">
+                        <div class="setting-text"><b>Tab Cloaking</b><small>Disguises OS as another site</small></div>
+                        <select id="cloak-select" onchange="window.parent.updateCloak(this.value)">
+                            <option value="none">None (Cine-OS)</option>
+                            <option value="google">Google</option>
+                            <option value="drive">Google Drive</option>
+                            <option value="canvas">Canvas</option>
+                        </select>
+                    </div>
+                    <div class="setting-card">
+                        <div class="setting-text"><b>Panic Key</b><small>Instant site redirection shortcut</small></div>
+                        <input type="text" id="panic-input" maxlength="1" style="width:40px; text-align:center; font-weight:bold; font-size:16px;" onkeyup="window.parent.updateSysSetting('panicKey',this.value)">
+                    </div>
+                    <script>
+                        var prefs = window.parent.sysConfig;
+                        document.getElementById('chk-bg').checked = prefs.optBg;
+                        document.getElementById('chk-boot').checked = prefs.shortBoot;
+                        document.getElementById('chk-idle').checked = prefs.idleLock;
+                        document.getElementById('chk-redir').checked = prefs.redirectConfirm;
+                        document.getElementById('cloak-select').value = prefs.cloak;
+                        document.getElementById('panic-input').value = prefs.panicKey;
+                    <\/script>
+                </body>
+                </html>`;
+                f.srcdoc = html;
+            }
+        }
+    } else {
+        win.classList.remove('minimized');
+        win.classList.add('active');
+        win.style.zIndex = ++highestZ;
+    }
+    
+    activeWindowId = id;
+    startImmersiveMode(win);
+}
+
+function closeWindow(id) {
+    let w = document.getElementById('win-' + id);
+    if(w) w.remove();
+    if(activeWindowId === id) activeWindowId = null;
+    endImmersiveMode();
+}
+
+function minimizeWindow(id) {
+    let w = document.getElementById('win-' + id);
+    if(w) {
+        w.classList.add('minimized');
+        w.classList.remove('active');
+        if(activeWindowId === id) activeWindowId = null;
+    }
+    endImmersiveMode();
+}
+
+function startImmersiveMode(win) {
+    document.getElementById('dock-container').classList.add('dock-hidden');
+    win.classList.remove('header-visible');
+}
+
+function endImmersiveMode() {
+    let aw = document.querySelectorAll('.window.active:not(.minimized)');
+    if(aw.length === 0) {
+        document.getElementById('dock-container').classList.remove('dock-hidden');
+        activeWindowId = null;
+    } else {
+        let t = aw[aw.length - 1];
+        activeWindowId = t.id.replace('win-', '');
+        t.style.zIndex = ++highestZ;
+        startImmersiveMode(t);
+    }
+}
+
+var dockTimer;
+var dEl = document.getElementById('dock-container');
+document.getElementById('bottom-trigger').addEventListener('mouseenter', function() {
+    dEl.classList.remove('dock-hidden');
+    clearTimeout(dockTimer);
+});
+dEl.addEventListener('mouseleave', function() {
+    let aw = document.querySelectorAll('.window.active:not(.minimized)');
+    if(aw.length > 0) {
+        dockTimer = setTimeout(function() { dEl.classList.add('dock-hidden'); }, 1000);
+    }
+});
+dEl.addEventListener('mouseenter', function() { clearTimeout(dockTimer); });
+
+document.getElementById('top-trigger').addEventListener('mouseenter', function() {
+    if(activeWindowId) {
+        let w = document.getElementById('win-' + activeWindowId);
+        if(w && !w.classList.contains('minimized')) w.classList.add('header-visible');
+    }
+});
+
+document.addEventListener('mouseover', function(e) {
+    if(e.target.closest('.win-header')) {
+        if(activeWindowId) {
+            let w = document.getElementById('win-' + activeWindowId);
+            if(w) w.classList.add('header-visible');
+        }
+    } else if(activeWindowId && !e.target.closest('#top-trigger')) {
+        let w = document.getElementById('win-' + activeWindowId);
+        if(w) w.classList.remove('header-visible');
+    }
+});
+
+var desktopLayout = JSON.parse(localStorage.getItem('cine_desktop_v2')) || [];
+
+function saveDesktop() {
+    localStorage.setItem('cine_desktop_v2', JSON.stringify(desktopLayout));
+    loadDesktop();
+}
+
+function loadDesktop() {
+    let c = document.getElementById('desktop-area');
+    let ex = document.querySelectorAll('.desktop-app');
+    for(let j=0; j<ex.length; j++) ex[j].remove();
+    
+    desktopLayout.forEach(function(item, idx) {
+        let d = document.createElement('div');
+        d.className = 'desktop-app';
+        d.style.left = item.x + 'px';
+        d.style.top = item.y + 'px';
+        d.setAttribute('data-idx', idx);
+        
+        if(item.type === 'folder') {
+            let gHTML = '<div class="d-folder-grid">';
+            let mx = item.apps.slice(0, 4);
+            mx.forEach(function(a) {
+                if(APPS[a]) gHTML += '<img src="' + APPS[a].icon + '">';
+            });
+            gHTML += '</div>';
+            if(!item.hideName) gHTML += '<div class="d-label">' + (item.customName || 'Folder') + '</div>';
+            
+            d.innerHTML = gHTML;
+            d.onclick = function(ev) {
+                if(DragSystem.isDragMove) return;
+                ev.stopPropagation();
+                if(!this.classList.contains('expanded-folder')) {
+                    closeAllFolders();
+                    expandFolder(this, item, idx);
+                }
+            };
+        } else {
+            let a = APPS[item.id];
+            if(a) {
+                let iSrc = item.customIcon || a.icon;
+                let lbl = item.customName || a.title;
+                let h = '<img src="' + iSrc + '" class="d-icon">';
+                if(!item.hideName) h += '<div class="d-label">' + lbl + '</div>';
+                d.innerHTML = h;
+                d.ondblclick = function(ev) { ev.stopPropagation(); toggleApp(item.id); };
+            }
+        }
+        
+        d.onmousedown = function(ev) {
+            ev.stopPropagation();
+            if(ev.button === 0) DragSystem.start(ev, d, 'desktop', idx);
+        };
+        
+        d.oncontextmenu = function(ev) {
+            ev.preventDefault(); ev.stopPropagation();
+            hideAllCtx();
+            let m = document.getElementById('app-context-menu');
+            if(m) {
+                m.style.display = 'block';
+                m.style.left = ev.pageX + 'px';
+                m.style.top = ev.pageY + 'px';
+                m.setAttribute('data-target-idx', idx);
+            }
+        };
+        
+        c.appendChild(d);
+    });
+}
+
+function expandFolder(el, dat, idx) {
+    el.classList.add('expanded-folder');
+    
+    let h = '<div class="folder-header">' + (dat.customName || 'Folder') + ' <i class="fas fa-times" onclick="closeAllFolders(event)"></i></div>';
+    h += '<div class="folder-grid-expanded">';
+    for(let k=0; k<dat.apps.length; k++) {
+        let aId = dat.apps[k];
+        let info = APPS[aId];
+        if(info) {
+            h += '<div class="f-app" onclick="event.stopPropagation(); toggleApp(\'' + aId + '\')"><img src="' + info.icon + '"><span>' + info.title + '</span></div>';
+        }
+    }
+    h += '</div>';
+    el.innerHTML = h;
+    
+    setTimeout(function() {
+        let rect = el.getBoundingClientRect();
+        let sibs = document.querySelectorAll('.desktop-app:not(.expanded-folder)');
+        for(let s=0; s<sibs.length; s++) {
+            let sib = sibs[s];
+            let sr = sib.getBoundingClientRect();
+            if(!(rect.right < sr.left || rect.left > sr.right || rect.bottom < sr.top || rect.top > sr.bottom)) {
+                let push = (rect.bottom - sr.top) + 20;
+                sib.style.transform = 'translateY(' + push + 'px)';
+                sib.setAttribute('data-pushed', 'true');
+            }
+        }
+    }, 50);
+}
+
+function closeAllFolders(ev) {
+    if(ev) ev.stopPropagation();
+    let op = document.querySelectorAll('.expanded-folder');
+    if(op.length === 0) return;
+    
+    for(let i=0; i<op.length; i++) op[i].classList.remove('expanded-folder');
+    
+    let push = document.querySelectorAll('.desktop-app[data-pushed="true"]');
+    for(let j=0; j<push.length; j++) {
+        push[j].style.transform = '';
+        push[j].removeAttribute('data-pushed');
+    }
+    setTimeout(loadDesktop, 250);
+}
+
+function setupAppContextMenu() {
+    let m = document.getElementById('app-context-menu');
+    if(!m) return;
+    m.innerHTML = `
+        <li class="ctx-item" id="ctx-rename" role="menuitem" tabindex="0"><i class="fas fa-edit fa-fw" aria-hidden="true"></i> Rename</li>
+        <li class="ctx-item" id="ctx-hidename" role="menuitem" tabindex="0"><i class="fas fa-eye-slash fa-fw" aria-hidden="true"></i> Toggle Name</li>
+        <li class="ctx-item" id="ctx-changeicon" role="menuitem" tabindex="0"><i class="fas fa-image fa-fw" aria-hidden="true"></i> Change Icon</li>
+        <li class="ctx-separator" role="separator"></li>
+        <li class="ctx-item" id="ctx-delete" role="menuitem" tabindex="0"><i class="fas fa-trash fa-fw" style="color:#aaa;" aria-hidden="true"></i> Remove</li>
+    `;
+    
+    document.getElementById('ctx-rename').onclick = function() {
+        let i = m.getAttribute('data-target-idx');
+        let nm = prompt("Enter new name:", desktopLayout[i].customName || "");
+        if(nm !== null) {
+            desktopLayout[i].customName = nm.trim() === "" ? "App" : nm;
+            saveDesktop();
+        }
+        m.style.display = 'none';
+    };
+    
+    document.getElementById('ctx-hidename').onclick = function() {
+        let i = m.getAttribute('data-target-idx');
+        desktopLayout[i].hideName = !desktopLayout[i].hideName;
+        saveDesktop();
+        m.style.display = 'none';
+    };
+    
+    document.getElementById('ctx-changeicon').onclick = function() {
+        let i = m.getAttribute('data-target-idx');
+        let url = prompt("Enter image URL for custom icon:");
+        if(url) {
+            desktopLayout[i].customIcon = url;
+            saveDesktop();
+        }
+        m.style.display = 'none';
+    };
+    
+    document.getElementById('ctx-delete').onclick = function() {
+        let i = m.getAttribute('data-target-idx');
+        desktopLayout.splice(i, 1);
+        saveDesktop();
+        m.style.display = 'none';
+    };
+}
+
+document.addEventListener('contextmenu', function(e) {
+    let ids = ['desktop-area', 'windows-layer', 'bg-video', 'bg-img', 'snow-fx', 'right-sidebar'];
+    if(ids.includes(e.target.id) || e.target.tagName === 'BODY' || e.target.closest('#right-sidebar')) {
+        e.preventDefault();
+        hideAllCtx();
+        let m = document.getElementById('desktop-context-menu');
+        if(m) {
+            m.style.display = 'block';
+            let x = e.pageX, y = e.pageY;
+            if(x + 200 > window.innerWidth) x = window.innerWidth - 200;
+            if(y + 100 > window.innerHeight) y = window.innerHeight - 100;
+            m.style.left = x + 'px';
+            m.style.top = y + 'px';
+        }
+    }
+});
+
+var DragSystem = {
+    dragging: false, startPos: {x:0,y:0}, sourceType: null, sourceEl: null,
+    idx: null, appId: null, proxy: document.getElementById('drag-proxy'),
+    pImg: document.getElementById('proxy-img'), badge: document.getElementById('folder-badge'),
+    
+    init: function() {
+        window.addEventListener('mousemove', e => this.move(e));
+        window.addEventListener('mouseup', e => this.end(e));
+    },
+    
+    start: function(e, el, type, id) {
+        this.startPos = {x: e.clientX, y: e.clientY};
+        this.sourceType = type; this.sourceEl = el; this.isDragMove = false;
+        if(type === 'drawer' || type === 'dock') this.appId = id;
+        else if(type === 'desktop') { this.idx = id; this.sourceEl.style.opacity = '0.5'; }
+    },
+    
+    startWinDrag: function(e, id) {
+        this.startPos = {x: e.clientX, y: e.clientY};
+        this.sourceType = 'window'; this.sourceEl = document.getElementById('win-' + id);
+        this.isDragMove = false;
+    },
+    
+    move: function(e) {
+        if(!this.sourceEl) return;
+        let dx = Math.abs(e.clientX - this.startPos.x);
+        let dy = Math.abs(e.clientY - this.startPos.y);
+        
+        if(dx > 3 || dy > 3) {
+            this.dragging = true; this.isDragMove = true;
+            if(this.sourceType === 'desktop' || this.sourceType === 'drawer' || this.sourceType === 'dock') {
+                if(this.sourceType === 'drawer') toggleAppDrawer();
+                this.proxy.style.display = 'block';
+                this.proxy.style.left = (e.clientX - 25) + 'px';
+                this.proxy.style.top = (e.clientY - 25) + 'px';
+                
+                if(this.sourceType === 'drawer' || this.sourceType === 'dock') {
+                    if(APPS[this.appId]) this.pImg.src = APPS[this.appId].icon;
+                } else {
+                    let itm = desktopLayout[this.idx];
+                    if(itm.type === 'app') {
+                        if(APPS[itm.id]) this.pImg.src = APPS[itm.id].icon;
+                    } else {
+                        this.pImg.src = '';
+                        this.badge.style.display = 'flex';
+                        this.badge.innerText = itm.apps.length;
+                    }
+                }
+            }
+        }
+    },
+    
+    end: function(e) {
+        if(!this.sourceEl) return;
+        if(!this.isDragMove && this.sourceType === 'desktop') { this.reset(); return; }
+        if(!this.dragging) { this.reset(); return; }
+        
+        if(this.sourceType === 'desktop' || this.sourceType === 'drawer' || this.sourceType === 'dock') {
+            let nx = Math.round((e.clientX - 40) / 90) * 90;
+            let ny = Math.round((e.clientY - 40) / 100) * 100;
+            
+            if(e.clientY > window.innerHeight - 80) {
+                if(this.sourceType === 'desktop') desktopLayout.splice(this.idx, 1);
+            } else {
+                let tIdx = -1;
+                let aAll = document.querySelectorAll('.desktop-app');
+                for(let i=0; i<aAll.length; i++) {
+                    if(aAll[i] !== this.sourceEl) {
+                        let r = aAll[i].getBoundingClientRect();
+                        if(e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom) tIdx = aAll[i].dataset.idx;
+                    }
+                }
+                
+                if(tIdx > -1) {
+                    let targ = desktopLayout[tIdx];
+                    let drp = (this.sourceType === 'drawer' || this.sourceType === 'dock') ? [this.appId] : (desktopLayout[this.idx].type === 'app' ? [desktopLayout[this.idx].id] : desktopLayout[this.idx].apps);
+                    
+                    if(targ.type === 'app') {
+                        targ.type = 'folder';
+                        targ.apps = [targ.id].concat(drp);
+                        delete targ.id;
+                    } else {
+                        targ.apps.push.apply(targ.apps, drp);
+                    }
+                    if(this.sourceType === 'desktop') desktopLayout.splice(this.idx, 1);
+                } else {
+                    if(this.sourceType === 'drawer' || this.sourceType === 'dock') {
+                        desktopLayout.push({type: 'app', id: this.appId, x: nx, y: ny});
+                    } else {
+                        desktopLayout[this.idx].x = nx;
+                        desktopLayout[this.idx].y = ny;
+                    }
+                }
+            }
+            saveDesktop();
+        }
+        this.reset();
+    },
+    
+    reset: function() {
+        this.dragging = false;
+        if(this.sourceEl) this.sourceEl.style.opacity = '1';
+        this.sourceEl = null;
+        this.proxy.style.display = 'none';
+        this.badge.style.display = 'none';
+    }
+};
+DragSystem.init();
+
+window.toggleDesktopSize = function(l) {
+    if(l) document.getElementById('desktop-area').classList.add('desktop-large-mode');
+    else document.getElementById('desktop-area').classList.remove('desktop-large-mode');
+    document.getElementById('desktop-context-menu').style.display = 'none';
+};
+
+var unlockedWallpapers = JSON.parse(localStorage.getItem('cine_unlocked_wp')) || ['default'];
+window.wpMode = 'both';
+
+function setWallpaper(k, noti=false) {
+    let d = wallpaperRegistry[k];
+    if(!d) return;
+    
+    if(noti && d.locked && !unlockedWallpapers.includes(d.id)) {
+        unlockedWallpapers.push(d.id);
+        localStorage.setItem('cine_unlocked_wp', JSON.stringify(unlockedWallpapers));
+        alert("Wallpaper: [ " + d.name + " ] Unlocked.");
+    }
+    
+    if(window.wpMode === 'home' || window.wpMode === 'both') {
+        let bV = document.getElementById('bg-video');
+        let bI = document.getElementById('bg-img');
+        applyMediaToElements(d.url, bV, bI, true);
+        updateSysSetting('homeWallpaper', k);
+    }
+    
+    if(window.wpMode === 'lock' || window.wpMode === 'both') {
+        let lV = document.getElementById('lock-video');
+        let lI = document.getElementById('lock-img');
+        applyMediaToElements(d.url, lV, lI, false);
+        updateSysSetting('lockWallpaper', k);
+    }
+    
+    updateWallpaperLoop();
+    openWallpaperMenu();
+}
+
+function openWallpaperMenu() {
+    let m = document.getElementById('wallpaper-menu');
+    let gu = document.getElementById('wp-grid-unlocked');
+    let gl = document.getElementById('wp-grid-locked');
+    if(!m) return;
+    
+    if(m.showModal) m.showModal();
+    else m.style.display = 'flex';
+    m.classList.add('open');
+    
+    gu.innerHTML = '';
+    gl.innerHTML = '';
+    
+    for(let k in wallpaperRegistry) {
+        let d = wallpaperRegistry[k];
+        let ul = !d.locked || unlockedWallpapers.includes(d.id);
+        let c = document.createElement('div');
+        c.className = "wp-card " + (ul ? "" : "wp-locked");
+        
+        if(ul) {
+            let mHtml = "";
+            if(d.url.match(/\.(png|jpg|jpeg|gif)$/i)) mHtml = '<img src="' + d.url + '" alt="wp">';
+            else mHtml = '<video src="' + d.url + '" preload="auto" playsinline muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>';
+            
+            c.innerHTML = mHtml + '<div class="wp-info">' + d.name + '</div>';
+            c.setAttribute('data-key', k);
+            c.onclick = function() {
+                setWallpaper(this.getAttribute('data-key'));
+                let crds = document.querySelectorAll('.wp-card');
+                for(let j=0; j<crds.length; j++) crds[j].classList.remove('active-wp');
+                this.classList.add('active-wp');
+            };
+            gu.appendChild(c);
+        } else {
+            c.innerHTML = '<div class="wp-info"><i class="fas fa-lock"></i></div>';
+            gl.appendChild(c);
+        }
+    }
+    
+    let chk = document.getElementById('wp-loop-chk');
+    if(chk) {
+        chk.checked = sysConfig.wpLoop;
+        chk.onchange = e => updateSysSetting('wpLoop', e.target.checked);
+    }
+}
+
+var sInp = document.getElementById('start-search-input');
+if(sInp) {
+    sInp.addEventListener('keydown', function(e) {
+        if(e.key === 'Enter') {
+            let q = this.value.trim();
+            if(wallpaperRegistry[q]) {
+                setWallpaper(q, true);
+                this.value = "";
+                this.blur();
+            }
+        }
+    });
+}
+
+function toggleStartMenu() {
+    let sm = document.getElementById('start-menu');
+    if(sm.classList.contains('open')) {
+        sm.classList.remove('open');
+        setTimeout(function(){ sm.style.display='none'; }, 300);
+    } else {
+        sm.style.display = 'flex';
+        setTimeout(function(){ sm.classList.add('open'); }, 10);
+    }
+}
+
+document.addEventListener('click', function(e) {
+    let sm = document.getElementById('start-menu');
+    if(sm && !sm.contains(e.target) && !e.target.closest('.dock-item')) {
+        sm.classList.remove('open');
+        setTimeout(function(){ sm.style.display='none'; }, 300);
+    }
+});
+
+var cvsSnow = document.getElementById('snow-fx');
+if(cvsSnow) {
+    var ctxSnow = cvsSnow.getContext('2d');
+    var sW = window.innerWidth, sH = window.innerHeight;
+    cvsSnow.width = sW; cvsSnow.height = sH;
+    
+    var flakes = [];
+    for(var f=0; f<30; f++) flakes.push({x: Math.random()*sW, y: Math.random()*sH, r: Math.random()*2, s: Math.random()+0.5});
+    
+    function drawSnow() {
+        if(isDesktopActive) {
+            ctxSnow.clearRect(0, 0, sW, sH);
+            ctxSnow.fillStyle = "rgba(255,255,255,0.3)";
+            for(let i=0; i<flakes.length; i++) {
+                let fl = flakes[i];
+                ctxSnow.beginPath();
+                ctxSnow.arc(fl.x, fl.y, fl.r, 0, Math.PI * 2);
+                ctxSnow.fill();
+                fl.y += fl.s;
+                if(fl.y > sH) fl.y = 0;
+            }
+        }
+        requestAnimationFrame(drawSnow);
+    }
+    drawSnow();
+}
+
+var MODES = ['FAST', 'THINKING', 'LIVE'];
+var cMode = 0;
+var isCiriActive = false;
+var holdTimer = null;
+var hasBootCiri = false;
+var expectKey = false;
+var sStream = null;
+var cImgB64 = null;
+var cImgMime = null;
+
+function checkApiKey() {
+    let st = document.getElementById('status-text');
+    let si = document.getElementById('status-icon');
+    if(!st) return;
+    if(localStorage.getItem('ciri_key')) {
+        st.textContent = "Secure"; st.className = "secure";
+        si.innerHTML = '<svg class="secure-svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>';
+    } else {
+        st.textContent = "Unstable"; st.className = "unstable";
+        si.innerHTML = '<svg class="unstable-svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+    }
+}
+checkApiKey();
+
+window.autoGrow = function(el) { el.style.height = "5px"; el.style.height = (el.scrollHeight) + "px"; };
+
+window.addEventListener('keydown', function(e) {
+    if(e.altKey && (e.code === 'KeyS' || e.key.toLowerCase() === 's')) {
+        if(!holdTimer && !isCiriActive) {
+            holdTimer = setTimeout(function() {
+                document.body.classList.add('ciri-active');
+                isCiriActive = true;
+                let cInp = document.getElementById('chat-input');
+                if(!hasBootCiri) {
+                    let bs = document.getElementById('ciri-boot-screen');
+                    if(bs) bs.style.display = 'flex';
+                    setTimeout(function(){ document.getElementById('boot-ciri-text').classList.add('typing'); }, 300);
+                    setTimeout(function(){ document.getElementById('boot-sub-text').classList.add('show'); }, 1100);
+                    setTimeout(function() {
+                        document.getElementById('boot-loader').style.opacity = '1';
+                        setTimeout(function() {
+                            document.getElementById('boot-status-text').textContent = "Connection Established.";
+                            document.getElementById('boot-spinner').style.display = 'none';
+                            setTimeout(function() {
+                                bs.style.filter = 'blur(10px)'; bs.style.opacity = '0';
+                                setTimeout(function() {
+                                    bs.style.display = 'none';
+                                    hasBootCiri = true;
+                                    if(cInp) cInp.focus();
+                                }, 800);
+                            }, 1800);
+                        }, 1000);
+                    }, 2200);
+                } else {
+                    setTimeout(function(){ if(cInp) cInp.focus(); }, 100);
+                }
+            }, 2000);
+        }
+    } else if(e.code === 'Escape' && isCiriActive) {
+        closeCiri();
+    }
+});
+
+window.addEventListener('keyup', function(e) {
+    if(e.code === 'KeyS' || e.key.toLowerCase() === 's' || e.key === 'Alt') {
+        clearTimeout(holdTimer); holdTimer = null;
+    }
+});
+
+window.closeCiri = function() {
+    document.body.classList.remove('ciri-active');
+    isCiriActive = false;
+};
+
+var aMedia = null;
+var nHide;
+var cNoti = document.getElementById('cine-noti');
+
+function showNoti() {
+    if(!cNoti) return;
+    cNoti.classList.add('active'); cNoti.classList.remove('minimized');
+    let rb = document.getElementById('restore-btn');
+    if(rb) rb.classList.remove('visible');
+    resetNH();
+}
+
+function hideNoti() {
+    if(!cNoti) return;
+    cNoti.classList.remove('active'); cNoti.classList.remove('minimized');
+    let rb = document.getElementById('restore-btn');
+    if(rb) rb.classList.remove('visible');
+    clearTimeout(nHide);
+}
+
+function resetNH() {
+    clearTimeout(nHide);
+    if(cNoti && cNoti.classList.contains('active') && !cNoti.classList.contains('minimized')) {
+        nHide = setTimeout(function() {
+            cNoti.classList.add('minimized');
+            setTimeout(function(){ let rb = document.getElementById('restore-btn'); if(rb) rb.classList.add('visible'); }, 300);
+        }, 5000);
+    }
+}
+
+if(cNoti) {
+    cNoti.addEventListener('mouseenter', function(){ clearTimeout(nHide); });
+    cNoti.addEventListener('mouseleave', resetNH);
+    let mn = document.getElementById('minimize-noti-btn');
+    if(mn) mn.onclick = function() {
+        cNoti.classList.add('minimized');
+        setTimeout(function(){ let rb = document.getElementById('restore-btn'); if(rb) rb.classList.add('visible'); }, 300);
+    };
+    let rbtn = document.getElementById('restore-btn');
+    if(rbtn) rbtn.onclick = function() {
+        this.classList.remove('visible');
+        cNoti.classList.remove('minimized');
+        resetNH();
+    };
+    let clbtn = document.getElementById('close-noti-btn');
+    if(clbtn) clbtn.onclick = function() {
+        if(aMedia) aMedia.pause();
+        hideNoti();
+    };
+}
+
+setInterval(function() {
+    let fnd = null;
+    let md = document.querySelectorAll('audio, video');
+    for(let i=0; i<md.length; i++) {
+        let m = md[i];
+        if(!m.paused && !m.muted && m.volume > 0 && !['bg-video', 'lock-video', 'boot-video'].includes(m.id)) fnd = m;
+    }
+    
+    let ifr = document.querySelectorAll('iframe');
+    for(let j=0; j<ifr.length; j++) {
+        try {
+            let idc = ifr[j].contentDocument || ifr[j].contentWindow.document;
+            if(idc) {
+                let imd = idc.querySelectorAll('audio, video');
+                for(let k=0; k<imd.length; k++) {
+                    if(!imd[k].paused && !imd[k].muted && imd[k].volume > 0) fnd = imd[k];
+                }
+            }
+        } catch(e) {}
+    }
+    
+    isMediaPlaying = !!fnd;
+    if(fnd !== aMedia) {
+        if(fnd) { aMedia = fnd; setupM(); showNoti(); }
+        else { aMedia = null; hideNoti(); }
+    }
+    
+    if(aMedia) {
+        let ct = document.getElementById('current-time');
+        if(ct) ct.textContent = fmtT(aMedia.currentTime);
+        if(isFinite(aMedia.duration) && aMedia.duration > 0) {
+            let pf = document.getElementById('progress-fill');
+            if(pf) pf.style.width = ((aMedia.currentTime / aMedia.duration) * 100) + "%";
+            let tt = document.getElementById('total-time');
+            if(tt) tt.textContent = fmtT(aMedia.duration);
+        }
+    }
+}, 1000);
+
+function setupM() {
+    if(!aMedia) return;
+    let nt = document.getElementById('noti-title');
+    if(nt) nt.innerText = aMedia.title || "Web Media Playing";
+    
+    let pp = document.getElementById('play-pause');
+    if(pp) pp.onclick = function() { aMedia.paused ? aMedia.play() : aMedia.pause(); resetNH(); };
+    
+    aMedia.addEventListener('play', function() {
+        let iPl = document.getElementById('icon-play');
+        let iPa = document.getElementById('icon-pause');
+        if(iPl) iPl.classList.add('hidden-svg');
+        if(iPa) iPa.classList.add('visible-svg');
+        showNoti();
+    });
+    
+    aMedia.addEventListener('pause', function() {
+        let iPl = document.getElementById('icon-play');
+        let iPa = document.getElementById('icon-pause');
+        if(iPl) { iPl.classList.remove('hidden-svg'); iPl.classList.add('visible-svg'); }
+        if(iPa) { iPa.classList.remove('visible-svg'); iPa.classList.add('hidden-svg'); }
+    });
+    
+    let sb = document.getElementById('skip-back');
+    if(sb) sb.onclick = function() { if(isFinite(aMedia.currentTime)) aMedia.currentTime = Math.max(0, aMedia.currentTime - 15); resetNH(); };
+    
+    let sf = document.getElementById('skip-forward');
+    if(sf) sf.onclick = function() { if(isFinite(aMedia.duration) && aMedia.duration > 0) aMedia.currentTime = Math.min(aMedia.duration, aMedia.currentTime + 15); resetNH(); };
+    
+    let pha = document.getElementById('progress-hit-area');
+    if(pha) pha.onclick = function(e) {
+        if(isFinite(aMedia.duration) && aMedia.duration > 0) {
+            let r = this.getBoundingClientRect();
+            let p = (e.clientX - r.left) / r.width;
+            aMedia.currentTime = p * aMedia.duration;
+        }
+        resetNH();
+    };
+}
+
+function fmtT(s) {
+    if(isNaN(s) || !isFinite(s)) return "0:00";
+    let m = Math.floor(s / 60);
+    let se = Math.floor(s % 60);
+    return m + ":" + se.toString().padStart(2, '0');
+}
+
+function drawFV() {
+    requestAnimationFrame(drawFV);
+    let cv = document.getElementById('visualizer');
+    if(!cv) return;
+    let cx = cv.getContext('2d');
+    
+    cv.width = cv.parentElement.clientWidth;
+    cv.height = 14;
+    
+    let bL = 32;
+    cx.clearRect(0, 0, cv.width, cv.height);
+    let bW = (cv.width / bL) * 2;
+    let xP = 0;
+    
+    for(let i=0; i<bL; i++) {
+        let bH = aMedia && !aMedia.paused ? (Math.random() * cv.height) : 2;
+        cx.fillStyle = "#fff";
+        cx.beginPath();
+        cx.roundRect(xP, cv.height - bH, bW - 1.5, bH, 2);
+        cx.fill();
+        xP += bW;
+    }
+}
+drawFV();
+
+var fLT = performance.now();
+var fFr = 0;
+var fLC = 0;
+
+function chkFps() {
+    let nw = performance.now();
+    fFr++;
+    if(nw - fLT >= 1000) {
+        let cFps = fFr;
+        let fv = document.getElementById('fps-val');
+        if(fv) fv.innerText = cFps;
+
+        if(cFps <= 20) {
+            fLC++;
+            if(fLC >= 5 && !sysConfig.optBg) {
+                sysConfig.optBg = true;
+                localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
+                let bv = document.getElementById('bg-video');
+                let lv = document.getElementById('lock-video');
+                if(bv) bv.pause();
+                if(lv) lv.pause();
+                showNotification("System Optimized", "Low FPS detected. Backgrounds paused.");
+            }
+        } else {
+            fLC = 0;
+        }
+        
+        fFr = 0;
+        fLT = nw;
+    }
+    requestAnimationFrame(chkFps);
+}
+requestAnimationFrame(chkFps);
+</script>
+</body>
+</html>
