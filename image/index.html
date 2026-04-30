@@ -565,6 +565,28 @@
     display: none;
   }
   .spinner.visible { display: inline-block; }
+
+  /* Video preview styles */
+  .preview-item video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  
+  .preview-item .video-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: var(--accent2);
+    color: #fff;
+    font-size: 0.5rem;
+    padding: 0.15rem 0.35rem;
+    border-radius: 2px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
 </style>
 </head>
 <body>
@@ -579,7 +601,7 @@
     <div class="dot active"></div>
     <div class="dot"></div>
     <div class="dot"></div>
-    <span class="card-title">imgbb upload</span>
+    <span class="card-title">imgbb / streamable upload</span>
   </div>
 
   <div class="dropzone" id="dropzone" tabindex="0">
@@ -592,9 +614,9 @@
         <path d="M26 6v12M21 9l5-5 5 5" stroke="#e8ff47" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
-    <div class="drop-text">Drop images, zips, or folders here</div>
-    <div class="drop-sub">or <span id="browseLink">browse files</span> — images, .zip, or folders</div>
-    <input type="file" id="fileInput" accept=".zip,image/*" multiple webkitdirectory directory>
+    <div class="drop-text">Drop images, videos, zips, or folders here</div>
+    <div class="drop-sub">or <span id="browseLink">browse files</span> — images, videos, .zip, or folders</div>
+    <input type="file" id="fileInput" accept=".zip,image/*,video/*" multiple webkitdirectory directory>
   </div>
 
   <div class="preview-section" id="previewSection">
@@ -663,6 +685,7 @@
 
   // Image extensions to accept
   const IMAGE_EXTS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg', '.ico', '.avif'];
+  const VIDEO_EXTS = ['.mp4', '.webm', '.mov', '.mkv', '.avi', '.flv', '.wmv', '.m4v', '.ogv', '.3gp'];
 
   function isImageFile(file) {
     // Check MIME type
@@ -672,47 +695,63 @@
     return IMAGE_EXTS.some(ext => name.endsWith(ext));
   }
 
+  function isVideoFile(file) {
+    // Check MIME type
+    if (file.type && file.type.startsWith('video/')) return true;
+    // Fallback: check extension
+    const name = (file.name || '').toLowerCase();
+    return VIDEO_EXTS.some(ext => name.endsWith(ext));
+  }
+
   function isZipFile(file) {
     return file.type === 'application/zip' || file.type === 'application/x-zip-compressed' ||
            (file.name || '').toLowerCase().endsWith('.zip');
   }
 
-  // Extract images from a zip file
-  async function extractImagesFromZip(file) {
+  // Extract media (images + videos) from a zip file
+  async function extractMediaFromZip(file) {
     const zip = await JSZip.loadAsync(file);
-    const imageFiles = [];
+    const mediaFiles = [];
     const promises = [];
 
     zip.forEach((relativePath, zipEntry) => {
       if (zipEntry.dir) return;
-      if (!isImageFile({ name: relativePath })) return;
+      const lowerName = relativePath.toLowerCase();
+      const isImage = isImageFile({ name: relativePath });
+      const isVideo = isVideoFile({ name: relativePath });
+      if (!isImage && !isVideo) return;
 
       promises.push(
         zipEntry.async('blob').then(blob => {
           const ext = relativePath.split('.').pop() || 'png';
-          const mime = `image/${ext === 'svg' ? 'svg+xml' : ext}`;
-          const imageFile = new File([blob], zipEntry.name, { type: mime });
-          imageFiles.push(imageFile);
+          let mime;
+          if (isVideo) {
+            mime = `video/${ext === 'mov' ? 'quicktime' : ext}`;
+          } else {
+            mime = `image/${ext === 'svg' ? 'svg+xml' : ext}`;
+          }
+          const mediaFile = new File([blob], zipEntry.name, { type: mime });
+          mediaFiles.push(mediaFile);
         })
       );
     });
 
     await Promise.all(promises);
-    return imageFiles;
+    return mediaFiles;
   }
 
-  // Process incoming files (flat images, zips, or folders)
+  // Process incoming files (flat images, videos, zips, or folders)
   async function processFiles(files) {
-    const allImages = [];
+    const allFiles = [];
     const skipped = [];
 
     for (const file of files) {
-      if (isImageFile(file)) {
-        allImages.push(file);
+      if (isImageFile(file) || isVideoFile(file)) {
+        allFiles.push(file);
       } else if (isZipFile(file)) {
         try {
-          const zipImages = await extractImagesFromZip(file);
-          allImages.push(...zipImages);
+          const zipFiles = await extractMediaFromZip(file);
+          allFiles.push(...zipFiles);
         } catch (err) {
           skipped.push(`${file.name}: invalid zip`);
         }
@@ -721,12 +760,12 @@
       }
     }
 
-    if (allImages.length === 0) {
-      showError('No image files found. Please drop images, a .zip containing images, or a folder of images.');
+    if (allFiles.length === 0) {
+      showError('No image or video files found. Please drop images, videos, a .zip containing media, or a folder of media.');
       return;
     }
 
-    addFiles(allImages);
+    addFiles(allFiles);
   }
 
   // Drag & drop
@@ -788,12 +827,12 @@
   });
 
   function addFiles(files) {
-    const imageFiles = files.filter(f => isImageFile(f));
-    if (imageFiles.length === 0) {
-      showError('Please select image files only.');
+    const mediaFiles = files.filter(f => isImageFile(f) || isVideoFile(f));
+    if (mediaFiles.length === 0) {
+      showError('Please select image or video files only.');
       return;
     }
-    currentFiles = [...currentFiles, ...imageFiles];
+    currentFiles = [...currentFiles, ...mediaFiles];
     renderPreviews();
     previewSection.classList.add('visible');
     resultSection.classList.remove('visible');
@@ -810,22 +849,47 @@
     let totalSize = 0;
     currentFiles.forEach((file, index) => {
       totalSize += file.size;
-      const reader = new FileReader();
-      reader.onload = e => {
-        const item = document.createElement('div');
-        item.className = 'preview-item';
+      const isVideo = isVideoFile(file);
+      
+      const item = document.createElement('div');
+      item.className = 'preview-item';
+      
+      if (isVideo) {
+        // For videos, create a video element with a poster frame
+        const videoUrl = URL.createObjectURL(file);
         item.innerHTML = `
-          <img src="${e.target.result}" alt="${file.name}">
+          <video src="${videoUrl}" muted playsinline preload="metadata"></video>
+          <span class="video-badge">VIDEO</span>
           <button class="remove-btn" data-index="${index}" title="Remove">×</button>
           <div class="file-name">${file.name}</div>
         `;
-        item.querySelector('.remove-btn').addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          removeFile(index);
+        // Auto-seek to get a thumbnail frame
+        const video = item.querySelector('video');
+        video.addEventListener('loadedmetadata', () => {
+          video.currentTime = 0.5;
         });
         previewGrid.appendChild(item);
-      };
-      reader.readAsDataURL(file);
+        item.querySelector('.remove-btn').addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          URL.revokeObjectURL(videoUrl);
+          removeFile(index);
+        });
+      } else {
+        const reader = new FileReader();
+        reader.onload = e => {
+          item.innerHTML = `
+            <img src="${e.target.result}" alt="${file.name}">
+            <button class="remove-btn" data-index="${index}" title="Remove">×</button>
+            <div class="file-name">${file.name}</div>
+          `;
+          item.querySelector('.remove-btn').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            removeFile(index);
+          });
+          previewGrid.appendChild(item);
+        };
+        reader.readAsDataURL(file);
+      }
     });
     metaCount.textContent = currentFiles.length;
     metaSize.textContent = formatSize(totalSize);
@@ -857,26 +921,49 @@
     for (let i = 0; i < currentFiles.length; i++) {
       const file = currentFiles[i];
       try {
-        const base64 = await toBase64(file);
-        const formData = new FormData();
-        formData.append('image', base64.split(',')[1]);
-        formData.append('name', file.name.replace(/\\.[^.]+$/, ''));
+        let url, thumbUrl;
+        
+        if (isVideoFile(file)) {
+          // Upload video to file.io (temporary hosting, 14 days)
+          const videoForm = new FormData();
+          videoForm.append('file', file);
+          
+          const res = await fetch('https://file.io', {
+            method: 'POST',
+            body: videoForm
+          });
+          
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          if (!data.link) throw new Error('Video upload failed');
+          
+          url = data.link;
+          thumbUrl = url;
+        } else {
+          // Upload image to imgbb
+          const base64 = await toBase64(file);
+          const formData = new FormData();
+          formData.append('image', base64.split(',')[1]);
+          formData.append('name', file.name.replace(/\\.[^.]+$/, ''));
 
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}`, {
-          method: 'POST',
-          body: formData
-        });
+          const res = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}`, {
+            method: 'POST',
+            body: formData
+          });
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        const data = await res.json();
-        if (!data.success) throw new Error(data.error?.message || 'Upload failed');
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error?.message || 'Upload failed');
 
-        const url = data.data.url;
-        results.push({ url, thumb: data.data.thumb?.url || data.data.url, name: file.name });
+          url = data.data.url;
+          thumbUrl = data.data.thumb?.url || data.data.url;
+        }
+
+        results.push({ url, thumb: thumbUrl, name: file.name });
 
         // Save to history
-        uploadHistory.unshift({ url, thumb: data.data.thumb?.url || data.data.url, name: file.name });
+        uploadHistory.unshift({ url, thumb: thumbUrl, name: file.name });
         if (uploadHistory.length > 20) uploadHistory = uploadHistory.slice(0, 20);
 
       } catch (err) {
