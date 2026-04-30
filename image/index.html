@@ -106,7 +106,6 @@
     margin-left: auto;
   }
 
-  /* Drop zone */
   .dropzone {
     padding: 3rem 2rem;
     display: flex;
@@ -181,7 +180,6 @@
 
   #fileInput, #folderInput { display: none; }
 
-  /* Preview */
   .preview-section {
     display: none;
     padding: 1.5rem;
@@ -286,7 +284,6 @@
     color: var(--text);
   }
 
-  /* Upload button */
   .upload-btn {
     background: var(--accent);
     color: #000;
@@ -315,7 +312,6 @@
     transform: none;
   }
 
-  /* Progress */
   .progress-wrap {
     display: none;
     flex-direction: column;
@@ -345,7 +341,6 @@
     text-align: right;
   }
 
-  /* Result */
   .result-section {
     display: none;
     padding: 1.5rem;
@@ -473,7 +468,6 @@
 
   .action-link:hover { border-color: var(--muted); color: var(--text); }
 
-  /* Error */
   .error-msg {
     display: none;
     font-size: 0.7rem;
@@ -488,7 +482,6 @@
 
   .error-msg.visible { display: block; }
 
-  /* History */
   .history-section {
     display: none;
     margin-top: 2rem;
@@ -558,7 +551,6 @@
 
   .history-copy:hover { color: var(--accent); }
 
-  /* Spinner */
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner {
     width: 14px;
@@ -571,7 +563,6 @@
   }
   .spinner.visible { display: inline-block; }
 
-  /* Video preview styles */
   .preview-item video {
     width: 100%;
     height: 100%;
@@ -592,6 +583,18 @@
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
+
+  /* Size warning */
+  .size-warning {
+    font-size: 0.65rem;
+    color: var(--accent2);
+    background: rgba(255,107,53,0.05);
+    border: 1px solid rgba(255,107,53,0.2);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius);
+    display: none;
+  }
+  .size-warning.visible { display: block; }
 </style>
 </head>
 <body>
@@ -626,9 +629,7 @@
       <span class="link" id="folderLink">select folder</span>
       <br>images, videos, .zip, or folders
     </div>
-    <!-- File input for individual files (no directory attribute) -->
     <input type="file" id="fileInput" accept=".zip,image/*,video/*" multiple>
-    <!-- Separate input for folder selection only -->
     <input type="file" id="folderInput" accept="image/*,video/*" webkitdirectory directory multiple>
   </div>
 
@@ -638,6 +639,7 @@
       <span>Files: <strong id="metaCount">—</strong></span>
       <span>Total size: <strong id="metaSize">—</strong></span>
     </div>
+    <div class="size-warning" id="sizeWarning"></div>
     <div class="progress-wrap" id="progressWrap">
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
       <div class="progress-label" id="progressLabel">0%</div>
@@ -675,6 +677,7 @@
   const previewGrid = document.getElementById('previewGrid');
   const metaCount = document.getElementById('metaCount');
   const metaSize = document.getElementById('metaSize');
+  const sizeWarning = document.getElementById('sizeWarning');
   const uploadBtn = document.getElementById('uploadBtn');
   const uploadBtnText = document.getElementById('uploadBtnText');
   const spinner = document.getElementById('spinner');
@@ -690,6 +693,11 @@
   const historyList = document.getElementById('historyList');
 
   const API_KEY = '9c96da8cf964e9b1331c5275d0f455c9';
+  
+  // Limits
+  const MAX_FILE_SIZE = 32 * 1024 * 1024; // 32MB per file for ImgBB
+  const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB per file for file.io
+  const CONCURRENT_UPLOADS = 3; // Upload 3 files at a time
 
   let currentFiles = [];
   let uploadHistory = JSON.parse(localStorage.getItem('imgdrop_history') || '[]');
@@ -773,7 +781,6 @@
     addFiles(allFiles);
   }
 
-  // Drag & drop
   dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
   dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
   dropzone.addEventListener('drop', async e => {
@@ -821,7 +828,6 @@
     }
   }
 
-  // Click handlers for the two separate links
   browseLink.addEventListener('click', (e) => {
     e.stopPropagation();
     fileInput.click();
@@ -832,7 +838,6 @@
     folderInput.click();
   });
 
-  // Click on dropzone (but not the links) triggers file browser
   dropzone.addEventListener('click', e => {
     if (e.target !== browseLink && e.target !== folderLink) {
       fileInput.click();
@@ -872,9 +877,16 @@
   function renderPreviews() {
     previewGrid.innerHTML = '';
     let totalSize = 0;
+    let oversizedFiles = [];
+    
     currentFiles.forEach((file, index) => {
       totalSize += file.size;
       const isVideo = isVideoFile(file);
+      const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_FILE_SIZE;
+      
+      if (file.size > maxSize) {
+        oversizedFiles.push(`${file.name} (${formatSize(file.size)})`);
+      }
       
       const item = document.createElement('div');
       item.className = 'preview-item';
@@ -914,8 +926,16 @@
         reader.readAsDataURL(file);
       }
     });
+    
     metaCount.textContent = currentFiles.length;
     metaSize.textContent = formatSize(totalSize);
+    
+    if (oversizedFiles.length > 0) {
+      sizeWarning.textContent = `⚠️ ${oversizedFiles.length} file(s) exceed size limits and may fail: ${oversizedFiles.join(', ')}`;
+      sizeWarning.classList.add('visible');
+    } else {
+      sizeWarning.classList.remove('visible');
+    }
   }
 
   function removeFile(index) {
@@ -930,69 +950,133 @@
     }
   }
 
+  // Upload a single file with timeout and retry
+  async function uploadFile(file, attempt = 1) {
+    const isVideo = isVideoFile(file);
+    const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_FILE_SIZE;
+    
+    if (file.size > maxSize) {
+      throw new Error(`File too large (max ${formatSize(maxSize)})`);
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
+    try {
+      let url, thumbUrl;
+      
+      if (isVideo) {
+        const videoForm = new FormData();
+        videoForm.append('file', file);
+        
+        const res = await fetch('https://file.io', {
+          method: 'POST',
+          body: videoForm,
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!res.ok) {
+          if (res.status === 413) throw new Error('File too large for server');
+          throw new Error(`HTTP ${res.status}`);
+        }
+        
+        const data = await res.json();
+        if (!data.link) throw new Error('Video upload failed - no link returned');
+        
+        url = data.link;
+        thumbUrl = url;
+      } else {
+        const base64 = await toBase64(file);
+        const formData = new FormData();
+        formData.append('image', base64.split(',')[1]);
+        formData.append('name', file.name.replace(/\.[^.]+$/, ''));
+
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}`, {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          if (res.status === 413) throw new Error('File too large for ImgBB (max 32MB)');
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error?.message || 'Upload failed');
+
+        url = data.data.url;
+        thumbUrl = data.data.thumb?.url || data.data.url;
+      }
+
+      return { url, thumb: thumbUrl, name: file.name };
+      
+    } catch (err) {
+      clearTimeout(timeoutId);
+      
+      // Retry once on network errors
+      if (attempt < 2 && (err.name === 'AbortError' || err.message.includes('fetch') || err.message.includes('network'))) {
+        await delay(2000);
+        return uploadFile(file, attempt + 1);
+      }
+      
+      if (err.name === 'AbortError') {
+        throw new Error('Upload timed out (60s)');
+      }
+      throw err;
+    }
+  }
+
+  // Process uploads with concurrency limit
+  async function processUploads(files) {
+    const results = [];
+    const errors = [];
+    let completed = 0;
+
+    // Split into chunks of CONCURRENT_UPLOADS
+    for (let i = 0; i < files.length; i += CONCURRENT_UPLOADS) {
+      const chunk = files.slice(i, i + CONCURRENT_UPLOADS);
+      
+      const chunkPromises = chunk.map(async (file) => {
+        try {
+          const result = await uploadFile(file);
+          results.push(result);
+          
+          // Save to history immediately
+          uploadHistory.unshift(result);
+          if (uploadHistory.length > 20) uploadHistory = uploadHistory.slice(0, 20);
+          
+        } catch (err) {
+          errors.push(`${file.name}: ${err.message}`);
+        }
+        
+        completed++;
+        const prog = (completed / files.length) * 100;
+        setProgress(prog);
+        uploadBtnText.textContent = `Uploading… ${completed}/${files.length}`;
+      });
+      
+      await Promise.all(chunkPromises);
+    }
+
+    return { results, errors };
+  }
+
   uploadBtn.addEventListener('click', async () => {
     if (currentFiles.length === 0) return;
+    
     uploadBtn.disabled = true;
     spinner.classList.add('visible');
-    uploadBtnText.textContent = 'Uploading…';
+    uploadBtnText.textContent = `Uploading… 0/${currentFiles.length}`;
     progressWrap.classList.add('visible');
     errorMsg.classList.remove('visible');
     resultSection.classList.remove('visible');
 
-    const results = [];
-    const errors = [];
-
-    for (let i = 0; i < currentFiles.length; i++) {
-      const file = currentFiles[i];
-      try {
-        let url, thumbUrl;
-        
-        if (isVideoFile(file)) {
-          const videoForm = new FormData();
-          videoForm.append('file', file);
-          
-          const res = await fetch('https://file.io', {
-            method: 'POST',
-            body: videoForm
-          });
-          
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json();
-          if (!data.link) throw new Error('Video upload failed');
-          
-          url = data.link;
-          thumbUrl = url;
-        } else {
-          const base64 = await toBase64(file);
-          const formData = new FormData();
-          formData.append('image', base64.split(',')[1]);
-          formData.append('name', file.name.replace(/\\.[^.]+$/, ''));
-
-          const res = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}`, {
-            method: 'POST',
-            body: formData
-          });
-
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-          const data = await res.json();
-          if (!data.success) throw new Error(data.error?.message || 'Upload failed');
-
-          url = data.data.url;
-          thumbUrl = data.data.thumb?.url || data.data.url;
-        }
-
-        results.push({ url, thumb: thumbUrl, name: file.name });
-        uploadHistory.unshift({ url, thumb: thumbUrl, name: file.name });
-        if (uploadHistory.length > 20) uploadHistory = uploadHistory.slice(0, 20);
-
-      } catch (err) {
-        errors.push(`${file.name}: ${err.message}`);
-      }
-
-      const prog = ((i + 1) / currentFiles.length) * 100;
-      setProgress(prog);
-    }
+    const { results, errors } = await processUploads(currentFiles);
 
     localStorage.setItem('imgdrop_history', JSON.stringify(uploadHistory));
     renderHistory();
@@ -1038,7 +1122,7 @@
   }
 
   copyAllBtn.addEventListener('click', async () => {
-    const urls = Array.from(urlList.querySelectorAll('.url-input')).map(i => i.value).join('\\n');
+    const urls = Array.from(urlList.querySelectorAll('.url-input')).map(i => i.value).join('\n');
     if (!urls) return;
     try {
       await navigator.clipboard.writeText(urls);
@@ -1086,11 +1170,33 @@
     });
   }
 
-  function showError(msg) { errorMsg.textContent = msg; errorMsg.classList.add('visible'); progressWrap.classList.remove('visible'); }
-  function setProgress(p) { progressFill.style.width = p + '%'; progressLabel.textContent = Math.round(p) + '%'; }
-  function formatSize(b) { return b > 1048576 ? (b/1048576).toFixed(1)+' MB' : (b/1024).toFixed(0)+' KB'; }
+  function showError(msg) { 
+    errorMsg.textContent = msg; 
+    errorMsg.classList.add('visible'); 
+    progressWrap.classList.remove('visible'); 
+  }
+  
+  function setProgress(p) { 
+    progressFill.style.width = p + '%'; 
+    progressLabel.textContent = Math.round(p) + '%'; 
+  }
+  
+  function formatSize(b) { 
+    if (b > 1073741824) return (b/1073741824).toFixed(1)+' GB';
+    if (b > 1048576) return (b/1048576).toFixed(1)+' MB'; 
+    return (b/1024).toFixed(0)+' KB'; 
+  }
+  
   function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-  function toBase64(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); }); }
+  
+  function toBase64(file) { 
+    return new Promise((res, rej) => { 
+      const r = new FileReader(); 
+      r.onload = () => res(r.result); 
+      r.onerror = rej; 
+      r.readAsDataURL(file); 
+    }); 
+  }
 </script>
 </body>
 </html>
