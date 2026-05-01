@@ -23,7 +23,7 @@
     <div id="ld">Booting...</div>
     <iframe id="ifr" allowfullscreen allow="autoplay; fullscreen; gamepad; microphone; camera"></iframe>
     <script>
-        const srvs = ["cine-browser-1.b-cdn.net", "cine-browser-2.b-cdn.net", "cine-browser-3.b-cdn.net"];
+        const srvs = ["cine-browser-1.b-cdn.net", "cine-browser-2.b-cdn.net"];
         const ping = async (d) => { try { await fetch(`https://${d}`, { mode: 'no-cors' }); return true; } catch { return false; } };
         async function go() {
             let i = Math.floor(Math.random()*srvs.length), s = srvs[i];
