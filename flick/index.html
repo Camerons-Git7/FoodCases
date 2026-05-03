@@ -27,6 +27,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 .pulse{animation:pulse 2s ease-in-out infinite}
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -447,7 +448,10 @@ function resolveCollisions(px,py,pz, rad, h) {
             if (oY < CFG.stepHeight && oY < oX && oY < oZ && by1 > oy - 0.01 && by1 < oy + CFG.stepHeight + 0.05) {
                 oy = by1; continue;
             }
-            if (oX <= oZ && oX <= oY) {
+            // If player is above the box and moving down, land on top instead of pushing through
+            if (py >= by1 - 0.05 && oy < by1 && oY < oX && oY < oZ) {
+                oy = by1;
+            } else if (oX <= oZ && oX <= oY) {
                 ox += (ox < b.cx) ? -oX : oX;
             } else if (oZ <= oX && oZ <= oY) {
                 oz += (oz < b.cz) ? -oZ : oZ;
@@ -580,11 +584,6 @@ function buildParticleGeo(p) {
 
 // --- Player Update ---
 function updatePlayer(dt) {
-    // Weapon switch
-    if (keys['Digit1']) { player.weaponIdx=0; player.reloading=false; player.reloadTimer=0; }
-    if (keys['Digit2']) { player.weaponIdx=1; player.reloading=false; player.reloadTimer=0; }
-    if (keys['Digit3']) { player.weaponIdx=2; player.reloading=false; player.reloadTimer=0; }
-
     const w = weapons[player.weaponIdx];
 
     // Reload
@@ -648,8 +647,9 @@ function updatePlayer(dt) {
     player.vx += (desVX - player.vx) * Math.min(1, accelRate * dt);
     player.vz += (desVZ - player.vz) * Math.min(1, accelRate * dt);
 
-    // Gravity
+    // Gravity - cap terminal velocity for normal falling feel
     player.vy -= CFG.gravity * dt;
+    if (player.vy < -20) player.vy = -20;
 
     // Jump
     if (keys['Space'] && player.onGround) {
@@ -667,9 +667,32 @@ function updatePlayer(dt) {
     player.y = resolved[1];
     player.z = resolved[2];
 
-    // Ground check
-    player.onGround = player.y < 0.02;
-    if (player.y < 0) { player.y = 0; player.vy = 0; }
+    // Ground check - check if standing on floor or any collider top surface
+    player.onGround = false;
+    if (player.y < 0.02) {
+        player.onGround = true;
+        if (player.y < 0) { player.y = 0; player.vy = 0; }
+    } else {
+        // Check if standing on top of any solid object
+        const footY = player.y - 0.01;
+        const checkMin = [player.x - CFG.playerRadius, footY, player.z - CFG.playerRadius];
+        const checkMax = [player.x + CFG.playerRadius, player.y + 0.05, player.z + CFG.playerRadius];
+        for (const ci of colliders) {
+            const b = mapBoxes[ci];
+            const [bx0,by0,bz0,bx1,by1,bz1] = getAABB(b);
+            if (checkMax[0] > bx0 && checkMin[0] < bx1 && 
+                checkMax[1] > by0 && checkMin[1] < by1 && 
+                checkMax[2] > bz0 && checkMin[2] < bz1) {
+                // Player's feet are inside this box - check if they're near the top
+                if (Math.abs(player.y - by1) < 0.05) {
+                    player.onGround = true;
+                    player.y = by1; // Snap to surface
+                    player.vy = 0;
+                    break;
+                }
+            }
+        }
+    }
 
     // Clamp to map
     player.x = Math.max(-CFG.mapHalf+0.5, Math.min(CFG.mapHalf-0.5, player.x));
