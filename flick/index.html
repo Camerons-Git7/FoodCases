@@ -22,10 +22,11 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 .controls span{color:#6a8a80}
 .go-title{font-size:clamp(36px,7vw,72px);font-weight:900;color:#cc2a1a;text-shadow:0 0 40px rgba(200,30,10,0.4);margin-bottom:16px}
 .go-score{font-size:24px;color:#e8e0d4;margin-bottom:8px}
-.go-wave{font-size:16px;color:#7a8a86;margin-bottom:40px}
+
 @keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
 .pulse{animation:pulse 2s ease-in-out infinite}
 </style>
+<base target="_blank">
 </head>
 <body>
 <canvas id="gl"></canvas>
@@ -43,7 +44,6 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 <div id="gameover" class="overlay">
 <div class="go-title">ELIMINATED</div>
 <div class="go-score" id="finalScore">Score: 0</div>
-<div class="go-wave" id="finalWave">Wave 0</div>
 <button class="btn" id="restartBtn">RETRY</button>
 </div>
 <div id="pause" class="overlay">
@@ -338,12 +338,7 @@ addBox(8,3,8,1,6,1,WC);
 addBox(8,3,-8,1,6,1,WC);
 addBox(-8,3,8,1,6,1,WC);
 
-// Spawn points for enemies
-const spawnPoints = [
-    [-17,-17],[17,-17],[-17,17],[17,17],
-    [0,-17],[0,17],[-17,0],[17,0],
-    [-12,-12],[12,-12],[-12,12],[12,12]
-];
+
 
 function pushBox(arr, cx,cy,cz, sx,sy,sz, r,g,b) {
     const hx=sx/2, hy=sy/2, hz=sz/2;
@@ -373,7 +368,7 @@ const mapVerts = [];
 for (const b of mapBoxes) pushBox(mapVerts, b.cx,b.cy,b.cz, b.sx,b.sy,b.sz, b.col[0],b.col[1],b.col[2]);
 const mapVertCount = mapVerts.length / FPV;
 
-// Dynamic vertex buffer (enemies, effects)
+// Dynamic vertex buffer (effects)
 const dynVerts = [];
 let dynCount = 0;
 
@@ -387,8 +382,7 @@ const player = {
     maxHealth: 100,
     weaponIdx: 0,
     score: 0,
-    kills: 0,
-    fireTimer: 0,
+        fireTimer: 0,
     reloading: false,
     reloadTimer: 0,
     recoilPitch: 0,
@@ -484,21 +478,6 @@ function rayAABB(ox,oy,oz, dx,dy,dz, bx0,by0,bz0,bx1,by1,bz1) {
     return tmin>=0.001 ? tmin : (tmax>=0.001 ? tmax : -1);
 }
 
-function hasLOS(x1,y1,z1,x2,y2,z2) {
-    const dx=x2-x1,dy=y2-y1,dz=z2-z1;
-    const len=Math.sqrt(dx*dx+dy*dy+dz*dz);
-    if(len<0.01) return true;
-    const nx=dx/len,ny=dy/len,nz=dz/len;
-    for (const ci of colliders) {
-        const b=mapBoxes[ci];
-        if(b.sy<1) continue;
-        const [bx0,by0,bz0,bx1,by1,bz1]=getAABB(b);
-        const t=rayAABB(x1,y1,z1,nx,ny,nz,bx0,by0,bz0,bx1,by1,bz1);
-        if(t>0.01 && t<len-0.01) return false;
-    }
-    return true;
-}
-
 // --- Weapons ---
 function startReload() {
     const w = weapons[player.weaponIdx];
@@ -543,40 +522,15 @@ function shoot() {
         const dl = Math.sqrt(dx*dx+dy*dy+dz*dz);
         const ndx=dx/dl, ndy=dy/dl, ndz=dz/dl;
 
-        // Check enemy hits
-        let closestDist = 100, hitEnemy = null, hitNormal = null;
-        for (const e of enemies) {
-            if (e.dead) continue;
-            const ex=e.x-e.size[0]/2, ey=e.y, ez=e.z-e.size[2]/2;
-            const ex2=e.x+e.size[0]/2, ey2=e.y+e.size[1], ez2=e.z+e.size[2]/2;
-            const t = rayAABB(player.x,eyeY,player.z,ndx,ndy,ndz,ex,ey,ez,ex2,ey2,ez2);
-            if (t>0 && t<closestDist) { closestDist=t; hitEnemy=e; }
-        }
-
         // Check wall hits
-        let wallDist = 100, wallNorm = [0,0,0];
+        let wallDist = 100;
         for (const ci of colliders) {
             const b=mapBoxes[ci];
             const [bx0,by0,bz0,bx1,by1,bz1]=getAABB(b);
             const t=rayAABB(player.x,eyeY,player.z,ndx,ndy,ndz,bx0,by0,bz0,bx1,by1,bz1);
             if(t>0 && t<wallDist) wallDist=t;
         }
-
-        if (hitEnemy && closestDist < wallDist) {
-            hitEnemy.health -= w.damage;
-            player.hitMarkerTimer = 0.15;
-            playSound('hit');
-            spawnImpactParticles(player.x+ndx*closestDist, eyeY+ndy*closestDist, player.z+ndz*closestDist, [1,0.4,0.2], 3);
-            if (hitEnemy.health <= 0 && !hitEnemy.dead) {
-                hitEnemy.dead = true;
-                hitEnemy.deathTimer = 0.6;
-                player.score += hitEnemy.points;
-                player.kills++;
-                playSound('kill');
-                spawnImpactParticles(hitEnemy.x, hitEnemy.y+hitEnemy.size[1]/2, hitEnemy.z, hitEnemy.color, 10);
-                maybeDropPickup(hitEnemy.x, hitEnemy.y, hitEnemy.z);
-            }
-        } else if (wallDist < 100) {
+        if (wallDist < 100) {
             spawnImpactParticles(player.x+ndx*wallDist, eyeY+ndy*wallDist, player.z+ndz*wallDist, [0.6,0.55,0.45], 4);
         }
     }
@@ -584,135 +538,9 @@ function shoot() {
     if (w.ammo <= 0) startReload();
 }
 
-// --- Enemies ---
-const enemyTypes = [
-    { name:'Grunt', health:60, speed:3.5, damage:8, attackRate:1.0, size:[0.7,1.6,0.7], color:[1.1,0.25,0.15], headColor:[1.2,0.35,0.2], points:100 },
-    { name:'Runner', health:35, speed:6.5, damage:6, attackRate:0.6, size:[0.55,1.3,0.55], color:[1.1,0.55,0.12], headColor:[1.2,0.65,0.2], points:150 },
-    { name:'Tank', health:180, speed:2.2, damage:18, attackRate:1.5, size:[0.9,1.9,0.9], color:[0.8,0.12,0.08], headColor:[0.9,0.18,0.1], points:250 }
-];
 
-let enemies = [];
+
 const particles = [];
-const pickups = [];
-
-function createEnemy(x, z, typeIdx) {
-    const t = enemyTypes[typeIdx];
-    return {
-        x, y: 0, z,
-        vx: 0, vz: 0,
-        type: typeIdx,
-        health: t.health,
-        maxHealth: t.health,
-        speed: t.speed,
-        damage: t.damage,
-        attackRate: t.attackRate,
-        attackTimer: t.attackRate * (0.5 + Math.random()*0.5),
-        size: [...t.size],
-        color: [...t.color],
-        headColor: [...t.headColor],
-        points: t.points,
-        dead: false,
-        deathTimer: 0,
-        canSee: false,
-        eyeH: t.size[1] * 0.85
-    };
-}
-
-function updateEnemies(dt) {
-    for (const e of enemies) {
-        if (e.dead) {
-            e.deathTimer -= dt;
-            continue;
-        }
-        const dx = player.x - e.x;
-        const dz = player.z - e.z;
-        const dist = Math.sqrt(dx*dx + dz*dz);
-
-        // Line of sight check
-        const eyeY = e.y + e.eyeH;
-        const playerEyeY = player.y + CFG.eyeHeight;
-        e.canSee = hasLOS(e.x, eyeY, e.z, player.x, playerEyeY, player.z);
-
-        // Movement
-        if (dist > 2.0) {
-            const nx = dx / dist, nz = dz / dist;
-            let moveX = nx * e.speed * dt;
-            let moveZ = nz * e.speed * dt;
-
-            // Simple obstacle avoidance
-            const nextX = e.x + moveX;
-            const nextZ = e.z + moveZ;
-            const eRad = Math.max(e.size[0], e.size[2]) / 2 + 0.1;
-
-            let blocked = false;
-            for (const ci of colliders) {
-                const b = mapBoxes[ci];
-                const [bx0,by0,bz0,bx1,,bz1] = getAABB(b);
-                if (nextX+eRad > bx0 && nextX-eRad < bx1 && nextZ+eRad > bz0 && nextZ-eRad < bz1 && by1 > e.y) {
-                    blocked = true;
-                    // Try sliding along the wall
-                    let blockedX = false, blockedZ = false;
-                    const testX = e.x + moveX;
-                    let bx2 = false;
-                    for (const ci2 of colliders) {
-                        const b2 = mapBoxes[ci2];
-                        const [bx0b,,bz0b,bx1b,,bz1b] = getAABB(b2);
-                        if (testX+eRad>bx0b && testX-eRad<bx1b && e.z+eRad>bz0b && e.z-eRad<bz1b && b2.cy+b2.sy/2>e.y) { bx2=true; break; }
-                    }
-                    const testZ = e.z + moveZ;
-                    let bz2 = false;
-                    for (const ci2 of colliders) {
-                        const b2 = mapBoxes[ci2];
-                        const [bx0b,,bz0b,bx1b,,bz1b] = getAABB(b2);
-                        if (e.x+eRad>bx0b && e.x-eRad<bx1b && testZ+eRad>bz0b && testZ-eRad<bz1b && b2.cy+b2.sy/2>e.y) { bz2=true; break; }
-                    }
-                    if (!bx2) { e.x += moveX; }
-                    else if (!bz2) { e.z += moveZ; }
-                    else {
-                        // Try perpendicular direction
-                        const perpX = -nz * e.speed * dt;
-                        const perpZ = nx * e.speed * dt;
-                        let canPerp = true;
-                        for (const ci2 of colliders) {
-                            const b2 = mapBoxes[ci2];
-                            const [bx0b,,bz0b,bx1b,,bz1b] = getAABB(b2);
-                            if (e.x+perpX+eRad>bx0b && e.x+perpX-eRad<bx1b && e.z+perpZ+eRad>bz0b && e.z+perpZ-eRad<bz1b && b2.cy+b2.sy/2>e.y) { canPerp=false; break; }
-                        }
-                        if (canPerp) { e.x+=perpX; e.z+=perpZ; }
-                    }
-                    break;
-                }
-            }
-            if (!blocked) { e.x += moveX; e.z += moveZ; }
-        }
-
-        // Clamp to map bounds
-        const eR = Math.max(e.size[0],e.size[2])/2;
-        e.x = Math.max(-CFG.mapHalf+eR+0.3, Math.min(CFG.mapHalf-eR-0.3, e.x));
-        e.z = Math.max(-CFG.mapHalf+eR+0.3, Math.min(CFG.mapHalf-eR-0.3, e.z));
-
-        // Attack
-        e.attackTimer -= dt;
-        if (e.canSee && dist < 18 && e.attackTimer <= 0) {
-            e.attackTimer = e.attackRate;
-            // Accuracy decreases with distance
-            const accuracy = Math.max(0.3, 1.0 - dist * 0.04);
-            if (Math.random() < accuracy) {
-                player.health -= e.damage;
-                player.damageFlash = 0.3;
-                playSound('hurt');
-                if (player.health <= 0) {
-                    player.health = 0;
-                    gameOver();
-                }
-            }
-        }
-    }
-    // Remove fully dead enemies
-    for (let i = enemies.length-1; i >= 0; i--) {
-        if (enemies[i].dead && enemies[i].deathTimer <= 0) enemies.splice(i, 1);
-    }
-}
 
 // --- Particles ---
 function spawnImpactParticles(x, y, z, color, count) {
@@ -742,142 +570,12 @@ function updateParticles(dt) {
     }
 }
 
-// --- Pickups ---
-function maybeDropPickup(x, y, z) {
-    if (Math.random() < 0.35) {
-        const type = Math.random() < 0.6 ? 'health' : 'ammo';
-        pickups.push({ x, y: 0.3, z, type, life: 15 });
-    }
-}
-
-function updatePickups(dt) {
-    for (let i = pickups.length-1; i >= 0; i--) {
-        const pk = pickups[i];
-        pk.life -= dt;
-        pk.y = 0.3 + Math.sin(performance.now()*0.003 + i)*0.1;
-        if (pk.life <= 0) { pickups.splice(i, 1); continue; }
-        const dx = player.x - pk.x, dz = player.z - pk.z;
-        if (dx*dx + dz*dz < 1.2) {
-            if (pk.type === 'health') {
-                player.health = Math.min(player.maxHealth, player.health + 25);
-            } else {
-                for (const w of weapons) w.ammo = w.maxAmmo;
-                player.reloading = false;
-                player.reloadTimer = 0;
-            }
-            playSound('pickup');
-            pickups.splice(i, 1);
-        }
-    }
-}
-
-// --- Wave System ---
-let wave = 0;
-let waveTimer = 0;
-let waveActive = false;
-let waveAnnounce = '';
-let waveAnnounceTimer = 0;
-
-function startWave() {
-    wave++;
-    waveActive = true;
-    waveAnnounce = 'WAVE ' + wave;
-    waveAnnounceTimer = 2.0;
-
-    const baseCount = 3 + wave * 2;
-    const count = Math.min(baseCount, 20);
-
-    for (let i = 0; i < count; i++) {
-        const sp = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
-        // Don't spawn too close to player
-        const dx = sp[0] - player.x, dz = sp[1] - player.z;
-        if (dx*dx + dz*dz < 25) continue;
-
-        let typeIdx = 0;
-        if (wave >= 3 && Math.random() < 0.3) typeIdx = 1;
-        if (wave >= 5 && Math.random() < 0.15) typeIdx = 2;
-        enemies.push(createEnemy(sp[0], sp[1], typeIdx));
-    }
-}
-
-function updateWaves(dt) {
-    if (waveAnnounceTimer > 0) waveAnnounceTimer -= dt;
-
-    if (!waveActive) {
-        waveTimer -= dt;
-        if (waveTimer <= 0) startWave();
-        return;
-    }
-
-    // Check if wave is complete
-    const alive = enemies.filter(e => !e.dead).length;
-    if (alive === 0) {
-        waveActive = false;
-        waveTimer = 3.0;
-        waveAnnounce = 'WAVE CLEAR';
-        waveAnnounceTimer = 2.5;
-        // Small health bonus
-        player.health = Math.min(player.maxHealth, player.health + 10);
-    }
-}
 
 // --- Dynamic Geometry ---
-function buildEnemyGeo(e) {
-    const t = enemyTypes[e.type];
-    const [sx, sy, sz] = e.size;
-    const alpha = e.dead ? Math.max(0, e.deathTimer / 0.6) : 1;
-    const sink = e.dead ? (1 - alpha) * 0.5 : 0;
-
-    // Body
-    pushBox(dynVerts, e.x, e.y + sy*0.45 - sink, e.z, sx*0.9, sy*0.55, sz*0.9,
-        e.color[0]*alpha, e.color[1]*alpha, e.color[2]*alpha);
-
-    // Head
-    pushBox(dynVerts, e.x, e.y + sy*0.85 - sink, e.z, sx*0.65, sy*0.3, sz*0.65,
-        e.headColor[0]*alpha, e.headColor[1]*alpha, e.headColor[2]*alpha);
-
-    // Eyes (small bright rectangles on front of head)
-    const facing = Math.atan2(player.x - e.x, player.z - e.z);
-    const eyeOff = 0.12;
-    const ex1 = e.x + Math.sin(facing - eyeOff) * sx * 0.33;
-    const ez1 = e.z + Math.cos(facing - eyeOff) * sz * 0.33;
-    const ex2 = e.x + Math.sin(facing + eyeOff) * sx * 0.33;
-    const ez2 = e.z + Math.cos(facing + eyeOff) * sz * 0.33;
-    const eyeY = e.y + sy * 0.88 - sink;
-    pushBox(dynVerts, ex1, eyeY, ez1, 0.08, 0.06, 0.08, 1.0*alpha, 0.9*alpha, 0.1*alpha);
-    pushBox(dynVerts, ex2, eyeY, ez2, 0.08, 0.06, 0.08, 1.0*alpha, 0.9*alpha, 0.1*alpha);
-
-    // Health bar above head
-    if (!e.dead && e.health < e.maxHealth) {
-        const barW = sx * 1.2;
-        const barH = 0.08;
-        const barY = e.y + sy + 0.2;
-        const hpRatio = e.health / e.maxHealth;
-        // Background
-        pushBox(dynVerts, e.x, barY, e.z, barW, barH, 0.02, 0.2, 0.2, 0.2);
-        // Health
-        pushBox(dynVerts, e.x - barW*0.5*(1-hpRatio), barY, e.z, barW*hpRatio, barH, 0.03,
-            hpRatio > 0.5 ? 0.1 : 0.9, hpRatio > 0.3 ? 0.8 : 0.2, hpRatio > 0.5 ? 0.2 : 0.1);
-    }
-}
-
 function buildParticleGeo(p) {
     const alpha = Math.max(0, p.life / p.maxLife);
     pushBox(dynVerts, p.x, p.y, p.z, p.size, p.size, p.size,
         p.color[0]*alpha, p.color[1]*alpha, p.color[2]*alpha);
-}
-
-function buildPickupGeo(pk) {
-    const pulse = 0.8 + Math.sin(performance.now()*0.005)*0.2;
-    if (pk.type === 'health') {
-        pushBox(dynVerts, pk.x, pk.y, pk.z, 0.35, 0.35, 0.35, 0.15*pulse, 0.9*pulse, 0.3*pulse);
-        // Cross
-        pushBox(dynVerts, pk.x, pk.y, pk.z, 0.25, 0.08, 0.08, 0.1, 1.0, 0.2);
-        pushBox(dynVerts, pk.x, pk.y, pk.z, 0.08, 0.25, 0.08, 0.1, 1.0, 0.2);
-    } else {
-        pushBox(dynVerts, pk.x, pk.y, pk.z, 0.3, 0.25, 0.3, 0.9*pulse, 0.7*pulse, 0.1*pulse);
-        pushBox(dynVerts, pk.x, pk.y+0.05, pk.z, 0.15, 0.15, 0.15, 1.0, 0.85, 0.15);
-    }
 }
 
 // --- Player Update ---
@@ -1017,10 +715,8 @@ function render() {
         // Build dynamic geometry
     dynVerts.length = 0;
     dynCount = 0;
-    for (const e of enemies) buildEnemyGeo(e);
-    for (const p of particles) buildParticleGeo(p);
-    for (const pk of pickups) buildPickupGeo(pk);
-
+        for (const p of particles) buildParticleGeo(p);
+    
     if (dynVerts.length > 0) {
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dynVerts), gl.DYNAMIC_DRAW);
         gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, BPV, 0);
@@ -1125,39 +821,15 @@ function drawHUD() {
         ctx.fillText((i+1) + ' ' + weapons[i].name, sx + slotW/2, slotY + 19);
     }
 
-    // Score & kills - top right
+    // Score - top right
     ctx.textAlign = 'right';
     ctx.font = '700 22px "Courier New"';
     ctx.fillStyle = 'rgba(220,230,225,0.9)';
     ctx.fillText('SCORE ' + player.score, w - 30, 40);
-    ctx.font = '600 14px "Courier New"';
-    ctx.fillStyle = 'rgba(160,170,165,0.8)';
-    ctx.fillText('KILLS ' + player.kills, w - 30, 62);
-
-    // Wave indicator - top center
-    ctx.textAlign = 'center';
-    ctx.font = '700 16px "Courier New"';
-    ctx.fillStyle = 'rgba(10,200,170,0.7)';
-    ctx.fillText('WAVE ' + wave, w/2, 35);
-
-    // Enemies remaining
-    const alive = enemies.filter(e => !e.dead).length;
-    ctx.font = '600 12px "Courier New"';
-    ctx.fillStyle = 'rgba(160,170,165,0.6)';
-    ctx.fillText(alive + ' hostiles', w/2, 55);
-
-    // Wave announcement
-    if (waveAnnounceTimer > 0) {
-        const aAlpha = Math.min(1, waveAnnounceTimer);
-        ctx.font = '900 48px "Courier New"';
-        ctx.fillStyle = `rgba(10,200,170,${aAlpha * 0.9})`;
-        ctx.shadowColor = 'rgba(10,200,170,0.3)';
-        ctx.shadowBlur = 20;
-        ctx.fillText(waveAnnounce, w/2, h/2 - 60);
-        ctx.shadowBlur = 0;
-    }
-
-    // Minimap - top left
+    
+        
+            
+        // Minimap - top left
     drawMinimap(w, h);
 
     // Low health warning
@@ -1191,25 +863,6 @@ function drawMinimap(w, h) {
         ctx.fillRect(bx - bw/2, bz - bd/2, Math.max(1,bw), Math.max(1,bd));
     }
 
-    // Enemies on minimap
-    for (const e of enemies) {
-        if (e.dead) continue;
-        const ex = mmX + (e.x + CFG.mapHalf) * mmScale;
-        const ez = mmY + (e.z + CFG.mapHalf) * mmScale;
-        ctx.fillStyle = e.canSee ? 'rgba(255,60,30,0.9)' : 'rgba(255,120,50,0.5)';
-        ctx.beginPath();
-        ctx.arc(ex, ez, 2, 0, Math.PI*2);
-        ctx.fill();
-    }
-
-    // Pickups
-    for (const pk of pickups) {
-        const px = mmX + (pk.x + CFG.mapHalf) * mmScale;
-        const pz = mmY + (pk.z + CFG.mapHalf) * mmScale;
-        ctx.fillStyle = pk.type === 'health' ? 'rgba(30,220,80,0.8)' : 'rgba(220,200,30,0.8)';
-        ctx.fillRect(px-1.5, pz-1.5, 3, 3);
-    }
-
     // Player on minimap
     const px = mmX + (player.x + CFG.mapHalf) * mmScale;
     const pz = mmY + (player.z + CFG.mapHalf) * mmScale;
@@ -1239,8 +892,7 @@ function startGame() {
     player.yaw = 0; player.pitch = 0;
     player.health = 100;
     player.score = 0;
-    player.kills = 0;
-    player.weaponIdx = 0;
+        player.weaponIdx = 0;
     player.reloading = false;
     player.reloadTimer = 0;
     player.fireTimer = 0;
@@ -1250,15 +902,8 @@ function startGame() {
     player.recoilPitch = 0;
     player.recoilKick = 0;
     for (const w of weapons) w.ammo = w.maxAmmo;
-    enemies.length = 0;
-    particles.length = 0;
-    pickups.length = 0;
-    wave = 0;
-    waveTimer = 1.5;
-    waveActive = false;
-    waveAnnounce = '';
-    waveAnnounceTimer = 0;
-    gameState = 'playing';
+        particles.length = 0;
+                            gameState = 'playing';
     document.getElementById('menu').style.display = 'none';
     document.getElementById('gameover').style.display = 'none';
     document.getElementById('pause').style.display = 'none';
@@ -1270,7 +915,7 @@ function gameOver() {
     gameState = 'gameover';
     document.exitPointerLock();
     document.getElementById('finalScore').textContent = 'Score: ' + player.score;
-    document.getElementById('finalWave').textContent = 'Reached Wave ' + wave + ' — ' + player.kills + ' Kills';
+    
     document.getElementById('gameover').style.display = 'flex';
 }
 
@@ -1305,11 +950,8 @@ function gameLoop(timestamp) {
 
     if (gameState === 'playing') {
         updatePlayer(dt);
-        updateEnemies(dt);
-        updateParticles(dt);
-        updatePickups(dt);
-        updateWaves(dt);
-    }
+                updateParticles(dt);
+                    }
 
     if (gameState === 'playing' || gameState === 'paused') {
         render();
