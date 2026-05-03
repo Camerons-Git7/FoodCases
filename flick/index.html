@@ -7,6 +7,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{overflow:hidden;background:#000;font-family:'Courier New',monospace;cursor:none}
+#menu{cursor:default}
 canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 #hud{pointer-events:none;z-index:1}
 .overlay{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;color:#fff}
@@ -344,7 +345,6 @@ const spawnPoints = [
     [-12,-12],[12,-12],[-12,12],[12,12]
 ];
 
-// --- Geometry Builder ---
 function pushBox(arr, cx,cy,cz, sx,sy,sz, r,g,b) {
     const hx=sx/2, hy=sy/2, hz=sz/2;
     const faces = [
@@ -374,8 +374,7 @@ for (const b of mapBoxes) pushBox(mapVerts, b.cx,b.cy,b.cz, b.sx,b.sy,b.sz, b.co
 const mapVertCount = mapVerts.length / FPV;
 
 // Dynamic vertex buffer (enemies, effects)
-const MAX_DYN = 30000;
-const dynVerts = new Float32Array(MAX_DYN * FPV);
+const dynVerts = [];
 let dynCount = 0;
 
 // --- Player State ---
@@ -1015,24 +1014,19 @@ function render() {
     gl.vertexAttribPointer(aC, 3, gl.FLOAT, false, BPV, 24);
     gl.drawArrays(gl.TRIANGLES, 0, mapVertCount);
 
-    // Build dynamic geometry
+        // Build dynamic geometry
+    dynVerts.length = 0;
     dynCount = 0;
-    for (const e of enemies) {
-        if (dynCount + 400 < MAX_DYN) buildEnemyGeo(e);
-    }
-    for (const p of particles) {
-        if (dynCount + 36 < MAX_DYN) buildParticleGeo(p);
-    }
-    for (const pk of pickups) {
-        if (dynCount + 100 < MAX_DYN) buildPickupGeo(pk);
-    }
+    for (const e of enemies) buildEnemyGeo(e);
+    for (const p of particles) buildParticleGeo(p);
+    for (const pk of pickups) buildPickupGeo(pk);
 
-    if (dynCount > 0) {
-        gl.bufferData(gl.ARRAY_BUFFER, dynVerts.subarray(0, dynCount * FPV), gl.DYNAMIC_DRAW);
+    if (dynVerts.length > 0) {
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dynVerts), gl.DYNAMIC_DRAW);
         gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, BPV, 0);
         gl.vertexAttribPointer(aN, 3, gl.FLOAT, false, BPV, 12);
         gl.vertexAttribPointer(aC, 3, gl.FLOAT, false, BPV, 24);
-        gl.drawArrays(gl.TRIANGLES, 0, dynCount);
+        gl.drawArrays(gl.TRIANGLES, 0, dynVerts.length / FPV);
     }
 }
 
