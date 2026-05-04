@@ -1,0 +1,62 @@
+name: Remove Root MP4 Files
+
+on:
+  # Run manually from the Actions tab
+  workflow_dispatch:
+  # Run on push to main branch
+  push:
+    branches: [main, master]
+  # Run on a schedule (e.g., daily at midnight UTC)
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  cleanup-mp4:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Remove MP4 files not in folders
+        run: |
+          # Find all .mp4 files in the root directory only (not in subdirectories)
+          # -maxdepth 1 prevents recursion into subdirectories
+          # -type f ensures we only target files
+          echo "Scanning for root-level MP4 files..."
+          
+          root_mp4_count=$(find . -maxdepth 1 -type f -name "*.mp4" | wc -l)
+          
+          if [ "$root_mp4_count" -eq 0 ]; then
+            echo "No MP4 files found in root directory. Nothing to delete."
+            exit 0
+          fi
+          
+          echo "Found $root_mp4_count MP4 file(s) in root directory:"
+          find . -maxdepth 1 -type f -name "*.mp4" | sed 's|^\\./||'
+          
+          # Delete the files
+          find . -maxdepth 1 -type f -name "*.mp4" -delete
+          
+          echo "Deleted $root_mp4_count MP4 file(s) from root directory."
+          echo "MP4 files inside folders/subdirectories were preserved."
+      
+      - name: Check for changes
+        id: verify-changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit and push changes
+        if: steps.verify-changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          git commit -m "chore: remove MP4 files from root directory [skip ci]"
+          git push
