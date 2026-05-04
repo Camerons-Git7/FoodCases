@@ -488,10 +488,6 @@ function updatePlayer(dt) {
             }
         }
     }
-    if (!wasOnGround && player.onGround) {
-        player.landImpact = Math.min(1.0, Math.abs(player.vy) / 10);
-    }
-    player.landImpact *= Math.pow(0.1, dt);
     
     // --- SMOOTHED HEAD BOB ---
     const moveSpeed = Math.sqrt(player.vx*player.vx + player.vz*player.vz);
@@ -534,16 +530,12 @@ function render() {
     const rawBob = Math.sin(player.bobPhase * bobFreq);
     const bobY = rawBob * bobAmp * bobBlend;
     
-    const landY = player.landImpact > 0.01 
-        ? player.landImpact * 0.1 * Math.sin(player.landImpact * Math.PI * 2)
-        : 0;
-    
     // Idle sway fades out as bobBlend fades in (crossfade)
     const idleSway = (1.0 - bobBlend) * (player.onGround
         ? Math.sin(performance.now() * 0.0012) * 0.025
         : 0);
     
-    const eyeY = player.y + CFG.eyeHeight + bobY + landY;
+    const eyeY = player.y + CFG.eyeHeight + bobY;
     const pitch = player.pitch + idleSway;
     
     M4.viewFPS(viewMat, player.x, eyeY, player.z, player.yaw, pitch);
@@ -575,7 +567,7 @@ function startGame() {
     player.vx = 0; player.vy = 0; player.vz = 0;
     player.yaw = 0; player.pitch = 0;
     player.health = 100; player.score = 0; player.onGround = false;
-    player.bobPhase = 0; player.landImpact = 0;
+    player.bobPhase = 0;
     bobBlend = 0;
     bobBlendTarget = 0;
     gameState = 'playing';
