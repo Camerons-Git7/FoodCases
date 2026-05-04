@@ -31,7 +31,7 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%}
 <canvas id="gl"></canvas>
 <canvas id="hud"></canvas>
 <div id="menu" class="overlay">
-<div class="title">FLICK ARENA</div>
+<div class="title">THE BACKROOMS</div>
 <div class="subtitle">Backrooms — Level 0</div>
 <button class="btn" id="startBtn">ENTER THE BACKROOMS</button>
 <div class="controls">
@@ -435,6 +435,13 @@ function resolveCollisions(px,py,pz, rad, h) {
     return [ox,oy,oz];
 }
 
+// --- SMOOTH HEAD BOB SYSTEM ---
+// We blend the bob offset itself (not just speed) so there's zero snap
+let bobBlend = 0;          // 0 = no bob, 1 = full bob
+let bobBlendTarget = 0;    // what we want bobBlend to be
+let smoothedSpeed = 0;
+const BOB_BLEND_SPEED = 8.0;
+
 function updatePlayer(dt) {
     const sprint = keys['ShiftLeft'] || keys['ShiftRight'];
     const speed = CFG.walkSpeed * (sprint ? CFG.sprintMult : 1);
@@ -485,10 +492,20 @@ function updatePlayer(dt) {
         player.landImpact = Math.min(1.0, Math.abs(player.vy) / 10);
     }
     player.landImpact *= Math.pow(0.1, dt);
+    
+    // --- SMOOTHED HEAD BOB ---
     const moveSpeed = Math.sqrt(player.vx*player.vx + player.vz*player.vz);
-    if (player.onGround && moveSpeed > 0.1) {
+    
+    // Target: 1 when walking on ground, 0 otherwise
+    bobBlendTarget = (player.onGround && moveSpeed > 0.1) ? 1 : 0;
+    // Smoothly interpolate the blend factor
+    bobBlend += (bobBlendTarget - bobBlend) * Math.min(1, BOB_BLEND_SPEED * dt);
+    
+    // Only advance phase when we actually want bob
+    if (bobBlend > 0.001) {
         player.bobPhase += dt;
     }
+    
     player.x = Math.max(-CFG.mapHalf+0.5, Math.min(CFG.mapHalf-0.5, player.x));
     player.z = Math.max(-CFG.mapHalf+0.5, Math.min(CFG.mapHalf-0.5, player.z));
 }
@@ -507,23 +524,24 @@ function render() {
     const aspect = w / h;
     M4.perspective(projMat, CFG.fov, aspect, CFG.nearPlane, CFG.farPlane);
     
-    const moveSpeed = Math.sqrt(player.vx*player.vx + player.vz*player.vz);
     const isSprinting = keys['ShiftLeft'] || keys['ShiftRight'];
     
     const bobPeriod = 0.35;
     const bobFreq = 2 * Math.PI / bobPeriod;
     const bobAmp = isSprinting ? 0.05 : 0.075;
-    const bobY = player.onGround && moveSpeed > 0.1 
-        ? Math.sin(player.bobPhase * bobFreq) * bobAmp * Math.min(moveSpeed / CFG.walkSpeed, 1.0)
-        : 0;
+    
+    // Bob Y is scaled by bobBlend so it fades in/out smoothly
+    const rawBob = Math.sin(player.bobPhase * bobFreq);
+    const bobY = rawBob * bobAmp * bobBlend;
     
     const landY = player.landImpact > 0.01 
         ? player.landImpact * 0.1 * Math.sin(player.landImpact * Math.PI * 2)
         : 0;
     
-    const idleSway = moveSpeed < 0.1 && player.onGround
+    // Idle sway fades out as bobBlend fades in (crossfade)
+    const idleSway = (1.0 - bobBlend) * (player.onGround
         ? Math.sin(performance.now() * 0.0012) * 0.025
-        : 0;
+        : 0);
     
     const eyeY = player.y + CFG.eyeHeight + bobY + landY;
     const pitch = player.pitch + idleSway;
@@ -558,6 +576,8 @@ function startGame() {
     player.yaw = 0; player.pitch = 0;
     player.health = 100; player.score = 0; player.onGround = false;
     player.bobPhase = 0; player.landImpact = 0;
+    bobBlend = 0;
+    bobBlendTarget = 0;
     gameState = 'playing';
     document.getElementById('menu').style.display = 'none';
     document.getElementById('pause').style.display = 'none';
