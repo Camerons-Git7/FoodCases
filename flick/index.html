@@ -249,70 +249,28 @@ function pushBox(arr, cx, cy, cz, sx, sy, sz, defaultTexID, override) {
 }
 
 const ROOM_H = 3.5, WALL_T = 0.5, DOOR_W = 2.5;
-
-// ================================================================
-// FIXED MAP LAYOUT - No overlaps, proper connectivity
-// ================================================================
-
-// Grid system: rooms are 10x10, corridors are 6 wide
-// All coordinates calculated to ensure walls touch but don't overlap
-
-const C_W = 6;           // corridor width
-const C_HW = C_W / 2;    // corridor half-width
-const R_W = 10;          // room width/depth
-const R_HW = R_W / 2;    // room half-width
 const WALL_HALF = WALL_T / 2;
+const FLOOR_Y = -0.02;
+const CEIL_Y = ROOM_H + 0.02;
+const FLOOR_THICK = 0.04;
+const CEIL_THICK = 0.04;
 
-// Key insight: corridor walls are at x = +/- (C_HW + WALL_HALF) = +/- 3.25
-// Room walls should be at exactly these same positions to connect
+addBox(0, FLOOR_Y, 0, 50, FLOOR_THICK, 62, TEX_WALL, false);
+addBox(0, CEIL_Y, 0, 50, CEIL_THICK, 62, TEX_WALL, false);
 
-// For east rooms: room west wall at x = 3.25
-// Room center x = 3.25 + R_HW + WALL_HALF = 3.25 + 5 + 0.25 = 8.5
-const E_ROOM_X = C_HW + WALL_HALF + R_HW + WALL_HALF;  // 8.5
-const W_ROOM_X = -(C_HW + WALL_HALF + R_HW + WALL_HALF); // -8.5
-
-// Corridor runs N-S. Let's say from z = -20 to z = 20
-// North rooms: south wall at z = -20
-// Room center z = -20 - R_HW - WALL_HALF = -25.25
-const N_ROOM_Z = -20 - R_HW - WALL_HALF;  // -25.25
-const S_ROOM_Z = 20 + R_HW + WALL_HALF;   // 25.25
-
-// Room positions along corridor (z coordinates)
-const ROOM_Z_POSITIONS = [-12, 0, 12];
-
-// Build corridor as a single room with open sides, not separate corridor geometry
-// Actually, let's build it properly: corridor is the central spine
-
-// CORRIDOR: central spine running N-S at x=0
-// We build it as a "room" with doors on east/west sides
-// Floor and ceiling span the full corridor length
-
+const C_HW = 3;
 const CORRIDOR_Z_START = -20;
 const CORRIDOR_Z_END = 20;
-const CORRIDOR_LEN = CORRIDOR_Z_END - CORRIDOR_Z_START;  // 40
-const CORRIDOR_CENTER_Z = (CORRIDOR_Z_START + CORRIDOR_Z_END) / 2;  // 0
+const ROOM_Z_POSITIONS = [-12, 0, 12];
 
-// Corridor floor and ceiling - these are the ONLY floor/ceiling in the corridor
-addBox(0, -0.02, CORRIDOR_CENTER_Z, C_W, 0.04, CORRIDOR_LEN, TEX_WALL, false);  // floor
-addBox(0, ROOM_H + 0.02, CORRIDOR_CENTER_Z, C_W, 0.04, CORRIDOR_LEN, TEX_WALL, false);  // ceiling
-
-// Corridor walls (north and south ends are closed, east/west have doorways)
-// East wall segments (with doorways at room z positions)
 function buildCorridorWall(isEast) {
     const wallX = isEast ? (C_HW + WALL_HALF) : -(C_HW + WALL_HALF);
-    const doorPositions = ROOM_Z_POSITIONS;
-    
-    // Sort door positions
-    doorPositions.sort((a,b) => a-b);
-    
-    // Build wall segments between doors
+    const doorPositions = ROOM_Z_POSITIONS.slice().sort((a,b)=>a-b);
     let currentZ = CORRIDOR_Z_START;
-    
     for (const doorZ of doorPositions) {
         const doorHalf = DOOR_W / 2;
         const segStart = currentZ;
         const segEnd = doorZ - doorHalf;
-        
         if (segEnd > segStart + 0.1) {
             const segCenter = (segStart + segEnd) / 2;
             const segLen = segEnd - segStart;
@@ -320,8 +278,6 @@ function buildCorridorWall(isEast) {
         }
         currentZ = doorZ + doorHalf;
     }
-    
-    // Final segment
     if (CORRIDOR_Z_END > currentZ + 0.1) {
         const segCenter = (currentZ + CORRIDOR_Z_END) / 2;
         const segLen = CORRIDOR_Z_END - currentZ;
@@ -329,117 +285,56 @@ function buildCorridorWall(isEast) {
     }
 }
 
-buildCorridorWall(true);   // east wall
-buildCorridorWall(false);  // west wall
+buildCorridorWall(true);
+buildCorridorWall(false);
 
-// Corridor north and south end walls
-addBox(0, ROOM_H/2, CORRIDOR_Z_START - WALL_HALF, C_W + WALL_T*2, ROOM_H, WALL_T, TEX_WALL);
-addBox(0, ROOM_H/2, CORRIDOR_Z_END + WALL_HALF, C_W + WALL_T*2, ROOM_H, WALL_T, TEX_WALL);
+addBox(0, ROOM_H/2, CORRIDOR_Z_START - WALL_HALF, C_HW*2 + WALL_T*2, ROOM_H, WALL_T, TEX_WALL);
+addBox(0, ROOM_H/2, CORRIDOR_Z_END + WALL_HALF, C_HW*2 + WALL_T*2, ROOM_H, WALL_T, TEX_WALL);
 
-// ROOMS - East wing (3 rooms along corridor)
-for (const rz of ROOM_Z_POSITIONS) {
-    // East room
-    addRoom(E_ROOM_X, rz, R_W, R_W, ROOM_H, { west: true });
-    // West room
-    addRoom(W_ROOM_X, rz, R_W, R_W, ROOM_H, { east: true });
-}
+const R_W = 10;
+const R_HW = R_W / 2;
+const E_ROOM_X = C_HW + WALL_HALF + R_HW + WALL_HALF;
+const W_ROOM_X = -(C_HW + WALL_HALF + R_HW + WALL_HALF);
+const N_ROOM_Z = -20 - R_HW - WALL_HALF;
+const S_ROOM_Z = 20 + R_HW + WALL_HALF;
+const DEEP_E_X = E_ROOM_X + R_W + WALL_T;
+const DEEP_W_X = W_ROOM_X - R_W - WALL_T;
 
-// North extension rooms (at corridor north end)
-addRoom(0, N_ROOM_Z, R_W, R_W, ROOM_H, { south: true });
-addRoom(E_ROOM_X, N_ROOM_Z, R_W, R_W, ROOM_H, { west: true, south: true });
-addRoom(W_ROOM_X, N_ROOM_Z, R_W, R_W, ROOM_H, { east: true, south: true });
-
-// South extension rooms
-addRoom(0, S_ROOM_Z, R_W, R_W, ROOM_H, { north: true });
-addRoom(E_ROOM_X, S_ROOM_Z, R_W, R_W, ROOM_H, { west: true, north: true });
-addRoom(W_ROOM_X, S_ROOM_Z, R_W, R_W, ROOM_H, { east: true, north: true });
-
-// Deep east/west rooms (2nd row)
-const DEEP_E_X = E_ROOM_X + R_W + WALL_T;  // 8.5 + 10 + 0.5 = 19
-const DEEP_W_X = W_ROOM_X - R_W - WALL_T;  // -8.5 - 10 - 0.5 = -19
-
-for (const rz of ROOM_Z_POSITIONS) {
-    addRoom(DEEP_E_X, rz, R_W, R_W, ROOM_H, { west: true });
-    addRoom(DEEP_W_X, rz, R_W, R_W, ROOM_H, { east: true });
-}
-
-// Deep corner rooms
-addRoom(DEEP_E_X, N_ROOM_Z, R_W, R_W, ROOM_H, { west: true, south: true });
-addRoom(DEEP_W_X, N_ROOM_Z, R_W, R_W, ROOM_H, { east: true, south: true });
-addRoom(DEEP_E_X, S_ROOM_Z, R_W, R_W, ROOM_H, { west: true, north: true });
-addRoom(DEEP_W_X, S_ROOM_Z, R_W, R_W, ROOM_H, { east: true, north: true });
-
-// Build a room with optional doorways on each side
-function addRoom(cx, cz, w, d, h, doors) {
+function buildRoomWalls(cx, cz, w, d, h, doors) {
     doors = doors || {};
-    const wt = WALL_T, hw = w/2, hd = d/2;
-    const floorY = -0.02;  // Floor lowered to prevent z-fighting with walls
-    const ceilY = h + 0.02;  // Ceiling raised to prevent z-fighting with walls
-    
-    // Floor - only this room's floor, no overlaps
-    addBox(cx, floorY, cz, w, 0.04, d, TEX_WALL, false);  // 0.04 height, centered at -0.02, top at 0
-    // Ceiling
-    addBox(cx, ceilY, cz, w, 0.04, d, TEX_WALL, false);  // 0.04 height, centered at h+0.02, bottom at h
-    
-    // North wall (at z = cz - hd - wt/2)
-    if (doors.north) {
-        const wallZ = cz - hd - WALL_HALF;
-        const seg1 = (w - DOOR_W) / 2;
-        if (seg1 > 0.1) {
-            addBox(cx - hw + seg1/2, h/2, wallZ, seg1, h, WALL_T, TEX_WALL);
-            addBox(cx + hw - seg1/2, h/2, wallZ, seg1, h, WALL_T, TEX_WALL);
-        }
-    } else {
-        addBox(cx, h/2, cz - hd - WALL_HALF, w + WALL_T, h, WALL_T, TEX_WALL);
-    }
-    
-    // South wall
-    if (doors.south) {
-        const wallZ = cz + hd + WALL_HALF;
-        const seg1 = (w - DOOR_W) / 2;
-        if (seg1 > 0.1) {
-            addBox(cx - hw + seg1/2, h/2, wallZ, seg1, h, WALL_T, TEX_WALL);
-            addBox(cx + hw - seg1/2, h/2, wallZ, seg1, h, WALL_T, TEX_WALL);
-        }
-    } else {
-        addBox(cx, h/2, cz + hd + WALL_HALF, w + WALL_T, h, WALL_T, TEX_WALL);
-    }
-    
-    // West wall
-    if (doors.west) {
-        const wallX = cx - hw - WALL_HALF;
-        const seg1 = (d - DOOR_W) / 2;
-        if (seg1 > 0.1) {
-            addBox(wallX, h/2, cz - hd + seg1/2, WALL_T, h, seg1, TEX_WALL);
-            addBox(wallX, h/2, cz + hd - seg1/2, WALL_T, h, seg1, TEX_WALL);
-        }
-    } else {
-        addBox(cx - hw - WALL_HALF, h/2, cz, WALL_T, h, d + WALL_T, TEX_WALL);
-    }
-    
-    // East wall
-    if (doors.east) {
-        const wallX = cx + hw + WALL_HALF;
-        const seg1 = (d - DOOR_W) / 2;
-        if (seg1 > 0.1) {
-            addBox(wallX, h/2, cz - hd + seg1/2, WALL_T, h, seg1, TEX_WALL);
-            addBox(wallX, h/2, cz + hd - seg1/2, WALL_T, h, seg1, TEX_WALL);
-        }
-    } else {
-        addBox(cx + hw + WALL_HALF, h/2, cz, WALL_T, h, d + WALL_T, TEX_WALL);
-    }
+    const hw = w/2, hd = d/2;
+    if (!doors.north) addBox(cx, h/2, cz - hd - WALL_HALF, w + WALL_T, h, WALL_T, TEX_WALL);
+    if (!doors.south) addBox(cx, h/2, cz + hd + WALL_HALF, w + WALL_T, h, WALL_T, TEX_WALL);
+    if (!doors.west)  addBox(cx - hw - WALL_HALF, h/2, cz, WALL_T, h, d + WALL_T, TEX_WALL);
+    if (!doors.east)  addBox(cx + hw + WALL_HALF, h/2, cz, WALL_T, h, d + WALL_T, TEX_WALL);
 }
 
-// Interior dividers (within rooms) - make sure they don't overlap with walls
+for (const rz of ROOM_Z_POSITIONS) {
+    buildRoomWalls(E_ROOM_X, rz, R_W, R_W, ROOM_H, { west: true });
+    buildRoomWalls(W_ROOM_X, rz, R_W, R_W, ROOM_H, { east: true });
+}
+buildRoomWalls(0, N_ROOM_Z, R_W, R_W, ROOM_H, { south: true });
+buildRoomWalls(E_ROOM_X, N_ROOM_Z, R_W, R_W, ROOM_H, { west: true, south: true });
+buildRoomWalls(W_ROOM_X, N_ROOM_Z, R_W, R_W, ROOM_H, { east: true, south: true });
+buildRoomWalls(0, S_ROOM_Z, R_W, R_W, ROOM_H, { north: true });
+buildRoomWalls(E_ROOM_X, S_ROOM_Z, R_W, R_W, ROOM_H, { west: true, north: true });
+buildRoomWalls(W_ROOM_X, S_ROOM_Z, R_W, R_W, ROOM_H, { east: true, north: true });
+for (const rz of ROOM_Z_POSITIONS) {
+    buildRoomWalls(DEEP_E_X, rz, R_W, R_W, ROOM_H, { west: true });
+    buildRoomWalls(DEEP_W_X, rz, R_W, R_W, ROOM_H, { east: true });
+}
+buildRoomWalls(DEEP_E_X, N_ROOM_Z, R_W, R_W, ROOM_H, { west: true, south: true });
+buildRoomWalls(DEEP_W_X, N_ROOM_Z, R_W, R_W, ROOM_H, { east: true, south: true });
+buildRoomWalls(DEEP_E_X, S_ROOM_Z, R_W, R_W, ROOM_H, { west: true, north: true });
+buildRoomWalls(DEEP_W_X, S_ROOM_Z, R_W, R_W, ROOM_H, { east: true, north: true });
+
 addBox(8.5, ROOM_H/2, -8, 6, ROOM_H, 0.5, TEX_WALL);
 addBox(12, ROOM_H/2, 0, 0.5, ROOM_H, 5, TEX_WALL);
 addBox(19, ROOM_H/2, 4, 0.5, ROOM_H, 5, TEX_WALL);
-
 addBox(-8.5, ROOM_H/2, 8, 6, ROOM_H, 0.5, TEX_WALL);
 addBox(-12, ROOM_H/2, 0, 0.5, ROOM_H, 5, TEX_WALL);
 addBox(-19, ROOM_H/2, -4, 0.5, ROOM_H, 5, TEX_WALL);
 
-// Support pillars
 const pillarPositions = [
     [4,4],[4,-4],[-4,4],[-4,-4],
     [13,4],[13,-4],[-13,4],[-13,-4],
@@ -448,34 +343,26 @@ const pillarPositions = [
 ];
 for (const [px,pz] of pillarPositions) addBox(px,ROOM_H/2,pz,0.6,ROOM_H,0.6,TEX_WALL);
 
-// Desks
 const desks = [[6,-10],[6,-14],[10,-10],[10,-14],[-6,10],[-6,14],[-10,10],[-10,14],
     [16,-2],[22,-2],[16,2],[22,2],[-16,-2],[-22,-2],[-16,2],[-22,2]];
 for (const [dx,dz] of desks) addBox(dx,0.4,dz,1.2,0.8,0.6,TEX_WALL);
 
-// Cubicle partitions
 const partitions = [[8,-8,3,0.1,1.4,2],[8,-16,3,0.1,1.4,2],[11,-12,2,0.1,1.4,3],[5,-12,2,0.1,1.4,3],
     [-8,8,3,0.1,1.4,2],[-8,16,3,0.1,1.4,2],[-11,12,2,0.1,1.4,3],[-5,12,2,0.1,1.4,3]];
 for (const [px,pz,sx,sy,sz,h] of partitions) addBox(px,h/2+0.8,pz,sx,h,sz,TEX_WALL);
 
-// Dead end alcoves
 addBox(3, ROOM_H/2, -30, 3, ROOM_H, 0.5, TEX_WALL);
 addBox(-3, ROOM_H/2, -30, 3, ROOM_H, 0.5, TEX_WALL);
 addBox(0, ROOM_H/2, -33, 0.5, ROOM_H, 6, TEX_WALL);
-
 addBox(3, ROOM_H/2, 30, 3, ROOM_H, 0.5, TEX_WALL);
 addBox(-3, ROOM_H/2, 30, 3, ROOM_H, 0.5, TEX_WALL);
 addBox(0, ROOM_H/2, 33, 0.5, ROOM_H, 6, TEX_WALL);
 
-// Outer boundary walls (enclose everything)
-// Bounds: x from -24.5 to 24.5, z from -30.5 to 30.5
 addBox(0, ROOM_H/2, -30.5, 50, ROOM_H, 0.5, TEX_WALL);
 addBox(0, ROOM_H/2, 30.5, 50, ROOM_H, 0.5, TEX_WALL);
 addBox(-24.5, ROOM_H/2, 0, 0.5, ROOM_H, 61, TEX_WALL);
 addBox(24.5, ROOM_H/2, 0, 0.5, ROOM_H, 61, TEX_WALL);
 
-// Ceiling light panels - attached just below ceiling, no collision, no overlap
-// Place them at y = ROOM_H - 0.15 (well below ceiling to prevent z-fighting)
 const lightY = ROOM_H - 0.15;
 const lightPositions = [
     [0,-10],[0,0],[0,10],[8.5,-12],[8.5,0],[8.5,12],[-8.5,-12],[-8.5,0],[-8.5,12],
@@ -484,23 +371,18 @@ const lightPositions = [
     [19,-25.25],[-19,-25.25],[19,25.25],[-19,25.25]
 ];
 for (const [lx,lz] of lightPositions) {
-    // Very thin light panel, non-solid, positioned just below ceiling
     addBox(lx, lightY, lz, 2.0, 0.06, 2.0, TEX_CEILING_LIGHT, false);
 }
 
-// Build vertex data
 const mapVerts = [];
 for (const b of mapBoxes) {
     let override = null;
-    // Floor detection: y near 0, thin height
-    if (Math.abs(b.cy) < 0.05 && b.sy < 0.1) {
+    if (Math.abs(b.cy - FLOOR_Y) < 0.05 && b.sy < 0.1) {
         override = { '+y': TEX_CARPET };
     }
-    // Ceiling detection: y near ROOM_H, thin height
-    else if (Math.abs(b.cy - ROOM_H) < 0.05 && b.sy < 0.1) {
+    else if (Math.abs(b.cy - CEIL_Y) < 0.05 && b.sy < 0.1) {
         override = { '-y': TEX_CEILING_TILE };
     }
-    // Light panel detection
     else if (b.texID === TEX_CEILING_LIGHT) {
         override = { '-y': TEX_CEILING_LIGHT, '+y': TEX_CEILING_LIGHT, '+z': TEX_CEILING_LIGHT, '-z': TEX_CEILING_LIGHT, '+x': TEX_CEILING_LIGHT, '-x': TEX_CEILING_LIGHT };
     }
@@ -508,9 +390,7 @@ for (const b of mapBoxes) {
 }
 const mapVertCount = mapVerts.length / FPV;
 
-// --- Player ---
 const player = { x:0, y:0.1, z:12, vx:0, vy:0, vz:0, yaw:0, pitch:0, onGround:false, health:100, maxHealth:100, score:0 };
-
 const keys = {};
 document.addEventListener('keydown', e => { keys[e.code]=true; if(e.code==='Space')e.preventDefault(); });
 document.addEventListener('keyup', e => { keys[e.code]=false; });
