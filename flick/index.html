@@ -390,7 +390,7 @@ for (const b of mapBoxes) {
 }
 const mapVertCount = mapVerts.length / FPV;
 
-const player = { x:0, y:0.1, z:12, vx:0, vy:0, vz:0, yaw:0, pitch:0, onGround:false, health:100, maxHealth:100, score:0 };
+const player = { x:0, y:0.1, z:12, vx:0, vy:0, vz:0, yaw:0, pitch:0, onGround:false, health:100, maxHealth:100, score:0, bobPhase:0, landImpact:0 };
 const keys = {};
 document.addEventListener('keydown', e => { keys[e.code]=true; if(e.code==='Space')e.preventDefault(); });
 document.addEventListener('keyup', e => { keys[e.code]=false; });
@@ -460,6 +460,7 @@ function updatePlayer(dt) {
     let nx = player.x + player.vx * dt;
     let ny = player.y + player.vy * dt;
     let nz = player.z + player.vz * dt;
+    const wasOnGround = player.onGround;
     const resolved = resolveCollisions(nx, ny, nz, CFG.playerRadius, CFG.playerHeight);
     player.x = resolved[0]; player.y = resolved[1]; player.z = resolved[2];
     player.onGround = false;
@@ -480,6 +481,14 @@ function updatePlayer(dt) {
             }
         }
     }
+    if (!wasOnGround && player.onGround) {
+        player.landImpact = Math.min(1.0, Math.abs(player.vy) / 10);
+    }
+    player.landImpact *= Math.pow(0.1, dt);
+    const moveSpeed = Math.sqrt(player.vx*player.vx + player.vz*player.vz);
+    if (player.onGround && moveSpeed > 0.1) {
+        player.bobPhase += dt;
+    }
     player.x = Math.max(-CFG.mapHalf+0.5, Math.min(CFG.mapHalf-0.5, player.x));
     player.z = Math.max(-CFG.mapHalf+0.5, Math.min(CFG.mapHalf-0.5, player.z));
 }
@@ -497,8 +506,30 @@ function render() {
     const w = glCanvas.width, h = glCanvas.height;
     const aspect = w / h;
     M4.perspective(projMat, CFG.fov, aspect, CFG.nearPlane, CFG.farPlane);
-    const eyeY = player.y + CFG.eyeHeight;
-    M4.viewFPS(viewMat, player.x, eyeY, player.z, player.yaw, player.pitch);
+    
+    const moveSpeed = Math.sqrt(player.vx*player.vx + player.vz*player.vz);
+    const isSprinting = keys['ShiftLeft'] || keys['ShiftRight'];
+    
+    const bobPeriod = 0.5;
+    const bobFreq = 2 * Math.PI / bobPeriod;
+    const bobAmp = isSprinting ? 0.04 : 0.025;
+    const bobY = player.onGround && moveSpeed > 0.1 
+        ? Math.sin(player.bobPhase * bobFreq) * bobAmp * Math.min(moveSpeed / CFG.walkSpeed, 1.0)
+        : 0;
+    
+    const landY = player.landImpact > 0.01 
+        ? player.landImpact * 0.1 * Math.sin(player.landImpact * Math.PI * 2)
+        : 0;
+    
+    const idleSway = moveSpeed < 0.1 && player.onGround
+        ? Math.sin(performance.now() * 0.0012) * 0.005
+        : 0;
+    
+    const eyeY = player.y + CFG.eyeHeight + bobY + landY;
+    const pitch = player.pitch + idleSway;
+    
+    M4.viewFPS(viewMat, player.x, eyeY, player.z, player.yaw, pitch);
+    
     M4.mul(vpMat, projMat, viewMat);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(prog);
@@ -526,6 +557,7 @@ function startGame() {
     player.vx = 0; player.vy = 0; player.vz = 0;
     player.yaw = 0; player.pitch = 0;
     player.health = 100; player.score = 0; player.onGround = false;
+    player.bobPhase = 0; player.landImpact = 0;
     gameState = 'playing';
     document.getElementById('menu').style.display = 'none';
     document.getElementById('pause').style.display = 'none';
