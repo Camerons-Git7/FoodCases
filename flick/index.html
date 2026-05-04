@@ -97,7 +97,7 @@ if (!gl) { document.body.innerHTML = '<h1 style="color:#fff;text-align:center;ma
 
 const TEX_URLS = {
     carpet: 'https://i.ibb.co/GQYgK9X8/backrooms-carpet-diffuse.png',
-    wall: 'https://i.ibb.co/WNk5cdJq/backrooms-wall-diffuse.png',
+    wall: 'https://i.ibb.co/xSmz0QvS/backrooms-wall-diffuse.png',
     ceilingTile: 'https://i.ibb.co/fdSNB7Kt/backrooms-ceiling-tile-diffuse.png',
     ceilingLight: 'https://i.ibb.co/jPDbvWPb/backrooms-ceiling-light-diffuse.png'
 };
@@ -530,10 +530,8 @@ function render() {
     const rawBob = Math.sin(player.bobPhase * bobFreq);
     const bobY = rawBob * bobAmp * bobBlend;
     
-    // Idle sway fades out as bobBlend fades in (crossfade)
-    const idleSway = (1.0 - bobBlend) * (player.onGround
-        ? Math.sin(performance.now() * 0.0012) * 0.025
-        : 0);
+        // Idle sway always runs, even in air, so landing has no snap
+    const idleSway = (1.0 - bobBlend) * Math.sin(performance.now() * 0.0012) * 0.025;
     
     const eyeY = player.y + CFG.eyeHeight + bobY;
     const pitch = player.pitch + idleSway;
