@@ -293,8 +293,8 @@ const CORRIDOR_LEN = CORRIDOR_Z_END - CORRIDOR_Z_START;  // 40
 const CORRIDOR_CENTER_Z = (CORRIDOR_Z_START + CORRIDOR_Z_END) / 2;  // 0
 
 // Corridor floor and ceiling - these are the ONLY floor/ceiling in the corridor
-addBox(0, 0, CORRIDOR_CENTER_Z, C_W, 0.02, CORRIDOR_LEN, TEX_WALL, false);  // floor
-addBox(0, ROOM_H, CORRIDOR_CENTER_Z, C_W, 0.02, CORRIDOR_LEN, TEX_WALL, false);  // ceiling
+addBox(0, -0.02, CORRIDOR_CENTER_Z, C_W, 0.04, CORRIDOR_LEN, TEX_WALL, false);  // floor
+addBox(0, ROOM_H + 0.02, CORRIDOR_CENTER_Z, C_W, 0.04, CORRIDOR_LEN, TEX_WALL, false);  // ceiling
 
 // Corridor walls (north and south ends are closed, east/west have doorways)
 // East wall segments (with doorways at room z positions)
@@ -373,13 +373,13 @@ addRoom(DEEP_W_X, S_ROOM_Z, R_W, R_W, ROOM_H, { east: true, north: true });
 function addRoom(cx, cz, w, d, h, doors) {
     doors = doors || {};
     const wt = WALL_T, hw = w/2, hd = d/2;
-    const floorY = 0;  // Floor at y=0
-    const ceilY = h;   // Ceiling at y=h
+    const floorY = -0.02;  // Floor lowered to prevent z-fighting with walls
+    const ceilY = h + 0.02;  // Ceiling raised to prevent z-fighting with walls
     
     // Floor - only this room's floor, no overlaps
-    addBox(cx, floorY, cz, w, 0.02, d, TEX_WALL, false);
+    addBox(cx, floorY, cz, w, 0.04, d, TEX_WALL, false);  // 0.04 height, centered at -0.02, top at 0
     // Ceiling
-    addBox(cx, ceilY, cz, w, 0.02, d, TEX_WALL, false);
+    addBox(cx, ceilY, cz, w, 0.04, d, TEX_WALL, false);  // 0.04 height, centered at h+0.02, bottom at h
     
     // North wall (at z = cz - hd - wt/2)
     if (doors.north) {
@@ -475,8 +475,8 @@ addBox(-24.5, ROOM_H/2, 0, 0.5, ROOM_H, 61, TEX_WALL);
 addBox(24.5, ROOM_H/2, 0, 0.5, ROOM_H, 61, TEX_WALL);
 
 // Ceiling light panels - attached just below ceiling, no collision, no overlap
-// Place them at y = ROOM_H - 0.05 (just a tiny bit below ceiling)
-const lightY = ROOM_H - 0.05;
+// Place them at y = ROOM_H - 0.15 (well below ceiling to prevent z-fighting)
+const lightY = ROOM_H - 0.15;
 const lightPositions = [
     [0,-10],[0,0],[0,10],[8.5,-12],[8.5,0],[8.5,12],[-8.5,-12],[-8.5,0],[-8.5,12],
     [19,-12],[19,0],[19,12],[-19,-12],[-19,0],[-19,12],[0,-25.25],[0,25.25],
@@ -485,7 +485,7 @@ const lightPositions = [
 ];
 for (const [lx,lz] of lightPositions) {
     // Very thin light panel, non-solid, positioned just below ceiling
-    addBox(lx, lightY, lz, 2.0, 0.02, 2.0, TEX_CEILING_LIGHT, false);
+    addBox(lx, lightY, lz, 2.0, 0.06, 2.0, TEX_CEILING_LIGHT, false);
 }
 
 // Build vertex data
@@ -502,7 +502,7 @@ for (const b of mapBoxes) {
     }
     // Light panel detection
     else if (b.texID === TEX_CEILING_LIGHT) {
-        override = { '-y': TEX_CEILING_LIGHT, '+y': TEX_CEILING_LIGHT };
+        override = { '-y': TEX_CEILING_LIGHT, '+y': TEX_CEILING_LIGHT, '+z': TEX_CEILING_LIGHT, '-z': TEX_CEILING_LIGHT, '+x': TEX_CEILING_LIGHT, '-x': TEX_CEILING_LIGHT };
     }
     pushBox(mapVerts, b.cx, b.cy, b.cz, b.sx, b.sy, b.sz, b.texID, override);
 }
