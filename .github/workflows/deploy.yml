@@ -56,6 +56,9 @@ jobs:
           log-level: standard
 
       # ─── SECOND WEBSITE ────────────────────────────
+      - name: Restore original code for Site 2
+        run: git checkout .
+
       - name: Replace "menist" with "strict" for Site 2 deploy
         run: |
           find . -type f \
@@ -69,7 +72,7 @@ jobs:
       - name: Deploy to InfinityFree Site 2
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          server: ${{ secrets.FTP_SERVER_2 }}
           username: ${{ secrets.FTP_USERNAME_2 }}
           password: ${{ secrets.FTP_PASSWORD_2 }}
           protocol: ftp
@@ -89,6 +92,9 @@ jobs:
           log-level: standard
 
       # ─── THIRD WEBSITE ─────────────────────────────
+      - name: Restore original code for Site 3
+        run: git checkout .
+
       - name: Replace "menist" with "skippy" for Site 3 deploy
         run: |
           find . -type f \
@@ -102,7 +108,7 @@ jobs:
       - name: Deploy to InfinityFree Site 3
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          server: ${{ secrets.FTP_SERVER_3 }}
           username: ${{ secrets.FTP_USERNAME_3 }}
           password: ${{ secrets.FTP_PASSWORD_3 }}
           protocol: ftp
