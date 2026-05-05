@@ -72,7 +72,7 @@ jobs:
       - name: Deploy to InfinityFree Site 2
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER_2 }}
+          server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME_2 }}
           password: ${{ secrets.FTP_PASSWORD_2 }}
           protocol: ftp
@@ -108,7 +108,7 @@ jobs:
       - name: Deploy to InfinityFree Site 3
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER_3 }}
+          server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME_3 }}
           password: ${{ secrets.FTP_PASSWORD_3 }}
           protocol: ftp
