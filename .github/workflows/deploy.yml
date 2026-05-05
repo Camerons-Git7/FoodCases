@@ -29,7 +29,7 @@ jobs:
         if: github.event.inputs.force_full_sync == 'true'
         run: |
           echo "Force full sync requested - will delete local sync state if it exists"
-          rm -f .ftp-sync-state.json .ftp-sync-state-2.json
+          rm -f .ftp-sync-state-1.json .ftp-sync-state-2.json .ftp-sync-state-3.json
           echo "Sync state cleared. All files will be re-uploaded."
 
       # ─── FIRST WEBSITE ─────────────────────────────
@@ -52,6 +52,7 @@ jobs:
             .gitignore
             .ftp-sync-state-1.json
             .ftp-sync-state-2.json
+            .ftp-sync-state-3.json
           log-level: standard
 
       # ─── SECOND WEBSITE ────────────────────────────
@@ -62,6 +63,7 @@ jobs:
             ! -path './.github/*' \
             ! -name '.ftp-sync-state-1.json' \
             ! -name '.ftp-sync-state-2.json' \
+            ! -name '.ftp-sync-state-3.json' \
             -exec sed -i 's/menist/strict/g' {} +
 
       - name: Deploy to InfinityFree Site 2
@@ -83,4 +85,38 @@ jobs:
             .gitignore
             .ftp-sync-state-1.json
             .ftp-sync-state-2.json
+            .ftp-sync-state-3.json
+          log-level: standard
+
+      # ─── THIRD WEBSITE ─────────────────────────────
+      - name: Replace "menist" with "skippy" for Site 3 deploy
+        run: |
+          find . -type f \
+            ! -path './.git/*' \
+            ! -path './.github/*' \
+            ! -name '.ftp-sync-state-1.json' \
+            ! -name '.ftp-sync-state-2.json' \
+            ! -name '.ftp-sync-state-3.json' \
+            -exec sed -i 's/menist/skippy/g' {} +
+
+      - name: Deploy to InfinityFree Site 3
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER_3 }}
+          username: ${{ secrets.FTP_USERNAME_3 }}
+          password: ${{ secrets.FTP_PASSWORD_3 }}
+          protocol: ftp
+          port: 21
+          server-dir: htdocs/
+          local-dir: ./
+          state-name: .ftp-sync-state-3.json
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            README.md
+            .gitignore
+            .ftp-sync-state-1.json
+            .ftp-sync-state-2.json
+            .ftp-sync-state-3.json
           log-level: standard
