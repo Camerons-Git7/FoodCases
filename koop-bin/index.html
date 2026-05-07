@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KoopBin</title>
+    <link rel="icon" href="https://cdn.jsdelivr.net/gh/bestsabplayerox/kb-cdn@main/koopbin.ico">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bestsabplayerox/kb-cdn@main/assets/index-BzXn8K5i.css">
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        const CDN_BASE = 'https://cdn.jsdelivr.net/gh/bestsabplayerox/kb-cdn@main';
+
+        // Asset loader utility
+        function loadScript(src, module = false) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                if (module) script.type = 'module';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        function loadWorker(src) {
+            return navigator.serviceWorker.register(src);
+        }
+
+        // Initialize everything in dependency order
+        async function init() {
+            try {
+                // 1. Load nacl-fast (crypto primitives needed by transports)
+                await loadScript(`${CDN_BASE}/assets/nacl-fast-C4cFKTsS.js`);
+
+                // 2. Load commonjs helpers
+                await loadScript(`${CDN_BASE}/assets/_commonjsHelpers-Dvrxj_Zk.js`);
+
+                // 3. Register Service Workers FIRST (must be before proxy loads)
+                // UV Service Worker
+                await loadWorker(`${CDN_BASE}/uv/uv.sw.js`);
+                // Main SW
+                await loadWorker(`${CDN_BASE}/sw.js`);
+                // SJ Service Worker
+                await loadWorker(`${CDN_BASE}/sj-sw.js`);
+
+                // 4. Load Bare-mux transport (dependency for UV)
+                await loadScript(`${CDN_BASE}/baremux/index.js`);
+
+                // 5. Load transport backends (epoxy, libcurl)
+                await loadScript(`${CDN_BASE}/epoxy/index.js`);
+                await loadScript(`${CDN_BASE}/libcurl/index.js`);
+
+                // 6. Load UV proxy core
+                await loadScript(`${CDN_BASE}/uv/uv.bundle.js`);
+                await loadScript(`${CDN_BASE}/uv/uv.config.js`);
+                await loadScript(`${CDN_BASE}/uv/uv.client.js`);
+                await loadScript(`${CDN_BASE}/uv/uv.handler.js`);
+
+                // 7. Load Scramjet
+                await loadScript(`${CDN_BASE}/scram/scramjet.all.js`);
+
+                // 8. Load main app bundles
+                await loadScript(`${CDN_BASE}/assets/index-CiRp6bgH.js`);
+                await loadScript(`${CDN_BASE}/assets/index-CuhBT5Ku.js`);
+
+                console.log('All assets loaded successfully');
+
+            } catch (err) {
+                console.error('Failed to initialize:', err);
+            }
+        }
+
+        // Run when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>
