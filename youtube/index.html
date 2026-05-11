@@ -234,16 +234,18 @@
       .video-grid { grid-template-columns: 1fr; }
     }
   </style>
+<base target="_blank">
 </head>
 <body>
   <div id="input-screen">
     <h1>▶︎ YouTube</h1>
-    <p class="subtitle">Paste Your YouTube Link Below or Browse Videos</p>
+    <p class="subtitle">Paste Your YouTube Link Below, Browse Videos, or Search</p>
     <div class="input-group">
-      <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." autofocus />
+      <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=... or search query" autofocus />
     </div>
     <div class="button-group" style="margin-top: 1rem;">
       <button id="submit">Watch</button>
+      <button id="search-btn" class="secondary">Search</button>
       <button id="browse-btn" class="secondary">Browse Videos</button>
     </div>
   </div>
@@ -257,7 +259,7 @@
 
   <div id="browse-screen">
     <div class="browse-header">
-      <h2>Joe Bart Videos</h2>
+      <h2 id="browse-title">Joe Bart Videos</h2>
       <button class="back-btn secondary" onclick="closeBrowse()">Back</button>
     </div>
     <div id="global-loading">
@@ -270,6 +272,7 @@
   <script>
     const submitBtn = document.getElementById("submit");
     const browseBtn = document.getElementById("browse-btn");
+    const searchBtn = document.getElementById("search-btn");
     const urlInput = document.getElementById("url");
     const inputScreen = document.getElementById("input-screen");
     const videoScreen = document.getElementById("video-screen");
@@ -278,6 +281,7 @@
     const globalLoading = document.getElementById("global-loading");
     const player = document.getElementById("player");
     const loading = document.getElementById("loading");
+    const browseTitle = document.getElementById("browse-title");
 
     const proxies = [
       "https://api.allorigins.win/raw?url=",
@@ -298,11 +302,32 @@
     submitBtn.addEventListener("click", handleSubmit);
     urlInput.addEventListener("keypress", e => { if (e.key === "Enter") handleSubmit(); });
     browseBtn.addEventListener("click", () => openBrowse());
+    searchBtn.addEventListener("click", handleSearch);
+
+    function handleSearch() {
+      let input = urlInput.value.trim();
+      if (!input) return;
+
+      // If it looks like a URL, treat it as video/channel instead
+      if (input.includes("youtube.com") || input.includes("youtu.be")) {
+        handleSubmit();
+        return;
+      }
+
+      // Build search URL
+      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(input)}&sp=EgIQAQ%253D%253D`;
+
+      const searchChannel = [
+        { id: "search-results", title: `Search: "${input}"`, url: searchUrl, isSearch: true }
+      ];
+
+      openBrowse(null, searchChannel);
+    }
 
     function handleSubmit() {
       let input = urlInput.value.trim();
       if (!input) return;
-      
+
       // Check if it's a channel/profile link
       const channelMatch = input.match(/youtube\.com\/(@[^/]+|channel\/[^/]+|c\/[^/]+)/i);
       if (channelMatch) {
@@ -316,16 +341,16 @@
         if (!url.includes("gl=") && !url.includes("hl=")) {
           url += (url.includes("?") ? "&" : "?") + "gl=US&hl=en";
         }
-        
+
         // Create a dynamic single channel entry for the pasted URL
         const dynamicChannel = [
           { id: "dynamic-channel", title: "Channel Videos", url: url }
         ];
-        
+
         openBrowse(null, dynamicChannel);
         return;
       }
-      
+
       // Otherwise treat as video
       playVideo(input);
     }
@@ -354,16 +379,17 @@
 
       allChannelVideos = {};
       channelStates = {};
-      
-      // Use custom channels if provided (from pasted URL), otherwise use default Joe Bart channels
+
+      // Use custom channels if provided (from pasted URL or search), otherwise use default Joe Bart channels
       const channelsToLoad = customChannels || channels;
-      
-      // Update header title if custom channel
-      const headerTitle = document.querySelector(".browse-header h2");
-      if (customChannels) {
-        headerTitle.textContent = "Channel Videos";
+
+      // Update header title
+      if (customChannels && customChannels[0]?.isSearch) {
+        browseTitle.textContent = customChannels[0].title;
+      } else if (customChannels) {
+        browseTitle.textContent = "Channel Videos";
       } else {
-        headerTitle.textContent = "Joe Bart Videos";
+        browseTitle.textContent = "Joe Bart Videos";
       }
 
       channelsToLoad.forEach(ch => {
@@ -383,7 +409,7 @@
         browseContent.appendChild(section);
 
         allChannelVideos[ch.id] = [];
-        channelStates[ch.id] = { continuationToken: null, apiKey: null, clientVersion: null, proxy: null, loading: true, error: null };
+        channelStates[ch.id] = { continuationToken: null, apiKey: null, clientVersion: null, proxy: null, loading: true, error: null, isSearch: ch.isSearch || false };
       });
 
       await Promise.all(channelsToLoad.map(ch => loadAllChannelVideos(ch)));
@@ -405,7 +431,7 @@
             if (!fetchUrl.includes("hl=")) {
               fetchUrl += (fetchUrl.includes("?") ? "&" : "?") + "hl=en&gl=US";
             }
-            
+
             const res = await fetch(proxy + encodeURIComponent(fetchUrl), { 
               headers: { 
                 "Accept": "text/html",
@@ -432,7 +458,8 @@
               clientVersion,
               proxy,
               loading: false,
-              error: null
+              error: null,
+              isSearch: channel.isSearch || false
             };
 
             renderChannelVideos(channel);
@@ -487,7 +514,7 @@
                 } else {
                   title = "Untitled Video";
                 }
-                
+
                 const thumbs = vr.thumbnail?.thumbnails || [];
                 const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
                 videos.push({ id: vr.videoId, title, thumbnail: thumb });
@@ -504,7 +531,7 @@
                 } else {
                   title = "Untitled Video";
                 }
-                
+
                 const thumbs = vr.thumbnail?.thumbnails || [];
                 const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
                 videos.push({ id: vr.videoId, title, thumbnail: thumb });
@@ -611,7 +638,7 @@
           } else {
             title = "Untitled";
           }
-          
+
           const thumbs = vr.thumbnail?.thumbnails || [];
           const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
           videos.push({ id: vr.videoId, title, thumbnail: thumb });
@@ -664,10 +691,9 @@
       browseContent.innerHTML = "";
       allChannelVideos = {};
       channelStates = {};
-      
+
       // Reset header title
-      const headerTitle = document.querySelector(".browse-header h2");
-      headerTitle.textContent = "Joe Bart Videos";
+      browseTitle.textContent = "Joe Bart Videos";
     }
   </script>
 </body>
