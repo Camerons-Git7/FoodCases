@@ -295,6 +295,7 @@
   </style>
 <base target="_blank">
 <base target="_blank">
+<base target="_blank">
 </head>
 <body style="display:flex;flex-direction:column;height:100vh;">
 
@@ -642,6 +643,11 @@
       const tabEl = document.getElementById("tab-" + id);
       const contentEl = document.querySelector(`.tab-content[data-tab="${id}"]`);
       if (!tabEl || !contentEl) return;
+
+      // Stop any video playing in this tab before closing
+      const player = contentEl.querySelector(".player");
+      if (player) player.src = "";
+
       const allTabs = [...document.querySelectorAll(".chrome-tab")];
       const idx = allTabs.indexOf(tabEl);
       tabEl.remove();
@@ -833,10 +839,10 @@
         return;
       }
 
-      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(input)}&sp=EgIQAQ%253D%253D`;
+      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(input)}`;
       const searchChannels = [{ id: "search-results", title: `Search: "${input}"`, url: searchUrl, isSearch: true }];
-      pushNav("browse", searchChannels, `Search: "${input}"`);
-      openBrowse(null, searchChannels, `Search: "${input}"`);
+      pushNav("browse", searchChannels, searchUrl);
+      openBrowse(null, searchChannels, searchUrl);
     }
 
     function extractVideoId(input) {
@@ -1001,9 +1007,9 @@
           const data = JSON.parse(match[1]);
           function recurse(obj) {
             if (!obj || typeof obj !== "object") return;
-            const vr = obj.videoRenderer || obj.gridVideoRenderer || obj.richItemRenderer?.content?.videoRenderer;
+            const vr = obj.videoRenderer || obj.gridVideoRenderer || obj.richItemRenderer?.content?.videoRenderer || obj.compactVideoRenderer || obj.reelItemRenderer;
             if (vr?.videoId) {
-              let title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || "Untitled Video";
+              let title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || vr.headline?.simpleText || "Untitled Video";
               const thumbs = vr.thumbnail?.thumbnails || [];
               const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
               videos.push({ id: vr.videoId, title: title.trim(), thumbnail: thumb });
@@ -1016,7 +1022,14 @@
       if (videos.length === 0) {
         const seen = new Set();
         [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].forEach(m => {
-          if (!seen.has(m[1])) { seen.add(m[1]); videos.push({ id: m[1], title: "Video (fallback)", thumbnail: `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg` }); }
+          if (!seen.has(m[1])) { 
+            seen.add(m[1]); 
+            // Try to find a nearby title for this video ID
+            let title = "Video (fallback)";
+            const titleMatch = html.match(new RegExp(`"videoId":"${m[1]}"[\s\S]{0,500}?"title":\s*"([^"]+)"`));
+            if (titleMatch) title = titleMatch[1];
+            videos.push({ id: m[1], title: title, thumbnail: `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg` }); 
+          }
         });
       }
       const unique = [], seenIds = new Set();
@@ -1047,9 +1060,9 @@
       const videos = [];
       function recurse(obj) {
         if (!obj || typeof obj !== "object") return;
-        const vr = obj.gridVideoRenderer || obj.videoRenderer || obj.richItemRenderer?.content?.videoRenderer;
+        const vr = obj.gridVideoRenderer || obj.videoRenderer || obj.richItemRenderer?.content?.videoRenderer || obj.compactVideoRenderer || obj.reelItemRenderer;
         if (vr?.videoId) {
-          let title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || "Untitled";
+          let title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || vr.headline?.simpleText || "Untitled";
           const thumbs = vr.thumbnail?.thumbnails || [];
           const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
           videos.push({ id: vr.videoId, title: title.trim(), thumbnail: thumb });
@@ -1285,6 +1298,18 @@
       if (e.key === "F11") {
         e.preventDefault();
         toggleFullscreen();
+      }
+    });
+
+    /* ── Home Search Enter Key Listener ── */
+    document.addEventListener("keypress", e => {
+      if (e.key === "Enter") {
+        const target = e.target;
+        if (target && target.classList && target.classList.contains("home-input")) {
+          e.preventDefault();
+          const input = target.value.trim();
+          if (input) handleInput(input);
+        }
       }
     });
 
