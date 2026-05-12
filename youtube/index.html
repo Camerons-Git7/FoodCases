@@ -3,494 +3,988 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title> ▶︎ YouTube ▶︎</title>
-  <link rel="icon" type="image/x-icon" href="https://www.youtube.com/favicon.ico" />
+  <title>YouTube Browser</title>
+  <link rel="icon" type="image/x-icon" href="https://www.youtube.com/s/desktop/14cba078/img/favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; overflow: hidden; }
-    body {
-      font-family: "Inter", system-ui, sans-serif;
-      background: #0f0f0f;
-      color: #e5e5e5;
-      display: flex;
-      flex-direction: column;
+    html, body { height: 100%; font-family: "Inter", "Segoe UI", system-ui, sans-serif; background: #0f0f0f; color: #e8eaed; overflow: hidden; }
+
+    /* ════════════════════════════════════════
+       CHROME BROWSER SHELL
+       ════════════════════════════════════════ */
+
+    /* Title Bar */
+    #chrome-titlebar {
+      height: 38px; background: #1a1a1a; display: flex; align-items: center;
+      padding: 0 0 0 8px; gap: 4px; user-select: none;
+      border-bottom: 1px solid #333; overflow-x: auto; flex-shrink: 0;
     }
-    #input-screen {
+    #chrome-titlebar::-webkit-scrollbar { height: 0; }
+    .chrome-tab {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 12px; height: 30px; background: #2d2d2d;
+      border-radius: 8px 8px 0 0; font-size: 12px; color: #e8eaed;
+      max-width: 200px; min-width: 100px; cursor: pointer;
+      border: 1px solid #444; border-bottom: none;
+      transition: background 0.15s;
+    }
+    .chrome-tab.active { background: #0f0f0f; border-color: #555; }
+    .chrome-tab:hover:not(.active) { background: #353535; }
+    .chrome-tab img { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+    .chrome-tab span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chrome-tab .tab-close {
+      width: 16px; height: 16px; border-radius: 50%; border: none;
+      background: transparent; color: #999; font-size: 14px; line-height: 1;
+      cursor: pointer; display: grid; place-items: center; opacity: 0; flex-shrink: 0;
+    }
+    .chrome-tab:hover .tab-close { opacity: 1; }
+    .chrome-tab .tab-close:hover { background: #ff4444; color: white; }
+    .chrome-newtab {
+      width: 26px; height: 26px; border-radius: 50%; border: none;
+      background: transparent; color: #aaa; font-size: 18px; cursor: pointer;
+      display: grid; place-items: center; flex-shrink: 0;
+    }
+    .chrome-newtab:hover { background: #4a4a4a; color: #fff; }
+    .chrome-window-btns {
+      margin-left: auto; display: flex; align-items: center; height: 100%; flex-shrink: 0;
+    }
+    .chrome-window-btns button {
+      width: 46px; height: 38px; border: none; background: transparent;
+      color: #ccc; font-size: 14px; cursor: pointer; display: grid; place-items: center;
+    }
+    .chrome-window-btns button:hover { background: #4a4a4a; }
+    .chrome-window-btns .chrome-close:hover { background: #e81123; color: white; }
+
+    /* Toolbar / Address Bar */
+    #chrome-toolbar {
+      height: 42px; background: #0f0f0f; display: flex; align-items: center;
+      padding: 0 8px; gap: 6px; border-bottom: 1px solid #333; flex-shrink: 0;
+    }
+    .chrome-nav-btn {
+      width: 28px; height: 28px; border-radius: 50%; border: none;
+      background: transparent; color: #aaa; font-size: 16px; cursor: pointer;
+      display: grid; place-items: center;
+    }
+    .chrome-nav-btn:hover:not(:disabled) { background: #3c3c3c; color: #fff; }
+    .chrome-nav-btn:disabled { opacity: 0.3; cursor: default; }
+    #chrome-omnibox {
+      flex: 1; display: flex; align-items: center; gap: 6px;
+      background: #1f1f1f; border-radius: 20px; padding: 0 12px;
+      height: 32px; border: 1px solid #333; transition: border-color 0.2s;
+    }
+    #chrome-omnibox:focus-within { border-color: #ff0000; background: #1a1a1a; }
+    #chrome-omnibox .omni-icon { color: #888; font-size: 13px; }
+    #chrome-omnibox input {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: #e8eaed; font-size: 13px; font-family: inherit;
+    }
+    #chrome-omnibox input::placeholder { color: #888; }
+    #chrome-omnibox .omni-star {
+      width: 24px; height: 24px; border-radius: 50%; border: none;
+      background: transparent; color: #888; font-size: 14px; cursor: pointer;
+      display: grid; place-items: center;
+    }
+    #chrome-omnibox .omni-star:hover { background: #4a4a4a; }
+    #chrome-omnibox .omni-star.bookmarked { color: #fbbc04; }
+
+    /* Bookmarks Bar */
+    #chrome-bookmarks {
+      min-height: 36px; background: #1a1a1a; display: flex; align-items: center;
+      padding: 4px 12px; gap: 8px; border-bottom: 2px solid #ff0000; overflow-x: auto; flex-shrink: 0;
+    }
+    #chrome-bookmarks::-webkit-scrollbar { height: 0; }
+    .bm-bar-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 6px; cursor: pointer;
+      font-size: 13px; color: #e8eaed; white-space: nowrap;
+      transition: background 0.15s; font-weight: 500;
+      border: 1px solid transparent;
+    }
+    .bm-bar-item:hover { background: #2a2a2a; border-color: #444; }
+    .bm-bar-item .bm-favicon {
+      width: 14px; height: 14px; border-radius: 2px;
+      display: grid; place-items: center; flex-shrink: 0;
+    }
+
+    .bm-bar-item .bm-del {
+      opacity: 0; width: 14px; height: 14px; border-radius: 3px; border: none;
+      background: transparent; color: #888; cursor: pointer; font-size: 11px;
+      display: grid; place-items: center; flex-shrink: 0;
+    }
+    .bm-bar-item:hover .bm-del { opacity: 1; }
+    .bm-bar-item .bm-del:hover { background: #ff4444; color: white; }
+
+    /* ════════════════════════════════════════
+       CONTENT AREA
+       ════════════════════════════════════════ */
+    #chrome-content {
+      flex: 1; overflow: hidden; position: relative; background: #0f0f0f;
+      display: flex; flex-direction: column;
+    }
+    .tab-content {
+      position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; display: none;
+      flex-direction: column; background: #0f0f0f;
+    }
+    .tab-content.active { display: flex; }
+
+    /* Home / New Tab - PERFECTLY CENTERED */
+    .home-screen {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 2rem;
       text-align: center;
-      transition: opacity 0.4s ease;
-      overflow-y: auto;
-      background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
-    }
-    h1 { font-size: 3rem; font-weight: 700; margin-bottom: 1.5rem; letter-spacing: -0.02em; }
-    p.subtitle { font-size: 1.25rem; color: #a1a1aa; margin-bottom: 2.5rem; max-width: 500px; }
-    .input-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      max-width: 700px;
+      padding: 2rem;
+      background: radial-gradient(circle at 50% 30%, #1a1a1a 0%, #000 70%);
+      min-height: 100%;
       width: 100%;
-      justify-content: center;
     }
-    input[type="text"] {
+    .home-screen .home-logo {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .home-screen .home-logo .logo-icon {
+      width: 56px; height: 56px; border-radius: 14px;
+      background: #ff0000; display: grid; place-items: center;
+      box-shadow: 0 4px 20px rgba(255,0,0,0.3);
+    }
+    .home-screen .home-logo .logo-icon svg { width: 28px; height: 28px; fill: white; }
+    .home-screen .home-logo .logo-text {
+      font-size: 2.8rem; font-weight: 800; letter-spacing: -0.03em; color: #fff;
+    }
+    .home-screen .home-subtitle {
+      font-size: 1.1rem; color: #a1a1aa; margin-bottom: 2.5rem; max-width: 480px;
+    }
+    .home-screen .home-search-box {
+      display: flex; align-items: center; gap: 8px;
+      background: #1f1f1f; border: 1px solid #333; border-radius: 12px;
+      padding: 0 16px; width: 100%; max-width: 560px; height: 52px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .home-screen .home-search-box:focus-within {
+      border-color: #ff0000; box-shadow: 0 0 0 3px rgba(255,0,0,0.12);
+    }
+    .home-screen .home-search-box input {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: #e5e5e5; font-size: 1rem; font-family: inherit;
+    }
+    .home-screen .home-search-box input::placeholder { color: #888; }
+    .home-screen .home-search-box button {
+      background: #ff0000; color: white; border: none; border-radius: 8px;
+      padding: 6px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .home-screen .home-search-box button:hover { background: #cc0000; }
+
+    /* Browse */
+    .browse-screen { 
+      padding-bottom: 2rem; 
       flex: 1;
-      min-width: 300px;
-      padding: 1rem 1.5rem;
-      font-size: 1.1rem;
-      background: #1f1f1f;
-      border: 1px solid #333;
-      border-radius: 12px;
-      color: white;
-      outline: none;
-      transition: all 0.2s;
-    }
-    input[type="text"]:focus {
-      border-color: #ff0000;
-      box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.15);
-    }
-    button {
-      padding: 1rem 2.5rem;
-      font-size: 1.1rem;
-      font-weight: 600;
-      background: #ff0000;
-      color: white;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    button:hover { background: #cc0000; transform: translateY(-2px); }
-    button:active { transform: translateY(0); }
-    button.secondary { background: #333; }
-    button.secondary:hover { background: #444; }
-    .button-group { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
-    #video-screen {
-      position: fixed;
-      inset: 0;
-      background: black;
-      display: none;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
       flex-direction: column;
+    }
+    .browse-screen:has(.loading-wrap.active) {
       align-items: center;
       justify-content: center;
-      z-index: 10;
     }
-    .video-container {
-      position: relative;
-      width: 100%;
-      height: 100vh;
-      max-width: 100vw;
-      overflow: hidden;
-      background: #000;
-    }
-    .video-container iframe {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
-    #browse-screen {
-      position: fixed;
-      inset: 0;
-      background: #0f0f0f;
-      display: none;
-      flex-direction: column;
-      z-index: 20;
-      height: 100vh;
-      overflow-y: auto;
-      padding-bottom: 2rem;
-    }
-    .browse-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem 2rem;
-      background: #1f1f1f;
-      border-bottom: 1px solid #333;
-      flex-shrink: 0;
-      height: 60px;
-    }
-    .browse-header h2 {
-      font-size: 1.5rem;
-      color: #ff0000;
-      margin: 0;
-      user-select: none;
-    }
-    .back-btn { padding: 0.5rem 1.5rem; font-size: 0.9rem; }
-    .channel-section {
-      max-width: 900px;
-      margin: 1.5rem auto;
-      padding: 0 1rem;
-      display: none; /* hidden until all loaded */
-    }
+    .browse-content { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; width: 100%; }
+    .channel-section { margin-bottom: 2rem; display: none; }
+    .channel-section.loaded { display: block; }
     .channel-title {
-      font-size: 1.6rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      color: #ff0000;
-      border-bottom: 2px solid #ff0000;
-      padding-bottom: 0.3rem;
-      user-select: none;
+      font-size: 1.3rem; font-weight: 700; color: #ff0000;
+      border-bottom: 2px solid #ff0000; padding-bottom: 0.4rem; margin-bottom: 1rem;
     }
     .video-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-      width: 100%;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;
     }
     .video-card {
-      background: #1f1f1f;
-      border-radius: 12px;
-      overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.2s, border-color 0.2s;
-      border: 1px solid #333;
+      background: #1f1f1f; border-radius: 12px; overflow: hidden; cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      border: 1px solid #333; display: flex; flex-direction: column;
+    }
+    .video-card:hover { transform: translateY(-4px); border-color: #ff0000; box-shadow: 0 8px 24px rgba(255,0,0,0.08); }
+    .video-thumb { width: 100%; padding-bottom: 56.25%; position: relative; background: #000; overflow: hidden; }
+    .video-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+    .video-info { padding: 0.75rem 1rem; color: white; font-size: 0.9rem; font-weight: 600; line-height: 1.35; }
+
+    /* Video Player */
+    .video-screen { 
+      background: #000; 
+      padding: 0; 
+      flex: 1;
       display: flex;
       flex-direction: column;
-      user-select: none;
     }
-    .video-card:hover { transform: translateY(-3px); border-color: #ff0000; }
-    .video-thumb {
-      width: 100%;
-      padding-bottom: 56.25%;
-      position: relative;
-      background: #000;
-      overflow: hidden;
-      flex-shrink: 0;
+    .video-container {
+      position: relative; width: 100%; flex: 1;
+      max-width: 100%; overflow: hidden; background: #000;
     }
-    .video-thumb img {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    .video-info {
-      padding: 0.75rem 1rem;
-      color: white;
-      font-size: 0.95rem;
-      font-weight: 600;
-      line-height: 1.3;
-      white-space: normal;
-    }
-    .loading {
-      font-size: 1.5rem;
-      color: #888;
-      text-align: center;
-      padding: 2rem 0;
-    }
-    .error-msg {
-      color: #ff4444;
-      padding: 2rem;
-      text-align: center;
-      font-weight: 600;
-      font-size: 1rem;
-      user-select: none;
-    }
-    #global-loading {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+    .video-container iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+
+    /* Loading & Errors */
+    .loading-wrap { 
+      display: none;
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center; 
+      gap: 1rem; 
       padding: 4rem 2rem;
-      gap: 1.5rem;
+      min-height: 300px;
     }
-    #global-loading-text {
-      font-size: 1.5rem;
-      color: #888;
-      text-align: center;
+    .loading-wrap.active { display: flex; }
+    .red-spinner { width: 44px; height: 44px; border: 4px solid rgba(255,0,0,0.2); border-top: 4px solid #ff0000; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .error-msg { color: #ff4444; padding: 2rem; text-align: center; font-weight: 600; }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+      background: #323232; color: #fff; padding: 0.7rem 1.4rem; border-radius: 8px;
+      border: 1px solid #444; font-size: 0.85rem; font-weight: 500; z-index: 9999;
+      transition: opacity 0.3s ease; white-space: nowrap;
+      opacity: 0; pointer-events: none; display: none;
     }
-    /* Red Loading Spinner */
-    .red-spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid rgba(255, 0, 0, 0.2);
-      border-top: 4px solid #ff0000;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
+    #toast.show { opacity: 1; pointer-events: auto; display: block; }
+
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #0f0f0f; }
+    ::-webkit-scrollbar-thumb { background: #5f6368; border-radius: 5px; border: 2px solid #0f0f0f; }
+    ::-webkit-scrollbar-thumb:hover { background: #80868b; }
+    ::-webkit-scrollbar-corner { background: transparent; }
+
+    /* Context Menu */
+    #context-menu {
+      position: fixed;
+      background: #2d2d2d;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 4px 0;
+      min-width: 160px;
+      z-index: 10000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      font-size: 13px;
+      user-select: none;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    .ctx-item {
+      padding: 8px 16px;
+      color: #e8eaed;
+      cursor: pointer;
+      transition: background 0.1s;
     }
-    @media (max-width: 600px) {
-      h1 { font-size: 2.4rem; }
-      .input-group { flex-direction: column; align-items: stretch; }
-      input, button { width: 100%; }
-      .browse-header { padding: 1rem; height: auto; }
-      .browse-header h2 { font-size: 1.2rem; }
-      #browse-screen { padding: 0 0 2rem 0; }
-      .channel-section { max-width: 100%; margin: 1rem 1rem 2rem; }
+    .ctx-item:hover { background: #3c3c3c; }
+    .ctx-item.hidden { display: none; }
+    @media (max-width: 640px) {
+      #chrome-titlebar { height: auto; flex-wrap: wrap; padding: 4px; }
+      .chrome-tab { max-width: 140px; min-width: 80px; }
+      #chrome-toolbar { padding: 0 4px; }
       .video-grid { grid-template-columns: 1fr; }
+      .home-screen .home-logo .logo-text { font-size: 2rem; }
+      .home-screen .home-search-box { max-width: 100%; }
     }
   </style>
 <base target="_blank">
 </head>
-<body>
-  <div id="input-screen">
-    <h1>▶︎ YouTube</h1>
-    <p class="subtitle">Paste Your YouTube Link Below, Browse Videos, or Search</p>
-    <div class="input-group">
-      <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=... or search query" autofocus />
+<body style="display:flex;flex-direction:column;height:100vh;">
+
+  <!-- ═══════ CHROME TITLE BAR WITH TABS ═══════ -->
+  <div id="chrome-titlebar">
+    <div class="chrome-tab active" id="tab-0" onclick="switchTab(0)">
+      <span style="color:#ff0000;font-size:10px;">▶</span>
+      <span>New Tab</span>
+      <button class="tab-close" onclick="event.stopPropagation(); closeTab(0)">×</button>
     </div>
-    <div class="button-group" style="margin-top: 1rem;">
-      <button id="submit">Watch</button>
-      <button id="search-btn" class="secondary">Search</button>
-      <button id="browse-btn" class="secondary">Browse Videos</button>
+    <button class="chrome-newtab" onclick="newTab()" title="New Tab">+</button>
+    <div class="chrome-window-btns">
+      <button title="Toggle Fullscreen" onclick="toggleFullscreen()">⛶</button>
+      <button class="chrome-close" title="Close" onclick="window.close()">×</button>
     </div>
   </div>
 
-  <div id="video-screen">
-    <div class="video-container">
-      <iframe id="player" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+  <!-- ═══════ CHROME TOOLBAR / ADDRESS BAR ═══════ -->
+  <div id="chrome-toolbar">
+    <button class="chrome-nav-btn" id="btn-back" onclick="goBack()" disabled title="Back (Alt+Left)">←</button>
+    <button class="chrome-nav-btn" id="btn-fwd" onclick="goForward()" disabled title="Forward (Alt+Right)">→</button>
+    <button class="chrome-nav-btn" onclick="reloadPage()" title="Reload (Ctrl+R)">↻</button>
+
+    <div id="chrome-omnibox">
+      <span class="omni-icon" id="omni-secure">🔒</span>
+      <input id="omnibox-input" type="text" placeholder="Search YouTube or type a URL" />
+      <button class="omni-star" id="omni-star" onclick="starCurrent()" title="Bookmark this page (Ctrl+D)">☆</button>
     </div>
-    <div class="loading" id="loading">Loading video...</div>
   </div>
 
-  <div id="browse-screen">
-    <div class="browse-header">
-      <h2 id="browse-title">Joe Bart Videos</h2>
-      <button class="back-btn secondary" onclick="closeBrowse()">Back</button>
+  <!-- ═══════ CHROME BOOKMARKS BAR ═══════ -->
+  <div id="chrome-bookmarks">
+    <div class="bm-bar-item" data-hardcoded="true" style="background:#ff0000;color:#fff;border-color:#cc0000;" onclick="pushNav('browse', defaultChannels, 'Joe Bart Videos'); openBrowse(null, defaultChannels, 'Joe Bart Videos');">
+      <div class="bm-favicon" style="color:#fff;font-weight:700;font-size:10px;">▶</div>
+      <span style="font-weight:700;">Joe</span>
     </div>
-    <div id="global-loading">
-      <div id="global-loading-text">Loading Videos...</div>
-      <div class="red-spinner"></div>
-    </div>
-    <div id="browse-content"></div>
   </div>
+
+  <!-- ═══════ CONTENT AREA ═══════ -->
+  <div id="chrome-content">
+
+    <!-- Tab 0 -->
+    <div class="tab-content active" data-tab="0">
+      <div class="home-screen">
+        <div class="home-logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24"><path d="M10 15l5.19-3L10 9v6zm11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>
+          </div>
+          <div class="logo-text">YouTube Browser</div>
+        </div>
+        <div class="home-subtitle">Paste a YouTube video or channel link, or type a search query.</div>
+        <div class="home-search-box">
+          <input class="home-input" type="text" placeholder="Search YouTube or paste a link…" />
+          <button onclick="handleHomeSearch(this)">Go</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="toast"></div>
 
   <script>
-    const submitBtn = document.getElementById("submit");
-    const browseBtn = document.getElementById("browse-btn");
-    const searchBtn = document.getElementById("search-btn");
-    const urlInput = document.getElementById("url");
-    const inputScreen = document.getElementById("input-screen");
-    const videoScreen = document.getElementById("video-screen");
-    const browseScreen = document.getElementById("browse-screen");
-    const browseContent = document.getElementById("browse-content");
-    const globalLoading = document.getElementById("global-loading");
-    const player = document.getElementById("player");
-    const loading = document.getElementById("loading");
-    const browseTitle = document.getElementById("browse-title");
-
+    /* ── State ── */
     const proxies = [
       "https://api.allorigins.win/raw?url=",
       "https://api.codetabs.com/v1/proxy?quest=",
-      "https://thingproxy.freeboard.io/fetch/",
+      "https://thingproxy.freeboard.io/fetch/"
     ];
 
-    const channels = [
+    const defaultChannels = [
       { id: "joe-bart-gaming", title: "Joe Bart Gaming", url: "https://www.youtube.com/@JoeBartGames/videos" },
       { id: "joe-bart", title: "General Videos", url: "https://www.youtube.com/@JoeBartolozzi/videos" },
       { id: "joe-bart-vods", title: "Vods", url: "https://www.youtube.com/@JoeBartVOD/videos" },
-      { id: "joe-bart-philosophy", title: "Philosophy Videos", url: "https://www.youtube.com/@Joe-Bart-Philosophy/videos" },
+      { id: "joe-bart-philosophy", title: "Philosophy Videos", url: "https://www.youtube.com/@Joe-Bart-Philosophy/videos" }
     ];
 
-    let allChannelVideos = {};
-    let channelStates = {};
+    let tabs = [];
+    let activeTabId = 0;
+    let nextTabId = 1;
 
-    submitBtn.addEventListener("click", handleSubmit);
-    urlInput.addEventListener("keypress", e => { if (e.key === "Enter") handleSubmit(); });
-    browseBtn.addEventListener("click", () => openBrowse());
-    searchBtn.addEventListener("click", handleSearch);
+    /* ── Background Preload Cache ── */
+    const preloadCache = {};
+    let preloadInProgress = false;
 
-    function handleSearch() {
-      let input = urlInput.value.trim();
-      if (!input) return;
+    function initTabState(id) {
+      tabs[id] = {
+        allChannelVideos: {},
+        channelStates: {},
+        currentVideoId: null,
+        currentVideoTitle: "",
+        currentChannels: [],
+        currentBrowseTitle: "",
+        isSearchMode: false,
+        navHistory: [],
+        navIndex: -1,
+        screen: "home",
+      muted: false
+      };
+    }
+    initTabState(0);
 
-      // If it looks like a URL, treat it as video/channel instead
-      if (input.includes("youtube.com") || input.includes("youtu.be")) {
-        handleSubmit();
-        return;
+    /* ── Bookmarks (localStorage) ── */
+    const BM_KEY = "yt_browser_bookmarks";
+
+    function getBookmarks() {
+      try { return JSON.parse(localStorage.getItem(BM_KEY)) || []; } catch { return []; }
+    }
+    function saveBookmarks(bms) { localStorage.setItem(BM_KEY, JSON.stringify(bms)); renderBookmarksBar(); }
+
+    function ensureDefaultBookmark() {
+      let bms = getBookmarks();
+      const joeIdx = bms.findIndex(b => b.id === "joe-default");
+      if (joeIdx === -1) {
+        bms.unshift({
+          id: "joe-default",
+          name: "Joe",
+          type: "collection",
+          channels: defaultChannels,
+          created: Date.now(),
+          deletable: false
+        });
+        saveBookmarks(bms);
       }
-
-      // Build search URL
-      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(input)}&sp=EgIQAQ%253D%253D`;
-
-      const searchChannel = [
-        { id: "search-results", title: `Search: "${input}"`, url: searchUrl, isSearch: true }
-      ];
-
-      openBrowse(null, searchChannel);
     }
 
-    function handleSubmit() {
-      let input = urlInput.value.trim();
-      if (!input) return;
+    function deleteBookmark(id) {
+      let bms = getBookmarks().filter(b => b.id !== id);
+      saveBookmarks(bms);
+      toast("Bookmark removed");
+    }
 
-      // Check if it's a channel/profile link
-      const channelMatch = input.match(/youtube\.com\/(@[^/]+|channel\/[^/]+|c\/[^/]+)/i);
-      if (channelMatch) {
-        let url = input;
-        // Ensure it ends with /videos
-        if (!/\/videos/i.test(url)) {
-          // Remove any trailing slashes or query params before adding /videos
-          url = url.replace(/\/?(\?.*)?$/, '') + "/videos";
+    function addBookmark(name, type, data) {
+      let bms = getBookmarks();
+      if (type === "video" && bms.some(b => b.type === "video" && b.videoId === data.videoId)) {
+        toast("Already bookmarked"); return;
+      }
+      const bm = { id: "bm-" + Date.now() + "-" + Math.random().toString(36).slice(2,7), name, type, created: Date.now(), deletable: true, ...data };
+      bms.push(bm);
+      saveBookmarks(bms);
+      toast("Bookmarked: " + name);
+    }
+
+    function bookmarkCurrent() {
+      const t = tabs[activeTabId];
+      if (!t.currentVideoId) return;
+      addBookmark(t.currentVideoTitle || "Video " + t.currentVideoId, "video", { videoId: t.currentVideoId });
+    }
+
+    function bookmarkCurrentChannels(title, channels) {
+      addBookmark(title, "collection", { channels });
+    }
+
+    function renderBookmarksBar() {
+      const bar = document.getElementById("chrome-bookmarks");
+      const bms = getBookmarks();
+      // Keep the hardcoded Joe bookmark, remove only dynamic ones
+      const joe = bar.querySelector('.bm-bar-item[data-hardcoded="true"]');
+      bar.querySelectorAll('.bm-bar-item:not([data-hardcoded="true"])').forEach(el => el.remove());
+      bms.forEach(bm => {
+        const item = document.createElement("div");
+        item.className = "bm-bar-item";
+        item.dataset.dynamic = "true";
+        item.innerHTML = `
+          <div class="bm-favicon" style="color:#ff0000;font-size:10px;font-weight:700;">▶</div>
+          <span>${escapeHtml(bm.name)}</span>
+          ${bm.deletable !== false ? `<button class="bm-del" onclick="event.stopPropagation(); deleteBookmark('${bm.id}')">×</button>` : ""}
+        `;
+        item.onclick = () => {
+          if (bm.type === "video") { pushNav("video", bm.videoId); playVideo(bm.videoId); }
+          else if (bm.type === "collection") { pushNav("browse", bm.channels, bm.name); openBrowse(null, bm.channels, bm.name); }
+        };
+        bar.appendChild(item);
+      });
+    }
+
+    function starCurrent() {
+      const t = tabs[activeTabId];
+      const input = document.getElementById("omnibox-input").value.trim();
+      if (t.currentVideoId) {
+        bookmarkCurrent();
+        document.getElementById("omni-star").classList.add("bookmarked");
+        setTimeout(() => document.getElementById("omni-star").classList.remove("bookmarked"), 2000);
+      } else if (t.currentChannels.length > 0) {
+        bookmarkCurrentChannels(t.currentBrowseTitle || "Channel", t.currentChannels);
+        document.getElementById("omni-star").classList.add("bookmarked");
+        setTimeout(() => document.getElementById("omni-star").classList.remove("bookmarked"), 2000);
+      } else if (input) {
+        const ch = extractChannel(input);
+        if (ch) {
+          const channels = [{ id: "dynamic-channel", title: ch.name || "Channel", url: ch.url }];
+          bookmarkCurrentChannels(ch.name || "Channel", channels);
+          document.getElementById("omni-star").classList.add("bookmarked");
+          setTimeout(() => document.getElementById("omni-star").classList.remove("bookmarked"), 2000);
+        } else {
+          toast("Nothing to bookmark");
         }
-        // Force English/US region
-        if (!url.includes("gl=") && !url.includes("hl=")) {
-          url += (url.includes("?") ? "&" : "?") + "gl=US&hl=en";
-        }
-
-        // Create a dynamic single channel entry for the pasted URL
-        const dynamicChannel = [
-          { id: "dynamic-channel", title: "Channel Videos", url: url }
-        ];
-
-        openBrowse(null, dynamicChannel);
-        return;
-      }
-
-      // Otherwise treat as video
-      playVideo(input);
-    }
-
-    function playVideo(input) {
-      let videoId = input.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1] || (input.length === 11 ? input : null);
-      if (!videoId) {
-        alert("Couldn't find a valid YouTube video ID. Try a full link.");
-        return;
-      }
-      inputScreen.style.opacity = "0";
-      setTimeout(() => inputScreen.style.display = "none", 400);
-      browseScreen.style.display = "none";
-      videoScreen.style.display = "flex";
-      player.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1`;
-      loading.style.display = "block";
-      setTimeout(() => loading.style.display = "none", 1800);
-    }
-
-    async function openBrowse(e, customChannels = null) {
-      inputScreen.style.display = "none";
-      videoScreen.style.display = "none";
-      browseScreen.style.display = "flex";
-      browseContent.innerHTML = "";
-      globalLoading.style.display = "flex";
-
-      allChannelVideos = {};
-      channelStates = {};
-
-      // Use custom channels if provided (from pasted URL or search), otherwise use default Joe Bart channels
-      const channelsToLoad = customChannels || channels;
-
-      // Update header title
-      if (customChannels && customChannels[0]?.isSearch) {
-        browseTitle.textContent = customChannels[0].title;
-      } else if (customChannels) {
-        browseTitle.textContent = "Channel Videos";
       } else {
-        browseTitle.textContent = "Joe Bart Videos";
+        toast("Nothing to bookmark");
       }
+    }
 
-      channelsToLoad.forEach(ch => {
-        const section = document.createElement("section");
-        section.className = "channel-section";
-        section.id = `channel-section-${ch.id}`;
+    /* ── Background Preloading ── */
+    function getCacheKey(channels) {
+      return channels.map(c => c.id).sort().join("|");
+    }
 
-        const titleEl = document.createElement("h2");
-        titleEl.className = "channel-title";
-        titleEl.textContent = ch.title;
+    async function preloadChannels(channels) {
+      const key = getCacheKey(channels);
+      if (preloadCache[key] || preloadInProgress) return;
+      preloadInProgress = true;
 
-        const grid = document.createElement("div");
-        grid.className = "video-grid";
-        grid.id = `video-grid-${ch.id}`;
+      const cacheEntry = {
+        allChannelVideos: {},
+        channelStates: {},
+        ready: false,
+        loading: true,
+        error: null
+      };
+      preloadCache[key] = cacheEntry;
 
-        section.append(titleEl, grid);
-        browseContent.appendChild(section);
-
-        allChannelVideos[ch.id] = [];
-        channelStates[ch.id] = { continuationToken: null, apiKey: null, clientVersion: null, proxy: null, loading: true, error: null, isSearch: ch.isSearch || false };
+      channels.forEach(ch => {
+        cacheEntry.allChannelVideos[ch.id] = [];
+        cacheEntry.channelStates[ch.id] = { continuationToken: null, apiKey: null, clientVersion: null, proxy: null, loading: true, error: null, isSearch: ch.isSearch || false };
       });
 
-      await Promise.all(channelsToLoad.map(ch => loadAllChannelVideos(ch)));
-
-      globalLoading.style.display = "none";
-      document.querySelectorAll(".channel-section").forEach(sec => sec.style.display = "block");
+      try {
+        await Promise.all(channels.map(ch => preloadChannelVideos(ch, cacheEntry)));
+        cacheEntry.ready = true;
+      } catch (err) {
+        cacheEntry.error = err.message;
+      } finally {
+        cacheEntry.loading = false;
+        preloadInProgress = false;
+      }
     }
 
-    async function loadAllChannelVideos(channel) {
-      const grid = document.getElementById(`video-grid-${channel.id}`);
+    async function preloadChannelVideos(channel, cacheEntry) {
       try {
-        let initSuccess = false;
-        let lastError = null;
-
+        let initSuccess = false, lastError = null;
         for (const proxy of proxies) {
           try {
-            // Add hl=en&gl=US to force English titles
             let fetchUrl = channel.url;
-            if (!fetchUrl.includes("hl=")) {
-              fetchUrl += (fetchUrl.includes("?") ? "&" : "?") + "hl=en&gl=US";
-            }
-
-            const res = await fetch(proxy + encodeURIComponent(fetchUrl), { 
-              headers: { 
-                "Accept": "text/html",
-                "Accept-Language": "en-US,en;q=0.9"
-              } 
-            });
+            if (!fetchUrl.includes("hl=")) fetchUrl += (fetchUrl.includes("?") ? "&" : "?") + "hl=en&gl=US";
+            const res = await fetch(proxy + encodeURIComponent(fetchUrl), { headers: { "Accept": "text/html", "Accept-Language": "en-US,en;q=0.9" } });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const html = await res.text();
             if (html.length < 2000) throw new Error("Empty response");
-
             const apiKey = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/)?.[1];
             const clientVersion = html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/)?.[1];
             if (!apiKey || !clientVersion) throw new Error("Missing API key/version");
-
             const videos = parseVideos(html);
-            if (videos.length === 0) throw new Error("No videos parsed from initial page");
-
+            if (videos.length === 0) throw new Error("No videos found");
             const continuationToken = findContinuation(html);
-
-            allChannelVideos[channel.id] = videos;
-            channelStates[channel.id] = {
-              continuationToken,
-              apiKey,
-              clientVersion,
-              proxy,
-              loading: false,
-              error: null,
-              isSearch: channel.isSearch || false
-            };
-
-            renderChannelVideos(channel);
-            initSuccess = true;
-            break;
-          } catch (e) {
-            lastError = e;
-          }
+            cacheEntry.allChannelVideos[channel.id] = videos;
+            cacheEntry.channelStates[channel.id] = { continuationToken, apiKey, clientVersion, proxy, loading: false, error: null, isSearch: channel.isSearch || false };
+            initSuccess = true; break;
+          } catch (e) { lastError = e; }
         }
-
         if (!initSuccess) throw lastError || new Error("All proxies failed");
 
-        while (channelStates[channel.id].continuationToken && allChannelVideos[channel.id].length < 120) {
+        while (cacheEntry.channelStates[channel.id].continuationToken && cacheEntry.allChannelVideos[channel.id].length < 120) {
+          const ok = await preloadMoreVideos(channel, cacheEntry);
+          if (!ok) break;
+          await new Promise(r => setTimeout(r, 200));
+        }
+      } catch (err) {
+        cacheEntry.channelStates[channel.id].error = err.message;
+        console.error(channel.title + " preload error:", err);
+      } finally {
+        cacheEntry.channelStates[channel.id].loading = false;
+      }
+    }
+
+    async function preloadMoreVideos(channel, cacheEntry) {
+      const s = cacheEntry.channelStates[channel.id];
+      if (!s.continuationToken || !s.apiKey || !s.proxy) return false;
+      try {
+        const url = `https://www.youtube.com/youtubei/v1/browse?key=${s.apiKey}`;
+        const body = { context: { client: { clientName: "WEB", clientVersion: s.clientVersion || "2.20250301.01.00", hl: "en", gl: "US" } }, continuation: s.continuationToken };
+        const res = await fetch(s.proxy + encodeURIComponent(url), { method: "POST", headers: { "Content-Type": "application/json", "Accept-Language": "en-US,en;q=0.9" }, body: JSON.stringify(body) });
+        if (!res.ok) return false;
+        const data = await res.json();
+        const newVideos = parseContinuationVideos(data);
+        if (newVideos.length === 0) { s.continuationToken = null; return false; }
+        const seen = new Set(cacheEntry.allChannelVideos[channel.id].map(v => v.id));
+        cacheEntry.allChannelVideos[channel.id].push(...newVideos.filter(v => !seen.has(v.id)));
+        s.continuationToken = data?.continuationContents?.gridContinuation?.continuations?.[0]?.nextContinuationData?.continuation || data?.onResponseReceivedActions?.[0]?.appendContinuationItemsAction?.continuationItems?.find(i => i.continuationItemRenderer)?.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token || null;
+        return true;
+      } catch (e) { console.warn("Preload continuation error:", e); return false; }
+    }
+
+        /* ── Tab System ── */
+    function newTab() {
+      const id = nextTabId++;
+      initTabState(id);
+
+      const tabEl = document.createElement("div");
+      tabEl.className = "chrome-tab";
+      tabEl.id = "tab-" + id;
+      tabEl.onclick = () => switchTab(id);
+      tabEl.innerHTML = `
+        <span style="color:#ff0000;font-size:10px;">▶</span>
+        <span>New Tab</span>
+        <button class="tab-close" onclick="event.stopPropagation(); closeTab(${id})">×</button>
+      `;
+      document.getElementById("chrome-titlebar").insertBefore(tabEl, document.querySelector(".chrome-newtab"));
+
+      const contentEl = document.createElement("div");
+      contentEl.className = "tab-content";
+      contentEl.setAttribute("data-tab", id);
+      contentEl.innerHTML = `
+        <div class="home-screen">
+          <div class="home-logo">
+            <div class="logo-icon">
+              <svg viewBox="0 0 24 24"><path d="M10 15l5.19-3L10 9v6zm11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>
+            </div>
+            <div class="logo-text">YouTube Browser</div>
+          </div>
+          <div class="home-subtitle">Paste a YouTube video or channel link, or type a search query.</div>
+          <div class="home-search-box">
+            <input class="home-input" type="text" placeholder="Search YouTube or paste a link…" />
+            <button onclick="handleHomeSearch(this)">Go</button>
+          </div>
+        </div>
+      `;
+      document.getElementById("chrome-content").appendChild(contentEl);
+
+      switchTab(id);
+    }
+
+    function switchTab(id) {
+      activeTabId = id;
+      document.querySelectorAll(".chrome-tab").forEach(t => t.classList.remove("active"));
+      document.getElementById("tab-" + id)?.classList.add("active");
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      document.querySelector(`.tab-content[data-tab="${id}"]`)?.classList.add("active");
+      updateNavButtons();
+      syncOmnibox();
+    }
+
+    function closeTab(id) {
+      const tabEl = document.getElementById("tab-" + id);
+      const contentEl = document.querySelector(`.tab-content[data-tab="${id}"]`);
+      if (!tabEl || !contentEl) return;
+      const allTabs = [...document.querySelectorAll(".chrome-tab")];
+      const idx = allTabs.indexOf(tabEl);
+      tabEl.remove();
+      contentEl.remove();
+      delete tabs[id];
+      const remaining = document.querySelectorAll(".chrome-tab");
+      if (remaining.length === 0) {
+        newTab();
+        return;
+      }
+      if (activeTabId === id) {
+        const newIdx = Math.max(0, Math.min(idx, remaining.length - 1));
+        const newId = parseInt(remaining[newIdx].id.replace("tab-", ""));
+        switchTab(newId);
+      }
+    }
+
+    function getActiveContent() {
+      return document.querySelector(`.tab-content[data-tab="${activeTabId}"]`);
+    }
+
+    function getActiveHomeInput() {
+      const content = getActiveContent();
+      return content?.querySelector(".home-input");
+    }
+
+    /* ── Navigation / History ── */
+    function pushNav(type, data, title) {
+      const t = tabs[activeTabId];
+      t.navHistory = t.navHistory.slice(0, t.navIndex + 1);
+      t.navHistory.push({ type, data, title });
+      t.navIndex++;
+      updateNavButtons();
+    }
+
+    function goBack() {
+      const t = tabs[activeTabId];
+      if (t.navIndex > 0) {
+        t.navIndex--;
+        const entry = t.navHistory[t.navIndex];
+        restoreNav(entry, false);
+        updateNavButtons();
+      }
+    }
+
+    function goForward() {
+      const t = tabs[activeTabId];
+      if (t.navIndex < t.navHistory.length - 1) {
+        t.navIndex++;
+        const entry = t.navHistory[t.navIndex];
+        restoreNav(entry, false);
+        updateNavButtons();
+      }
+    }
+
+    function updateNavButtons() {
+      const t = tabs[activeTabId];
+      document.getElementById("btn-back").disabled = t.navIndex <= 0;
+      document.getElementById("btn-fwd").disabled = t.navIndex >= t.navHistory.length - 1;
+    }
+
+    function restoreNav(entry, push=true) {
+      if (!entry) return;
+      if (entry.type === "home") goHome(false);
+      else if (entry.type === "video") playVideo(entry.data, false);
+      else if (entry.type === "browse") openBrowse(null, entry.data, entry.title, false);
+    }
+
+    /* ── Fullscreen ── */
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(()=>{});
+      } else {
+        document.exitFullscreen().catch(()=>{});
+      }
+    }
+
+    /* ── Screens ── */
+    function showScreen(id) {
+      const content = getActiveContent();
+      if (!content) return;
+      content.querySelectorAll(".home-screen, .browse-screen, .video-screen").forEach(s => s.style.display = "none");
+      const target = content.querySelector("." + id);
+      if (target) target.style.display = "flex";
+      tabs[activeTabId].screen = id.replace("-screen", "");
+    }
+
+    function ensureScreens() {
+      const content = getActiveContent();
+      if (!content) return;
+      if (!content.querySelector(".browse-screen")) {
+        const browse = document.createElement("div");
+        browse.className = "browse-screen";
+        browse.style.display = "none";
+        browse.innerHTML = `
+          <div class="browse-content"></div>
+          <div class="loading-wrap">
+            <div class="red-spinner"></div>
+            <div style="color:#888;font-size:1.1rem;">Loading…</div>
+          </div>
+        `;
+        content.appendChild(browse);
+      }
+      if (!content.querySelector(".video-screen")) {
+        const video = document.createElement("div");
+        video.className = "video-screen";
+        video.style.display = "none";
+        video.innerHTML = `
+          <div class="video-container">
+            <iframe class="player" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        `;
+        content.appendChild(video);
+      }
+    }
+
+    function goHome(push=true) {
+      ensureScreens();
+      showScreen("home-screen");
+      const t = tabs[activeTabId];
+      const content = getActiveContent();
+      const player = content?.querySelector(".player");
+      if (player) player.src = "";
+      t.currentVideoId = null;
+      t.currentChannels = [];
+      t.currentBrowseTitle = "";
+      document.getElementById("tab-" + activeTabId).querySelector("span").textContent = "New Tab";
+      document.getElementById("omnibox-input").value = "";
+      document.getElementById("omni-secure").textContent = "🔒";
+      if (push) pushNav("home");
+    }
+
+    function reloadPage() {
+      const t = tabs[activeTabId];
+      if (t.currentVideoId) {
+        playVideo(t.currentVideoId, false);
+        toast("Reloaded");
+      } else if (t.currentChannels.length > 0) {
+        openBrowse(null, t.currentChannels, t.currentBrowseTitle, false);
+        toast("Reloaded");
+      } else {
+        goHome(false);
+        toast("Reloaded");
+      }
+    }
+
+    function focusHomeSearch() {
+      const input = getActiveHomeInput();
+      if (input) input.focus();
+    }
+
+    function syncOmnibox() {
+      const t = tabs[activeTabId];
+      if (t.currentVideoId) {
+        document.getElementById("omnibox-input").value = `https://www.youtube.com/watch?v=${t.currentVideoId}`;
+      } else if (t.currentBrowseTitle) {
+        document.getElementById("omnibox-input").value = t.currentBrowseTitle;
+      } else {
+        document.getElementById("omnibox-input").value = "";
+      }
+    }
+
+    /* ── Omnibox & Home Search Handling ── */
+    document.getElementById("omnibox-input").addEventListener("keypress", e => {
+      if (e.key === "Enter") handleOmnibox();
+    });
+
+    function handleOmnibox() {
+      const input = document.getElementById("omnibox-input").value.trim();
+      if (!input) return;
+      handleInput(input);
+    }
+
+    function handleHomeSearch(btn) {
+      const input = btn.parentElement.querySelector(".home-input").value.trim();
+      if (!input) return;
+      handleInput(input);
+    }
+
+    function handleInput(input) {
+      const videoId = extractVideoId(input);
+      if (videoId) { pushNav("video", videoId); playVideo(videoId); return; }
+
+      const ch = extractChannel(input);
+      if (ch) {
+        const channels = [{ id: "dynamic-channel", title: ch.name || "Channel", url: ch.url }];
+        pushNav("browse", channels, ch.name || "Channel Videos");
+        openBrowse(null, channels, ch.name || "Channel Videos");
+        return;
+      }
+
+      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(input)}&sp=EgIQAQ%253D%253D`;
+      const searchChannels = [{ id: "search-results", title: `Search: "${input}"`, url: searchUrl, isSearch: true }];
+      pushNav("browse", searchChannels, `Search: "${input}"`);
+      openBrowse(null, searchChannels, `Search: "${input}"`);
+    }
+
+    function extractVideoId(input) {
+      return input.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1] || (input.length === 11 && /^[a-zA-Z0-9_-]{11}$/.test(input) ? input : null);
+    }
+
+    function extractChannel(input) {
+      const m = input.match(/youtube\.com\/(@[^/]+|channel\/[^/]+|c\/[^/]+)/i);
+      if (!m) return null;
+      let url = input;
+      if (!/\/videos/i.test(url)) url = url.replace(/\/?(\?.*)?$/, "") + "/videos";
+      if (!url.includes("gl=") && !url.includes("hl=")) url += (url.includes("?") ? "&" : "?") + "gl=US&hl=en";
+      const name = m[1].startsWith("@") ? m[1] : "Channel";
+      return { url, name };
+    }
+
+    /* ── Video Player ── */
+    function playVideo(input, push=true) {
+      const videoId = typeof input === "string" && input.length === 11 ? input : extractVideoId(input);
+      if (!videoId) { toast("Invalid YouTube link"); return; }
+      ensureScreens();
+      const t = tabs[activeTabId];
+      t.currentVideoId = videoId;
+      t.currentVideoTitle = "YouTube Video";
+      t.currentChannels = [];
+      showScreen("video-screen");
+      const content = getActiveContent();
+      const player = content.querySelector(".player");
+      player.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1`;
+      document.getElementById("tab-" + activeTabId).querySelector("span").textContent = "▶ YouTube Video";
+      document.getElementById("omnibox-input").value = `https://www.youtube.com/watch?v=${videoId}`;
+      document.getElementById("omni-secure").textContent = "🔒";
+      if (push) pushNav("video", videoId);
+    }
+
+    /* ── Browse ── */
+    async function openBrowse(e, customChannels, title, push=true) {
+      ensureScreens();
+      showScreen("browse-screen");
+      const content = getActiveContent();
+      const browseContent = content.querySelector(".browse-content");
+      const loading = content.querySelector(".loading-wrap");
+      browseContent.innerHTML = "";
+      loading.classList.add("active");
+
+      const t = tabs[activeTabId];
+      const channelsToLoad = customChannels || defaultChannels;
+      const cacheKey = getCacheKey(channelsToLoad);
+      const cached = preloadCache[cacheKey];
+
+      // If we have cached data, use it immediately
+      if (cached && cached.ready) {
+        t.allChannelVideos = JSON.parse(JSON.stringify(cached.allChannelVideos));
+        t.channelStates = JSON.parse(JSON.stringify(cached.channelStates));
+        t.currentChannels = channelsToLoad;
+        t.currentBrowseTitle = title || (customChannels ? "Browse" : "Joe Bart Videos");
+        t.isSearchMode = !!(customChannels && customChannels[0]?.isSearch);
+        t.currentVideoId = null;
+
+        document.getElementById("tab-" + activeTabId).querySelector("span").textContent = t.currentBrowseTitle;
+        document.getElementById("omnibox-input").value = t.currentBrowseTitle;
+        document.getElementById("omni-secure").textContent = "🔒";
+
+        channelsToLoad.forEach(ch => {
+          const section = document.createElement("section");
+          section.className = "channel-section";
+          section.id = `section-${activeTabId}-${ch.id}`;
+          section.innerHTML = `<h2 class="channel-title">${escapeHtml(ch.title)}</h2><div class="video-grid" id="grid-${activeTabId}-${ch.id}"></div>`;
+          browseContent.appendChild(section);
+          renderChannelVideos(ch);
+        });
+
+        loading.classList.remove("active");
+        content.querySelectorAll(".channel-section").forEach(sec => sec.classList.add("loaded"));
+        if (push) pushNav("browse", t.currentChannels, t.currentBrowseTitle);
+        return;
+      }
+
+      t.allChannelVideos = {};
+      t.channelStates = {};
+      t.currentChannels = customChannels || defaultChannels;
+      t.currentBrowseTitle = title || (customChannels ? "Browse" : "Joe Bart Videos");
+      t.isSearchMode = !!(customChannels && customChannels[0]?.isSearch);
+      t.currentVideoId = null;
+
+      document.getElementById("tab-" + activeTabId).querySelector("span").textContent = t.currentBrowseTitle;
+      document.getElementById("omnibox-input").value = t.currentBrowseTitle;
+      document.getElementById("omni-secure").textContent = "🔒";
+
+      t.currentChannels.forEach(ch => {
+        const section = document.createElement("section");
+        section.className = "channel-section";
+        section.id = `section-${activeTabId}-${ch.id}`;
+        section.innerHTML = `<h2 class="channel-title">${escapeHtml(ch.title)}</h2><div class="video-grid" id="grid-${activeTabId}-${ch.id}"></div>`;
+        browseContent.appendChild(section);
+        t.allChannelVideos[ch.id] = [];
+        t.channelStates[ch.id] = { continuationToken: null, apiKey: null, clientVersion: null, proxy: null, loading: true, error: null, isSearch: ch.isSearch || false };
+      });
+
+      await Promise.all(t.currentChannels.map(ch => loadAllChannelVideos(ch)));
+
+      loading.classList.remove("active");
+      // Show all sections only after everything is loaded
+      content.querySelectorAll(".channel-section").forEach(sec => sec.classList.add("loaded"));
+      if (push) pushNav("browse", t.currentChannels, t.currentBrowseTitle);
+    }
+
+    function loadDefaultJoe() { openBrowse(null, defaultChannels, "Joe Bart Videos"); }
+
+    async function loadAllChannelVideos(channel) {
+      const t = tabs[activeTabId];
+      const grid = document.getElementById(`grid-${activeTabId}-${channel.id}`);
+      try {
+        let initSuccess = false, lastError = null;
+        for (const proxy of proxies) {
+          try {
+            let fetchUrl = channel.url;
+            if (!fetchUrl.includes("hl=")) fetchUrl += (fetchUrl.includes("?") ? "&" : "?") + "hl=en&gl=US";
+            const res = await fetch(proxy + encodeURIComponent(fetchUrl), { headers: { "Accept": "text/html", "Accept-Language": "en-US,en;q=0.9" } });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const html = await res.text();
+            if (html.length < 2000) throw new Error("Empty response");
+            const apiKey = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/)?.[1];
+            const clientVersion = html.match(/"INNERTUBE_CLIENT_VERSION":"([^"]+)"/)?.[1];
+            if (!apiKey || !clientVersion) throw new Error("Missing API key/version");
+            const videos = parseVideos(html);
+            if (videos.length === 0) throw new Error("No videos found");
+            const continuationToken = findContinuation(html);
+            t.allChannelVideos[channel.id] = videos;
+            t.channelStates[channel.id] = { continuationToken, apiKey, clientVersion, proxy, loading: false, error: null, isSearch: channel.isSearch || false };
+            renderChannelVideos(channel);
+            initSuccess = true; break;
+          } catch (e) { lastError = e; }
+        }
+        if (!initSuccess) throw lastError || new Error("All proxies failed");
+        while (t.channelStates[channel.id].continuationToken && t.allChannelVideos[channel.id].length < 120) {
           const ok = await loadMoreVideos(channel);
           if (!ok) break;
           renderChannelVideos(channel);
           await new Promise(r => setTimeout(r, 200));
         }
       } catch (err) {
-        grid.innerHTML = `<div class="error-msg">Failed to load videos<br>${err.message}</div>`;
-        channelStates[channel.id].error = err.message;
+        grid.innerHTML = `<div class="error-msg">Failed to load<br>${escapeHtml(err.message)}</div>`;
+        t.channelStates[channel.id].error = err.message;
         console.error(channel.title + " error:", err);
       } finally {
-        channelStates[channel.id].loading = false;
+        t.channelStates[channel.id].loading = false;
         renderChannelVideos(channel);
       }
     }
 
     function findContinuation(html) {
-      const m = html.match(/"continuationCommand":\s*{"token":"([^"]+)"}/) ||
-                html.match(/"continuation":"([^"]+)"/);
+      const m = html.match(/"continuationCommand":\s*{"token":"([^"]+)"}/) || html.match(/"continuation":"([^"]+)"/);
       return m ? m[1] : null;
     }
 
@@ -502,125 +996,46 @@
           const data = JSON.parse(match[1]);
           function recurse(obj) {
             if (!obj || typeof obj !== "object") return;
-            if (obj.videoRenderer || obj.gridVideoRenderer) {
-              const vr = obj.videoRenderer || obj.gridVideoRenderer;
-              if (vr?.videoId) {
-                // Prioritize runs[0].text for English titles, avoid accessibilityData which may contain localized text
-                let title = "";
-                if (vr.title?.runs?.[0]?.text) {
-                  title = vr.title.runs[0].text.trim();
-                } else if (vr.title?.simpleText) {
-                  title = vr.title.simpleText.trim();
-                } else {
-                  title = "Untitled Video";
-                }
-
-                const thumbs = vr.thumbnail?.thumbnails || [];
-                const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
-                videos.push({ id: vr.videoId, title, thumbnail: thumb });
-              }
-            }
-            if (obj.richItemRenderer?.content?.videoRenderer) {
-              const vr = obj.richItemRenderer.content.videoRenderer;
-              if (vr?.videoId) {
-                let title = "";
-                if (vr.title?.runs?.[0]?.text) {
-                  title = vr.title.runs[0].text.trim();
-                } else if (vr.title?.simpleText) {
-                  title = vr.title.simpleText.trim();
-                } else {
-                  title = "Untitled Video";
-                }
-
-                const thumbs = vr.thumbnail?.thumbnails || [];
-                const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
-                videos.push({ id: vr.videoId, title, thumbnail: thumb });
-              }
+            const vr = obj.videoRenderer || obj.gridVideoRenderer || obj.richItemRenderer?.content?.videoRenderer;
+            if (vr?.videoId) {
+              let title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || "Untitled Video";
+              const thumbs = vr.thumbnail?.thumbnails || [];
+              const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
+              videos.push({ id: vr.videoId, title: title.trim(), thumbnail: thumb });
             }
             Object.values(obj).forEach(recurse);
           }
           recurse(data);
         }
-      } catch (e) {
-        console.error("JSON parse failed:", e);
-      }
-
-      // Fallback: regex scan if JSON empty or failed
+      } catch (e) { console.error("JSON parse failed:", e); }
       if (videos.length === 0) {
-        const idMatches = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)];
         const seen = new Set();
-        idMatches.forEach(m => {
-          const id = m[1];
-          if (seen.has(id)) return;
-          seen.add(id);
-          videos.push({
-            id,
-            title: "Video (fallback)",
-            thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
-          });
+        [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].forEach(m => {
+          if (!seen.has(m[1])) { seen.add(m[1]); videos.push({ id: m[1], title: "Video (fallback)", thumbnail: `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg` }); }
         });
       }
-
-      // Dedupe just in case
-      const unique = [];
-      const seenIds = new Set();
-      for (const v of videos) {
-        if (!seenIds.has(v.id)) {
-          seenIds.add(v.id);
-          unique.push(v);
-        }
-      }
+      const unique = [], seenIds = new Set();
+      for (const v of videos) { if (!seenIds.has(v.id)) { seenIds.add(v.id); unique.push(v); } }
       return unique;
     }
 
     async function loadMoreVideos(channel) {
-      const s = channelStates[channel.id];
+      const t = tabs[activeTabId];
+      const s = t.channelStates[channel.id];
       if (!s.continuationToken || !s.apiKey || !s.proxy) return false;
       try {
         const url = `https://www.youtube.com/youtubei/v1/browse?key=${s.apiKey}`;
-        const body = {
-          context: {
-            client: {
-              clientName: "WEB",
-              clientVersion: s.clientVersion || "2.20250301.01.00",
-              hl: "en",
-              gl: "US"
-            }
-          },
-          continuation: s.continuationToken
-        };
-        const res = await fetch(s.proxy + encodeURIComponent(url), {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Accept-Language": "en-US,en;q=0.9"
-          },
-          body: JSON.stringify(body)
-        });
+        const body = { context: { client: { clientName: "WEB", clientVersion: s.clientVersion || "2.20250301.01.00", hl: "en", gl: "US" } }, continuation: s.continuationToken };
+        const res = await fetch(s.proxy + encodeURIComponent(url), { method: "POST", headers: { "Content-Type": "application/json", "Accept-Language": "en-US,en;q=0.9" }, body: JSON.stringify(body) });
         if (!res.ok) return false;
         const data = await res.json();
-
         const newVideos = parseContinuationVideos(data);
-        if (newVideos.length === 0) {
-          s.continuationToken = null;
-          return false;
-        }
-
-        const seen = new Set(allChannelVideos[channel.id].map(v => v.id));
-        allChannelVideos[channel.id].push(...newVideos.filter(v => !seen.has(v.id)));
-
-        s.continuationToken =
-          data?.continuationContents?.gridContinuation?.continuations?.[0]?.nextContinuationData?.continuation ||
-          data?.onResponseReceivedActions?.[0]?.appendContinuationItemsAction?.continuationItems
-            ?.find(i => i.continuationItemRenderer)
-            ?.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token ||
-          null;
-
+        if (newVideos.length === 0) { s.continuationToken = null; return false; }
+        const seen = new Set(t.allChannelVideos[channel.id].map(v => v.id));
+        t.allChannelVideos[channel.id].push(...newVideos.filter(v => !seen.has(v.id)));
+        s.continuationToken = data?.continuationContents?.gridContinuation?.continuations?.[0]?.nextContinuationData?.continuation || data?.onResponseReceivedActions?.[0]?.appendContinuationItemsAction?.continuationItems?.find(i => i.continuationItemRenderer)?.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token || null;
         return true;
-      } catch (e) {
-        console.warn("Continuation error:", e);
-        return false;
-      }
+      } catch (e) { console.warn("Continuation error:", e); return false; }
     }
 
     function parseContinuationVideos(data) {
@@ -629,19 +1044,10 @@
         if (!obj || typeof obj !== "object") return;
         const vr = obj.gridVideoRenderer || obj.videoRenderer || obj.richItemRenderer?.content?.videoRenderer;
         if (vr?.videoId) {
-          // Prioritize runs[0].text for English titles, avoid accessibilityData
-          let title = "";
-          if (vr.title?.runs?.[0]?.text) {
-            title = vr.title.runs[0].text.trim();
-          } else if (vr.title?.simpleText) {
-            title = vr.title.simpleText.trim();
-          } else {
-            title = "Untitled";
-          }
-
+          let title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || "Untitled";
           const thumbs = vr.thumbnail?.thumbnails || [];
           const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
-          videos.push({ id: vr.videoId, title, thumbnail: thumb });
+          videos.push({ id: vr.videoId, title: title.trim(), thumbnail: thumb });
         }
         Object.values(obj).forEach(recurse);
       }
@@ -650,21 +1056,19 @@
     }
 
     function renderChannelVideos(channel) {
-      const grid = document.getElementById(`video-grid-${channel.id}`);
+      const t = tabs[activeTabId];
+      const grid = document.getElementById(`grid-${activeTabId}-${channel.id}`);
       if (!grid) return;
       grid.innerHTML = "";
-      const videos = allChannelVideos[channel.id] || [];
-      if (videos.length === 0) {
-        grid.innerHTML = `<div class="loading">No videos found</div>`;
-        return;
-      }
+      const videos = t.allChannelVideos[channel.id] || [];
+      if (videos.length === 0) { grid.innerHTML = `<div class="loading-wrap" style="grid-column:1/-1;"><div style="color:#888;">No videos found</div></div>`; return; }
       videos.forEach(v => grid.appendChild(createVideoCard(v)));
     }
 
     function createVideoCard(video) {
       const card = document.createElement("div");
       card.className = "video-card";
-      card.onclick = () => playVideo(video.id);
+      card.onclick = () => { pushNav("video", video.id); playVideo(video.id); };
       card.innerHTML = `
         <div class="video-thumb">
           <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}" loading="lazy"
@@ -681,20 +1085,214 @@
       return div.innerHTML;
     }
 
-    function closeBrowse() {
-      browseScreen.style.display = "none";
-      inputScreen.style.display = "flex";
-      inputScreen.style.opacity = "1";
-      player.src = "";
-      loading.style.display = "none";
-      globalLoading.style.display = "none";
-      browseContent.innerHTML = "";
-      allChannelVideos = {};
-      channelStates = {};
-
-      // Reset header title
-      browseTitle.textContent = "Joe Bart Videos";
+    function toast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2200);
     }
+
+    /* ── Custom Context Menu ── */
+    const ctxMenu = document.getElementById("context-menu");
+    let ctxTarget = null;
+    let ctxTargetType = null;
+
+    function hideCtxMenu() {
+      ctxMenu.style.display = "none";
+      ctxTarget = null;
+      ctxTargetType = null;
+    }
+
+    function showCtxMenu(x, y, type, target) {
+      ctxTarget = target;
+      ctxTargetType = type;
+      ctxMenu.querySelectorAll(".ctx-item").forEach(item => item.classList.add("hidden"));
+
+      if (type === "bookmark") {
+        ctxMenu.querySelector('[data-action="delete"]').classList.remove("hidden");
+        ctxMenu.querySelector('[data-action="rename"]').classList.remove("hidden");
+      } else if (type === "video") {
+        ctxMenu.querySelector('[data-action="bookmark"]').classList.remove("hidden");
+      } else if (type === "tab") {
+        ctxMenu.querySelector('[data-action="bookmark"]').classList.remove("hidden");
+        const t = tabs[activeTabId];
+        if (t && t.muted) {
+          ctxMenu.querySelector('[data-action="unmute"]').classList.remove("hidden");
+        } else {
+          ctxMenu.querySelector('[data-action="mute"]').classList.remove("hidden");
+        }
+      }
+
+      // Position and clamp to viewport
+      const rect = ctxMenu.getBoundingClientRect();
+      let px = x, py = y;
+      if (px + rect.width > window.innerWidth) px = window.innerWidth - rect.width - 8;
+      if (py + rect.height > window.innerHeight) py = window.innerHeight - rect.height - 8;
+      ctxMenu.style.left = px + "px";
+      ctxMenu.style.top = py + "px";
+      ctxMenu.style.display = "block";
+    }
+
+    document.addEventListener("contextmenu", e => {
+      // Check if target is a bookmark bar item
+      const bmItem = e.target.closest(".bm-bar-item");
+      if (bmItem) {
+        e.preventDefault();
+        showCtxMenu(e.clientX, e.clientY, "bookmark", bmItem);
+        return;
+      }
+
+      // Check if target is a video card
+      const videoCard = e.target.closest(".video-card");
+      if (videoCard) {
+        e.preventDefault();
+        showCtxMenu(e.clientX, e.clientY, "video", videoCard);
+        return;
+      }
+
+      // Check if target is a tab
+      const tabEl = e.target.closest(".chrome-tab");
+      if (tabEl) {
+        e.preventDefault();
+        showCtxMenu(e.clientX, e.clientY, "tab", tabEl);
+        return;
+      }
+
+      // Anything else: suppress default menu
+      e.preventDefault();
+      hideCtxMenu();
+    });
+
+    document.addEventListener("click", () => hideCtxMenu());
+    document.addEventListener("scroll", () => hideCtxMenu(), true);
+
+    ctxMenu.addEventListener("click", e => {
+      const item = e.target.closest(".ctx-item");
+      if (!item) return;
+      const action = item.dataset.action;
+
+      if (action === "delete" && ctxTargetType === "bookmark") {
+        const delBtn = ctxTarget.querySelector(".bm-del");
+        if (delBtn) delBtn.click();
+      }
+      else if (action === "rename" && ctxTargetType === "bookmark") {
+        const bms = getBookmarks();
+        const idx = [...document.querySelectorAll(".bm-bar-item")].indexOf(ctxTarget);
+        if (idx >= 0 && idx < bms.length && bms[idx].deletable !== false) {
+          const newName = prompt("Rename bookmark:", bms[idx].name);
+          if (newName && newName.trim()) {
+            bms[idx].name = newName.trim();
+            saveBookmarks(bms);
+            toast("Renamed to: " + newName.trim());
+          }
+        } else {
+          toast("Cannot rename this bookmark");
+        }
+      }
+      else if (action === "bookmark" && ctxTargetType === "video") {
+        // Extract video data from the card
+        const titleEl = ctxTarget.querySelector(".video-info");
+        const imgEl = ctxTarget.querySelector("img");
+        let videoId = "";
+        if (imgEl && imgEl.src) {
+          const m = imgEl.src.match(/\/vi\/([a-zA-Z0-9_-]{11})\//);
+          if (m) videoId = m[1];
+        }
+        if (videoId) {
+          addBookmark(titleEl?.textContent?.trim() || "Video " + videoId, "video", { videoId });
+        }
+      }
+      else if (action === "bookmark" && ctxTargetType === "tab") {
+        const tabId = parseInt(ctxTarget.id.replace("tab-", ""));
+        const t = tabs[tabId];
+        if (t && t.currentVideoId) {
+          addBookmark(t.currentVideoTitle || "Video " + t.currentVideoId, "video", { videoId: t.currentVideoId });
+        } else if (t && t.currentChannels.length > 0) {
+          bookmarkCurrentChannels(t.currentBrowseTitle || "Channel", t.currentChannels);
+        } else {
+          toast("Nothing to bookmark");
+        }
+      }
+      else if ((action === "mute" || action === "unmute") && ctxTargetType === "tab") {
+        const tabId = parseInt(ctxTarget.id.replace("tab-", ""));
+        const t = tabs[tabId];
+        if (t) {
+          t.muted = !t.muted;
+          const muted = t.muted;
+          // Update tab visual indicator
+          const span = ctxTarget.querySelector("span");
+          if (span) {
+            const baseText = span.textContent.replace(" 🔇", "").replace(" ▶", "");
+            if (muted && baseText !== "New Tab") {
+              span.textContent = baseText + " 🔇";
+            } else {
+              span.textContent = baseText;
+            }
+          }
+          toast(muted ? "Tab muted" : "Tab unmuted");
+        }
+      }
+
+      hideCtxMenu();
+    });
+
+        /* ── Keyboard Shortcuts ── */
+    document.addEventListener("keydown", e => {
+      // Ctrl+T: New Tab
+      if (e.ctrlKey && e.key === "t") {
+        e.preventDefault();
+        newTab();
+      }
+      // Ctrl+W: Close Tab
+      if (e.ctrlKey && e.key === "w") {
+        e.preventDefault();
+        closeTab(activeTabId);
+      }
+      // Ctrl+L: Focus Address Bar
+      if (e.ctrlKey && e.key === "l") {
+        e.preventDefault();
+        document.getElementById("omnibox-input").focus();
+        document.getElementById("omnibox-input").select();
+      }
+      // Ctrl+D: Bookmark
+      if (e.ctrlKey && e.key === "d") {
+        e.preventDefault();
+        starCurrent();
+      }
+      // Alt+Left: Back
+      if (e.altKey && e.key === "ArrowLeft") {
+        e.preventDefault();
+        goBack();
+      }
+      // Alt+Right: Forward
+      if (e.altKey && e.key === "ArrowRight") {
+        e.preventDefault();
+        goForward();
+      }
+      // Escape: Go Home
+      if (e.key === "Escape") {
+        goHome();
+      }
+      // F11: Fullscreen
+      if (e.key === "F11") {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+    });
+
+    /* ── Init ── */
+    ensureDefaultBookmark();
+    renderBookmarksBar();
+    pushNav("home");
+    // Start preloading Joe Bart channels in background
+    preloadChannels(defaultChannels);
   </script>
+  <div id="context-menu" style="display:none;">
+    <div class="ctx-item" data-action="bookmark">Bookmark</div>
+    <div class="ctx-item" data-action="delete">Delete Bookmark</div>
+    <div class="ctx-item" data-action="rename">Rename Bookmark</div>
+    <div class="ctx-item" data-action="mute">Mute Tab</div>
+    <div class="ctx-item" data-action="unmute">Unmute Tab</div>
+  </div>
 </body>
 </html>
