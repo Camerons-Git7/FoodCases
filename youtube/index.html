@@ -268,20 +268,22 @@
       border: 1px solid #444;
       border-radius: 8px;
       padding: 4px 0;
-      min-width: 160px;
-      z-index: 10000;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      min-width: 180px;
+      z-index: 100000;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
       font-size: 13px;
       user-select: none;
+      display: none;
     }
     .ctx-item {
-      padding: 8px 16px;
+      padding: 10px 18px;
       color: #e8eaed;
       cursor: pointer;
-      transition: background 0.1s;
+      transition: background 0.12s;
+      font-weight: 500;
     }
-    .ctx-item:hover { background: #3c3c3c; }
-    .ctx-item.hidden { display: none; }
+    .ctx-item:hover { background: #ff0000; color: #fff; }
+    .ctx-item.hidden { display: none !important; }
     @media (max-width: 640px) {
       #chrome-titlebar { height: auto; flex-wrap: wrap; padding: 4px; }
       .chrome-tab { max-width: 140px; min-width: 80px; }
@@ -291,6 +293,7 @@
       .home-screen .home-search-box { max-width: 100%; }
     }
   </style>
+<base target="_blank">
 <base target="_blank">
 </head>
 <body style="display:flex;flex-direction:column;height:100vh;">
@@ -323,12 +326,7 @@
   </div>
 
   <!-- ═══════ CHROME BOOKMARKS BAR ═══════ -->
-  <div id="chrome-bookmarks">
-    <div class="bm-bar-item" data-hardcoded="true" style="background:#ff0000;color:#fff;border-color:#cc0000;" onclick="pushNav('browse', defaultChannels, 'Joe Bart Videos'); openBrowse(null, defaultChannels, 'Joe Bart Videos');">
-      <div class="bm-favicon" style="color:#fff;font-weight:700;font-size:10px;">▶</div>
-      <span style="font-weight:700;">Joe</span>
-    </div>
-  </div>
+  <div id="chrome-bookmarks"></div>
 
   <!-- ═══════ CONTENT AREA ═══════ -->
   <div id="chrome-content">
@@ -353,6 +351,15 @@
   </div>
 
   <div id="toast"></div>
+
+  <div id="context-menu" style="display:none;">
+    <div class="ctx-item" data-action="bookmark">Bookmark</div>
+    <div class="ctx-item" data-action="delete">Delete Bookmark</div>
+    <div class="ctx-item" data-action="rename">Rename Bookmark</div>
+    <div class="ctx-item" data-action="mute">Mute Tab</div>
+    <div class="ctx-item" data-action="unmute">Unmute Tab</div>
+  </div>
+
 
   <script>
     /* ── State ── */
@@ -448,9 +455,7 @@
     function renderBookmarksBar() {
       const bar = document.getElementById("chrome-bookmarks");
       const bms = getBookmarks();
-      // Keep the hardcoded Joe bookmark, remove only dynamic ones
-      const joe = bar.querySelector('.bm-bar-item[data-hardcoded="true"]');
-      bar.querySelectorAll('.bm-bar-item:not([data-hardcoded="true"])').forEach(el => el.remove());
+      bar.innerHTML = "";
       bms.forEach(bm => {
         const item = document.createElement("div");
         item.className = "bm-bar-item";
@@ -1115,7 +1120,8 @@
         ctxMenu.querySelector('[data-action="bookmark"]').classList.remove("hidden");
       } else if (type === "tab") {
         ctxMenu.querySelector('[data-action="bookmark"]').classList.remove("hidden");
-        const t = tabs[activeTabId];
+        const tabId = parseInt(target.id.replace("tab-", ""));
+        const t = tabs[tabId];
         if (t && t.muted) {
           ctxMenu.querySelector('[data-action="unmute"]').classList.remove("hidden");
         } else {
@@ -1169,6 +1175,7 @@
     ctxMenu.addEventListener("click", e => {
       const item = e.target.closest(".ctx-item");
       if (!item) return;
+      e.stopPropagation();
       const action = item.dataset.action;
 
       if (action === "delete" && ctxTargetType === "bookmark") {
@@ -1216,6 +1223,7 @@
       else if ((action === "mute" || action === "unmute") && ctxTargetType === "tab") {
         const tabId = parseInt(ctxTarget.id.replace("tab-", ""));
         const t = tabs[tabId];
+        if (!t) { hideCtxMenu(); return; }
         if (t) {
           t.muted = !t.muted;
           const muted = t.muted;
@@ -1287,12 +1295,6 @@
     // Start preloading Joe Bart channels in background
     preloadChannels(defaultChannels);
   </script>
-  <div id="context-menu" style="display:none;">
-    <div class="ctx-item" data-action="bookmark">Bookmark</div>
-    <div class="ctx-item" data-action="delete">Delete Bookmark</div>
-    <div class="ctx-item" data-action="rename">Rename Bookmark</div>
-    <div class="ctx-item" data-action="mute">Mute Tab</div>
-    <div class="ctx-item" data-action="unmute">Unmute Tab</div>
-  </div>
+  
 </body>
 </html>
