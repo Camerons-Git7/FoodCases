@@ -333,7 +333,7 @@ body {
     <div class="grid-v" id="g-lib"></div>
   </div>
 
-  <div id="v-tut" class="tab-view">
+    <div id="v-tut" class="tab-view">
     <div class="tut-cnt">
       <h1 style="font-weight: 400; font-size: 42px; margin-bottom: 12px; letter-spacing:-1px;">Setup Guide</h1>
       <p style="color: #888; margin-bottom: 40px; font-size: 15px;">Make sure you watch this quick video so everything runs smoothly.</p>
@@ -632,12 +632,19 @@ window.addEventListener('load', () => {
   let boot = document.getElementById('new-boot');
   boot.style.display = 'flex';
   setTimeout(() => { boot.classList.add('start-boot'); }, 100);
-  setTimeout(() => {
+    setTimeout(() => {
     boot.style.opacity = '0';
     setTimeout(() => {
       boot.style.display = 'none';
       document.getElementById('app-wrap').style.opacity = '1';
       if (typeof G_DATA !== 'undefined') dodeLayout();
+      // If user is already on tutorial tab, inject rac-frame now that boot is done
+      if(document.getElementById('v-tut').classList.contains('active')) {
+        let rac = document.getElementById('rac-frame');
+        if(rac && !rac.src) {
+          rac.src = "https://www.raccoongame.com/login?redirect_uri=https%3A%2F%2Fwww.raccoongame.com%2Fwap%2Fdist%2F%23%2Fplatform%2Fset&lang=en";
+        }
+      }
     }, 800);
   }, 3500);
 });
@@ -715,6 +722,17 @@ function chgTab(v) {
   document.querySelectorAll('.tab-view').forEach(s => s.classList.remove('active'));
   document.getElementById('b-'+v).classList.add('active');
   document.getElementById('v-'+v).classList.add('active');
+  
+  // If switching to tutorial tab and frame-area is shown, inject rac-frame src only if boot is done
+  if(v === 'tut') {
+    let boot = document.getElementById('new-boot');
+    if(boot && boot.style.display === 'none') {
+      let rac = document.getElementById('rac-frame');
+      if(rac && !rac.src && document.getElementById('frame-area').classList.contains('show')) {
+        rac.src = "https://www.raccoongame.com/login?redirect_uri=https%3A%2F%2Fwww.raccoongame.com%2Fwap%2Fdist%2F%23%2Fplatform%2Fset&lang=en";
+      }
+    }
+  }
 }
 
 let isAuth = false;
@@ -722,8 +740,11 @@ let devMode = false;
 
 function openAuthTray() {
   document.getElementById('login-trigger').style.display = 'none';
-  document.getElementById('rac-frame').src = "https://www.raccoongame.com/login?redirect_uri=https%3A%2F%2Fwww.raccoongame.com%2Fwap%2Fdist%2F%23%2Fplatform%2Fset&lang=en";
   document.getElementById('frame-area').classList.add('show');
+  // Only inject the iframe src after the loading screen is fully gone
+  setTimeout(() => {
+    document.getElementById('rac-frame').src = "https://www.raccoongame.com/login?redirect_uri=https%3A%2F%2Fwww.raccoongame.com%2Fwap%2Fdist%2F%23%2Fplatform%2Fset&lang=en";
+  }, 500);
 }
 
 let frameLoadCount = 0;
