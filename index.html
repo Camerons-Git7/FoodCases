@@ -128,8 +128,9 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .ten-wide-button {
-      width: calc((var(--button-size) * 11) + (1rem * 9));
+    /* Full-width button spans entire row */
+    .game-button.full-width {
+      width: auto; /* JS will set this dynamically */
       height: var(--button-size);
       flex-direction: row;
       justify-content: center;
@@ -137,11 +138,11 @@
       gap: 1rem;
       padding: var(--padding-sides) 1rem;
     }
-    .ten-wide-button .emoji {
+    .game-button.full-width .emoji {
       flex-grow: 0;
       font-size: calc(var(--emoji-size) * 1.2);
     }
-    .ten-wide-button .game-name {
+    .game-button.full-width .game-name {
       margin-top: 0;
       font-size: calc(var(--text-size) * 1.3);
       width: auto;
@@ -233,7 +234,7 @@
   <canvas id="matrixCanvas"></canvas>
   <h1 class="title">SEAMLESS GAMES</h1>
   <div class="button-container" role="group" aria-label="Seamless Games menu">
-    <button class="game-button ten-wide-button" data-url="https://seamless-procksy.b-cdn.net/scramjet/" aria-label="Seamless Cloud"><div class="emoji">☁️</div><div class="game-name">Seamless Cloud</div><div class="emoji">☁️</div></button>
+    <button class="game-button full-width" data-url="https://menist.free.nf/seamless-cloud/" aria-label="Seamless Cloud"><div class="emoji">☁️</div><div class="game-name">Seamless Cloud</div><div class="emoji">☁️</div></button>
     <button class="game-button" data-url="https://menist.free.nf/case-opener/" aria-label="FoodCases"><div class="emoji">🍔</div><div class="game-name">Food-Cases</div></button>
     <button class="game-button" data-url="https://menist.free.nf/black-jack/" aria-label="Blackjack"><div class="emoji">🃏</div><div class="game-name">Black-Jack</div></button>
     <button class="game-button" data-url="https://menist.free.nf/word-bomb/" aria-label="WordBomb"><div class="emoji">💣</div><div class="game-name">Word-Bomb</div></button>
@@ -297,6 +298,7 @@
     const secretAudio = document.getElementById('secret-audio');
     let currentAudio = defaultAudio;
     let currentAudioVolume = 1.0;
+    let secretAudioVolume = 1.0;
     
     function updateMuteButton() { 
       const btn = document.getElementById('muteBtn'); 
@@ -465,6 +467,34 @@
       });
     }
     
+    // Dynamic full-width cloud button - spans however many buttons fit per row
+    function updateCloudButtonWidth() {
+      const container = document.querySelector('.button-container');
+      const cloudBtn = document.querySelector('.game-button.full-width');
+      if (!container || !cloudBtn) return;
+      
+      // Get all regular buttons (excluding the cloud button itself)
+      const regularButtons = Array.from(container.querySelectorAll('.game-button:not(.full-width)'));
+      if (regularButtons.length === 0) return;
+      
+      // Calculate how many buttons fit per row
+      const containerWidth = container.clientWidth;
+      const firstButton = regularButtons[0];
+      const buttonStyle = getComputedStyle(firstButton);
+      const buttonWidth = firstButton.offsetWidth + 
+                         parseFloat(buttonStyle.marginLeft || 0) + 
+                         parseFloat(buttonStyle.marginRight || 0);
+      const containerStyle = getComputedStyle(container);
+      const gap = parseFloat(containerStyle.gap) || 16; // fallback to 1rem = 16px
+      
+      // Math: how many buttons fit in one row?
+      const buttonsPerRow = Math.floor((containerWidth + gap) / (buttonWidth + gap));
+      
+      // Set cloud button width to match that many buttons + gaps between them
+      const targetWidth = (buttonsPerRow * buttonWidth) + ((buttonsPerRow - 1) * gap);
+      cloudBtn.style.width = targetWidth + 'px';
+    }
+    
     const muteBtn = document.getElementById('muteBtn');
     
     muteBtn.addEventListener('mousedown', (e) => { e.preventDefault(); startHoldTimer(); });
@@ -495,12 +525,16 @@
     window.onload = () => {
       updateMuteButton();
       fitTextToButton();
+      updateCloudButtonWidth();
       // Start Matrix rain AND fade in at the same time
       startMatrix();
       document.body.classList.add('fade-in');
     };
     
-    window.addEventListener('resize', fitTextToButton);
+    window.addEventListener('resize', () => {
+      fitTextToButton();
+      updateCloudButtonWidth();
+    });
     
     window.addEventListener('pageshow', () => {
       document.body.classList.remove('fade-out', 'fade-in');
