@@ -351,6 +351,7 @@ body {
           <div style="margin-bottom: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
             <p style="margin: 0 0 10px 0; color: #fff; font-size: 14px; font-weight: 600;">[BETA]: This is temporary, see if you can login by clicking the button below</p>
             <a href="https://www.raccoongame.com/login?redirect_uri=https%3A%2F%2Fwww.raccoongame.com%2Fwap%2Fdist%2F%23%2Fplatform%2Fset&lang=en" target="_blank" style="display: inline-block; padding: 10px 20px; background: #fff; color: #000; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 13px;">Open Login in New Tab</a>
+            <button onclick="manualReload = true; document.getElementById('rac-frame').src = 'https://www.raccoongame.com/login?redirect_uri=https%3A%2F%2Fwww.raccoongame.com%2Fwap%2Fdist%2F%23%2Fplatform%2Fset&lang=en'; frameLoadCount = 0;" style="display: inline-block; padding: 10px 20px; background: #fff; color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; margin-left: 10px;">Reload Raccoon</button>
           </div>
           <iframe id="rac-frame" class="f-rac" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
           <button class="verify-manual-btn" onclick="markAsLoggedIn()">I have successfully logged in</button>
@@ -725,8 +726,20 @@ function openAuthTray() {
   document.getElementById('frame-area').classList.add('show');
 }
 
+let frameLoadCount = 0;
+let manualReload = false;
+
+document.getElementById('rac-frame').addEventListener('load', function() {
+  if (manualReload) {
+    manualReload = false;
+    return; // Skip auto-login detection on manual reloads
+  }
+  frameLoadCount++;
+  if (frameLoadCount >= 2 && !devMode) markAsLoggedIn();
+});
+
 function markAsLoggedIn() {
-  if(isAuth) return;
+  if (isAuth) return;
   isAuth = true;
   document.getElementById('frame-area').classList.remove('show');
   setTimeout(() => { document.getElementById('frame-area').style.display = 'none'; }, 800);
@@ -741,12 +754,6 @@ function forceLoginReopen() {
   document.getElementById('frame-area').style.display = 'flex';
   setTimeout(() => { document.getElementById('frame-area').classList.add('show'); }, 50);
 }
-
-let frameLoadCount = 0;
-document.getElementById('rac-frame').addEventListener('load', function() {
-  frameLoadCount++;
-  if(frameLoadCount >= 2 && !devMode) markAsLoggedIn();
-});
 
 window.addEventListener('keydown', (e) => {
   if(e.altKey && e.key.toLowerCase() === 's') { devMode = true; frameLoadCount = 0; forceLoginReopen(); }
