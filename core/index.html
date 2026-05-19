@@ -266,10 +266,16 @@
       from { box-shadow: 0 0 15px rgba(0, 255, 0, 0.5); }
       to { box-shadow: 0 0 35px var(--accent), 0 0 50px var(--accent); }
     }
-    .request-button {
+    /* Save/Load button container */
+    .save-load-container {
       position: fixed;
       bottom: 1rem;
       right: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      z-index: 10;
+    }
+    .save-load-btn {
       font-family: 'Nunito', sans-serif;
       font-weight: 700;
       font-size: 1rem;
@@ -282,20 +288,50 @@
       box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
       transition: all 0.3s ease;
       user-select: none;
-      z-index: 10;
       display: flex;
       align-items: center;
       justify-content: center;
       min-width: 80px;
       min-height: 50px;
       text-decoration: none;
+      gap: 0.4rem;
     }
-    .request-button:hover {
+    .save-load-btn:hover {
       transform: scale(1.1);
       box-shadow: 0 0 25px var(--accent);
       background: rgba(0, 50, 0, 0.9);
     }
-    .request-button:active { transform: scale(0.95); }
+    .save-load-btn:active { transform: scale(0.95); }
+    .save-load-btn .icon {
+      font-size: 1.2rem;
+    }
+    /* Toast notification for save/load feedback */
+    .toast {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      padding: 1rem 2rem;
+      color: var(--accent);
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 1.2rem;
+      box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .toast.show {
+      opacity: 1;
+    }
+    /* Hidden file input for loading */
+    #fileInput {
+      display: none;
+    }
     @media (max-width: 600px) {
       .header {
         padding: 0.75rem 1rem;
@@ -498,7 +534,24 @@
   </div>
   <div class="bottom-note">ⓘ Don't Forget to Refresh Before Gameplay To Ensure You're Playing Latest Updates ⓘ</div>
   <button class="mute-button" id="muteBtn" aria-label="Toggle mute">🔈</button>
-  <a class="request-button" href="https://forms.gle/tcMZUPfym8Y7zPsm8" target="_blank" rel="noopener noreferrer" aria-label="Request a game">↗ Report Bugs ↗</a>
+  
+  <!-- Save and Load buttons replacing Report Bugs -->
+  <div class="save-load-container">
+    <button class="save-load-btn" id="loadBtn" aria-label="Load save">
+      <span class="icon">📁</span>
+      <span>Load</span>
+    </button>
+    <button class="save-load-btn" id="saveBtn" aria-label="Save progress">
+      <span class="icon">💾</span>
+      <span>Save</span>
+    </button>
+  </div>
+  
+  <!-- Hidden file input for loading -->
+  <input type="file" id="fileInput" accept=".json" />
+  
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
   
   <audio id="default-audio" loop style="display: none;">
     <source src="https://www.dropbox.com/scl/fi/z5e5u9p83wvp9sh41rdrs/onlymp3.io-Hide-CS01-Ambient-Rework-AMA-Drum-Bass-RMX-320-1776035788770.mp3?rlkey=owt699kjq6qxbuklbd0xtp03x&st=hh5cfej4&dl=1" type="audio/mpeg">
@@ -629,6 +682,112 @@
     function fadeOutAudio(duration, callback) {
       fadeAudioVolume(currentAudio, 0, duration, callback);
     }
+    
+    // ===== SAVE & LOAD FUNCTIONALITY =====
+    const SAVE_FILE_NAME = 'Seamless-Save.json';
+    
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+    
+    function collectSaveData() {
+      const saveData = {
+        timestamp: new Date().toISOString(),
+        version: '1.0',
+        localStorage: {}
+      };
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          try {
+            saveData.localStorage[key] = localStorage.getItem(key);
+          } catch (e) {
+            console.warn('Could not save key:', key);
+          }
+        }
+      }
+      
+      saveData.audioState = {
+        isMuted: isMuted,
+        isSecretTrack: isSecretTrack,
+        volume: currentAudio === defaultAudio ? defaultAudio.volume : secretAudioVolume
+      };
+      
+      return saveData;
+    }
+    
+    function saveToFile() {
+      const saveData = collectSaveData();
+      const blob = new Blob([JSON.stringify(saveData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = SAVE_FILE_NAME;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('💾 Saved!');
+    }
+    
+    function loadFromFile(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const saveData = JSON.parse(e.target.result);
+          
+          if (saveData.localStorage) {
+            localStorage.clear();
+            for (const [key, value] of Object.entries(saveData.localStorage)) {
+              localStorage.setItem(key, value);
+            }
+          }
+          
+          if (saveData.audioState) {
+            isMuted = saveData.audioState.isMuted;
+            if (saveData.audioState.isSecretTrack !== isSecretTrack) {
+              if (saveData.audioState.isSecretTrack) {
+                switchToSecretTrack();
+              } else {
+                resetToDefaultTrack();
+              }
+            }
+            updateMuteButton();
+          }
+          
+          showToast('📁 Loaded!');
+        } catch (err) {
+          showToast('❌ Invalid save file');
+          console.error('Load error:', err);
+        }
+      };
+      reader.onerror = function() {
+        showToast('❌ Read failed');
+      };
+      reader.readAsText(file);
+    }
+    
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      saveToFile();
+    });
+    
+    document.getElementById('loadBtn').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+    
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        loadFromFile(file);
+      }
+      e.target.value = '';
+    });
     
     // Matrix Canvas Setup - Animation starts with fade-in
     const canvas = document.getElementById('matrixCanvas'), ctx = canvas.getContext('2d');
@@ -761,7 +920,6 @@
     });
 
     function isEmojiQuery(query) {
-      // Match if the string contains only emoji characters (and optional whitespace)
       return /^\s*[\p{Emoji}\u200d\uFE0F\u20E3\u{1F1E0}-\u{1F1FF}]+\s*$/u.test(query);
     }
     
@@ -788,11 +946,9 @@
       let results;
 
       if (isEmojiQuery(query)) {
-        // Emoji mode: return all games whose button emoji matches the query exactly
         const trimmed = query.trim();
         results = gamesData.filter(game => game.emoji === trimmed);
       } else {
-        // Text mode: fuzzy match on game name, same as before
         const scoredGames = gamesData.map(game => ({
           ...game,
           score: calculateSimilarity(game.name, query)
