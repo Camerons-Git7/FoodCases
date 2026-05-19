@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Seamless OS</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --green:#00ff41;
+  --green-dim:#00a82a;
+  --green-dark:#003311;
+  --bg:#000;
+  --surface:rgba(0,20,0,0.85);
+  --surface2:rgba(0,30,0,0.95);
+  --border:rgba(0,255,65,0.35);
+  --text:#c0ffb0;
+  --accent:#00ff41;
+  --taskbar-h:44px;
+  --radius:6px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+body{font-family:'Rajdhani',sans-serif;background:#000;overflow:hidden;width:100vw;height:100vh;color:var(--text);}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+
+/* ======= BOOT SCREEN ======= */
+#boot{position:fixed;inset:0;background:#000;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem;}
+#boot-logo{font-family:'Orbitron',monospace;font-size:3rem;font-weight:900;color:var(--green);text-shadow:0 0 30px var(--green),0 0 60px var(--green);letter-spacing:.2em;animation:pulse 1.5s infinite alternate;}
+#boot-sub{font-family:'Share Tech Mono',monospace;color:var(--green-dim);font-size:.9rem;letter-spacing:.3em;}
+#boot-bar-wrap{width:320px;height:4px;background:#0a1a0a;border:1px solid var(--green-dim);border-radius:2px;overflow:hidden;}
+#boot-bar{height:100%;background:var(--green);width:0%;transition:width .05s linear;box-shadow:0 0 8px var(--green);}
+#boot-log{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:#00a82a;text-align:left;width:400px;max-height:140px;overflow:hidden;line-height:1.6;}
+@keyframes pulse{from{text-shadow:0 0 20px var(--green);}to{text-shadow:0 0 40px var(--green),0 0 80px #00ff41;}}
+
+/* ======= LOGIN SCREEN ======= */
+#login{position:fixed;inset:0;background:rgba(0,0,0,0.97);z-index:9998;display:none;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;}
+#login-avatar{width:80px;height:80px;border-radius:50%;border:2px solid var(--green);background:var(--green-dark);display:flex;align-items:center;justify-content:center;font-size:2.5rem;box-shadow:0 0 20px rgba(0,255,65,.4);}
+#login-name{font-family:'Orbitron',monospace;font-size:1.1rem;color:var(--green);letter-spacing:.15em;}
+#login-pass{background:var(--green-dark);border:1px solid var(--green);border-radius:var(--radius);padding:.6rem 1rem;color:var(--green);font-family:'Share Tech Mono',monospace;font-size:1rem;width:240px;outline:none;text-align:center;letter-spacing:.3em;}
+#login-pass::placeholder{color:#005510;letter-spacing:normal;}
+#login-btn{background:transparent;border:1px solid var(--green);border-radius:var(--radius);color:var(--green);font-family:'Orbitron',monospace;font-size:.8rem;padding:.5rem 1.5rem;cursor:pointer;letter-spacing:.1em;transition:all .2s;}
+#login-btn:hover{background:var(--green);color:#000;}
+#login-hint{font-family:'Share Tech Mono',monospace;font-size:.65rem;color:#004410;}
+
+/* ======= DESKTOP ======= */
+#desktop{position:fixed;inset:0;bottom:var(--taskbar-h);display:none;}
+#desktop-icons{position:absolute;top:16px;left:16px;display:grid;grid-template-columns:repeat(2,72px);gap:8px;}
+.desk-icon{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px;border-radius:5px;border:1px solid transparent;user-select:none;transition:all .15s;}
+.desk-icon:hover{background:rgba(0,255,65,.08);border-color:var(--border);}
+.desk-icon:active{background:rgba(0,255,65,.15);}
+.desk-icon .ico{font-size:2rem;filter:drop-shadow(0 0 4px var(--green));}
+.desk-icon .lbl{font-size:.6rem;color:var(--text);text-align:center;text-shadow:0 1px 4px #000;font-weight:600;line-height:1.2;max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ======= TASKBAR ======= */
+#taskbar{position:fixed;bottom:0;left:0;right:0;height:var(--taskbar-h);background:rgba(0,8,0,0.97);border-top:1px solid var(--border);display:flex;align-items:center;gap:4px;padding:0 8px;z-index:8000;backdrop-filter:blur(4px);}
+#start-btn{background:transparent;border:1px solid var(--green);border-radius:var(--radius);color:var(--green);font-family:'Orbitron',monospace;font-size:.65rem;padding:5px 10px;cursor:pointer;letter-spacing:.08em;transition:all .2s;white-space:nowrap;font-weight:700;}
+#start-btn:hover,#start-btn.active{background:var(--green);color:#000;}
+#taskbar-apps{display:flex;gap:4px;flex:1;overflow:hidden;}
+.tb-app{background:rgba(0,255,65,.06);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.7rem;padding:4px 8px;cursor:pointer;transition:all .15s;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
+.tb-app:hover{background:rgba(0,255,65,.15);}
+.tb-app.focused{background:rgba(0,255,65,.2);border-color:var(--green);color:var(--green);}
+.tb-app.minimized{opacity:.5;}
+#taskbar-tray{margin-left:auto;display:flex;align-items:center;gap:8px;}
+#clock{font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--green);text-align:right;line-height:1.3;min-width:70px;}
+
+/* ======= START MENU ======= */
+#start-menu{position:fixed;bottom:var(--taskbar-h);left:0;width:320px;max-height:80vh;background:rgba(0,10,0,0.97);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius) var(--radius) 0 0;display:none;flex-direction:column;z-index:7999;backdrop-filter:blur(8px);overflow:hidden;}
+#start-search{background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:.8rem;padding:.7rem 1rem;outline:none;width:100%;}
+#start-search::placeholder{color:#004410;}
+#start-cats{display:flex;gap:0;border-bottom:1px solid var(--border);}
+.start-cat{flex:1;background:transparent;border:none;border-right:1px solid var(--border);color:var(--green-dim);font-family:'Rajdhani',sans-serif;font-size:.65rem;font-weight:700;padding:.4rem;cursor:pointer;letter-spacing:.05em;transition:all .15s;}
+.start-cat:last-child{border-right:none;}
+.start-cat.active,.start-cat:hover{background:rgba(0,255,65,.1);color:var(--green);}
+#start-list{overflow-y:auto;flex:1;}
+#start-list::-webkit-scrollbar{width:4px;}
+#start-list::-webkit-scrollbar-track{background:#000;}
+#start-list::-webkit-scrollbar-thumb{background:var(--green-dim);}
+.start-item{display:flex;align-items:center;gap:10px;padding:.5rem 1rem;cursor:pointer;transition:all .1s;border-bottom:1px solid rgba(0,255,65,.05);}
+.start-item:hover{background:rgba(0,255,65,.1);}
+.start-item .si-ico{font-size:1.3rem;width:28px;text-align:center;flex-shrink:0;}
+.start-item .si-name{font-size:.8rem;font-weight:600;color:var(--text);}
+.start-item .si-cat{font-size:.6rem;color:var(--green-dim);}
+.start-bottom{padding:.6rem 1rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+#start-user{font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--green-dim);}
+#power-btn{background:transparent;border:1px solid var(--border);border-radius:var(--radius);color:var(--green-dim);font-size:.7rem;padding:.3rem .6rem;cursor:pointer;transition:all .2s;}
+#power-btn:hover{border-color:var(--green);color:var(--green);}
+
+/* ======= WINDOWS ======= */
+.win{position:fixed;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;min-width:300px;min-height:200px;box-shadow:0 8px 40px rgba(0,0,0,.8),0 0 0 1px rgba(0,255,65,.05);overflow:hidden;transition:box-shadow .2s;}
+.win.focused{border-color:rgba(0,255,65,.6);box-shadow:0 12px 50px rgba(0,0,0,.9),0 0 20px rgba(0,255,65,.15);}
+.win.minimized{display:none;}
+.win-titlebar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(0,20,0,0.9);border-bottom:1px solid var(--border);cursor:move;user-select:none;flex-shrink:0;}
+.win-icon{font-size:1rem;flex-shrink:0;}
+.win-title{flex:1;font-family:'Orbitron',monospace;font-size:.65rem;font-weight:700;color:var(--green);letter-spacing:.05em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.win-btns{display:flex;gap:5px;margin-left:auto;flex-shrink:0;}
+.win-btn{width:16px;height:16px;border-radius:50%;border:none;cursor:pointer;font-size:.5rem;display:flex;align-items:center;justify-content:center;transition:all .15s;color:#000;font-weight:900;}
+.win-btn.minimize{background:#f59e0b;}
+.win-btn.maximize{background:#10b981;}
+.win-btn.close{background:#ef4444;}
+.win-btn:hover{filter:brightness(1.2) saturate(1.2);transform:scale(1.1);}
+.win-body{flex:1;overflow:hidden;position:relative;}
+.win-body iframe{width:100%;height:100%;border:none;background:#000;}
+.win-resize{position:absolute;bottom:0;right:0;width:14px;height:14px;cursor:se-resize;z-index:10;}
+.win-resize::after{content:'';position:absolute;bottom:3px;right:3px;width:7px;height:7px;border-right:2px solid var(--green-dim);border-bottom:2px solid var(--green-dim);}
+
+/* ======= CONTEXT MENU ======= */
+#ctx-menu{position:fixed;background:rgba(0,12,0,0.97);border:1px solid var(--border);border-radius:var(--radius);padding:4px 0;min-width:160px;display:none;z-index:9000;box-shadow:0 8px 30px rgba(0,0,0,.8);}
+.ctx-item{padding:.45rem .9rem;cursor:pointer;font-size:.75rem;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;transition:background .1s;}
+.ctx-item:hover{background:rgba(0,255,65,.12);color:var(--green);}
+.ctx-sep{height:1px;background:var(--border);margin:4px 0;}
+
+/* ======= NOTIFICATION ======= */
+#notif{position:fixed;top:20px;right:20px;background:var(--surface2);border:1px solid var(--green);border-radius:var(--radius);padding:.7rem 1rem;font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--green);z-index:9001;opacity:0;transform:translateX(40px);transition:all .3s;max-width:240px;pointer-events:none;}
+#notif.show{opacity:1;transform:translateX(0);}
+
+/* ======= WALLPAPER CLOCK ======= */
+#desktop-clock{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Orbitron',monospace;text-align:center;pointer-events:none;opacity:.18;}
+#desktop-clock .dc-time{font-size:5rem;font-weight:900;color:var(--green);letter-spacing:.1em;}
+#desktop-clock .dc-date{font-size:1rem;color:var(--green-dim);margin-top:.3rem;letter-spacing:.2em;}
+
+/* ======= SCROLLBAR GLOBAL ======= */
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:#000;}
+::-webkit-scrollbar-thumb{background:var(--green-dim);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- Matrix canvas bg -->
+<canvas id="matrix-canvas"></canvas>
+
+<!-- ======= BOOT ======= -->
+<div id="boot">
+  <div id="boot-logo">SEAMLESS OS</div>
+  <div id="boot-sub">v2.0 · SEAMLESS EDITION</div>
+  <div id="boot-bar-wrap"><div id="boot-bar"></div></div>
+  <div id="boot-log"></div>
+</div>
+
+<!-- ======= LOGIN ======= -->
+<div id="login">
+  <div id="login-avatar">🎮</div>
+  <div id="login-name">SEAMLESS USER</div>
+  <input id="login-pass" type="password" placeholder="Enter password (any key)" autocomplete="off"/>
+  <button id="login-btn">LOG IN →</button>
+  <div id="login-hint">hint: press enter or click login</div>
+</div>
+
+<!-- ======= DESKTOP ======= -->
+<div id="desktop">
+  <div id="desktop-clock">
+    <div class="dc-time" id="dc-time">00:00:00</div>
+    <div class="dc-date" id="dc-date">LOADING...</div>
+  </div>
+  <div id="desktop-icons"></div>
+</div>
+
+<!-- ======= TASKBAR ======= -->
+<div id="taskbar" style="display:none;">
+  <button id="start-btn">⊞ START</button>
+  <div id="taskbar-apps"></div>
+  <div id="taskbar-tray">
+    <div id="clock">00:00<br>--/--</div>
+  </div>
+</div>
+
+<!-- ======= START MENU ======= -->
+<div id="start-menu">
+  <input id="start-search" type="text" placeholder="🔍 Search apps..."/>
+  <div id="start-cats">
+    <button class="start-cat active" data-cat="all">ALL</button>
+    <button class="start-cat" data-cat="games">GAMES</button>
+    <button class="start-cat" data-cat="apps">APPS</button>
+    <button class="start-cat" data-cat="tools">TOOLS</button>
+  </div>
+  <div id="start-list"></div>
+  <div class="start-bottom">
+    <span id="start-user">👤 Seamless User</span>
+    <button id="power-btn">⏻ Power</button>
+  </div>
+</div>
+
+<!-- ======= CONTEXT MENU ======= -->
+<div id="ctx-menu">
+  <div class="ctx-item" data-action="refresh">🔄 Refresh Desktop</div>
+  <div class="ctx-item" data-action="games">🎮 Open Game Hub</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" data-action="wallpaper">🖼 Toggle Matrix</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" data-action="about">ℹ About Seamless OS</div>
+</div>
+
+<!-- ======= NOTIFICATION ======= -->
+<div id="notif" id="notif"></div>
+
+<script>
+// =========================================================
+// APP DATA - All apps from FoodCases repo
+// =========================================================
+const BASE = 'https://menist.free.nf';
+const APPS = [
+  // ---- FEATURED ----
+  {id:'hub',      name:'Seamless Games',  ico:'🔗', url:`${BASE}/`,                       cat:'apps',  desc:'Main game hub'},
+  {id:'cloud',    name:'Seamless Cloud',  ico:'☁️', url:`${BASE}/seamless-cloud/`,         cat:'apps',  desc:'Cloud storage'},
+  {id:'cine',     name:'Cine-OS',         ico:'🌀', url:`${BASE}/cine-os/`,               cat:'apps',  desc:'Cinema OS'},
+  {id:'widgets',  name:'Widgets',         ico:'🕞', url:`${BASE}/seamless-widgets/`,       cat:'apps',  desc:'All widgets'},
+  // ---- TOOLS ----
+  {id:'calc',     name:'Calculator',      ico:'🧮', url:`${BASE}/calculator/`,            cat:'tools', desc:'Calculator'},
+  {id:'browse',   name:'Browser',         ico:'🌐', url:`${BASE}/browse/`,                cat:'tools', desc:'Web browser'},
+  {id:'coder',    name:'Code Editor',     ico:'💻', url:`${BASE}/coder/`,                 cat:'tools', desc:'Code editor'},
+  {id:'creator',  name:'Creator',         ico:'✏️', url:`${BASE}/creator/`,              cat:'tools', desc:'Content creator'},
+  {id:'image',    name:'Image Tool',      ico:'🖼', url:`${BASE}/image/`,                 cat:'tools', desc:'Image tool'},
+  {id:'clipforge',name:'Clip Forge',      ico:'✂️', url:`${BASE}/clip-forge/`,            cat:'tools', desc:'Clip editor'},
+  {id:'digits',   name:'Digits',          ico:'🔢', url:`${BASE}/digits/`,                cat:'tools', desc:'Number game'},
+  {id:'youtube',  name:'YouTube',         ico:'▶️', url:`${BASE}/youtube/`,              cat:'tools', desc:'YouTube viewer'},
+  {id:'twitch',   name:'Twitch',          ico:'📺', url:`${BASE}/twitch/`,               cat:'tools', desc:'Twitch viewer'},
+  {id:'audio',    name:'Audio Player',    ico:'🎵', url:`${BASE}/audio/`,                cat:'tools', desc:'Audio player'},
+  {id:'bypasser', name:'Bypasser',        ico:'🚪', url:`${BASE}/bypasser/`,             cat:'tools', desc:'URL bypasser'},
+  {id:'prank',    name:'Prank',           ico:'😈', url:`${BASE}/prank/`,                cat:'tools', desc:'Prank page'},
+  {id:'ram',      name:'RAM Monitor',     ico:'💾', url:`${BASE}/ram/`,                  cat:'tools', desc:'RAM usage'},
+  {id:'claudecode',name:'Claude Code',    ico:'🤖', url:`${BASE}/claude-code/`,          cat:'tools', desc:'AI coding'},
+  // ---- BIG GAMES ----
+  {id:'1v1lol',   name:'1v1.lol',         ico:'🥇', url:`${BASE}/big/1v1.lol/`,          cat:'games', desc:'Battle royale'},
+  {id:'geodash',  name:'Geometry Dash',   ico:'🔳', url:`${BASE}/big/geometrydash/`,     cat:'games', desc:'Rhythm platformer'},
+  {id:'minecraft',name:'Minecraft',       ico:'⚒️', url:`${BASE}/big/minecraft/`,        cat:'games', desc:'Build & survive'},
+  {id:'basketball',name:'Basketball Stars',ico:'🌟',url:`${BASE}/big/basketball/`,       cat:'games', desc:'Basketball game'},
+  {id:'subway',   name:'Subway Surfers',  ico:'🚇', url:`${BASE}/big/subway-surfers/`,   cat:'games', desc:'Endless runner'},
+  {id:'slope',    name:'Slope',           ico:'🕹️', url:`${BASE}/big/slope/`,            cat:'games', desc:'3D ball game'},
+  {id:'pvz',      name:'Plants vs Zombies',ico:'🧟',url:`${BASE}/big/plants-zombies/`,  cat:'games', desc:'Tower defense'},
+  {id:'mariokart',name:'Mario Kart',      ico:'🏎️', url:`${BASE}/big/mario-kart/`,      cat:'games', desc:'Racing game'},
+  {id:'candycrush',name:'Candy Crush',    ico:'🍬', url:`${BASE}/big/candy-crush/`,     cat:'games', desc:'Match 3 puzzle'},
+  {id:'driftboss',name:'Drift Boss',      ico:'🚗', url:`${BASE}/big/drift-boss/`,       cat:'games', desc:'Drift racing'},
+  {id:'crossyroad',name:'Crossy Road',   ico:'🐔', url:`${BASE}/big/crossy-road/`,      cat:'games', desc:'Hop across road'},
+  {id:'leveldevil',name:'Level Devil',   ico:'😈', url:`${BASE}/big/level-devil/`,       cat:'games', desc:'Evil platformer'},
+  {id:'taproad',   name:'Tap Road',       ico:'🛣️', url:`${BASE}/big/tap-road/`,         cat:'games', desc:'Tap game'},
+  {id:'angrybirds',name:'Angry Birds',   ico:'🐦', url:`${BASE}/big/angry-birds/`,       cat:'games', desc:'Slingshot birds'},
+  {id:'tunnelrush',name:'Tunnel Rush',   ico:'👾', url:`${BASE}/big/tunnel-rush/`,       cat:'games', desc:'Dodge obstacles'},
+  {id:'bloonstd5', name:'Bloons TD 5',   ico:'🎈', url:`${BASE}/big/bloonstd5/`,         cat:'games', desc:'Tower defense'},
+  {id:'tanks',     name:'Awesome Tanks', ico:'🪖', url:`${BASE}/big/awesome-tanks/`,    cat:'games', desc:'Tank warfare'},
+  {id:'granny',    name:'Granny',         ico:'👵', url:`${BASE}/big/granny/`,            cat:'games', desc:'Horror escape'},
+  {id:'twoplayer', name:'Two Player',     ico:'⚔️', url:`${BASE}/big/two-player/`,       cat:'games', desc:'2 player games'},
+  {id:'holeio',    name:'Hole.io',        ico:'🕳️', url:`${BASE}/big/hole-io/`,          cat:'games', desc:'Consume city'},
+  {id:'bowmasters',name:'Bowmasters',    ico:'🏹', url:`${BASE}/big/bowmasters/`,        cat:'games', desc:'Bow battle'},
+  {id:'ducklife',  name:'Duck Life',      ico:'🦆', url:`${BASE}/big/duck-life/`,         cat:'games', desc:'Train your duck'},
+  {id:'jetpack',   name:'Jetpack Joyride',ico:'🚀', url:`${BASE}/big/jetpack-joyride/`, cat:'games', desc:'Jetpack runner'},
+  {id:'retrobowl', name:'Retro Bowl',     ico:'🏈', url:`${BASE}/big/retro-bowl/`,        cat:'games', desc:'Football game'},
+  {id:'crazycattle',name:'Crazy Cattle 3D',ico:'🐑',url:`${BASE}/big/crazy-cattle-3d/`, cat:'games', desc:'Battle royale'},
+  {id:'flightsim', name:'Flight Sim',     ico:'✈️', url:`${BASE}/big/flightsim/`,        cat:'games', desc:'Fly a plane'},
+  {id:'volleyrandom',name:'Volley Random',ico:'🏀',url:`${BASE}/big/volley-random/`,    cat:'games', desc:'Random volleyball'},
+  {id:'houseofhaz',name:'House of Hazards',ico:'🏠',url:`${BASE}/big/house-of-hazards/`,cat:'games', desc:'Party game'},
+  {id:'ragdollarchers',name:'Ragdoll Archers',ico:'🍎',url:`${BASE}/big/ragdoll-archers/`,cat:'games',desc:'Archery battle'},
+  {id:'ytsurfers',name:'YouTube Surfers', ico:'📱', url:`${BASE}/big/youtube-surfers/`,  cat:'games', desc:'YouTube + Subway'},
+  // ---- MINI GAMES ----
+  {id:'caseopener',name:'Food Cases',     ico:'🍔', url:`${BASE}/case-opener/`,           cat:'games', desc:'Open food cases'},
+  {id:'blackjack', name:'Blackjack',      ico:'🃏', url:`${BASE}/black-jack/`,             cat:'games', desc:'Card game'},
+  {id:'wordbomb',  name:'Word Bomb',      ico:'💣', url:`${BASE}/word-bomb/`,              cat:'games', desc:'Word game'},
+  {id:'flappybird',name:'Flappy Bird',    ico:'🐦', url:`${BASE}/flappy-bird/`,            cat:'games', desc:'Classic flappy'},
+  {id:'droppymerge',name:'Droppy Merge', ico:'🧱', url:`${BASE}/droppy-merge/`,           cat:'games', desc:'Drop & merge'},
+  {id:'rocketgoal',name:'Rocket League', ico:'⛐',  url:`${BASE}/peak/rocket-goal/`,       cat:'games', desc:'Rocket soccer'},
+  {id:'csgo',      name:'CSGO Clicker',  ico:'🔑', url:`${BASE}/peak/csgo-clicker/`,      cat:'games', desc:'CS:GO clicker'},
+  {id:'krunker',   name:'Krunker.io',    ico:'🎯', url:`${BASE}/peak/krunker/`,            cat:'games', desc:'FPS io game'},
+  {id:'smashkarts',name:'Smash Karts',   ico:'💥', url:`${BASE}/peak/smash-karts/`,       cat:'games', desc:'Kart battle'},
+  {id:'cool',      name:'Cool Games',    ico:'😎', url:`${BASE}/cool/`,                    cat:'games', desc:'Cool stuff'},
+  {id:'moregames', name:'More Games',    ico:'➡️', url:`${BASE}/core/`,                   cat:'games', desc:'150+ games'},
+  {id:'marchmadness',name:'March Madness',ico:'🏆',url:`${BASE}/march-madness/`,          cat:'games', desc:'Basketball bracket'},
+  {id:'flick',     name:'Flick',          ico:'👆', url:`${BASE}/flick/`,                  cat:'games', desc:'Flick game'},
+  {id:'game',      name:'Game Hub',       ico:'🕹', url:`${BASE}/game/`,                   cat:'games', desc:'Single game'},
+];
+
+// Desktop shortcut subset
+const DESK_ICONS = ['hub','caseopener','moregames','blackjack','geodash','minecraft','slope','flappybird','1v1lol','coder','youtube','calc','cine','cloud'];
+
+// =========================================================
+// MATRIX RAIN
+// =========================================================
+const matCanvas = document.getElementById('matrix-canvas');
+const mctx = matCanvas.getContext('2d');
+let matCols, matDrops, matRunning = true;
+function resizeMat(){matCanvas.width=window.innerWidth;matCanvas.height=window.innerHeight;matCols=Math.floor(matCanvas.width/14);matDrops=new Array(matCols).fill(1);}
+resizeMat();window.addEventListener('resize',resizeMat);
+const matChars='ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+function drawMat(){
+  if(!matRunning)return;
+  mctx.fillStyle='rgba(0,0,0,0.04)';mctx.fillRect(0,0,matCanvas.width,matCanvas.height);
+  mctx.fillStyle='#00ff41';mctx.font='13px monospace';
+  for(let i=0;i<matDrops.length;i++){
+    mctx.fillText(matChars[Math.floor(Math.random()*matChars.length)],i*14,matDrops[i]*14);
+    if(matDrops[i]*14>matCanvas.height&&Math.random()>.975)matDrops[i]=0;
+    matDrops[i]++;
+  }
+}
+setInterval(drawMat,30);
+
+// =========================================================
+// BOOT SEQUENCE
+// =========================================================
+const bootLogs=[
+  'Initializing Seamless OS kernel...',
+  'Loading seamless game modules...',
+  'Mounting virtual file systems...',
+  'Starting game engine services...',
+  'Checking network connectivity...',
+  'Loading audio subsystem...',
+  'Starting window manager...',
+  'Loading desktop environment...',
+  'Syncing with menist.free.nf...',
+  'Ready. Booting into Seamless Desktop...',
+];
+let bootPct=0,bootIdx=0;
+const bootBar=document.getElementById('boot-bar');
+const bootLog=document.getElementById('boot-log');
+function bootStep(){
+  if(bootIdx>=bootLogs.length){setTimeout(showLogin,400);return;}
+  bootLog.innerHTML+=`<div>&gt; ${bootLogs[bootIdx]}</div>`;
+  bootLog.scrollTop=bootLog.scrollHeight;
+  bootPct=Math.min(100,Math.round((bootIdx+1)/bootLogs.length*100));
+  bootBar.style.width=bootPct+'%';
+  bootIdx++;
+  setTimeout(bootStep,180+Math.random()*120);
+}
+setTimeout(bootStep,500);
+
+function showLogin(){
+  document.getElementById('boot').style.opacity='0';
+  document.getElementById('boot').style.transition='opacity .5s';
+  setTimeout(()=>{
+    document.getElementById('boot').style.display='none';
+    const l=document.getElementById('login');
+    l.style.display='flex';
+    l.style.opacity='0';l.style.transition='opacity .4s';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{l.style.opacity='1';}));
+    document.getElementById('login-pass').focus();
+  },500);
+}
+
+function doLogin(){
+  const l=document.getElementById('login');
+  l.style.opacity='0';
+  setTimeout(()=>{
+    l.style.display='none';
+    startDesktop();
+  },400);
+}
+document.getElementById('login-btn').addEventListener('click',doLogin);
+document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+// =========================================================
+// DESKTOP START
+// =========================================================
+function startDesktop(){
+  document.getElementById('desktop').style.display='block';
+  document.getElementById('taskbar').style.display='flex';
+  buildDesktopIcons();
+  buildStartList('all');
+  updateClock();
+  setInterval(updateClock,1000);
+  showNotif('Welcome to Seamless OS! 🎮');
+}
+
+// =========================================================
+// CLOCK
+// =========================================================
+function updateClock(){
+  const now=new Date();
+  const h=String(now.getHours()).padStart(2,'0');
+  const m=String(now.getMinutes()).padStart(2,'0');
+  const s=String(now.getSeconds()).padStart(2,'0');
+  const mo=String(now.getMonth()+1).padStart(2,'0');
+  const d=String(now.getDate()).padStart(2,'0');
+  document.getElementById('clock').innerHTML=`${h}:${m}<br>${mo}/${d}`;
+  const dcT=document.getElementById('dc-time');
+  const dcD=document.getElementById('dc-date');
+  if(dcT)dcT.textContent=`${h}:${m}:${s}`;
+  const days=['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+  const months=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  if(dcD)dcD.textContent=`${days[now.getDay()]} · ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+}
+
+// =========================================================
+// DESKTOP ICONS
+// =========================================================
+function buildDesktopIcons(){
+  const cont=document.getElementById('desktop-icons');
+  cont.innerHTML='';
+  DESK_ICONS.forEach(id=>{
+    const app=APPS.find(a=>a.id===id);
+    if(!app)return;
+    const el=document.createElement('div');
+    el.className='desk-icon';
+    el.innerHTML=`<div class="ico">${app.ico}</div><div class="lbl">${app.name}</div>`;
+    el.addEventListener('dblclick',()=>openApp(app));
+    el.addEventListener('click',e=>{e.stopPropagation();});
+    cont.appendChild(el);
+  });
+}
+
+// =========================================================
+// START MENU
+// =========================================================
+let startCat='all';
+let startSearch='';
+document.getElementById('start-btn').addEventListener('click',()=>{
+  const sm=document.getElementById('start-menu');
+  const btn=document.getElementById('start-btn');
+  if(sm.style.display==='flex'){sm.style.display='none';btn.classList.remove('active');}
+  else{sm.style.display='flex';btn.classList.add('active');document.getElementById('start-search').focus();}
+});
+document.querySelectorAll('.start-cat').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.start-cat').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    startCat=btn.dataset.cat;
+    buildStartList(startCat);
+  });
+});
+document.getElementById('start-search').addEventListener('input',e=>{
+  startSearch=e.target.value.toLowerCase();
+  buildStartList(startCat);
+});
+function buildStartList(cat){
+  const list=document.getElementById('start-list');
+  list.innerHTML='';
+  const filtered=APPS.filter(a=>{
+    const catOk=cat==='all'||a.cat===cat;
+    const searchOk=!startSearch||a.name.toLowerCase().includes(startSearch)||a.desc.toLowerCase().includes(startSearch);
+    return catOk&&searchOk;
+  });
+  filtered.forEach(app=>{
+    const el=document.createElement('div');
+    el.className='start-item';
+    el.innerHTML=`<span class="si-ico">${app.ico}</span><div><div class="si-name">${app.name}</div><div class="si-cat">${app.desc}</div></div>`;
+    el.addEventListener('click',()=>{openApp(app);closeStartMenu();});
+    list.appendChild(el);
+  });
+}
+function closeStartMenu(){
+  document.getElementById('start-menu').style.display='none';
+  document.getElementById('start-btn').classList.remove('active');
+}
+document.getElementById('power-btn').addEventListener('click',()=>{
+  if(confirm('Shut down Seamless OS?')){
+    document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#000;font-family:Orbitron,monospace;font-size:1.5rem;color:#00ff41;text-shadow:0 0 20px #00ff41;">SYSTEM HALTED</div>';
+  }
+});
+
+// =========================================================
+// WINDOW MANAGER
+// =========================================================
+let windows={}, zTop=100, focused=null;
+
+function openApp(app){
+  // If already open, focus it
+  if(windows[app.id]){
+    focusWin(app.id);
+    if(windows[app.id].minimized){unminimizeWin(app.id);}
+    return;
+  }
+  const desktop=document.getElementById('desktop');
+  const dw=desktop.clientWidth, dh=desktop.clientHeight;
+  const w=Math.min(dw-60,900), h=Math.min(dh-60,620);
+  const x=Math.max(20, Math.random()*(dw-w-40));
+  const y=Math.max(10, Math.random()*(dh-h-20));
+
+  const win=document.createElement('div');
+  win.className='win';
+  win.id='win-'+app.id;
+  win.style.cssText=`left:${x}px;top:${y}px;width:${w}px;height:${h}px;z-index:${++zTop};`;
+  win.innerHTML=`
+    <div class="win-titlebar" id="tb-${app.id}">
+      <span class="win-icon">${app.ico}</span>
+      <span class="win-title">${app.name}</span>
+      <div class="win-btns">
+        <button class="win-btn minimize" title="Minimize" data-id="${app.id}">─</button>
+        <button class="win-btn maximize" title="Maximize" data-id="${app.id}">□</button>
+        <button class="win-btn close" title="Close" data-id="${app.id}">✕</button>
+      </div>
+    </div>
+    <div class="win-body">
+      <iframe src="${app.url}" title="${app.name}" allowfullscreen sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-modals"></iframe>
+    </div>
+    <div class="win-resize" data-id="${app.id}"></div>
+  `;
+  desktop.appendChild(win);
+
+  windows[app.id]={el:win, app, minimized:false, maximized:false, savedRect:null};
+
+  // Titlebar drag
+  makeDraggable(win, win.querySelector('#tb-'+app.id));
+  // Resize
+  makeResizable(win, win.querySelector('.win-resize'));
+  // Focus on click
+  win.addEventListener('mousedown',()=>focusWin(app.id));
+  // Buttons
+  win.querySelector('.win-btn.minimize').addEventListener('click',e=>{e.stopPropagation();minimizeWin(app.id);});
+  win.querySelector('.win-btn.maximize').addEventListener('click',e=>{e.stopPropagation();toggleMaximize(app.id);});
+  win.querySelector('.win-btn.close').addEventListener('click',e=>{e.stopPropagation();closeWin(app.id);});
+
+  focusWin(app.id);
+  addTaskbarBtn(app);
+}
+
+function focusWin(id){
+  if(focused)windows[focused]&&windows[focused].el.classList.remove('focused');
+  focused=id;
+  if(windows[id]){
+    windows[id].el.style.zIndex=++zTop;
+    windows[id].el.classList.add('focused');
+  }
+  updateTaskbar();
+}
+
+function minimizeWin(id){
+  if(!windows[id])return;
+  windows[id].minimized=true;
+  windows[id].el.classList.add('minimized');
+  if(focused===id)focused=null;
+  updateTaskbar();
+}
+
+function unminimizeWin(id){
+  if(!windows[id])return;
+  windows[id].minimized=false;
+  windows[id].el.classList.remove('minimized');
+  focusWin(id);
+}
+
+function toggleMaximize(id){
+  if(!windows[id])return;
+  const wn=windows[id];
+  const el=wn.el;
+  const desktop=document.getElementById('desktop');
+  if(!wn.maximized){
+    wn.savedRect={l:el.style.left,t:el.style.top,w:el.style.width,h:el.style.height};
+    el.style.left='0'; el.style.top='0';
+    el.style.width=desktop.clientWidth+'px';
+    el.style.height=desktop.clientHeight+'px';
+    wn.maximized=true;
+  } else {
+    el.style.left=wn.savedRect.l; el.style.top=wn.savedRect.t;
+    el.style.width=wn.savedRect.w; el.style.height=wn.savedRect.h;
+    wn.maximized=false;
+  }
+}
+
+function closeWin(id){
+  if(!windows[id])return;
+  windows[id].el.remove();
+  delete windows[id];
+  if(focused===id)focused=null;
+  removeTaskbarBtn(id);
+  updateTaskbar();
+}
+
+function addTaskbarBtn(app){
+  const apps=document.getElementById('taskbar-apps');
+  if(document.getElementById('tba-'+app.id))return;
+  const btn=document.createElement('button');
+  btn.className='tb-app';
+  btn.id='tba-'+app.id;
+  btn.innerHTML=`${app.ico} ${app.name}`;
+  btn.addEventListener('click',()=>{
+    if(!windows[app.id])return;
+    if(windows[app.id].minimized){unminimizeWin(app.id);}
+    else if(focused===app.id){minimizeWin(app.id);}
+    else{focusWin(app.id);}
+  });
+  apps.appendChild(btn);
+}
+
+function removeTaskbarBtn(id){
+  const el=document.getElementById('tba-'+id);
+  if(el)el.remove();
+}
+
+function updateTaskbar(){
+  document.querySelectorAll('.tb-app').forEach(btn=>{
+    const id=btn.id.replace('tba-','');
+    btn.classList.remove('focused','minimized');
+    if(focused===id)btn.classList.add('focused');
+    else if(windows[id]&&windows[id].minimized)btn.classList.add('minimized');
+  });
+}
+
+// =========================================================
+// DRAG
+// =========================================================
+function makeDraggable(win, handle){
+  let ox,oy,dragging=false;
+  handle.addEventListener('mousedown',e=>{
+    if(e.target.classList.contains('win-btn'))return;
+    dragging=true;ox=e.clientX-win.offsetLeft;oy=e.clientY-win.offsetTop;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!dragging)return;
+    const desk=document.getElementById('desktop');
+    let nx=e.clientX-ox, ny=e.clientY-oy;
+    nx=Math.max(-win.offsetWidth+60, Math.min(desk.clientWidth-60,nx));
+    ny=Math.max(0, Math.min(desk.clientHeight-40,ny));
+    win.style.left=nx+'px'; win.style.top=ny+'px';
+  });
+  document.addEventListener('mouseup',()=>{dragging=false;});
+}
+
+// =========================================================
+// RESIZE
+// =========================================================
+function makeResizable(win, handle){
+  let resizing=false,sx,sy,sw,sh;
+  handle.addEventListener('mousedown',e=>{
+    resizing=true;sx=e.clientX;sy=e.clientY;
+    sw=win.offsetWidth;sh=win.offsetHeight;
+    e.preventDefault();e.stopPropagation();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!resizing)return;
+    const nw=Math.max(300,sw+(e.clientX-sx));
+    const nh=Math.max(200,sh+(e.clientY-sy));
+    win.style.width=nw+'px'; win.style.height=nh+'px';
+  });
+  document.addEventListener('mouseup',()=>{resizing=false;});
+}
+
+// =========================================================
+// CONTEXT MENU
+// =========================================================
+const ctxMenu=document.getElementById('ctx-menu');
+document.getElementById('desktop').addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  ctxMenu.style.left=Math.min(e.clientX,window.innerWidth-170)+'px';
+  ctxMenu.style.top=Math.min(e.clientY,window.innerHeight-200)+'px';
+  ctxMenu.style.display='block';
+});
+document.addEventListener('click',()=>{ctxMenu.style.display='none';closeStartMenu();});
+document.querySelectorAll('.ctx-item').forEach(item=>{
+  item.addEventListener('click',e=>{
+    e.stopPropagation();
+    const action=item.dataset.action;
+    ctxMenu.style.display='none';
+    if(action==='refresh'){showNotif('Desktop refreshed ✓');buildDesktopIcons();}
+    else if(action==='games'){openApp(APPS.find(a=>a.id==='moregames'));}
+    else if(action==='wallpaper'){matRunning=!matRunning;if(!matRunning)mctx.clearRect(0,0,matCanvas.width,matCanvas.height);showNotif(matRunning?'Matrix rain ON':'Matrix rain OFF');}
+    else if(action==='about'){showAbout();}
+  });
+});
+
+function showAbout(){
+  const app={id:'about',name:'About Seamless OS',ico:'ℹ',url:'about:blank',cat:'tools',desc:'System info'};
+  openApp(app);
+  setTimeout(()=>{
+    const win=document.getElementById('win-about');
+    if(!win)return;
+    const body=win.querySelector('.win-body');
+    body.innerHTML=`<div style="padding:2rem;font-family:Share Tech Mono,monospace;background:#000;height:100%;overflow-y:auto;color:#00ff41;font-size:.8rem;line-height:1.8;">
+      <div style="font-family:Orbitron,monospace;font-size:1.5rem;font-weight:900;color:#00ff41;text-shadow:0 0 20px #00ff41;margin-bottom:1.5rem;">Seamless OS v2.0</div>
+      <div style="color:#c0ffb0;margin-bottom:1rem;">A full fake desktop operating system built from the Seamless GitHub repository.</div>
+      <div style="color:#00a82a;margin-bottom:.5rem;">── SYSTEM INFO ──────────────────────</div>
+      <div>Kernel: Seamless 2.0-seamless</div>
+      <div>Desktop: Seamless WM</div>
+      <div>Games available: ${APPS.filter(a=>a.cat==='games').length}</div>
+      <div>Total apps: ${APPS.length}</div>
+      <div>Built by: Camerons-Git7</div>
+      <div>Hosted: menist.free.nf</div>
+      <div style="margin-top:1rem;color:#00a82a;">── APPS ─────────────────────────────</div>
+      ${APPS.map(a=>`<div style="color:#c0ffb0;">${a.ico} ${a.name} <span style="color:#005510;">[${a.cat}]</span></div>`).join('')}
+    </div>`;
+  },100);
+}
+
+// =========================================================
+// NOTIFICATION
+// =========================================================
+let notifTimer=null;
+function showNotif(msg){
+  const n=document.getElementById('notif');
+  n.textContent=msg;
+  n.classList.add('show');
+  if(notifTimer)clearTimeout(notifTimer);
+  notifTimer=setTimeout(()=>n.classList.remove('show'),2500);
+}
+
+// =========================================================
+// DOUBLE CLICK DESKTOP TO OPEN HUB
+// =========================================================
+document.getElementById('desktop').addEventListener('dblclick',e=>{
+  if(e.target===document.getElementById('desktop')||e.target===document.getElementById('desktop-clock')||e.target.classList.contains('dc-time')||e.target.classList.contains('dc-date')){
+    openApp(APPS.find(a=>a.id==='hub'));
+  }
+});
+
+// =========================================================
+// KEYBOARD SHORTCUTS
+// =========================================================
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeStartMenu();ctxMenu.style.display='none';}
+  if(e.ctrlKey&&e.key==='g')openApp(APPS.find(a=>a.id==='moregames'));
+  if(e.ctrlKey&&e.key==='h')openApp(APPS.find(a=>a.id==='hub'));
+});
+</script>
+</body>
+</html>
