@@ -1986,33 +1986,8 @@ function openWindow(id) {
                 <body>
                     <h2>SYSTEM SETTINGS</h2>
                     <div class="setting-card">
-                        <div class="setting-text"><b>Optimized Background</b><small>Disables video background</small></div>
-                        <label class="switch"><input type="checkbox" id="chk-bg" onchange="window.parent.updateSysSetting('optBg',this.checked)"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-card">
                         <div class="setting-text"><b>Fast Boot</b><small>Skips the startup sequence</small></div>
                         <label class="switch"><input type="checkbox" id="chk-boot" onchange="window.parent.updateSysSetting('shortBoot',this.checked)"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-card">
-                        <div class="setting-text"><b>Idle Lock Screen</b><small>Locks system when away for 3 minutes</small></div>
-                        <label class="switch"><input type="checkbox" id="chk-idle" onchange="window.parent.updateSysSetting('idleLock',this.checked)"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-card">
-                        <div class="setting-text"><b>Redirect Confirmation</b><small>Helps Protect Against GoGuardian tracking!</small></div>
-                        <label class="switch"><input type="checkbox" id="chk-redir" onchange="window.parent.updateSysSetting('redirectConfirm',this.checked)"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-card">
-                        <div class="setting-text"><b>Tab Cloaking</b><small>Disguises OS as another site</small></div>
-                        <select id="cloak-select" onchange="window.parent.updateCloak(this.value)">
-                            <option value="none">None (Seamless-OS)</option>
-                            <option value="google">Google</option>
-                            <option value="drive">Google Drive</option>
-                            <option value="canvas">Canvas</option>
-                        </select>
-                    </div>
-                    <div class="setting-card">
-                        <div class="setting-text"><b>Panic Key</b><small>Instant site redirection shortcut</small></div>
-                        <input type="text" id="panic-input" maxlength="1" style="width:40px; text-align:center; font-weight:bold; font-size:16px;" onkeyup="window.parent.updateSysSetting('panicKey',this.value)">
                     </div>
                     <script>
                         var prefs = window.parent.sysConfig;
