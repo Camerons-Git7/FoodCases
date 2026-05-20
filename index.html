@@ -957,11 +957,11 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 <!-- Right Sidebar refactored with BEM and Semantic tags -->
 <aside id="right-sidebar" aria-label="Quick Access Widget">
   <section class="sidebar__section">
-    <h3 class="sidebar__title">System Status</h3>
-    <div class="sidebar__card" onclick="showNotification('Seamless-OS', 'System is running optimally.')" role="button" tabindex="0">
+    <h3 class="sidebar__title">Widgets</h3>
+    <div class="sidebar__card" onclick="openWindow('widgets', 'Widgets', 'https://menist.free.nf/seamless-widgets/')" role="button" tabindex="0">
       <div class="sidebar__info">
-        <strong class="txt-highlight">System Online</strong>
-        <small>All systems operational</small>
+        <strong class="txt-highlight">Seamless Widgets</strong>
+        <small>Date, Time, Weather, and more!</small>
       </div>
       <i class="fas fa-chevron-right sidebar__chevron" aria-hidden="true"></i>
     </div>
