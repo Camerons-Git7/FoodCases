@@ -14,7 +14,7 @@ jobs:
 
       - name: Replace favicon URL
         run: |
-          find . -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" -o -name "*.json" -o -name "*.txt" \) -exec sed -i 's|https://math.hws.edu/favicon.ico|https://i.ibb.co/MD6zN5z1/6-E8-D76-F3-B9-FD-4-A69-B35-D-451484-BC75-AC.png|g' {} +
+          find . -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" -o -name "*.json" -o -name "*.txt" \) -exec sed -i 's|https://i.ibb.co/MD6zN5z1/6-E8-D76-F3-B9-FD-4-A69-B35-D-451484-BC75-AC.png|https://math.hws.edu/favicon.ico|g' {} +
 
       - name: Commit changes
         run: |
