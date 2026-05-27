@@ -76,7 +76,7 @@ curl_setopt_array($ch, array(
     CURLOPT_SSL_VERIFYHOST => 2,
     CURLOPT_USERAGENT      => $CONFIG['user_agent'],
     CURLOPT_HTTPHEADER     => $headers,
-    CURLOPT_ENCODING       => '',
+    CURLOPT_ENCODING       => 'gzip,deflate',
 ));
 
 // Forward POST data
