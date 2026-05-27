@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="position: fixed; inset: 0;">
+  <foreignObject x="0" y="0" width="100%" height="100%">
+    <body xmlns="http://www.w3.org/1999/xhtml" lang="en" style="margin: 0; width: 100%; height: 100%; min-height: 100vh; overflow: auto;">
+
+      <div id="root"></div>
+
+      <style><![CDATA[
+        html, body, #root { width: 100%; min-height: 100vh; }
+        body { margin: 0; opacity: 1; }
+      ]]></style>
+
+      <script><![CDATA[
+        (() => {
+          const ns = 'http://www.w3.org/1999/xhtml';
+          const body = document.querySelector('body');
+          if (!body) return;
+          const svgRoot = document.documentElement;
+          const head = document.createElementNS(ns, 'head');
+          body.prepend(head);
+          const htmlRoot = body.parentElement && body.parentElement.namespaceURI === ns ? body.parentElement : body;
+          try { Object.defineProperty(document, 'head', { configurable: true, get() { return head; } }); } catch {}
+          try { Object.defineProperty(document, 'body', { configurable: true, get() { return body; } }); } catch {}
+          try { Object.defineProperty(document, 'documentElement', { configurable: true, get() { return htmlRoot; } }); } catch {}
+          try {
+            Object.defineProperty(svgRoot, 'className', {
+              configurable: true,
+              get() { return svgRoot.getAttribute('class') || ''; },
+              set(value) { svgRoot.setAttribute('class', value || ''); },
+            });
+          } catch {}
+          const originalCreateElement = document.createElement.bind(document);
+          document.createElement = function createElement(tagName, options) {
+            return typeof tagName === 'string'
+              ? document.createElementNS(ns, tagName, options)
+              : originalCreateElement(tagName, options);
+          };
+        })();
+
+        const headNodes = [
+          { tag: 'meta', attrs: { charset: 'UTF-8' } },
+          { tag: 'meta', attrs: { name: 'viewport', content: 'width=device-width, initial-scale=1' } },
+          { tag: 'meta', attrs: { name: 'theme-color', content: '#f8f6f1' } },
+          { tag: 'meta', attrs: { name: 'description', content: 'Secure, animated, and modern study platform designed for serious learners. Create flashcards, take quizzes, track your progress with advanced analytics, and master any subject with confidence.' } },
+          { tag: 'meta', attrs: { name: 'robots', content: 'index, follow' } },
+          { tag: 'meta', attrs: { property: 'og:type', content: 'website' } },
+          { tag: 'meta', attrs: { property: 'og:url', content: 'https://hypestudy.com/' } },
+          { tag: 'meta', attrs: { property: 'og:title', content: 'HypeStudy — Secure Study Platform for Students' } },
+          { tag: 'meta', attrs: { property: 'og:description', content: 'Secure, animated, and modern study platform. Master your subjects with interactive flashcards, dynamic quizzes, comprehensive analytics, and powerful study tools.' } },
+          { tag: 'meta', attrs: { property: 'og:image', content: 'logo.png' } },
+          { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
+          { tag: 'meta', attrs: { name: 'twitter:site', content: '@hypestudy' } },
+          { tag: 'meta', attrs: { name: 'twitter:title', content: 'HypeStudy — Secure Study Platform for Students' } },
+          { tag: 'meta', attrs: { name: 'twitter:image', content: 'logo.png' } },
+          { tag: 'link', attrs: { rel: 'icon', type: 'image/png', href: 'logo.png' } },
+          { tag: 'link', attrs: { rel: 'apple-touch-icon', sizes: '180x180', href: 'logo.png' } },
+          { tag: 'link', attrs: { rel: 'manifest', href: 'manifest.json' } },
+          { tag: 'link', attrs: { rel: 'stylesheet', crossorigin: '', href: 'assets/index-wx3ZcHSz.css' } },
+        ];
+        for (const nodeDef of headNodes) {
+          const node = document.createElement(nodeDef.tag);
+          for (const [name, value] of Object.entries(nodeDef.attrs)) node.setAttribute(name, value);
+          document.head.appendChild(node);
+        }
+
+        const title = document.createElement('title');
+        title.textContent = 'HypeStudy — Secure Study Platform for Students';
+        document.head.appendChild(title);
+
+        const gtmScript = document.createElement('script');
+        gtmScript.textContent = `(function(e,t,a,n){(e[n]=e[n]||[]).push({'gtm.start':new Date().getTime(),event:'gtm.js'});var g=t.getElementsByTagName(a)[0],m=t.createElement(a);m.async=true;m.src='https://www.googletagmanager.com/gtm.js?id=GTM-WPH7NCG4';g.parentNode.insertBefore(m,g);})(window,document,'script','dataLayer');`;
+        document.head.appendChild(gtmScript);
+
+        const gaLoader = document.createElement('script');
+        gaLoader.async = true;
+        gaLoader.src = 'https://www.googletagmanager.com/gtag/js?id=G-SHE360M0YP';
+        document.head.appendChild(gaLoader);
+
+        const gaConfig = document.createElement('script');
+        gaConfig.textContent = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-SHE360M0YP');`;
+        document.head.appendChild(gaConfig);
+
+        const entryScript = document.createElement('script');
+        entryScript.type = 'module';
+        entryScript.setAttribute('crossorigin', '');
+        entryScript.src = 'assets/index-eXKpulXh.js';
+        document.body.appendChild(entryScript);
+
+        const baremux = document.createElement('script');
+        baremux.src = 'baremux/index.js';
+        document.body.appendChild(baremux);
+
+        const scramjet = document.createElement('script');
+        scramjet.src = 'https://cdn.jsdelivr.net/gh/PeteZah-G/PeteStatic@main/scram/scramjet.all.js';
+        document.body.appendChild(scramjet);
+      ]]></script>
+
+    </body>
+  </foreignObject>
+</svg>
