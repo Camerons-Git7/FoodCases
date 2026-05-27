@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scramjet WASM</title>
+    <title>Scramjet</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -21,21 +21,46 @@
         .success { background: #e8f5e9; color: #2e7d32; }
         .error { background: #ffebee; color: #c62828; }
         pre { background: #f5f5f5; padding: 16px; border-radius: 8px; overflow-x: auto; }
+        input, button {
+            padding: 10px 14px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background: #1565c0;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover { background: #0d47a1; }
+        #proxy-frame {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-    <h1>Scramjet WASM Loader</h1>
-    <div id="status" class="status loading">Loading scripts...</div>
+    <h1>Scramjet Proxy</h1>
+    <div id="status" class="status loading">Loading Scramjet...</div>
     <div id="output"></div>
 
-    <!-- Load JS files -->
+    <div id="proxy-ui" style="display:none; margin-top: 20px;">
+        <input type="text" id="url-input" placeholder="Enter URL to proxy..." style="width: 60%;">
+        <button onclick="go()">Go</button>
+        <iframe id="proxy-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>
+    </div>
+
+    <!-- Load Scramjet bundle -->
     <script src="/scramjet.all.js"></script>
-    <script src="/scramjet.bundle.js"></script>
-    <script src="/scramjet.sync.js"></script>
 
     <script>
         const statusEl = document.getElementById('status');
         const outputEl = document.getElementById('output');
+        const proxyUi = document.getElementById('proxy-ui');
 
         function log(msg) {
             const pre = document.createElement('pre');
@@ -43,64 +68,66 @@
             outputEl.appendChild(pre);
         }
 
-        // Check if scripts loaded
-        const scripts = ['/scramjet.all.js', '/scramjet.bundle.js', '/scramjet.sync.js'];
-        let loaded = 0;
-
-        scripts.forEach(src => {
-            const script = document.querySelector(`script[src="${src}"]`);
-            if (script) {
-                script.onload = () => {
-                    loaded++;
-                    log(`Loaded: ${src}`);
-                    if (loaded === scripts.length) {
-                        loadWasm();
-                    }
-                };
-                script.onerror = () => {
-                    statusEl.className = 'status error';
-                    statusEl.textContent = `Failed to load: ${src}`;
-                    log(`Error loading: ${src}`);
-                };
-            }
-        });
-
-        async function loadWasm() {
-            statusEl.className = 'status loading';
-            statusEl.textContent = 'Loading WASM...';
-            
+        async function initScramjet() {
             try {
-                const response = await fetch('/scramjet.wasm.wasm');
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                // Check if the global loader function exists
+                if (typeof $scramjetLoadController !== 'function') {
+                    throw new Error('scramjet.all.js did not load correctly. $scramjetLoadController is not defined.');
                 }
-                
-                const wasmBuffer = await response.arrayBuffer();
-                log(`WASM fetched: ${wasmBuffer.byteLength} bytes`);
 
-                // Try to instantiate the WASM module
-                const wasmModule = await WebAssembly.compile(wasmBuffer);
-                const wasmInstance = await WebAssembly.instantiate(wasmModule, {
-                    env: {
-                        memory: new WebAssembly.Memory({ initial: 256, maximum: 512 }),
-                        __memory_base: 0,
-                        __table_base: 0,
-                        abort: () => { throw new Error('WASM abort called'); }
+                const { ScramjetController } = $scramjetLoadController();
+
+                const scramjet = new ScramjetController({
+                    files: {
+                        wasm: "/scramjet.wasm.wasm",
+                        all: "/scramjet.all.js",
+                        sync: "/scramjet.sync.js",
                     }
                 });
 
+                // Initialize Scramjet (this loads the WASM internally)
+                await scramjet.init();
+                log('ScramjetController initialized');
+
+                // Register the service worker
+                const reg = await navigator.serviceWorker.register("sw.js");
+                log('Service Worker registered: ' + reg.scope);
+
+                // Wait for the SW to be ready
+                await navigator.serviceWorker.ready;
+                log('Service Worker ready');
+
                 statusEl.className = 'status success';
-                statusEl.textContent = 'WASM loaded and instantiated successfully!';
-                log(`WASM exports: ${Object.keys(wasmInstance.exports).join(', ')}`);
-                
-                // Make wasm available globally for the loaded JS files
-                window.scramjetWasm = wasmInstance;
-                
+                statusEl.textContent = 'Scramjet ready!';
+                proxyUi.style.display = 'block';
+
+                // Store for global use
+                window.scramjet = scramjet;
+
             } catch (err) {
                 statusEl.className = 'status error';
-                statusEl.textContent = 'WASM loading failed';
-                log(`Error: ${err.message}`);
+                statusEl.textContent = 'Error: ' + err.message;
+                log('Error: ' + err.stack);
             }
+        }
+
+        async function go() {
+            const url = document.getElementById('url-input').value;
+            if (!url) return;
+
+            try {
+                const encoded = window.scramjet.encodeUrl(url);
+                document.getElementById('proxy-frame').src = encoded;
+            } catch (err) {
+                log('Proxy error: ' + err.message);
+            }
+        }
+
+        // Start initialization when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initScramjet);
+        } else {
+            initScramjet();
         }
     </script>
 </body>
