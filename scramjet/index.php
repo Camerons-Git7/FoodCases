@@ -1,19 +1,19 @@
 <?php
 /**
- * MiniWebProxy - A single-file PHP web proxy
+ * MiniWebProxy - A single-file PHP web proxy (PHP 5.6+ compatible)
  * Drop this file on any PHP host (like InfinityFree) and go.
  * 
- * Usage: https://yourdomain.com/proxy.php?url=https://example.com
+ * Usage: https://yourdomain.com/proxy/?url=https://example.com
  */
 
 // === CONFIG ===
-$CONFIG = [
-    'timeout'       => 30,      // Request timeout in seconds
-    'max_redirects' => 5,       // Max HTTP redirects to follow
+$CONFIG = array(
+    'timeout'       => 30,
+    'max_redirects' => 5,
     'user_agent'    => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    'blocked_hosts' => [],      // Domains to block (e.g. ['localhost', '127.0.0.1'])
-    'log_requests'  => false,   // Set to true to log requests
-];
+    'blocked_hosts' => array(),
+    'log_requests'  => false,
+);
 
 // === SECURITY: Block private/internal IPs ===
 function is_private_ip($host) {
@@ -21,7 +21,7 @@ function is_private_ip($host) {
     if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
         return true;
     }
-    $private_hosts = ['localhost', '127.0.0.1', '0.0.0.0', '::1'];
+    $private_hosts = array('localhost', '127.0.0.1', '0.0.0.0', '::1');
     return in_array(strtolower($host), $private_hosts);
 }
 
@@ -41,7 +41,7 @@ if (!filter_var($url, FILTER_VALIDATE_URL)) {
 }
 
 $parsed = parse_url($url);
-$host = $parsed['host'] ?? '';
+$host = isset($parsed['host']) ? $parsed['host'] : '';
 
 // Check blocked hosts
 if (is_private_ip($host) || in_array(strtolower($host), array_map('strtolower', $CONFIG['blocked_hosts']))) {
@@ -50,18 +50,23 @@ if (is_private_ip($host) || in_array(strtolower($host), array_map('strtolower', 
 }
 
 // === FETCH CONTENT ===
+if (!function_exists('curl_init')) {
+    http_response_code(500);
+    die('cURL is not enabled on this server. Contact your host.');
+}
+
 $ch = curl_init();
 
 // Set all curl options
-$headers = [];
-foreach (getallheaders() as $key => $value) {
+$headers = array();
+$all_headers = getallheaders_compat();
+foreach ($all_headers as $key => $value) {
     $key_lower = strtolower($key);
-    // Skip headers we don't want to forward
-    if (in_array($key_lower, ['host', 'connection', 'content-length'])) continue;
+    if (in_array($key_lower, array('host', 'connection', 'content-length'))) continue;
     $headers[] = "$key: $value";
 }
 
-curl_setopt_array($ch, [
+curl_setopt_array($ch, array(
     CURLOPT_URL            => $url,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_FOLLOWLOCATION => true,
@@ -71,8 +76,8 @@ curl_setopt_array($ch, [
     CURLOPT_SSL_VERIFYHOST => 2,
     CURLOPT_USERAGENT      => $CONFIG['user_agent'],
     CURLOPT_HTTPHEADER     => $headers,
-    CURLOPT_ENCODING       => '', // Accept all encodings
-]);
+    CURLOPT_ENCODING       => '',
+));
 
 // Forward POST data
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -81,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Forward other methods
-if (in_array($_SERVER['REQUEST_METHOD'], ['PUT', 'PATCH', 'DELETE'])) {
+if (in_array($_SERVER['REQUEST_METHOD'], array('PUT', 'PATCH', 'DELETE'))) {
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $_SERVER['REQUEST_METHOD']);
     curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents('php://input'));
 }
@@ -99,24 +104,16 @@ if ($response === false) {
 }
 
 // === REWRITE RESPONSE ===
-// Only rewrite HTML content
 if ($content_type && (strpos($content_type, 'text/html') !== false || strpos($content_type, 'application/xhtml') !== false)) {
     $response = rewrite_html($response, $url, $effective_url);
-} elseif ($content_type && (strpos($content_type, 'text/css') !== false)) {
+} elseif ($content_type && strpos($content_type, 'text/css') !== false) {
     $response = rewrite_css($response, $url);
-} elseif ($content_type && (strpos($content_type, 'javascript') !== false || strpos($content_type, '/json') !== false)) {
-    $response = rewrite_js($response, $url);
 }
 
 // === OUTPUT ===
 http_response_code($http_code);
 if ($content_type) {
     header('Content-Type: ' . $content_type);
-}
-// Forward other important headers
-$forward_headers = ['set-cookie', 'cache-control', 'expires', 'last-modified', 'etag'];
-foreach ($forward_headers as $h) {
-    // Note: curl doesn't give us response headers easily without CURLOPT_HEADER
 }
 
 echo $response;
@@ -126,6 +123,8 @@ echo $response;
 function show_landing_page() {
     $host = $_SERVER['HTTP_HOST'];
     $script = $_SERVER['SCRIPT_NAME'];
+    $dir = dirname($script);
+    if ($dir == '/' || $dir == '\\') $dir = '';
     ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -217,15 +216,15 @@ function show_landing_page() {
     <div class="container">
         <h1>MiniWebProxy</h1>
         <p class="subtitle">Single-file PHP proxy for InfinityFree & beyond</p>
-
+        
         <form action="" method="get" class="search-box">
             <input type="url" name="url" placeholder="https://example.com" required autofocus>
             <button type="submit">Go</button>
         </form>
-
+        
         <div class="info">
             <p><strong>Usage:</strong> Enter any URL above, or directly visit:</p>
-            <p><code>https://<?php echo $host . $script; ?>?url=https://example.com</code></p>
+            <p><code>https://<?php echo $host . $dir; ?>/?url=https://example.com</code></p>
             <br>
             <p><strong>Tips:</strong></p>
             <p>• Works on any PHP host (InfinityFree, 000webhost, etc.)</p>
@@ -241,164 +240,160 @@ function show_landing_page() {
 function rewrite_html($html, $base_url, $effective_url) {
     $proxy_url = get_proxy_url();
     $base = get_base_url($effective_url);
-
-    // Rewrite absolute URLs in attributes
-    $patterns = [
-        // href attributes
-        '/(href=["\'])(https?:\/\/[^"\']+)(["\'])/i' => function($m) use ($proxy_url) {
-            return $m[1] . $proxy_url . '?url=' . urlencode($m[2]) . $m[3];
-        },
-        // src attributes  
-        '/(src=["\'])(https?:\/\/[^"\']+)(["\'])/i' => function($m) use ($proxy_url) {
-            return $m[1] . $proxy_url . '?url=' . urlencode($m[2]) . $m[3];
-        },
-        // action attributes (forms)
-        '/(action=["\'])(https?:\/\/[^"\']+)(["\'])/i' => function($m) use ($proxy_url) {
-            return $m[1] . $proxy_url . '?url=' . urlencode($m[2]) . $m[3];
-        },
-        // content attribute (meta refresh)
-        '/(content=["\']\d+;url=)(https?:\/\/[^"\']+)(["\'])/i' => function($m) use ($proxy_url) {
-            return $m[1] . $proxy_url . '?url=' . urlencode($m[2]) . $m[3];
-        },
-    ];
-
-    foreach ($patterns as $pattern => $callback) {
-        $html = preg_replace_callback($pattern, $callback, $html);
-    }
-
+    
+    // Rewrite absolute URLs in href attributes
+    $html = preg_replace_callback(
+        '/(href=["\'])(https?:\/\/[^"\']+)(["\'])/i',
+        create_function('$m', '
+            $proxy = "' . addslashes($proxy_url) . '";
+            return $m[1] . $proxy . "?url=" . urlencode($m[2]) . $m[3];
+        '),
+        $html
+    );
+    
+    // Rewrite absolute URLs in src attributes
+    $html = preg_replace_callback(
+        '/(src=["\'])(https?:\/\/[^"\']+)(["\'])/i',
+        create_function('$m', '
+            $proxy = "' . addslashes($proxy_url) . '";
+            return $m[1] . $proxy . "?url=" . urlencode($m[2]) . $m[3];
+        '),
+        $html
+    );
+    
+    // Rewrite absolute URLs in action attributes (forms)
+    $html = preg_replace_callback(
+        '/(action=["\'])(https?:\/\/[^"\']+)(["\'])/i',
+        create_function('$m', '
+            $proxy = "' . addslashes($proxy_url) . '";
+            return $m[1] . $proxy . "?url=" . urlencode($m[2]) . $m[3];
+        '),
+        $html
+    );
+    
     // Rewrite relative URLs
     $html = rewrite_relative_urls($html, $base, $proxy_url);
-
-    // Inject base tag to help with relative URLs
+    
+    // Inject base tag
     $base_tag = '<base href="' . htmlspecialchars($base) . '">';
     if (stripos($html, '<head>') !== false) {
         $html = preg_replace('/(<head[^>]*>)/i', '$1' . $base_tag, $html, 1);
     }
-
-    // Inject script to handle dynamic links
-    $inject_script = '
-<script>
+    
+    // Inject script to intercept dynamic navigation
+    $inject_script = '<script>
 (function() {
-    const proxyBase = "' . $proxy_url . '?url=";
-
-    // Intercept all link clicks
+    var proxyBase = "' . $proxy_url . '?url=";
+    
     document.addEventListener("click", function(e) {
-        const el = e.target.closest("a");
-        if (el && el.href && !el.href.startsWith(proxyBase) && !el.href.startsWith("javascript:")) {
+        var el = e.target.closest("a");
+        if (el && el.href && el.href.indexOf(proxyBase) !== 0 && el.href.indexOf("javascript:") !== 0) {
             if (el.href.match(/^https?:\/\//)) {
                 el.href = proxyBase + encodeURIComponent(el.href);
             }
         }
     }, true);
-
-    // Rewrite fetch/XMLHttpRequest
-    const origFetch = window.fetch;
+    
+    var origFetch = window.fetch;
     window.fetch = function(url, opts) {
-        if (typeof url === "string" && url.match(/^https?:\/\//) && !url.startsWith(proxyBase)) {
+        if (typeof url === "string" && url.match(/^https?:\/\//) && url.indexOf(proxyBase) !== 0) {
             url = proxyBase + encodeURIComponent(url);
         }
         return origFetch(url, opts);
     };
-
-    const origOpen = XMLHttpRequest.prototype.open;
+    
+    var origOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
-        if (typeof url === "string" && url.match(/^https?:\/\//) && !url.startsWith(proxyBase)) {
+        if (typeof url === "string" && url.match(/^https?:\/\//) && url.indexOf(proxyBase) !== 0) {
             url = proxyBase + encodeURIComponent(url);
         }
         return origOpen.call(this, method, url, async, user, password);
     };
 })();
 </script>';
-
+    
     if (stripos($html, '</body>') !== false) {
         $html = str_ireplace('</body>', $inject_script . '</body>', $html);
     } else {
         $html .= $inject_script;
     }
-
+    
     return $html;
 }
 
 function rewrite_css($css, $base_url) {
     $proxy_url = get_proxy_url();
     $base = get_base_url($base_url);
-
-    // Rewrite url() in CSS
+    
+    // Rewrite url() with absolute URLs
     $css = preg_replace_callback(
-        '/url\(["\']?(https?:\/\/[^"\'\)]+)["\']?\)/i',
-        function($m) use ($proxy_url) {
-            return 'url("' . $proxy_url . '?url=' . urlencode($m[1]) . '")';
-        },
+        '/url\(["\']?(https?:\/\/[^"\')\]+)["\']?\)/i',
+        create_function('$m', '
+            $proxy = "' . addslashes($proxy_url) . '";
+            return "url(\"" . $proxy . "?url=" . urlencode($m[1]) . "\")";
+        '),
         $css
     );
-
-    // Rewrite relative URLs in CSS
-    $css = preg_replace_callback(
-        '/url\(["\']?([^"\'\)\/][^"\'\)]*)["\']?\)/i',
-        function($m) use ($base, $proxy_url) {
-            $abs = resolve_relative_url($m[1], $base);
-            return 'url("' . $proxy_url . '?url=' . urlencode($abs) . '")';
-        },
-        $css
-    );
-
+    
     return $css;
 }
 
-function rewrite_js($js, $base_url) {
-    $proxy_url = get_proxy_url();
-    // Basic JS rewriting - this is limited
-    // Full JS rewriting requires AST parsing which is complex
-    return $js;
-}
-
 function rewrite_relative_urls($html, $base, $proxy_url) {
-    // Rewrite relative URLs (starting with / or ./ or ../)
+    // Rewrite relative hrefs starting with /
     $html = preg_replace_callback(
         '/(href=["\'])(\/[^"\']*)(["\'])/i',
-        function($m) use ($base, $proxy_url) {
+        create_function('$m', '
+            $proxy = "' . addslashes($proxy_url) . '";
+            $base = "' . addslashes($base) . '";
             $abs = resolve_relative_url($m[2], $base);
-            return $m[1] . $proxy_url . '?url=' . urlencode($abs) . $m[3];
-        },
+            return $m[1] . $proxy . "?url=" . urlencode($abs) . $m[3];
+        '),
         $html
     );
-
+    
+    // Rewrite relative srcs starting with /
     $html = preg_replace_callback(
         '/(src=["\'])(\/[^"\']*)(["\'])/i',
-        function($m) use ($base, $proxy_url) {
+        create_function('$m', '
+            $proxy = "' . addslashes($proxy_url) . '";
+            $base = "' . addslashes($base) . '";
             $abs = resolve_relative_url($m[2], $base);
-            return $m[1] . $proxy_url . '?url=' . urlencode($abs) . $m[3];
-        },
+            return $m[1] . $proxy . "?url=" . urlencode($abs) . $m[3];
+        '),
         $html
     );
-
+    
     return $html;
 }
 
 function resolve_relative_url($rel, $base) {
     if (parse_url($rel, PHP_URL_SCHEME) != '') return $rel;
     if ($rel[0] == '#' || $rel[0] == '?') return $base . $rel;
-
-    extract(parse_url($base));
-    $path = preg_replace('#/[^/]*$#', '', $path ?? '/');
-
+    
+    $base_parts = parse_url($base);
+    $scheme = isset($base_parts['scheme']) ? $base_parts['scheme'] : 'https';
+    $host = isset($base_parts['host']) ? $base_parts['host'] : '';
+    $port = isset($base_parts['port']) ? ':' . $base_parts['port'] : '';
+    $path = isset($base_parts['path']) ? $base_parts['path'] : '/';
+    $path = preg_replace('#/[^/]*$#', '', $path);
+    
     if ($rel[0] == '/') $path = '';
-
-    $abs = ($user ?? '') . (isset($pass) ? ":$pass" : '') . ($user ? '@' : '');
-    $abs .= $host . (isset($port) ? ":$port" : '');
-    $abs .= $path . '/' . $rel;
-
-    $re = ['#(/\.?/)#', '#/(?!\.\.)[^/]+/\.\./#'];
+    
+    $abs = $host . $port . $path . '/' . $rel;
+    
+    $re = array('#(/\.?/)#', '#/(?!\.\.)[^/]+/\.\./#');
     for ($n = 1; $n > 0; $abs = preg_replace($re, '/', $abs, -1, $n)) {}
-
+    
     return $scheme . '://' . $abs;
 }
 
 function get_base_url($url) {
     $parsed = parse_url($url);
-    $base = $parsed['scheme'] . '://' . $parsed['host'];
-    if (isset($parsed['port'])) $base .= ':' . $parsed['port'];
-    $base .= ($parsed['path'] ?? '/');
+    $scheme = isset($parsed['scheme']) ? $parsed['scheme'] : 'https';
+    $host = isset($parsed['host']) ? $parsed['host'] : '';
+    $port = isset($parsed['port']) ? ':' . $parsed['port'] : '';
+    $path = isset($parsed['path']) ? $parsed['path'] : '/';
+    $base = $scheme . '://' . $host . $port . $path;
     $base = preg_replace('#/[^/]*$#', '/', $base);
     return $base;
 }
@@ -408,15 +403,16 @@ function get_proxy_url() {
     return $scheme . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['SCRIPT_NAME'];
 }
 
-// Polyfill for getallheaders() if not available (e.g., on some servers)
-if (!function_exists('getallheaders')) {
-    function getallheaders() {
-        $headers = [];
-        foreach ($_SERVER as $name => $value) {
-            if (substr($name, 0, 5) == 'HTTP_') {
-                $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
-            }
-        }
-        return $headers;
+function getallheaders_compat() {
+    if (function_exists('getallheaders')) {
+        return getallheaders();
     }
+    $headers = array();
+    foreach ($_SERVER as $name => $value) {
+        if (substr($name, 0, 5) == 'HTTP_') {
+            $header_name = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))));
+            $headers[$header_name] = $value;
+        }
+    }
+    return $headers;
 }
