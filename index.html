@@ -1556,9 +1556,14 @@ function applyCloak() {
         document.getElementsByTagName('head')[0].appendChild(n);
     } else {
         document.title = "🔗 Seamless-OS 🔗";
+        // Re-add your original favicon when not cloaking
+        let n = document.createElement('link');
+        n.type = 'image/x-icon';
+        n.rel = 'icon';  // match your original rel
+        n.href = 'https://i.ibb.co/cSvfKKgZ/Seamless-OS.png';
+        document.getElementsByTagName('head')[0].appendChild(n);
     }
 }
-setInterval(applyCloak, 2000);
 
 var isDesktopActive = false;
 var bootActive = true;
