@@ -122,7 +122,7 @@ class ScramjetProxy {
             CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             CURLOPT_HTTPHEADER => $headers,
             CURLOPT_HEADERFUNCTION => $headerCallback,
-            CURLOPT_ENCODING => '',
+            CURLOPT_ENCODING => 'gzip,deflate',
         ));
         
         // Handle all HTTP methods
