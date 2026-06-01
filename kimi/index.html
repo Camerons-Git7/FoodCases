@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kimi AI</title>
+    <link rel="icon" href="https://moonshotai.github.io/Branding-Guide/scenarios/03-icon-without-kimi/kimi-icon-round.png" type="image/x-icon">
+    <style>
+        /* Remove default browser margins and scrollbars */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000000;
+        }
+
+        /* Force the iframe to fill the exact dimensions of the screen */
+        iframe {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            z-index: 999999;
+        }
+    </style>
+</head>
+<body>
+
+    <iframe 
+        src="https://www.kimi.com/en" 
+        
+        <!-- Legacy fullscreen support -->
+        allowfullscreen="true"
+        webkitallowfullscreen="true"
+        mozallowfullscreen="true"
+
+        <!-- Modern Permissions Policy delegating all major features to the iframe -->
+        allow="
+            camera *; 
+            microphone *; 
+            geolocation *; 
+            fullscreen *; 
+            display-capture *; 
+            accelerometer *; 
+            gyroscope *; 
+            magnetometer *; 
+            ambient-light-sensor *; 
+            payment *; 
+            usb *; 
+            vr *; 
+            xr-spatial-tracking *; 
+            clipboard-write *; 
+            clipboard-read *; 
+            gamepad *; 
+            midi *; 
+            picture-in-picture *; 
+            sync-xhr *; 
+            encrypted-media *; 
+            autoplay *;
+            screen-wake-lock *;
+            web-share *
+        ">
+    </iframe>
+
+</body>
+</html>
