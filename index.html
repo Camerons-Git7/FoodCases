@@ -617,9 +617,9 @@ body {
     color: transparent;
 }
 .win-btn:hover { color: #fff; }
-.btn-min { background: #444; border: 1px solid #666; }
-.btn-min:hover { background: #888; transform: scale(1.15); }
-.btn-min::before { content: ''; width: 8px; height: 2px; background: currentColor; border-radius: 2px; }
+.btn-max { background: #444; border: 1px solid #666; }
+.btn-max:hover { background: #888; transform: scale(1.15); }
+.btn-max::before { content: ''; width: 8px; height: 8px; border: 2px solid currentColor; border-radius: 2px; }
 .btn-close { background: #555; border: 1px solid #777; }
 .btn-close:hover { transform: scale(1.15); box-shadow: 0 0 8px #fff; background: #fff; color: #000; }
 .btn-close::before, .btn-close::after { content: ''; position: absolute; width: 8px; height: 2px; background: currentColor; border-radius: 2px; }
@@ -1957,7 +1957,7 @@ function openWindow(id) {
         
         let iframeStr = dat.internal ? '<iframe id="frame-' + id + '"></iframe>' : '<iframe id="frame-' + id + '" src="' + dat.path + '"></iframe>';
         
-        win.innerHTML = '<div class="win-header" onmousedown="DragSystem.startWinDrag(event, \'' + id + '\')"><div class="win-title">' + dat.title + '</div><div class="win-controls"><div class="win-btn btn-min" onclick="minimizeWindow(\'' + id + '\')"></div><div class="win-btn btn-close" onclick="closeWindow(\'' + id + '\')"></div></div></div><div class="win-body">' + iframeStr + '</div>';
+        win.innerHTML = '<div class="win-header" onmousedown="DragSystem.startWinDrag(event, \'' + id + '\')"><div class="win-title">' + dat.title + '</div><div class="win-controls"><div class="win-btn btn-max" onclick="toggleFullscreen(\'' + id + '\')"></div><div class="win-btn btn-close" onclick="closeWindow(\'' + id + '\')"></div></div></div><div class="win-body">' + iframeStr + '</div>';
         
         layer.appendChild(win);
         
@@ -2033,6 +2033,19 @@ function minimizeWindow(id) {
         if(activeWindowId === id) activeWindowId = null;
     }
     endImmersiveMode();
+}
+
+function toggleFullscreen(id) {
+    let w = document.getElementById('win-' + id);
+    if (!w) return;
+    
+    if (!document.fullscreenElement) {
+        w.requestFullscreen().catch(err => {
+            console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+    } else {
+        document.exitFullscreen();
+    }
 }
 
 function startImmersiveMode(win) {
