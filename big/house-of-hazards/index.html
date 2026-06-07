@@ -37,6 +37,7 @@
       border: none;
     }
   </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -48,6 +49,13 @@
 <iframe id="gameframe" style="display:none;"></iframe>
 
 <div id="error" style="display:none;"></div>
+
+<script>
+  // Block all alert dialogs globally
+  window.alert = function() { console.log('[Alert blocked]', arguments); };
+  window.confirm = function() { console.log('[Confirm blocked]', arguments); return true; };
+  window.prompt = function() { console.log('[Prompt blocked]', arguments); return null; };
+</script>
 
 <script>
 const GAME_URL = "https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/houseofhazards.html";
@@ -65,15 +73,33 @@ async function start() {
 
     const text = await resp.text();
 
-    // This is the key part — same technique your runner uses
-    const blob = new Blob([text], { type: 'text/html;charset=utf-8' });
+    // Inject alert blocking into the fetched HTML before creating the blob
+    const alertBlocker = `<script>
+      window.alert = function() { console.log('[Alert blocked]', arguments); };
+      window.confirm = function() { console.log('[Confirm blocked]', arguments); return true; };
+      window.prompt = function() { console.log('[Prompt blocked]', arguments); return null; };
+    <\/script>`;
+
+    // Insert alert blocker right after the <head> tag or before </head> if no <head>
+    let modifiedText = text;
+    if (text.includes('<head>')) {
+      modifiedText = text.replace('<head>', '<head>' + alertBlocker);
+    } else if (text.includes('</head>')) {
+      modifiedText = text.replace('</head>', alertBlocker + '</head>');
+    } else if (text.includes('<body>')) {
+      modifiedText = text.replace('<body>', '<body>' + alertBlocker);
+    } else {
+      // Fallback: prepend to the very beginning
+      modifiedText = alertBlocker + text;
+    }
+
+    const blob = new Blob([modifiedText], { type: 'text/html;charset=utf-8' });
     const blobUrl = URL.createObjectURL(blob);
 
     frame.src = blobUrl;
     frame.onload = () => {
       loading.style.display = 'none';
       frame.style.display = 'block';
-      // Optional: clean up after a delay
       setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
     };
 
@@ -92,7 +118,6 @@ async function start() {
   }
 }
 
-// Go immediately
 start();
 </script>
 
