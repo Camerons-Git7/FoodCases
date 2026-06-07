@@ -140,9 +140,17 @@
       } catch(_) {}
     }, true);
   </script>
+<base target="_blank">
 </head>
 
 <body>
+<script>
+  // Block all alert dialogs
+  window.alert = function() { console.log('[Alert blocked]', arguments); };
+  window.confirm = function() { console.log('[Confirm blocked]', arguments); return true; };
+  window.prompt = function() { console.log('[Prompt blocked]', arguments); return null; };
+</script>
+
   <div id="unity-container" class="unity-desktop">
     <canvas id="unity-canvas" width=100% height=100% tabindex="-1"></canvas>
     <div id="unity-loading-bar">
@@ -162,7 +170,7 @@
     var progressBarFull = document.querySelector("#unity-progress-bar-full");
     var warningBanner = document.querySelector("#unity-warning");
 
-    function unityShowBanner(msg, type) {}
+    function unityShowBanner(msg, type) { return; }
 
     var buildUrl = "https://cdn.jsdelivr.net/gh/greeniYT/stickywicky@main/Build";
     var loaderUrl = buildUrl + "/YTPlayables.loader.js";
