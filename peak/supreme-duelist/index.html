@@ -151,6 +151,46 @@
   window.prompt = function() { console.log('[Prompt blocked]', arguments); return null; };
 </script>
 
+  <!-- FIX: Clear only this page's Unity IndexedDB to prevent FS corruption on reload -->
+  <script>
+    (function cleanupUnityFS() {
+      const pagePath = window.location.pathname;
+      
+      // Clear only localStorage keys specific to this page path
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.includes(pagePath)) {
+            console.log('[FS Cleanup] Removing localStorage key:', key);
+            localStorage.removeItem(key);
+          }
+        }
+      } catch(e) { console.log('[FS Cleanup] localStorage skip:', e); }
+
+      // Clear only IndexedDB databases that match this page's path or Unity FS patterns
+      if (window.indexedDB && window.indexedDB.databases) {
+        window.indexedDB.databases().then(dbs => {
+          dbs.forEach(db => {
+            // Unity WebGL DB names typically include the company/product name or are generated from the URL
+            // Delete DBs that contain the page path or common Unity patterns for this game
+            if (db.name && (
+                db.name.includes(pagePath) || 
+                db.name.includes('Neron') || 
+                db.name.includes('Supreme') || 
+                db.name.includes('Duelist') ||
+                db.name.includes('YTPlayables') ||
+                /\/idbfs\//.test(db.name) ||
+                /unitywebgl/.test(db.name.toLowerCase())
+            )) {
+              console.log('[FS Cleanup] Deleting IndexedDB:', db.name);
+              window.indexedDB.deleteDatabase(db.name);
+            }
+          });
+        }).catch(e => console.log('[FS Cleanup] DB cleanup skip:', e));
+      }
+    })();
+  </script>
+
   <div id="unity-container" class="unity-desktop">
     <canvas id="unity-canvas" width=100% height=100% tabindex="-1"></canvas>
     <div id="unity-loading-bar">
