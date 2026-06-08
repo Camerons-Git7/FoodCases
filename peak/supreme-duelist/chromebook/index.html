@@ -12,13 +12,11 @@
   <link rel="stylesheet" href="TemplateData/style.css">
 
   <script>
-    // === SPOOF 1: Make page think it's top-level (not inside an iframe) ===
     try {
       Object.defineProperty(window, 'parent', { get: () => window, configurable: true });
       Object.defineProperty(window, 'top', { get: () => window, configurable: true });
     } catch(e) {}
 
-    // === SPOOF 2: Fake document.referrer as youtube.com ===
     try {
       Object.defineProperty(document, 'referrer', {
         get: () => 'https://www.youtube.com/',
@@ -26,7 +24,6 @@
       });
     } catch(e) {}
 
-    // === SPOOF 3: Fake ancestorOrigins ===
     try {
       Object.defineProperty(window.location, 'ancestorOrigins', {
         get: () => ({ length: 1, 0: 'https://www.youtube.com', contains: (o) => o === 'https://www.youtube.com' }),
@@ -75,11 +72,9 @@
     }, 500);
   </script>
 
-  <!-- Real YouTube Game API SDK -->
   <script src="https://www.youtube.com/game_api/v1"></script>
 
   <script>
-    // Patch ytgame immediately after SDK loads
     (function patchYTGame() {
       if (typeof ytgame === 'undefined' || !ytgame.system) {
         setTimeout(patchYTGame, 10);
@@ -145,7 +140,6 @@
 
 <body>
 <script>
-  // Block all alert dialogs
   window.alert = function() { console.log('[Alert blocked]', arguments); };
   window.confirm = function() { console.log('[Confirm blocked]', arguments); return true; };
   window.prompt = function() { return null; };
@@ -169,6 +163,11 @@
     var loadingBar = document.querySelector("#unity-loading-bar");
     var progressBarFull = document.querySelector("#unity-progress-bar-full");
     var warningBanner = document.querySelector("#unity-warning");
+
+    function showError(msg) {
+      console.error('[FATAL]', msg);
+      warningBanner.innerHTML = '<span style="color:red;font-weight:bold;">' + msg + '</span>';
+    }
 
     function unityShowBanner(msg, type) { return; }
 
@@ -200,19 +199,19 @@
 
     loadingBar.style.display = "block";
 
-    // === CHROMEBOOK FIX 1: Async URL check instead of sync XHR ===
+    // === FIX: Check if unarchiver loaded ===
+    if (typeof Unarchiver === 'undefined') {
+      showError('unarchiver.min.js failed to load. Check your connection.');
+    }
+
+    // === FIX: Async URL check, never blocks ===
     async function UrlExistsAsync(urlToCheck) {
       try {
-        const response = await fetch(urlToCheck, { method: 'HEAD', mode: 'no-cors' });
+        await fetch(urlToCheck, { method: 'HEAD', mode: 'no-cors' });
         return true;
       } catch(e) {
         return false;
       }
-    }
-
-    // Keep old function for compatibility but make it non-blocking
-    function UrlExists(urlToCheck) {
-      return true; // Assume exists; async check won't block
     }
 
     loadResources = async (callback) => {
@@ -260,7 +259,7 @@
           callback(decompressedFile);
         }).catch(err => {
           console.error('[DecompressFile] Error:', err);
-          callback(file); // Fallback to original file
+          callback(file);
         });
       });
     }
@@ -268,10 +267,21 @@
     var unityGameInstance = null;
 
     function InitUnitySection() {
+      console.log('[Init] Starting Unity section, loaderUrl:', loaderUrl);
+      
       var script = document.createElement("script");
       script.src = loaderUrl;
+      
       script.onload = () => {
+        console.log('[Init] Loader script loaded, createUnityInstance exists:', typeof createUnityInstance);
+        
+        if (typeof createUnityInstance !== 'function') {
+          showError('Unity loader loaded but createUnityInstance not found.');
+          return;
+        }
+        
         createUnityInstance(canvas, config, (progress) => {
+          console.log('[Init] Unity progress:', progress);
           progressBarFull.style.width = 100 * progress + "%";
         }).then((unityInstance) => {
           unityGameInstance = unityInstance;
@@ -281,67 +291,106 @@
             try { if (window.ytgame && window.ytgame.system) window.ytgame.system.notifyLoadComplete(); } catch(e) {}
           }, 1000);
         }).catch((message) => { 
-          console.error(message); 
-          warningBanner.innerHTML = "Failed to load game. Try refreshing or using a different browser.";
+          console.error(message);
+          showError('Unity failed to start: ' + message);
         });
       };
-      script.onerror = () => {
-        warningBanner.innerHTML = "Failed to load game engine. Check your connection.";
+      
+      script.onerror = (e) => {
+        console.error('[Init] Loader script failed to load:', e);
+        showError('Failed to load Unity engine from CDN. Check connection or try a different network.');
       };
+      
       document.body.appendChild(script);
     }
 
-    function GetGzipUrl(url) { return url + "ip"; }
+    // === CRITICAL FIX: The "ip" suffix was a bug. Use proper .gz handling ===
+    // Chromebooks may not support DecompressionStream, so we try direct .gz first
+    // If that fails, try without .gz (some CDNs serve uncompressed)
+    
+    async function tryFetchDirect(url, type, label) {
+      console.log(`[Fetch] Trying direct: ${url}`);
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        console.log(`[Fetch] Direct success for ${label}: ${blob.size} bytes`);
+        return window.URL.createObjectURL(blob);
+      } catch(err) {
+        console.warn(`[Fetch] Direct failed for ${label}:`, err.message);
+        throw err;
+      }
+    }
 
-    // === CHROMEBOOK FIX 2: Chunked decompression with memory checks ===
-    async function decompressWithFallback(url, type, label) {
+    async function tryDecompress(url, type, label) {
+      console.log(`[Fetch] Trying decompress: ${url}`);
+      
+      if (typeof DecompressionStream === 'undefined') {
+        console.warn(`[Fetch] DecompressionStream not available on this device`);
+        throw new Error('DecompressionStream not supported');
+      }
+      
       try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const blob = await response.blob();
         
-        // Check if DecompressionStream exists
-        if (typeof DecompressionStream === 'undefined') {
-          console.warn(`[${label}] DecompressionStream not available, using raw`);
-          return window.URL.createObjectURL(blob);
-        }
-        
         const ds = new DecompressionStream("gzip");
         const decompressed = await new Response(blob.stream().pipeThrough(ds)).blob();
         decompressed.type = type;
+        console.log(`[Fetch] Decompress success for ${label}: ${decompressed.size} bytes`);
         return window.URL.createObjectURL(decompressed);
-      } catch (err) {
-        console.error(`[${label}] Decompression failed:`, err);
-        // Fallback: try without .gz
-        try {
-          const fallbackUrl = url.replace('.gz', '');
-          const response = await fetch(fallbackUrl);
-          const blob = await response.blob();
-          blob.type = type;
-          return window.URL.createObjectURL(blob);
-        } catch(e2) {
-          throw err; // Re-throw if both fail
-        }
+      } catch(err) {
+        console.warn(`[Fetch] Decompress failed for ${label}:`, err.message);
+        throw err;
       }
     }
 
     async function DecompressGzipFiles(callback) {
+      console.log('[DecompressGzipFiles] Starting...');
+      
+      // Try multiple strategies per file
+      const strategies = [
+        // Strategy 1: Direct .gz fetch (CDN may auto-decompress with Content-Encoding)
+        (url, type, label) => tryFetchDirect(url, type, label),
+        // Strategy 2: Manual decompression
+        (url, type, label) => tryDecompress(url, type, label),
+        // Strategy 3: Try without .gz suffix
+        (url, type, label) => tryFetchDirect(url.replace('.gz', ''), type, label)
+      ];
+
+      async function fetchWithFallback(url, type, label) {
+        for (let i = 0; i < strategies.length; i++) {
+          try {
+            const result = await strategies[i](url, type, label);
+            console.log(`[Fetch] Strategy ${i + 1} worked for ${label}`);
+            return result;
+          } catch(err) {
+            console.log(`[Fetch] Strategy ${i + 1} failed for ${label}`);
+            if (i === strategies.length - 1) throw err;
+          }
+        }
+      }
+
       try {
-        config.codeUrl = await decompressWithFallback(GetGzipUrl(config.codeUrl), "application/wasm", "WASM");
-        config.dataUrl = await decompressWithFallback(GetGzipUrl(config.dataUrl), "application/octet-stream", "Data");
-        config.frameworkUrl = await decompressWithFallback(GetGzipUrl(config.frameworkUrl), "text/javascript", "Framework");
+        // The "ip" suffix was wrong. Use the actual .gz URLs from config
+        config.codeUrl = await fetchWithFallback(config.codeUrl, "application/wasm", "WASM");
+        config.dataUrl = await fetchWithFallback(config.dataUrl, "application/octet-stream", "Data");
+        config.frameworkUrl = await fetchWithFallback(config.frameworkUrl, "text/javascript", "Framework");
+        
+        console.log('[DecompressGzipFiles] All files ready');
         callback();
       } catch (err) {
         console.error("Fatal decompression error:", err);
-        warningBanner.innerHTML = "Failed to load game files. Your device may not have enough memory.";
+        showError('Failed to load game files. Chromebook may not support required features, or CDN is unreachable.');
       }
     }
 
-    // === CHROMEBOOK FIX 3: Gentler cleanup that preserves essential DBs ===
+    // === CLEANUP: Gentler, preserves system DBs ===
     async function cleanupAndStartUnity() {
+      console.log('[Cleanup] Starting...');
       const pagePath = window.location.pathname;
       
-      // Clear localStorage for this page only
       try {
         for (let i = localStorage.length - 1; i >= 0; i--) {
           const key = localStorage.key(i);
@@ -351,12 +400,10 @@
         }
       } catch(e) {}
 
-      // === CHROMEBOOK FIX 4: Only delete Unity-related DBs, not ALL ===
       if (window.indexedDB && window.indexedDB.databases) {
         try {
           const dbs = await window.indexedDB.databases();
           for (const db of dbs) {
-            // Only delete Unity/Emscripten DBs, preserve browser/system ones
             const dbName = db.name || '';
             const isUnityDb = dbName.includes('unity') || 
                               dbName.includes('emscripten') || 
@@ -379,8 +426,6 @@
                 req.onblocked = resolve;
                 setTimeout(resolve, 500);
               });
-            } else {
-              console.log('[FS Cleanup] Preserving non-Unity DB:', dbName);
             }
           }
         } catch(e) { 
@@ -388,7 +433,6 @@
         }
       }
 
-      // Patch Emscripten FS to prevent hashName crash on corrupted nodes
       const patchFS = () => {
         if (typeof FS !== 'undefined' && FS.lookupNode) {
           const _origLookupNode = FS.lookupNode;
@@ -417,14 +461,13 @@
       };
       patchFS();
 
-      // === CHROMEBOOK FIX 5: Delay start slightly to let browser settle after cleanup ===
-      setTimeout(() => {
-        if (config.dataUrl.includes(".gz")) {
-          DecompressGzipFiles(InitUnitySection);
-        } else {
-          InitUnitySection();
-        }
-      }, 100);
+      console.log('[Cleanup] Done, starting Unity...');
+      
+      if (config.dataUrl.includes(".gz")) {
+        DecompressGzipFiles(InitUnitySection);
+      } else {
+        InitUnitySection();
+      }
     }
 
     cleanupAndStartUnity();
