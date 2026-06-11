@@ -297,18 +297,19 @@ function mty_add_input_events(thread) {
 	}, {passive: true});
 
 	window.addEventListener('keydown', (ev) => {
-    mty_correct_relative();
-
-    // === ADD THIS BLOCK FOR CTRL+M MOUSE LOCK TOGGLE ===
+    // === CTRL+M TOGGLE (check FIRST, like play-260605.html) ===
     if (ev.ctrlKey && ev.code === 'KeyM') {
-        ev.preventDefault();  // Prevent default browser behavior
-        const newState = !MTY.relative;  // Toggle current state
+        ev.preventDefault();
+        const newState = !MTY.relative;
         mty_set_pointer_lock(newState);
         console.log('Mouse lock toggled via Ctrl+M:', newState ? 'LOCKED' : 'UNLOCKED');
-        return;  // Early exit so it doesn't forward to Parsec if desired
+        return;  // Early exit — don't forward to worker
     }
-    // ====================================================
 
+    // === AUTO-RECOVERY (only for non-toggle keys) ===
+    mty_correct_relative();
+
+    // ... rest of handler (keyboard message to worker, etc.)
     thread.postMessage({
         type: 'keyboard',
         pressed: true,
