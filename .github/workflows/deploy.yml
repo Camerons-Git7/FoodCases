@@ -32,135 +32,7 @@ jobs:
           rm -f .ftp-sync-state-1.json .ftp-sync-state-3.json
           echo "Sync state cleared. All files will be re-uploaded."
 
-      # ─── OBFUSCATION SETUP ─────────────────────────────
-      - name: Setup obfuscation tools
-        run: |
-          npm install terser html-minifier-terser clean-css-cli
-          sudo apt-get update && sudo apt-get install -y php-cli
-
       # ─── FIRST WEBSITE ─────────────────────────────
-      - name: Obfuscate code for Site 1
-        run: |
-          cat > obfuscate.js << 'EOF'
-          const fs = require('fs');
-          const path = require('path');
-          const { minify } = require('terser');
-          const HTMLMinifier = require('html-minifier-terser');
-          const CleanCSS = require('clean-css');
-
-          const stringEncoder = (content) => {
-            return content.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, (match) => {
-              if (match.length < 5) return match;
-              const inner = match.slice(1, -1);
-              if (inner.includes('\\x')) return match;
-              if (inner.includes('<') || inner.includes('>')) return match;
-              return "eval(String.fromCharCode(" + inner.split('').map(c => c.charCodeAt(0)).join(',') + "))";
-            });
-          };
-
-          const processFile = async (filePath) => {
-            const ext = path.extname(filePath);
-            const content = fs.readFileSync(filePath, 'utf8');
-            let result = content;
-
-            try {
-              if (ext === '.js') {
-                const minified = await minify(content, {
-                  compress: {
-                    drop_console: false,
-                    drop_debugger: true,
-                    passes: 2,
-                    dead_code: true,
-                    booleans_as_integers: true
-                  },
-                  mangle: {
-                    properties: { regex: /^_/ }
-                  },
-                  format: {
-                    comments: false,
-                    quote_style: 1
-                  }
-                });
-                result = minified.code;
-                result = stringEncoder(result);
-              }
-              else if (ext === '.css') {
-                const clean = new CleanCSS({
-                  level: 2,
-                  rebase: false
-                }).minify(content);
-                result = clean.styles;
-              }
-              else if (ext === '.html' || ext === '.htm' || ext === '.php') {
-                let html = content;
-                
-                html = html.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, (match, css) => {
-                  const clean = new CleanCSS({ level: 2 }).minify(css);
-                  return `<style>${clean.styles}</style>`;
-                });
-
-                const scriptPromises = [];
-                html = html.replace(/<script([^>]*)>([\s\S]*?)<\/script>/gi, (match, attrs, js) => {
-                  if (!js.trim() || attrs.includes('src=')) return match;
-                  scriptPromises.push((async () => {
-                    const minified = await minify(js, {
-                      compress: { drop_debugger: true, passes: 1 },
-                      mangle: true,
-                      format: { comments: false }
-                    });
-                    return `<script${attrs}>${minified.code}</script>`;
-                  })());
-                  return match;
-                });
-
-                if (scriptPromises.length > 0) {
-                  const results = await Promise.all(scriptPromises);
-                  let idx = 0;
-                  html = html.replace(/<script([^>]*)>([\s\S]*?)<\/script>/gi, (match, attrs, js) => {
-                    if (!js.trim() || attrs.includes('src=')) return match;
-                    return results[idx++];
-                  });
-                }
-
-                result = await HTMLMinifier.minify(html, {
-                  collapseWhitespace: true,
-                  removeComments: true,
-                  removeRedundantAttributes: true,
-                  removeScriptTypeAttributes: true,
-                  removeStyleLinkTypeAttributes: true,
-                  minifyCSS: false,
-                  minifyJS: false,
-                  useShortDoctype: true,
-                  removeEmptyAttributes: true
-                });
-              }
-              fs.writeFileSync(filePath, result);
-              console.log(`Obfuscated: ${filePath}`);
-            } catch (e) {
-              console.log(`Skipped (error): ${filePath} - ${e.message}`);
-            }
-          };
-
-          const walkDir = async (dir) => {
-            const files = fs.readdirSync(dir);
-            for (const file of files) {
-              const fullPath = path.join(dir, file);
-              const stat = fs.statSync(fullPath);
-              if (stat.isDirectory() && !fullPath.includes('.git') && !fullPath.includes('.github')) {
-                await walkDir(fullPath);
-              } else if (stat.isFile()) {
-                const ext = path.extname(fullPath);
-                if (['.js', '.css', '.html', '.htm', '.php'].includes(ext)) {
-                  await processFile(fullPath);
-                }
-              }
-            }
-          };
-
-          walkDir('.').catch(console.error);
-          EOF
-          node obfuscate.js
-
       - name: Deploy to InfinityFree Site 1
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -180,10 +52,6 @@ jobs:
             .gitignore
             .ftp-sync-state-1.json
             .ftp-sync-state-3.json
-            obfuscate.js
-            package.json
-            package-lock.json
-            node_modules/**
           log-level: standard
 
       # ─── THIRD WEBSITE ─────────────────────────────
@@ -198,9 +66,6 @@ jobs:
             ! -name '.ftp-sync-state-1.json' \
             ! -name '.ftp-sync-state-3.json' \
             -exec sed -i 's/menist/seamless-os/g' {} +
-
-      - name: Obfuscate code for Site 3
-        run: node obfuscate.js
 
       - name: Deploy to InfinityFree Site 3
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -221,8 +86,4 @@ jobs:
             .gitignore
             .ftp-sync-state-1.json
             .ftp-sync-state-3.json
-            obfuscate.js
-            package.json
-            package-lock.json
-            node_modules/**
           log-level: standard
