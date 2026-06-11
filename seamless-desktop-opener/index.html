@@ -15,6 +15,7 @@
             justify-content: center;
             align-items: center;
             font-family: 'Nunito', sans-serif;
+            flex-direction: column; /* Stack items vertically */
         }
 
         .pulse-btn {
@@ -57,11 +58,42 @@
                 box-shadow: 0 0 15px #39ff14, inset 0 0 15px #39ff14;
             }
         }
+
+        /* Copied message styling */
+        #copy-msg {
+            margin-top: 25px;
+            color: #39ff14;
+            font-size: 1.1rem;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+            text-shadow: 0 0 10px #39ff14;
+        }
+
+        #copy-msg.show {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
 
-    <a href="https://menist.free.nf/seamless-desktop/index.html" class="pulse-btn">↗️ Seamless Desktop ↗️</a>
+    <button class="pulse-btn" onclick="copyLink()">↗🔗 Copy Seamless Desktop Link 🔗</button>
+    <div id="copy-msg">Copied to Clipboard!</div>
+
+    <script>
+        function copyLink() {
+            const url = "https://menist.free.nf/seamless-desktop/index.html";
+            navigator.clipboard.writeText(url).then(() => {
+                const msg = document.getElementById('copy-msg');
+                msg.classList.add('show');
+                setTimeout(() => {
+                    msg.classList.remove('show');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
 
 </body>
 </html>
