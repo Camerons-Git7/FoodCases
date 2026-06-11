@@ -297,19 +297,29 @@ function mty_add_input_events(thread) {
 	}, {passive: true});
 
 	window.addEventListener('keydown', (ev) => {
-		mty_correct_relative();
+    mty_correct_relative();
 
-		thread.postMessage({
-			type: 'keyboard',
-			pressed: true,
-			code: ev.code,
-			key: ev.key,
-			mods: mty_get_mods(ev),
-		});
+    // === ADD THIS BLOCK FOR CTRL+M MOUSE LOCK TOGGLE ===
+    if (ev.ctrlKey && ev.code === 'KeyM') {
+        ev.preventDefault();  // Prevent default browser behavior
+        const newState = !MTY.relative;  // Toggle current state
+        mty_set_pointer_lock(newState);
+        console.log('Mouse lock toggled via Ctrl+M:', newState ? 'LOCKED' : 'UNLOCKED');
+        return;  // Early exit so it doesn't forward to Parsec if desired
+    }
+    // ====================================================
 
-		if (MTY.kb_grab || !mty_allow_default(ev))
-			ev.preventDefault();
-	});
+    thread.postMessage({
+        type: 'keyboard',
+        pressed: true,
+        code: ev.code,
+        key: ev.key,
+        mods: mty_get_mods(ev),
+    });
+
+    if (MTY.kb_grab || !mty_allow_default(ev))
+        ev.preventDefault();
+});
 
 	window.addEventListener('keyup', (ev) => {
 		thread.postMessage({
