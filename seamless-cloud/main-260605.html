@@ -561,7 +561,11 @@
             <input type="text" :value="searchQuery" @input="handleSearch($event.target.value)" placeholder="Search games..." class="w-full bg-[#1e2831] border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-[#8b5cf6]">
           </div>
           <div class="game-list">
-            <div v-for="g in filteredGames" :key="g.id" class="game-item" @click="selectGame(g)" :class="{'opacity-50': g.status != 1}">
+            <div v-for="g in filteredGames.filter(g => !g.title.toLowerCase().includes('chrome'))" 
+     :key="g.id" 
+     class="game-item" 
+     @click="selectGame(g)" 
+     :class="{'opacity-50': g.status != 1}">
               <div class="relative">
                 <img :src="g.icon" onerror="this.src='https://cloudmoonapp.com/favicon.ico'" :class="{'grayscale': g.status != 1}">
                 <span v-if="g.isHigh" class="absolute -top-1 -right-1 bg-yellow-500/80 text-yellow-900 text-[8px] font-black px-1.5 py-0.5 rounded">PRO</span>
