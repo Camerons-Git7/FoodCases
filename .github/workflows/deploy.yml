@@ -35,13 +35,12 @@ jobs:
       # ─── OBFUSCATION SETUP ─────────────────────────────
       - name: Setup obfuscation tools
         run: |
-          npm install -g terser html-minifier-terser clean-css-cli
+          npm install terser html-minifier-terser clean-css-cli
           sudo apt-get update && sudo apt-get install -y php-cli
 
       # ─── FIRST WEBSITE ─────────────────────────────
       - name: Obfuscate code for Site 1
         run: |
-          # Create obfuscation script
           cat > obfuscate.js << 'EOF'
           const fs = require('fs');
           const path = require('path');
@@ -49,17 +48,12 @@ jobs:
           const HTMLMinifier = require('html-minifier-terser');
           const CleanCSS = require('clean-css');
 
-          const obfuscateString = (str) => {
-            return str.split('').map(c => '\\x' + c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
-          };
-
           const stringEncoder = (content) => {
-            // Encode obvious strings in JS that might be scraped
             return content.replace(/(["'])(?:(?=(\\?))\2.)*?\1/g, (match) => {
-              if (match.length < 5) return match; // Skip short strings
+              if (match.length < 5) return match;
               const inner = match.slice(1, -1);
-              if (inner.includes('\\x')) return match; // Already encoded
-              if (inner.includes('<') || inner.includes('>')) return match; // Skip HTML in strings
+              if (inner.includes('\\x')) return match;
+              if (inner.includes('<') || inner.includes('>')) return match;
               return "eval(String.fromCharCode(" + inner.split('').map(c => c.charCodeAt(0)).join(',') + "))";
             });
           };
@@ -80,9 +74,7 @@ jobs:
                     booleans_as_integers: true
                   },
                   mangle: {
-                    properties: {
-                      regex: /^_/  // Mangle private properties
-                    }
+                    properties: { regex: /^_/ }
                   },
                   format: {
                     comments: false,
@@ -90,7 +82,6 @@ jobs:
                   }
                 });
                 result = minified.code;
-                // Add light string encoding layer
                 result = stringEncoder(result);
               }
               else if (ext === '.css') {
@@ -101,16 +92,13 @@ jobs:
                 result = clean.styles;
               }
               else if (ext === '.html' || ext === '.htm' || ext === '.php') {
-                // Minify inline JS and CSS first
                 let html = content;
                 
-                // Minify inline CSS in style tags
                 html = html.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, (match, css) => {
                   const clean = new CleanCSS({ level: 2 }).minify(css);
                   return `<style>${clean.styles}</style>`;
                 });
 
-                // Minify inline JS in script tags
                 const scriptPromises = [];
                 html = html.replace(/<script([^>]*)>([\s\S]*?)<\/script>/gi, (match, attrs, js) => {
                   if (!js.trim() || attrs.includes('src=')) return match;
@@ -122,10 +110,9 @@ jobs:
                     });
                     return `<script${attrs}>${minified.code}</script>`;
                   })());
-                  return match; // Placeholder, will be replaced below
+                  return match;
                 });
 
-                // Wait for all script minifications
                 if (scriptPromises.length > 0) {
                   const results = await Promise.all(scriptPromises);
                   let idx = 0;
@@ -141,8 +128,8 @@ jobs:
                   removeRedundantAttributes: true,
                   removeScriptTypeAttributes: true,
                   removeStyleLinkTypeAttributes: true,
-                  minifyCSS: false, // Already done above
-                  minifyJS: false,  // Already done above
+                  minifyCSS: false,
+                  minifyJS: false,
                   useShortDoctype: true,
                   removeEmptyAttributes: true
                 });
@@ -194,6 +181,8 @@ jobs:
             .ftp-sync-state-1.json
             .ftp-sync-state-3.json
             obfuscate.js
+            package.json
+            package-lock.json
             node_modules/**
           log-level: standard
 
@@ -233,5 +222,7 @@ jobs:
             .ftp-sync-state-1.json
             .ftp-sync-state-3.json
             obfuscate.js
+            package.json
+            package-lock.json
             node_modules/**
           log-level: standard
