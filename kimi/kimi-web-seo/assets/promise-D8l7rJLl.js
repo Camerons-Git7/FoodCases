@@ -1,2 +1,0 @@
-function sleep(ms=0){return new Promise(resolve=>{setTimeout(resolve,ms)})}function tapPromise(promise,callback){if(!promise)return Promise.resolve(void 0);const startTime=Date.now();return promise.then(res=>{callback(void 0,Date.now()-startTime,res)},e=>{throw callback(e,Date.now()-startTime,void 0),e}),promise}export{tapPromise as n,sleep as t};
-//# sourceMappingURL=promise-D8l7rJLl.js.map

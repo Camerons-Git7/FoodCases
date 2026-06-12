@@ -1,0 +1,208 @@
+Uri: https://lf16-cdn-tos.tiktokcdn-us.com/obj/static-tx/tiktok-infra/csp/sdk-pre/slardar.web.pre.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\static-tx\tiktok-infra\csp\sdk-pre\slardar.web.pre.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/foryou-prefetch.00bab536.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\foryou-prefetch.00bab536.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/39617.59d648dc.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\39617.59d648dc.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/10637.99eddfa6.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\10637.99eddfa6.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/12233.6959eff3.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\12233.6959eff3.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/13779.217aa497.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\13779.217aa497.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/14195.cdf4b99c.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\14195.cdf4b99c.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/1486.0dd8af69.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\1486.0dd8af69.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/14934.123cbe09.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\14934.123cbe09.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/16079.74fde1dc.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\16079.74fde1dc.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/17438.80b5d1cd.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\17438.80b5d1cd.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/1997.dbed1c09.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\1997.dbed1c09.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/20853.d350e051.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\20853.d350e051.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/37433.42652ffb.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\37433.42652ffb.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/3758.4226f689.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\3758.4226f689.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/4231.66bfbe3c.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\4231.66bfbe3c.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/45261.3448e37b.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\45261.3448e37b.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/46652.507710b4.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\46652.507710b4.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/4806.19030559.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\4806.19030559.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/49999.3d15eb56.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\49999.3d15eb56.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/53692.657654d0.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\53692.657654d0.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/63260.8e1087f8.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\63260.8e1087f8.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/64842.df3e304c.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\64842.df3e304c.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/6501.11acb817.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\6501.11acb817.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/7280.0bae9420.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\7280.0bae9420.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/79019.0ade2069.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\79019.0ade2069.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/80654.cfcd25de.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\80654.cfcd25de.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/83359.6e7af158.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\83359.6e7af158.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/86921.38b7e2c8.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\86921.38b7e2c8.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/87935.ab30080d.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\87935.ab30080d.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/90481.f9c4f606.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\90481.f9c4f606.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/90745.234b9a94.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\90745.234b9a94.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/92078.113de011.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\92078.113de011.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/92835.0a4f8cfd.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\92835.0a4f8cfd.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/99445.646e5412.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\99445.646e5412.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/async/foryou.islands.5bbfa69e.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\async\foryou.islands.5bbfa69e.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/atom.init.a30c7ee6.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\atom.init.a30c7ee6.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/biz.common.lib.db1f9f86.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\biz.common.lib.db1f9f86.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/biz.shared.init.006f865b.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\biz.shared.init.006f865b.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/builder-runtime.c10f0357.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\builder-runtime.c10f0357.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/cache.tux.a1edb32a.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\cache.tux.a1edb32a.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/emotion.init.4f24c210.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\emotion.init.4f24c210.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/i18n.c716e814.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\i18n.c716e814.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/npm-dp-byted-tea-sdk-oversea.f4e273c4.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\npm-dp-byted-tea-sdk-oversea.f4e273c4.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/npm-react.db934f16.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\npm-react.db934f16.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/npm-rxjs.c58b4b68.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\npm-rxjs.c58b4b68.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/npm-sigi.2b59dc0f.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\npm-sigi.2b59dc0f.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/player.init.165c847a.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\player.init.165c847a.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/slardar.60eb93eb.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\slardar.60eb93eb.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok/webapp/main/react-v18/webapp-desktop/static/js/webapp-desktop.6ea770d0.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok\webapp\main\react-v18\webapp-desktop\static\js\webapp-desktop.6ea770d0.js
+Content Type: application/javascript
+
+Uri: https://lf16-tiktok-web.tiktokcdn-us.com/obj/tiktok-web-tx/tiktok_privacy_protection_framework/loader/2.0.0.310/index.js
+File Name: C:\Downloaded Web Sites\www.tiktok.com\obj\tiktok-web-tx\tiktok_privacy_protection_framework\loader\2.0.0.310\index.js
+Content Type: application/javascript
+
+Uri: https://www.tiktok.com/
+File Name: C:\Downloaded Web Sites\www.tiktok.com\index.htm
+Content Type: text/html
+
