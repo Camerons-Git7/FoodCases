@@ -1,0 +1,2 @@
+import{Nr as inject}from"./framework-CbSiJTlV.js";function useImagePreview(){const api=inject("imagePreviewApi",null);if(null===api)throw new Error("没有找到provider");return api}export{useImagePreview as t};
+//# sourceMappingURL=kimi.imagePreview-DDXbCUCf.js.map

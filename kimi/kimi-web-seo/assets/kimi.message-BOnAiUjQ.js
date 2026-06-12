@@ -1,0 +1,2 @@
+import{Nr as inject}from"./framework-CbSiJTlV.js";function useMessage(){const api=inject("messageApi",null);if(null===api)throw new Error("没有找到provider");return api}export{useMessage as t};
+//# sourceMappingURL=kimi.message-BOnAiUjQ.js.map
