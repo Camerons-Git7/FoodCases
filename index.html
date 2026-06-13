@@ -5,11 +5,15 @@
   <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
   <script src="seamless-desktop/coi-serviceworker.js"></script>
   <script>
-  // Register COI service worker with correct scope
+  // Improved COI Service Worker registration
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('seamless-desktop/coi-serviceworker.js', {scope: 'seamless-desktop/'})
-      .then(() => console.log('✅ COI Service Worker active'))
-      .catch(err => console.error('Service Worker error:', err));
+    navigator.serviceWorker.register('seamless-desktop/coi-serviceworker.js', {scope: './'})
+      .then((reg) => {
+        console.log('✅ COI Service Worker active');
+      })
+      .catch((err) => {
+        console.error('Service Worker error:', err);
+      });
   }
 </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
