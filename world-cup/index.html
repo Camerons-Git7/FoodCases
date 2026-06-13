@@ -5,79 +5,95 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>News Room - Live Stream</title>
   <style>
-    body {
+    * { box-sizing: border-box; }
+    html, body {
       margin: 0;
+      padding: 0;
       font-family: system-ui, sans-serif;
       background: #08102b;
       color: #fffdfc;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .player-wrap {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 10px;
+      gap: 10px;
     }
     .player-box {
       position: relative;
-      width: 100%;
-      max-width: 1280px;
-      margin: 20px auto;
+      flex: 1;
+      min-height: 0;
       background: #000;
+      border-radius: 8px;
+      overflow: hidden;
     }
     iframe, video {
       width: 100%;
-      height: 500px;
+      height: 100%;
       border: none;
       background: #000;
+      display: block;
     }
     .info-area {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 15px;
-      text-align: center;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: #12183a;
+      border-radius: 8px;
+      gap: 16px;
     }
     .scoreboard-hero {
       display: flex;
-      justify-content: center;
       align-items: center;
-      gap: 30px;
-      font-size: 1.4rem;
-      margin-bottom: 20px;
+      gap: 20px;
+      font-size: 1.1rem;
+    }
+    .sb-team {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     .sb-team img {
-      height: 65px;
-      margin-bottom: 8px;
+      height: 36px;
+      width: 36px;
+      object-fit: contain;
+    }
+    .vs-text {
+      font-size: 1.2rem;
+      font-weight: bold;
+      opacity: 0.7;
     }
     .action-btn {
       background: #0c9784;
       color: white;
       border: none;
-      padding: 12px 20px;
-      margin: 8px;
+      padding: 8px 16px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 0.95rem;
+      white-space: nowrap;
     }
-    .servers-area {
-      max-width: 1280px;
-      margin: 20px auto;
-      padding: 0 15px;
-    }
-    .server-item {
-      padding: 14px;
-      background: #252526;
-      margin: 10px 0;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .server-item.active {
-      background: #0c9784;
-      color: white;
+    .action-btn:hover {
+      background: #0aa88f;
     }
     .loader {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 500px;
+      height: 100%;
       color: #0c9784;
+      font-size: 1.2rem;
     }
   </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -87,14 +103,14 @@
   <div class="player-box" id="stp-player-box">
     <!-- LOADER -->
     <div class="loader" id="stp-loader">
-      <div style="font-size:1.4rem;">Connecting to stream...</div>
+      <div>Connecting to stream...</div>
     </div>
 
     <!-- IFRAME PLAYER -->
     <iframe id="stp-iframe" allow="fullscreen; autoplay; encrypted-media" style="display:none;"></iframe>
 
     <!-- HLS VIDEO -->
-    <div id="vjs-container" style="display:none;">
+    <div id="vjs-container" style="display:none; height:100%;">
       <video id="main-hls-video" controls autoplay playsinline></video>
     </div>
   </div>
@@ -106,7 +122,7 @@
         <img id="logo-home" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/2/2f/No-flags-pictogram.svg'" src="">
         <div id="name-home">Home Team</div>
       </div>
-      <div style="font-size:2rem; font-weight:bold;">VS</div>
+      <div class="vs-text">VS</div>
       <div class="sb-team">
         <img id="logo-away" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/2/2f/No-flags-pictogram.svg'" src="">
         <div id="name-away">Away Team</div>
@@ -114,12 +130,6 @@
     </div>
 
     <button class="action-btn" onclick="stpFullscreen()">⛶ Fullscreen</button>
-  </div>
-
-  <!-- STREAM SOURCES -->
-  <div class="servers-area">
-    <h3 style="color:#0c9784; text-align:center;">Available Streams</h3>
-    <div id="stp-servers"></div>
   </div>
 
 </div>
@@ -145,35 +155,24 @@ async function fetchData() {
     document.getElementById('logo-home').src = match.logo_home || '';
     document.getElementById('logo-away').src = match.logo_away || '';
 
-    renderServers(match);
+    // Auto-select English stream, fallback to first
+    let englishIndex = 0;
+    if (match.streams && match.streams.length > 0) {
+      const engIdx = match.streams.findIndex(s =>
+        /english/i.test(s.name || '')
+      );
+      if (engIdx !== -1) englishIndex = engIdx;
+    }
 
-    // Auto start first stream
-    if (!document.getElementById('stp-iframe').src) {
-      launchPlayer(match.streams?.[0]);
+    state.streamIndex = englishIndex;
+    const stream = match.streams?.[englishIndex];
+
+    if (stream && !document.getElementById('stp-iframe').src) {
+      launchPlayer(stream);
     }
   } catch(e) {
     console.error(e);
   }
-}
-
-function renderServers(match) {
-  const container = document.getElementById('stp-servers');
-  container.innerHTML = '';
-
-  (match.streams || []).forEach((stream, i) => {
-    const div = document.createElement('div');
-    div.className = `server-item ${i === state.streamIndex ? 'active' : ''}`;
-    div.innerHTML = `<strong>${stream.name || 'Default Stream ' + (i+1)}</strong>`;
-    div.onclick = () => switchServer(i);
-    container.appendChild(div);
-  });
-}
-
-function switchServer(index) {
-  state.streamIndex = index;
-  const stream = matchDataGlobal?.streams?.[index];
-  if (stream) launchPlayer(stream);
-  renderServers(matchDataGlobal);
 }
 
 function launchPlayer(stream) {
