@@ -1985,7 +1985,9 @@ function openWindow(id) {
         win.className = 'window active header-visible';
         win.style.zIndex = ++highestZ;
         
-        let iframeStr = dat.internal ? '<iframe id="frame-' + id + '"></iframe>' : '<iframe id="frame-' + id + '" src="' + dat.path + '"></iframe>';
+        let iframeStr = dat.internal ? 
+    '<iframe id="frame-' + id + '"></iframe>' : 
+    '<iframe id="frame-' + id + '" src="' + dat.path + '" allow="cross-origin-isolated; fullscreen; clipboard-write; encrypted-media"></iframe>';
         
         win.innerHTML = '<div class="win-header" onmousedown="DragSystem.startWinDrag(event, \'' + id + '\')"><div class="win-title">' + dat.title + '</div><div class="win-controls"><div class="win-btn btn-min" onclick="minimizeWindow(\'' + id + '\')"></div><div class="win-btn btn-max" onclick="toggleFullscreen(\'' + id + '\')">⛶</div><div class="win-btn btn-close" onclick="closeWindow(\'' + id + '\')"></div></div></div><div class="win-body">' + iframeStr + '</div>';
         
