@@ -4,6 +4,14 @@
   <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
   <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
   <script src="seamless-desktop/coi-serviceworker.js"></script>
+  <script>
+  // Force service worker for Parsec iframe
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/seamless-desktop/coi-serviceworker.js', {scope: '/'})
+      .then(() => console.log('✅ COI Service Worker active'))
+      .catch(err => console.error('Service Worker error:', err));
+  }
+</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>🔗 Seamless-OS 🔗</title>
   <link rel="icon" type="image/x-icon" href="https://math.hws.edu/favicon.ico"/>
