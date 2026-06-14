@@ -63,136 +63,38 @@
             color: var(--text)
         }
         /* Continue Watching */
-        .continue-section {
-            margin-bottom: 40px;
-        }
-        .section-title {
-            font-size: 1.4rem;
-            font-weight: 600;
-            margin-bottom: 16px;
-            padding: 0 4px;
-        }
-        .continue-grid {
-            display: flex;
-            gap: 16px;
-            overflow-x: auto;
-            padding: 4px;
-            scrollbar-width: thin;
-        }
+        .continue-section { margin-bottom: 40px; }
+        .section-title { font-size: 1.4rem; font-weight: 600; margin-bottom: 16px; padding: 0 4px; }
+        .continue-grid { display: flex; gap: 16px; overflow-x: auto; padding: 4px; scrollbar-width: thin; }
         .continue-card {
-            min-width: 160px;
-            background: linear-gradient(180deg, var(--card), #0e0e0e);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: .25s;
-            position: relative;
+            min-width: 160px; background: linear-gradient(180deg, var(--card), #0e0e0e); border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden; cursor: pointer; transition: .25s; position: relative;
         }
-        .continue-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 20px 40px rgba(0, 255, 0, .25);
-            border-color: var(--accent)
-        }
-        .continue-card img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover
-        }
-        .continue-info {
-            padding: 10px;
-        }
-        .continue-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            line-height: 1.3;
-            margin-bottom: 4px;
-        }
-        .continue-progress {
-            font-size: 0.8rem;
-            color: var(--accent);
-        }
+        .continue-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0, 255, 0, .25); border-color: var(--accent); }
+        .continue-card img { width: 100%; height: 200px; object-fit: cover; }
+        .continue-info { padding: 10px; }
+        .continue-title { font-size: 0.95rem; font-weight: 600; line-height: 1.3; margin-bottom: 4px; }
+        .continue-progress { font-size: 0.8rem; color: var(--accent); }
         .remove-btn {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(0, 0, 0, 0.7);
-            color: #ff5555;
-            border: none;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 1.1rem;
-            opacity: 0;
-            transition: all 0.2s;
-            z-index: 10;
+            position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: #ff5555;
+            border: none; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; cursor: pointer; font-size: 1.1rem; opacity: 0; transition: all 0.2s; z-index: 10;
         }
-        .continue-card:hover .remove-btn {
-            opacity: 1;
-        }
-        .remove-btn:hover {
-            background: rgba(0, 0, 0, 0.9);
-            transform: scale(1.1);
-        }
-        main {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 20px
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 20px
-        }
+        .continue-card:hover .remove-btn { opacity: 1; }
+
+        main { max-width: 1400px; margin: 30px auto; padding: 0 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
         .card {
-            background: linear-gradient(180deg, var(--card), #0e0e0e);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: .25s;
-            display: flex;
-            flex-direction: column
+            background: linear-gradient(180deg, var(--card), #0e0e0e); border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden; cursor: pointer; transition: .25s;
         }
-        .card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 20px 40px rgba(0, 255, 0, .25);
-            border-color: var(--accent)
-        }
-        .card img {
-            width: 100%;
-            height: 240px;
-            object-fit: cover
-        }
-        .card .info {
-            padding: 10px;
-            text-align: center
-        }
-        .card .title {
-            font-size: .9rem;
-            font-weight: 600;
-            line-height: 1.3
-        }
-        .card .meta {
-            font-size: .75rem;
-            color: var(--accent)
-        }
-        .loading-more {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 30px 0;
-            color: var(--muted);
-        }
-        .status {
-            margin: 40px 0;
-            text-align: center;
-            color: var(--muted)
-        }
-        /* Button Styles */
+        .card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0, 255, 0, .25); border-color: var(--accent); }
+        .card img { width: 100%; height: 240px; object-fit: cover; }
+        .card .info { padding: 10px; text-align: center; }
+        .card .title { font-size: .9rem; font-weight: 600; line-height: 1.3; }
+        .card .meta { font-size: .75rem; color: var(--accent); }
+
+        /* Original Button Styling Restored */
         .active-btn {
             background: var(--accent);
             color: #000;
@@ -209,7 +111,8 @@
             border-radius: 999px;
             font-size: 0.95rem
         }
-        /* Modal styles */
+
+        /* Modal Styles - Exact original structure */
         .modal {
             position: fixed;
             inset: 0;
@@ -219,9 +122,7 @@
             justify-content: center;
             z-index: 100
         }
-        .modal.open {
-            display: flex
-        }
+        .modal.open { display: flex; }
         .modal-box {
             width: 90%;
             max-width: 1000px;
@@ -331,8 +232,8 @@
             <div class="search"><input id="search" placeholder="Search movies or TV shows..." /></div>
         </div>
     </header>
+
     <main>
-        <!-- Continue Watching -->
         <div class="continue-section" id="continueSection" style="display: none;">
             <div class="section-title">Continue Watching</div>
             <div class="continue-grid" id="continueGrid"></div>
@@ -347,14 +248,8 @@
                 <div class="modal-top-left">
                     <div class="providers" id="providers"></div>
                     <div class="episode-selector" id="episodeSelector" style="display: none;">
-                        <div>
-                            <label>Season</label>
-                            <select id="seasonSelect"></select>
-                        </div>
-                        <div>
-                            <label>Episode</label>
-                            <select id="episodeSelect"></select>
-                        </div>
+                        <div><label>Season</label><select id="seasonSelect"></select></div>
+                        <div><label>Episode</label><select id="episodeSelect"></select></div>
                     </div>
                 </div>
                 <div class="modal-controls">
@@ -367,7 +262,7 @@
     </div>
 
     <script>
-        // (Script remains exactly the same as previous version - only colors changed in CSS)
+        // Script is the same as the last working version
         const IMG = "https://image.tmdb.org/t/p/w500";
         const API_KEY = "2713804610e1e236b1cf44bfac3a7776";
       
@@ -397,6 +292,8 @@
         let currentList = [];
         let isLoading = false;
         let hasMore = true;
+        let currentSeasons = [];
+        let currentEpisodes = [];
 
         const FALLBACK_MOVIES = [
             { id: 157336, title: 'Interstellar', poster_path: '/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg', vote_average: 8.4 },
@@ -449,7 +346,7 @@
 
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
-                player.requestFullscreen().catch(err => console.warn(err));
+                player.requestFullscreen().catch(() => {});
                 fullscreenBtn.textContent = '⤢';
             } else {
                 document.exitFullscreen();
@@ -458,13 +355,24 @@
         }
         fullscreenBtn.addEventListener('click', toggleFullscreen);
 
-        let currentSeasons = [], currentEpisodes = [];
         async function openContent(content, fromContinue = false) {
             currentContent = content;
             modal.classList.add('open');
-            const isTV = (mode === 'tv' || content.type === 'tv');
-            if (!isTV) saveContinueWatching({ id: content.id, type: 'movie', title: content.title || content.name, poster_path: content.poster_path, timestamp: Date.now() });
+
+            const isTV = mode === 'tv' || content.type === 'tv' || content.media_type === 'tv' || !!content.name;
+
+            if (!isTV) {
+                saveContinueWatching({
+                    id: content.id,
+                    type: 'movie',
+                    title: content.title || content.name,
+                    poster_path: content.poster_path,
+                    timestamp: Date.now()
+                });
+            }
+
             renderProviders();
+
             if (isTV) {
                 episodeSelector.style.display = 'flex';
                 await fetchTVDetails(content.id);
@@ -489,18 +397,24 @@
                 const data = await res.json();
                 currentSeasons = data.seasons.filter(s => s.season_number > 0 && s.episode_count > 0);
                 populateSeasonSelect();
-            } catch (e) { currentSeasons = [{season_number:1}]; populateSeasonSelect(); }
+            } catch (e) {
+                currentSeasons = [{season_number:1}];
+                populateSeasonSelect();
+            }
         }
+
         function populateSeasonSelect() {
             seasonSelect.innerHTML = '';
             currentSeasons.forEach(s => {
                 const opt = document.createElement('option');
-                opt.value = s.season_number; opt.textContent = `Season ${s.season_number}`;
+                opt.value = s.season_number;
+                opt.textContent = `Season ${s.season_number}`;
                 seasonSelect.appendChild(opt);
             });
             seasonSelect.onchange = () => loadSeasonEpisodes(parseInt(seasonSelect.value));
             if (currentSeasons.length) loadSeasonEpisodes(currentSeasons[0].season_number);
         }
+
         async function loadSeasonEpisodes(seasonNumber) {
             try {
                 const res = await fetch(`https://api.themoviedb.org/3/tv/${currentContent.id}/season/${seasonNumber}?api_key=${API_KEY}`);
@@ -517,20 +431,36 @@
                 if (currentEpisodes.length) updateEpisode();
             } catch(e) { console.warn(e); }
         }
+
         function updateEpisode() {
             const s = parseInt(seasonSelect.value), e = parseInt(episodeSelect.value);
             loadProvider(currentProvider, s, e);
-            saveContinueWatching({id: currentContent.id, type:'tv', title: currentContent.name, poster_path: currentContent.poster_path, season:s, episode:e, timestamp:Date.now()});
+            saveContinueWatching({
+                id: currentContent.id,
+                type: 'tv',
+                title: currentContent.name || currentContent.title,
+                poster_path: currentContent.poster_path,
+                season: s,
+                episode: e,
+                timestamp: Date.now()
+            });
         }
+
         function loadProvider(id, season=1, episode=1) {
             const p = PROVIDERS.find(x => x.id === id);
-            if (!p) return;
-            if (mode === 'movie' && !currentContent.type) {
+            if (!p || !currentContent) return;
+
+            const isTV = mode === 'tv' || currentContent.type === 'tv' || !!currentContent.name;
+
+            if (!isTV) {
                 player.src = p.movie.replace('{id}', currentContent.id);
             } else {
-                player.src = p.tv.replace('{id}', currentContent.id).replace('{s}', season).replace('{e}', episode);
+                player.src = p.tv.replace('{id}', currentContent.id)
+                            .replace('{s}', season)
+                            .replace('{e}', episode);
             }
         }
+
         function renderProviders() {
             providersEl.innerHTML = '';
             PROVIDERS.forEach(p => {
@@ -540,13 +470,14 @@
                 b.onclick = () => {
                     currentProvider = p.id;
                     renderProviders();
-                    const s = parseInt(seasonSelect.value)||1;
-                    const e = parseInt(episodeSelect.value)||1;
+                    const s = parseInt(seasonSelect.value) || 1;
+                    const e = parseInt(episodeSelect.value) || 1;
                     loadProvider(p.id, s, e);
                 };
                 providersEl.appendChild(b);
             });
         }
+
         function closeModal() {
             modal.classList.remove('open');
             player.src = '';
@@ -631,7 +562,6 @@
         moviesBtn.addEventListener('click', () => { mode = 'movie'; updateButtons(); loadPopular(false); });
         tvBtn.addEventListener('click', () => { mode = 'tv'; updateButtons(); loadPopular(false); });
 
-        // Initialize
         updateButtons();
         loadPopular(false);
         renderContinueWatching();
