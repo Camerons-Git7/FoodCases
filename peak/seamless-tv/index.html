@@ -264,33 +264,36 @@
         }
 
         function renderContinueWatching() {
-            const list = getContinueWatching();
-            if (list.length === 0) { 
-                continueSection.style.display = 'none'; 
-                return; 
+    const list = getContinueWatching();
+    if (list.length === 0) {
+        continueSection.style.display = 'none';
+        return;
+    }
+    continueSection.style.display = 'block';
+    continueGrid.innerHTML = '';
+   
+    list.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'continue-card';
+        const progressText = item.type === 'tv' ? `S${item.season} E${item.episode}` : 'Movie';
+       
+        card.innerHTML = `
+            <img src="${IMG + item.poster_path}" alt="${item.title}">
+            <button class="remove-btn" title="Remove">
+                <i class="fas fa-trash fa-fw" style="color:#aaa;" aria-hidden="true"></i>
+            </button>
+            <div class="continue-info">
+                <div class="continue-title">${item.title}</div>
+                <div class="continue-progress">${progressText}</div>
+            </div>
+        `;
+        card.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('remove-btn')) {
+                openContent(item, true);
             }
-            continueSection.style.display = 'block';
-            continueGrid.innerHTML = '';
-            
-            list.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'continue-card';
-                const progressText = item.type === 'tv' ? `S${item.season} E${item.episode}` : 'Movie';
-                
-                card.innerHTML = `
-                    <img src="${IMG + item.poster_path}" alt="${item.title}">
-                    <button class="remove-btn" title="Remove">🗑</button>
-                    <div class="continue-info">
-                        <div class="continue-title">${item.title}</div>
-                        <div class="continue-progress">${progressText}</div>
-                    </div>
-                `;
-
-                card.addEventListener('click', (e) => {
-                    if (!e.target.classList.contains('remove-btn')) {
-                        openContent(item, true);
-                    }
-                });
+        });
+    });
+}
 
                 const removeBtn = card.querySelector('.remove-btn');
                 removeBtn.addEventListener('click', (e) => {
