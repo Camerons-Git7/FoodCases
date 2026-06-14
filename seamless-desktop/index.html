@@ -5,11 +5,26 @@
     <meta charset='utf-8'/>
     <meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
 
-    <!-- Force COOP/COEP + Service Worker -->
+    <!-- Critical: COOP/COEP + Service Worker -->
     <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
     <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
-    
+
     <script src='coi-serviceworker.js'></script>
+
+    <!-- Force reload if headers not applied yet -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('coi-serviceworker.js')
+                .then(reg => {
+                    console.log('Parsec SW registered');
+                    if (!navigator.serviceWorker.controller) {
+                        window.location.reload();   // Force reload to activate headers
+                    }
+                })
+                .catch(err => console.error('Parsec SW failed:', err));
+        }
+    </script>
+
     <script src='lib/matoya.js'></script>
     <script src='lib/weblib.js'></script>
     <script src='lib/parsec.js'></script>
