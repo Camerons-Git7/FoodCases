@@ -2,15 +2,17 @@
 <html lang='en-us'>
 
 <head>
-	<meta charset='utf-8'/>
-	<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
+    <meta charset='utf-8'/>
+    <meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
 
-	<!-- Load the COOP/COEP helper script FIRST to intercept subsequent requests -->
-	<script src='coi-serviceworker.js'></script>
-
-	<script src='lib/matoya.js'></script>
-	<script src='lib/weblib.js'></script>
-	<script src='lib/parsec.js'></script>
+    <!-- Force COOP/COEP + Service Worker -->
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
+    
+    <script src='coi-serviceworker.js'></script>
+    <script src='lib/matoya.js'></script>
+    <script src='lib/weblib.js'></script>
+    <script src='lib/parsec.js'></script>
 </head>
 
 <body>
