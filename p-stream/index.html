@@ -253,22 +253,19 @@
     <link rel="stylesheet" crossorigin href="assets/index-B9DRXy8o.css">
   </head>
 
-  <body>
-  <script>
-    // Auto-redirect /p-stream paths to clean URL (like seamless-desktop does)
-    (function() {
-      const path = window.location.pathname;
-      if (path.includes('/p-stream') && !path.endsWith('/p-stream/')) {
-        // Redirect to clean /p-stream/ URL
-        window.location.replace('/FoodCases/p-stream/');
-      } else {
-        // Optional: Clean the history like seamless-desktop
-        window.history.replaceState(null, document.title, '/FoodCases/p-stream/');
-      }
-    })();
-  </script>
+    <body>
+    <script>
+      // Auto redirect /p-stream or /p-stream/index.html to root (like seamless-desktop style)
+      (function() {
+        const path = window.location.pathname;
+        if (path.includes('/p-stream')) {
+          // Redirect to clean root URL with no trailing slash
+          window.location.replace('/');
+        }
+      })();
+    </script>
 
-  <noscript>You need to enable JavaScript to run this app.</noscript>
-  <div id="root"></div>
-</body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
 </html>
