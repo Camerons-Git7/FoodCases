@@ -12,8 +12,8 @@
         :root {
             --bg: #0b0b0b;
             --card: #121212;
-            --gold: #d4af37;
-            --gold-soft: rgba(212, 175, 55, .15);
+            --accent: #0f0;
+            --accent-soft: rgba(0, 255, 0, .15);
             --text: #f5f5f5;
             --muted: #aaa;
             --border: #222;
@@ -24,7 +24,7 @@
         }
         body {
             margin: 0;
-            background: radial-gradient(1200px 600px at top, var(--gold-soft), transparent 60%), var(--bg);
+            background: radial-gradient(1200px 600px at top, var(--accent-soft), transparent 60%), var(--bg);
             color: var(--text)
         }
         header {
@@ -46,7 +46,7 @@
         .logo {
             font-weight: 700;
             font-size: 1.4rem;
-            color: var(--gold);
+            color: var(--accent);
             letter-spacing: .5px
         }
         .search {
@@ -91,8 +91,8 @@
         }
         .continue-card:hover {
             transform: translateY(-6px);
-            box-shadow: 0 20px 40px rgba(212, 175, 55, .25);
-            border-color: var(--gold)
+            box-shadow: 0 20px 40px rgba(0, 255, 0, .25);
+            border-color: var(--accent)
         }
         .continue-card img {
             width: 100%;
@@ -110,7 +110,7 @@
         }
         .continue-progress {
             font-size: 0.8rem;
-            color: var(--gold);
+            color: var(--accent);
         }
         .remove-btn {
             position: absolute;
@@ -160,8 +160,8 @@
         }
         .card:hover {
             transform: translateY(-6px);
-            box-shadow: 0 20px 40px rgba(212, 175, 55, .25);
-            border-color: var(--gold)
+            box-shadow: 0 20px 40px rgba(0, 255, 0, .25);
+            border-color: var(--accent)
         }
         .card img {
             width: 100%;
@@ -179,7 +179,7 @@
         }
         .card .meta {
             font-size: .75rem;
-            color: var(--gold)
+            color: var(--accent)
         }
         .loading-more {
             grid-column: 1 / -1;
@@ -192,18 +192,18 @@
             text-align: center;
             color: var(--muted)
         }
-        /* Button Styles - Restored */
+        /* Button Styles */
         .active-btn {
-            background: var(--gold);
+            background: var(--accent);
             color: #000;
-            border: 1px solid var(--gold);
+            border: 1px solid var(--accent);
             padding: 10px 18px;
             border-radius: 999px;
             font-size: 0.95rem
         }
         .inactive-btn {
             background: #000;
-            color: var(--gold);
+            color: var(--accent);
             border: 1px solid var(--border);
             padding: 10px 18px;
             border-radius: 999px;
@@ -226,7 +226,7 @@
             width: 90%;
             max-width: 1000px;
             background: #000;
-            border: 1px solid var(--gold);
+            border: 1px solid var(--accent);
             border-radius: 14px;
             overflow: hidden
         }
@@ -235,7 +235,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 10px 14px;
-            background: linear-gradient(135deg, var(--gold), #b8962e);
+            background: linear-gradient(135deg, var(--accent), #00cc00);
             color: #000;
             gap: 12px;
         }
@@ -256,13 +256,13 @@
             padding: 10px 18px;
             cursor: pointer;
             background: #000;
-            color: var(--gold);
+            color: var(--accent);
             border: 1px solid #000;
             font-size: 0.9rem;
             transition: .2s
         }
         .providers button.active {
-            background: var(--gold);
+            background: var(--accent);
             color: #000
         }
         .episode-selector {
@@ -272,7 +272,7 @@
             background: rgba(0, 0, 0, 0.4);
             padding: 6px 12px;
             border-radius: 999px;
-            border: 1px solid rgba(212, 175, 55, 0.3);
+            border: 1px solid rgba(0, 255, 0, 0.3);
         }
         .episode-selector label {
             font-size: 0.85rem;
@@ -282,7 +282,7 @@
         }
         .episode-selector select {
             background: #111;
-            color: var(--gold);
+            color: var(--accent);
             border: 1px solid var(--border);
             border-radius: 999px;
             padding: 6px 12px;
@@ -367,6 +367,7 @@
     </div>
 
     <script>
+        // (Script remains exactly the same as previous version - only colors changed in CSS)
         const IMG = "https://image.tmdb.org/t/p/w500";
         const API_KEY = "2713804610e1e236b1cf44bfac3a7776";
       
@@ -403,7 +404,6 @@
             { id: 27205, title: 'Inception', poster_path: '/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg', vote_average: 8.3 }
         ];
 
-        // Continue Watching (unchanged)
         function getContinueWatching() { return JSON.parse(localStorage.getItem('continueWatching') || '[]'); }
         function saveContinueWatching(item) {
             let list = getContinueWatching();
@@ -458,7 +458,7 @@
         }
         fullscreenBtn.addEventListener('click', toggleFullscreen);
 
-        // Modal & Player functions (kept identical)
+        let currentSeasons = [], currentEpisodes = [];
         async function openContent(content, fromContinue = false) {
             currentContent = content;
             modal.classList.add('open');
@@ -483,8 +483,6 @@
             }
         }
 
-        // TV functions (minimal but working)
-        let currentSeasons = [], currentEpisodes = [];
         async function fetchTVDetails(tvId) {
             try {
                 const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${API_KEY}`);
@@ -593,7 +591,6 @@
             }
         }
 
-        // Infinite Scroll
         function setupInfiniteScroll() {
             window.addEventListener('scroll', () => {
                 if (isLoading || !hasMore || searchInput.value.trim().length >= 2) return;
@@ -603,7 +600,6 @@
             });
         }
 
-        // Search
         searchInput.addEventListener('input', async () => {
             const query = searchInput.value.trim();
             if (query.length < 2) {
