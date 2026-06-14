@@ -62,7 +62,6 @@
             background: var(--card);
             color: var(--text)
         }
-
         /* Continue Watching */
         .continue-section {
             margin-bottom: 40px;
@@ -139,7 +138,6 @@
             background: rgba(0, 0, 0, 0.9);
             transform: scale(1.1);
         }
-
         main {
             max-width: 1400px;
             margin: 30px auto;
@@ -204,8 +202,7 @@
             text-align: center;
             color: var(--muted)
         }
-
-        /* Modal styles (unchanged) */
+        /* Modal styles */
         .modal {
             position: fixed;
             inset: 0;
@@ -261,7 +258,6 @@
             background: var(--gold);
             color: #000
         }
-
         .episode-selector {
             display: flex;
             align-items: center;
@@ -291,7 +287,6 @@
             outline: none;
             border-color: var(--gold);
         }
-
         .modal-controls {
             display: flex;
             align-items: center;
@@ -314,7 +309,6 @@
             font-weight: 700;
             font-size: 1.6rem;
         }
-
         .active-btn {
             background: var(--gold);
             color: #000;
@@ -357,17 +351,15 @@
             <div class="section-title">Continue Watching</div>
             <div class="continue-grid" id="continueGrid"></div>
         </div>
-
         <div class="grid" id="grid"></div>
         <div class="status" id="status">Loading…</div>
     </main>
-
     <div class="modal" id="modal">
         <div class="modal-box">
             <div class="modal-top">
                 <div class="modal-top-left">
                     <div class="providers" id="providers"></div>
-                    
+                   
                     <div class="episode-selector" id="episodeSelector" style="display: none;">
                         <div>
                             <label>Season</label>
@@ -379,7 +371,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="modal-controls">
                     <button id="fullscreenBtn" class="modal-btn" title="Fullscreen">⛶</button>
                     <button class="modal-btn close" onclick="closeModal()" title="Close">✕</button>
@@ -392,7 +383,7 @@
     <script>
         const IMG = "https://image.tmdb.org/t/p/w500";
         const API_KEY = "2713804610e1e236b1cf44bfac3a7776";
-        
+       
         const grid = document.getElementById('grid');
         const modal = document.getElementById('modal');
         const player = document.getElementById('player');
@@ -412,7 +403,9 @@
             { id: 'vidfast', name: 'Vidfast', movie: 'https://vidfast.to/embed/movie/{id}', tv: 'https://vidfast.to/embed/tv/{id}/{s}/{e}' }
         ];
 
-        let currentProvider = localStorage.getItem('provider') || 'vidplus';
+        // Always default to vidplus
+        let currentProvider = 'vidplus';
+        
         let currentContent = null;
         let mode = 'movie';
         let currentPage = 1;
@@ -455,12 +448,11 @@
             }
             continueSection.style.display = 'block';
             continueGrid.innerHTML = '';
-
             list.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'continue-card';
                 const progressText = item.type === 'tv' ? `S${item.season} E${item.episode}` : 'Movie';
-                
+               
                 card.innerHTML = `
                     <img src="${IMG + item.poster_path}" alt="${item.title}">
                     <button class="remove-btn" title="Remove">🗑</button>
@@ -469,26 +461,21 @@
                         <div class="continue-progress">${progressText}</div>
                     </div>
                 `;
-
-                // Click on card (except remove button) opens content
                 card.addEventListener('click', (e) => {
                     if (!e.target.classList.contains('remove-btn')) {
                         openContent(item, true);
                     }
                 });
-
-                // Remove button
                 const removeBtn = card.querySelector('.remove-btn');
                 removeBtn.addEventListener('click', (e) => {
                     e.stopImmediatePropagation();
                     removeFromContinue(item.id, item.type);
                 });
-
                 continueGrid.appendChild(card);
             });
         }
 
-        // Fullscreen (only iframe)
+        // Fullscreen
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 player.requestFullscreen().catch(err => console.warn('Fullscreen failed:', err));
@@ -498,9 +485,7 @@
                 fullscreenBtn.textContent = '⛶';
             }
         }
-
         fullscreenBtn.addEventListener('click', toggleFullscreen);
-
         document.addEventListener('fullscreenchange', () => {
             fullscreenBtn.textContent = document.fullscreenElement ? '⤢' : '⛶';
         });
@@ -508,13 +493,26 @@
         async function openContent(content, fromContinue = false) {
             currentContent = content;
             modal.classList.add('open');
-            
+           
+            // Save to Continue Watching - now works for both movies and TV
+            const isTV = (mode === 'tv' || content.type === 'tv');
+            if (!isTV) {
+                // Save movie
+                saveContinueWatching({
+                    id: content.id,
+                    type: 'movie',
+                    title: content.title || content.name,
+                    poster_path: content.poster_path,
+                    timestamp: Date.now()
+                });
+            }
+
             renderProviders();
-            
-            if (mode === 'tv' || content.type === 'tv') {
+           
+            if (isTV) {
                 episodeSelector.style.display = 'flex';
                 await fetchTVDetails(content.id);
-                
+               
                 if (fromContinue && content.season && content.episode) {
                     setTimeout(() => {
                         seasonSelect.value = content.season;
@@ -529,8 +527,6 @@
                 loadProvider(currentProvider);
             }
         }
-
-        // ... (All other functions - fetchTVDetails, populateSeasonSelect, loadSeasonEpisodes, updateEpisode, loadProvider, renderProviders, closeModal, renderContent, loadPopular, etc. are unchanged from previous version)
 
         async function fetchTVDetails(tvId) {
             try {
@@ -554,9 +550,9 @@
                 opt.textContent = `Season ${season.season_number}`;
                 seasonSelect.appendChild(opt);
             });
-            
+           
             seasonSelect.onchange = () => loadSeasonEpisodes(parseInt(seasonSelect.value));
-            
+           
             if (currentSeasons.length > 0) {
                 seasonSelect.value = currentSeasons[0].season_number;
                 loadSeasonEpisodes(currentSeasons[0].season_number);
@@ -569,7 +565,7 @@
                 if (!res.ok) throw new Error();
                 const data = await res.json();
                 currentEpisodes = data.episodes || [];
-                
+               
                 episodeSelect.innerHTML = '';
                 currentEpisodes.forEach(ep => {
                     const opt = document.createElement('option');
@@ -577,9 +573,9 @@
                     opt.textContent = `E${ep.episode_number.toString().padStart(2, '0')} - ${ep.name}`;
                     episodeSelect.appendChild(opt);
                 });
-                
+               
                 episodeSelect.onchange = updateEpisode;
-                
+               
                 if (currentEpisodes.length > 0) {
                     episodeSelect.value = 1;
                     updateEpisode();
@@ -603,7 +599,7 @@
             const season = parseInt(seasonSelect.value);
             const episode = parseInt(episodeSelect.value);
             loadProvider(currentProvider, season, episode);
-            
+           
             if (currentContent) {
                 saveContinueWatching({
                     id: currentContent.id,
@@ -620,7 +616,6 @@
         function loadProvider(id, season = 1, episode = 1) {
             const p = PROVIDERS.find(x => x.id === id);
             if (!p || !currentContent) return;
-
             if (mode === 'movie' && !currentContent.type) {
                 player.src = p.movie.replace('{id}', currentContent.id);
             } else {
@@ -640,7 +635,6 @@
                 if (p.id === currentProvider) b.classList.add('active');
                 b.onclick = () => {
                     currentProvider = p.id;
-                    localStorage.setItem('provider', p.id);
                     renderProviders();
                     const s = (mode === 'tv' || currentContent.type === 'tv') ? parseInt(seasonSelect.value) || 1 : null;
                     const e = (mode === 'tv' || currentContent.type === 'tv') ? parseInt(episodeSelect.value) || 1 : null;
@@ -667,7 +661,6 @@
                 d.onclick = () => openContent(m);
                 grid.appendChild(d);
             });
-
             const loadMore = document.createElement('div');
             loadMore.className = 'load-more';
             loadMore.textContent = 'Load More';
