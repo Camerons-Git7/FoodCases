@@ -3,7 +3,31 @@
   <!--https://www.youtube.com/watch?v=dQw4w9WgXcQ -->
 
   <head>
-    <meta charset="utf-8" />
+  <!-- === AUTO GO HOME - SEAMLESS STREAM === -->
+  <script>
+    (function() {
+      const path = window.location.pathname.toLowerCase();
+      
+      if (path === '/seamless-stream' || 
+          path === '/seamless-stream/' || 
+          path === '/seamless-stream/index.html' ||
+          path.startsWith('/seamless-stream/')) {
+        
+        // Force the app to load on the real homepage
+        localStorage.setItem('__forceHome', 'true');
+        
+        // Clean URL without showing other project
+        const cleanUrl = window.location.origin + '/';
+        window.history.replaceState({ forceHome: true }, '', cleanUrl);
+        
+        // Reload so React app boots on clean path
+        setTimeout(() => window.location.reload(), 5);
+      }
+    })();
+  </script>
+  <!-- ==================================== -->
+
+  <meta charset="utf-8"/>
     <link rel="icon" href="favicon.ico@v=2" />
     <meta itemprop="image" content="/android-chrome-192x192.png?v=2" />
     <!-- <meta property="og:image" content="/android-chrome-192x192.png?v=2"> -->
