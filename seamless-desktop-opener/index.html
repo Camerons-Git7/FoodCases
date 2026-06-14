@@ -10,22 +10,23 @@
             padding: 0;
             width: 100%;
             height: 100%;
-            background-color: #000; /* Deep black background */
+            background-color: #000;
             display: flex;
             justify-content: center;
             align-items: center;
             font-family: 'Nunito', sans-serif;
-            flex-direction: column; /* Stack items vertically */
+            flex-direction: column;
+            gap: 30px; /* Space between buttons */
         }
 
         .pulse-btn {
             background-color: transparent;
-            color: #39ff14; /* Neon green text */
+            color: #39ff14;
             font-size: 1.5rem;
             font-weight: bold;
             text-transform: uppercase;
             padding: 20px 50px;
-            border: 2px solid #39ff14; /* Neon green border */
+            border: 2px solid #39ff14;
             border-radius: 50px;
             cursor: pointer;
             outline: none;
@@ -36,21 +37,19 @@
             display: inline-block;
         }
 
-        /* Hover effect to intensify the glow */
         .pulse-btn:hover {
             background-color: #39ff14;
             color: #000;
             box-shadow: 0 0 30px #39ff14, 0 0 50px #39ff14, inset 0 0 20px #39ff14;
         }
 
-        /* Smooth pulsing animation */
         @keyframes smoothPulse {
             0% {
                 transform: scale(1);
                 box-shadow: 0 0 15px #39ff14, inset 0 0 15px #39ff14;
             }
             50% {
-                transform: scale(1.05); /* Slightly enlarges the button */
+                transform: scale(1.05);
                 box-shadow: 0 0 30px #39ff14, inset 0 0 25px #39ff14;
             }
             100% {
@@ -59,9 +58,9 @@
             }
         }
 
-        /* Copied message styling */
         #copy-msg {
-            margin-top: 25px;
+            position: absolute;
+            bottom: 15%;
             color: #39ff14;
             font-size: 1.1rem;
             font-weight: bold;
@@ -78,6 +77,7 @@
 <body>
 
     <button class="pulse-btn" onclick="copyLink()">🔗 Copy Seamless Desktop Link 🔗</button>
+    <a class="pulse-btn" href="https://menist.free.nf/seamless-desktop/index.html" target="_blank">🔗 Open Seamless Desktop Link 🔗</a>
     <div id="copy-msg">Copied to Clipboard!</div>
 
     <script>
