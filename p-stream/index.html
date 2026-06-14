@@ -254,18 +254,24 @@
   </head>
 
     <body>
-    <script>
-      // Auto redirect /p-stream or /p-stream/index.html to root (like seamless-desktop style)
-      (function() {
-        const path = window.location.pathname;
-        if (path.includes('/p-stream')) {
-          // Redirect to clean root URL with no trailing slash
-          window.location.replace('/');
-        }
-      })();
-    </script>
+  <script>
+    // Force redirect /p-stream* → root + clear state so it shows Seamless-OS (not Parsec)
+    (function() {
+      const path = window.location.pathname;
+      if (path.includes('/p-stream')) {
+        // Clear possible conflicting state
+        try {
+          localStorage.removeItem('parsec-state');
+          sessionStorage.clear();
+        } catch(e) {}
 
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-  </body>
+        // Hard redirect to force fresh Seamless-OS load
+        window.location.replace('/');
+      }
+    })();
+  </script>
+
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+</body>
 </html>
