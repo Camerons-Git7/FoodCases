@@ -3,41 +3,6 @@
   <!--https://www.youtube.com/watch?v=dQw4w9WgXcQ -->
 
   <head>
-  <!-- === AUTO GO HOME - FIXED (no root project) === -->
-  <script>
-    (function() {
-      const path = window.location.pathname.toLowerCase();
-      
-      if (path === '/seamless-stream' || 
-          path === '/seamless-stream/' || 
-          path === '/seamless-stream/index.html' ||
-          path.startsWith('/seamless-stream/')) {
-        
-        // Set flag for the app
-        localStorage.setItem('__forceHome', 'true');
-        
-        // Clean the URL but stay in this folder (no reload to root)
-        const cleanUrl = window.location.origin + '/seamless-stream/';
-        window.history.replaceState({ forceHome: true }, '', cleanUrl);
-        
-        // Force the React app to go to home route after it loads
-        window.addEventListener('load', function forceHome() {
-          if (window.location.pathname.startsWith('/seamless-stream')) {
-            // This mimics clicking "Go Home"
-            try {
-              localStorage.setItem('__forceHome', 'true');
-              // Trigger React Router navigation if possible
-              if (typeof window.dispatchEvent === 'function') {
-                window.dispatchEvent(new Event('popstate'));
-              }
-            } catch(e) {}
-          }
-        });
-      }
-    })();
-  </script>
-  <!-- ============================================== -->
-
   <meta charset="utf-8"/>
     <link rel="icon" href="favicon.ico@v=2" />
     <meta itemprop="image" content="/android-chrome-192x192.png?v=2" />
