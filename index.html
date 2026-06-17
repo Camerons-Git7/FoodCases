@@ -1659,27 +1659,24 @@ function renderUI() {
 }
 
 function openDockCtx(e, id) {
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault(); 
+    e.stopPropagation();
     hideAllCtx();
     activeCtxId = id;
     let m = document.getElementById('dock-ctx-menu');
     if(m) {
-        m.style.display = 'block';
-        m.style.left = e.pageX + 'px';
-        m.style.top = e.pageY + 'px';
+        positionContextMenu(m, e);
     }
 }
 
 function openDrawerCtx(e, id) {
     e.preventDefault(); 
-  e.stopPropagation();
+    e.stopPropagation();
     hideAllCtx();
     activeCtxId = id;
     let m = document.getElementById('drawer-ctx-menu');
     if(m) {
-        m.style.display = 'block';
-        m.style.left = e.pageX + 'px';
-        m.style.top = e.pageY + 'px';
+        positionContextMenu(m, e);
     }
 }
 
@@ -1727,8 +1724,15 @@ function hideAllCtx() {
         if(m) m.style.display = 'none';
     }
 }
-document.addEventListener('click', hideAllCtx);
 
+// Close menus when clicking anywhere else
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.os-context-menu')) {
+        hideAllCtx();
+    }
+});
+
+// Boot skip (Double Enter) + Panic key
 document.addEventListener('keydown', function(e) {
     if(bootActive && e.key === 'Enter' && document.getElementById('boot-layer').style.display !== 'none') {
         enterCount++;
@@ -1739,6 +1743,52 @@ document.addEventListener('keydown', function(e) {
         window.location.href = "https://google.com";
     }
 });
+
+// === SMART CONTEXT MENU POSITIONING - QUADRANT BASED ===
+function positionContextMenu(menu, e) {
+    if (!menu) return;
+    
+    menu.style.display = 'block';
+    menu.style.visibility = 'hidden';
+    menu.style.left = '0px';
+    menu.style.top = '0px';
+    
+    const menuRect = menu.getBoundingClientRect();
+    const menuWidth = menuRect.width || 240;
+    const menuHeight = menuRect.height || 220;
+    
+    menu.style.visibility = 'visible';
+    
+    let x = e.pageX;
+    let y = e.pageY;
+    
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    
+    const midX = vw / 2;
+    const midY = vh / 2;
+    
+    const isRight = x > midX;
+    const isBottom = y > midY;
+    
+    if (isRight) {
+        x = x - menuWidth - 8;
+    } else {
+        x = x + 8;
+    }
+    
+    if (isBottom) {
+        y = y - menuHeight - 8;
+    } else {
+        y = y + 8;
+    }
+    
+    x = Math.max(10, Math.min(x, vw - menuWidth - 10));
+    y = Math.max(10, Math.min(y, vh - menuHeight - 10));
+    
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+}
 
 function startBootSequence() {
     let cb = document.getElementById('boot-content');
@@ -2218,16 +2268,15 @@ function loadDesktop() {
         };
         
         d.oncontextmenu = function(ev) {
-            ev.preventDefault(); ev.stopPropagation();
-            hideAllCtx();
-            let m = document.getElementById('app-context-menu');
-            if(m) {
-                m.style.display = 'block';
-                m.style.left = ev.pageX + 'px';
-                m.style.top = ev.pageY + 'px';
-                m.setAttribute('data-target-idx', idx);
-            }
-        };
+    ev.preventDefault(); 
+    ev.stopPropagation();
+    hideAllCtx();
+    let m = document.getElementById('app-context-menu');
+    if(m) {
+        positionContextMenu(m, ev);
+        m.setAttribute('data-target-idx', idx);
+    }
+};
         
         c.appendChild(d);
     });
@@ -2343,12 +2392,7 @@ document.addEventListener('contextmenu', function(e) {
         hideAllCtx();
         let m = document.getElementById('desktop-context-menu');
         if(m) {
-            m.style.display = 'block';
-            let x = e.pageX, y = e.pageY;
-            if(x + 200 > window.innerWidth) x = window.innerWidth - 200;
-            if(y + 100 > window.innerHeight) y = window.innerHeight - 100;
-            m.style.left = x + 'px';
-            m.style.top = y + 'px';
+            positionContextMenu(m, e);
         }
     }
 });
