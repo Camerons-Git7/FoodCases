@@ -2062,7 +2062,7 @@ function toggleApp(id) {
 
     // Open in new tab if specified
     if (app.openInNewTab === true) {
-        window.open(app.path, '_blank');
+        window.location.href = app.path;
         return;
     }
 
@@ -2093,7 +2093,7 @@ function openWindow(id) {
 
     // Open in new tab if specified
     if (app.openInNewTab === true) {
-        window.open(app.path, '_blank');
+        window.location.href = app.path;
         return;
     }
 
