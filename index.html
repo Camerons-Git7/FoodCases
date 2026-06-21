@@ -1581,7 +1581,7 @@ function applyCloak() {
     var sel = cloaks[k];
     var icons = document.querySelectorAll("link[rel*='icon']");
     for(var i=0; i<icons.length; i++) icons[i].remove();
-    
+   
     if(sel && k !== 'none') {
         document.title = sel.title;
         let n = document.createElement('link');
@@ -1591,11 +1591,10 @@ function applyCloak() {
         document.getElementsByTagName('head')[0].appendChild(n);
     } else {
         document.title = "🔗 Seamless-OS 🔗";
-        // Re-add your original favicon when not cloaking
         let n = document.createElement('link');
         n.type = 'image/x-icon';
-        n.rel = 'icon';  // match your original rel
-        n.href = 'https://math.hws.edu/favicon.ico';
+        n.rel = 'icon';
+        n.href = '/favicon.ico';
         document.getElementsByTagName('head')[0].appendChild(n);
     }
 }
