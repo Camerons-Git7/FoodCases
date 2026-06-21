@@ -2058,11 +2058,10 @@ function toggleApp(id) {
     let app = APPS[id];
     if (!app) return;
 
-    // Open in new tab if specified
-    if (app.openInNewTab === true) {
-        window.open(app.path, '_blank');
-        return;
-    }
+if (app.openInNewTab === true) {
+window.location.href = app.path;
+return;
+}
 
     // Normal in-OS window behavior
     let w = document.getElementById('win-' + id);
@@ -2091,7 +2090,7 @@ function openWindow(id) {
 
     // Open in new tab if specified
     if (app.openInNewTab === true) {
-        window.open(app.path, '_blank');
+        window.location.href = app.path;
         return;
     }
 
