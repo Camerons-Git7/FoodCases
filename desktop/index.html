@@ -3,7 +3,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>🔗 Seamless-OS 🔗</title>
-  <link rel="icon" type="image/x-icon" href="https://i.ibb.co/cSvfKKgZ/Seamless-OS.png"/>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico"/>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
@@ -1581,7 +1581,7 @@ function applyCloak() {
     var sel = cloaks[k];
     var icons = document.querySelectorAll("link[rel*='icon']");
     for(var i=0; i<icons.length; i++) icons[i].remove();
-    
+   
     if(sel && k !== 'none') {
         document.title = sel.title;
         let n = document.createElement('link');
@@ -1591,11 +1591,10 @@ function applyCloak() {
         document.getElementsByTagName('head')[0].appendChild(n);
     } else {
         document.title = "🔗 Seamless-OS 🔗";
-        // Re-add your original favicon when not cloaking
         let n = document.createElement('link');
         n.type = 'image/x-icon';
-        n.rel = 'icon';  // match your original rel
-        n.href = 'https://i.ibb.co/cSvfKKgZ/Seamless-OS.png';
+        n.rel = 'icon';
+        n.href = '/favicon.ico';
         document.getElementsByTagName('head')[0].appendChild(n);
     }
 }
