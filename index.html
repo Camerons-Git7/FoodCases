@@ -1517,7 +1517,6 @@ function syncPins() {
 }
 
 var wallpaperRegistry = {
-    "MatrixRain": { id: "MatrixRain", name: "Matrix Rain", url: "https://menist.free.nf/cine-os/Videos/Matrix-Rain.html", type: "iframe", locked: false },
     "Snake": {id: "Snake", name: "Snake Skeleton", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/default.mp4", locked: false},
     "green": {id: "green", name: "Green Anime", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/green.mp4", locked: false},
     "33A56": {id: "hunt_trait", name: "Hunt Showdown", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/33A56.mp4", locked: false},
@@ -1917,92 +1916,42 @@ window.unlockSystem = function() {
     resetIdle();
 };
 
-function applyMediaToElements(key, isBg) {
-    let item = wallpaperRegistry[key];
-    if (!item) return;
-
-    let vidEl = document.getElementById('bg-video');
-    let imgEl = document.getElementById('bg-img');
-
-    // Remove existing matrix iframe
-    let existingIframe = document.getElementById('matrix-iframe');
-    if (existingIframe) existingIframe.remove();
-
-    if (item.type === "iframe") {
-        // Show Matrix Rain when desktop is visible (no FULLSCREEN/immersive windows)
-        let visibleWindows = document.querySelectorAll('.window.active:not(.minimized)').length;
-        
-        if (isBg && isDesktopActive && visibleWindows === 0) {
-            let iframe = document.createElement('iframe');
-            iframe.id = 'matrix-iframe';
-            iframe.src = item.url;
-            iframe.style.position = 'fixed';
-            iframe.style.top = '0';
-            iframe.style.left = '0';
-            iframe.style.width = '100%';
-            iframe.style.height = '100%';
-            iframe.style.border = 'none';
-            iframe.style.zIndex = 'var(--z-bg)';
-            iframe.style.opacity = '0.88';
-            iframe.style.pointerEvents = 'none';
-            iframe.style.transition = 'opacity 0.8s ease';
-            document.body.appendChild(iframe);
-        }
-        
-        if (isBg) sysConfig.homeWallpaper = key;
-        return;
+function applyMediaToElements(url, vidEl, imgEl, isBg) {
+    if(!url) return;
+    let isImg = url.match(/\.(png|jpg|jpeg|gif)$/i);
+    if(isImg) {
+        vidEl.style.display = 'none';
+        vidEl.pause();
+        imgEl.style.display = 'block';
+        imgEl.src = url;
+    } else {
+        imgEl.style.display = 'none';
+        vidEl.style.display = 'block';
+        vidEl.src = url;
+        vidEl.load();
+        if(isBg && isDesktopActive && !sysConfig.optBg) vidEl.play().catch(function(e){});
+        if(!isBg && document.getElementById('lock-screen').classList.contains('active')) vidEl.play().catch(function(e){});
     }
-
-    // Normal video/image background
-    if (vidEl) vidEl.style.display = 'none';
-    if (imgEl) imgEl.style.display = 'none';
-
-    if (item.url) {
-        let isImg = item.url.match(/\.(png|jpg|jpeg|gif|webp)$/i);
-        
-        if (isImg) {
-            imgEl.style.display = 'block';
-            imgEl.src = item.url;
-        } else {
-            vidEl.style.display = 'block';
-            vidEl.src = item.url;
-            vidEl.load();
-            if (isBg && isDesktopActive && !sysConfig.optBg) {
-                vidEl.play().catch(() => {});
-            }
-        }
-    }
-
-    if (isBg) sysConfig.homeWallpaper = key;
 }
 
 function initWallpapers() {
-    let homeKey = sysConfig.homeWallpaper || 'Home';
-    let lockKey = sysConfig.lockWallpaper || 'Lock';
-
-    // Handle Homescreen Background
-    if (wallpaperRegistry[homeKey]) {
-        applyMediaToElements(homeKey, true);
-    } else {
-        // Fallback to default
-        applyMediaToElements('Home', true);
-    }
-
-    // Handle Lockscreen Background (only video/image for now)
+    let bV = document.getElementById('bg-video');
+    let bI = document.getElementById('bg-img');
     let lV = document.getElementById('lock-video');
     let lI = document.getElementById('lock-img');
     
-    if (wallpaperRegistry[lockKey] && wallpaperRegistry[lockKey].type !== "iframe") {
-        applyMediaToElements(lockKey, false);
-    } else {
-        // Fallback for lockscreen
-        applyMediaToElements('Lock', false);
+    if(wallpaperRegistry[sysConfig.homeWallpaper]) {
+        applyMediaToElements(wallpaperRegistry[sysConfig.homeWallpaper].url, bV, bI, true);
     }
-
-    updateWallpaperLoop();
+    if(wallpaperRegistry[sysConfig.lockWallpaper]) {
+        applyMediaToElements(wallpaperRegistry[sysConfig.lockWallpaper].url, lV, lI, false);
+    } else {
+        applyMediaToElements("https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/green.mp4", lV, lI, false);
+    }
     
+    updateWallpaperLoop();
     let wChk = document.getElementById('wp-loop-chk');
-    if (wChk) wChk.checked = sysConfig.wpLoop || false;
+    if(wChk) wChk.checked = sysConfig.wpLoop;
 }
 
 function updateWallpaperLoop() {
@@ -2610,25 +2559,31 @@ window.toggleDesktopSize = function(l) {
 var unlockedWallpapers = JSON.parse(localStorage.getItem('cine_unlocked_wp')) || ['default'];
 window.wpMode = 'both';
 
-function setWallpaper(k, noti = false) {
+function setWallpaper(k, noti=false) {
     let d = wallpaperRegistry[k];
-    if (!d) return;
-
-    if (noti && d.locked && !unlockedWallpapers.includes(d.id)) {
+    if(!d) return;
+    
+    if(noti && d.locked && !unlockedWallpapers.includes(d.id)) {
         unlockedWallpapers.push(d.id);
         localStorage.setItem('cine_unlocked_wp', JSON.stringify(unlockedWallpapers));
+        alert("Wallpaper: [ " + d.name + " ] Unlocked.");
     }
-
-    if (window.wpMode === 'home' || window.wpMode === 'both') {
-        applyMediaToElements(k, true);
+    
+    if(window.wpMode === 'home' || window.wpMode === 'both') {
+        let bV = document.getElementById('bg-video');
+        let bI = document.getElementById('bg-img');
+        applyMediaToElements(d.url, bV, bI, true);
         updateSysSetting('homeWallpaper', k);
     }
-
-    if (window.wpMode === 'lock' || window.wpMode === 'both') {
-        // For now we skip lockscreen iframe support
-        console.log("Matrix Rain on lockscreen not supported yet");
+    
+    if(window.wpMode === 'lock' || window.wpMode === 'both') {
+        let lV = document.getElementById('lock-video');
+        let lI = document.getElementById('lock-img');
+        applyMediaToElements(d.url, lV, lI, false);
+        updateSysSetting('lockWallpaper', k);
     }
-
+    
+    updateWallpaperLoop();
     openWallpaperMenu();
 }
 
