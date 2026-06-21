@@ -1517,7 +1517,7 @@ function syncPins() {
 }
 
 var wallpaperRegistry = {
-    "Default": {id: "Default", name: "Snake Skeleton", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/default.mp4", locked: false},
+    "Snake": {id: "Snake", name: "Snake Skeleton", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/default.mp4", locked: false},
     "green": {id: "green", name: "Green Anime", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/green.mp4", locked: false},
     "33A56": {id: "hunt_trait", name: "Hunt Showdown", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/33A56.mp4", locked: false},
     "45E33": {id: "45E33", name: "45E33", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/45E33.mp4", locked: false},
@@ -1541,7 +1541,9 @@ var wallpaperRegistry = {
     "Gojo": {id: "Gojo", name: "Gojo", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Gojo.mp4", locked: false},
     "BlackHole": {id: "BlackHole", name: "Black Hole", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/BlackHole.mp4", locked: false},
     "Yuta": {id: "Yuta", name: "Yuta", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Yuta.mp4", locked: false},
-    "Desktop": {id: "Desktop", name: "Desktop Lines", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Desktop.mp4", locked: false}
+    "Desktop": {id: "Desktop", name: "Desktop Lines", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Desktop.mp4", locked: false},
+    "Home": { id: "Home", name: "Default Home Screen", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Rog-Home-Screen.png", locked: false },
+    "Lock": { id: "Lock", name: "Default Lock Screen", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Rog-Lockscreen.png", locked: false }
 };
 
 var sysConfig = JSON.parse(localStorage.getItem('cine_sys_config')) || {};
@@ -1551,8 +1553,8 @@ if(sysConfig.wpLoop === undefined) sysConfig.wpLoop = false;
 if(sysConfig.idleLock === undefined) sysConfig.idleLock = false; 
 if(sysConfig.redirectConfirm === undefined) sysConfig.redirectConfirm = false; 
 if(!sysConfig.panicKey) sysConfig.panicKey = '`';
-if(!sysConfig.homeWallpaper) sysConfig.homeWallpaper = 'Default';
-if(!sysConfig.lockWallpaper) sysConfig.lockWallpaper = 'green';
+if(!sysConfig.homeWallpaper) sysConfig.homeWallpaper = 'Home';
+if(!sysConfig.lockWallpaper) sysConfig.lockWallpaper = 'Lock';
 if(!sysConfig.cloak) sysConfig.cloak = 'none';
 
 window.updateSysSetting = function(key, value) {
