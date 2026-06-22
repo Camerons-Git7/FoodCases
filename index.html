@@ -1884,43 +1884,80 @@ function startBootSequence() {
     };
 }
 
-function skipBootSequence() {
-    if(!bootActive) return;
-    bootActive = false;
-    let lay = document.getElementById('boot-layer');
-    let bv = document.getElementById('boot-video');
-    if(bv) bv.pause();
+function updateClock() {
+    let n = new Date();
+    let dArr = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+    let mArr = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
     
-    if(lay) {
-        lay.style.opacity = '0';
-        document.getElementById('lock-screen').classList.add('active');
-        
-        let lv = document.getElementById('lock-video');
-        if(lv.style.display !== 'none') {
-            lv.play().catch(function(e) {});
-        }
-        
-        setTimeout(function() { lay.style.display = 'none'; }, 600);
-        updateClock();
+    let hrs24 = n.getHours();
+    let hrs = hrs24 % 12 || 12;
+    let ampm = hrs24 >= 12 ? 'PM' : 'AM';
+    let min = n.getMinutes().toString().padStart(2, '0');
+    let sec = n.getSeconds().toString().padStart(2, '0');
+    let dNum = n.getDate().toString().padStart(2, '0');
+    let month = mArr[n.getMonth()];
+    
+    let lDay = document.getElementById('lock-day-large');
+    let lDat = document.getElementById('lock-date');
+    let lTim = document.getElementById('lock-time');
+    let hDay = document.getElementById('lbl-day');
+    
+    if(lDay) lDay.innerText = dArr[n.getDay()];
+    if(hDay) hDay.innerText = dArr[n.getDay()];
+    if(lDat) lDat.innerText = dNum + ' ' + month + ', ' + n.getFullYear() + '.';
+    if(lTim) lTim.innerText = '- ' + hrs + ':' + min + ' ' + ampm + ' -';
+    
+    updateDockTime();
+}
+
+function updateDockTime() {
+    let n = new Date();
+    
+    let hrs24 = n.getHours();
+    let hrs = hrs24 % 12 || 12;
+    let ampm = hrs24 >= 12 ? 'PM' : 'AM';
+    let min = n.getMinutes().toString().padStart(2, '0');
+    let sec = n.getSeconds().toString().padStart(2, '0');
+    
+    let month = (n.getMonth() + 1).toString().padStart(2, '0');
+    let day = n.getDate().toString().padStart(2, '0');
+    let year = n.getFullYear();
+    
+    const timeMain = document.getElementById('dock-time-main');
+    const dateSmall = document.getElementById('dock-date-small');
+    
+    if(timeMain) timeMain.textContent = `${hrs}:${min}:${sec} ${ampm}`;
+    if(dateSmall) dateSmall.textContent = `${month}/${day}/${year}`;
+}
+
+function startClock() {
+    updateClock();
+    if (!window.clockInterval) {
+        window.clockInterval = setInterval(updateClock, 1000);
     }
 }
 
-function showNotification(title, msg) {
-    let c = document.getElementById('toast-container');
-    let t = document.createElement('div');
-    t.className = 'toast-notification';
-    t.innerHTML = '<div class="toast-header"><div class="toast-app-info"><div class="toast-icon"><i class="fas fa-bell"></i></div><span>System</span></div><i class="fas fa-times toast-close"></i></div><div class="toast-title">' + title + '</div><div class="toast-body">' + msg + '</div>';
-    c.appendChild(t);
-    
-    setTimeout(function(){ t.classList.add('show'); }, 100);
-    t.onclick = function() {
-        t.classList.remove('show');
-        setTimeout(function(){ t.remove(); }, 400);
-    };
-    setTimeout(t.onclick, 6000);
-}
+function resetIdle() { idleTime = 0; }
+document.addEventListener('mousemove', resetIdle);
+document.addEventListener('keypress', resetIdle);
 
-var welcomeShown = false;
+setInterval(function() {
+    idleTime++;
+    let scr = document.getElementById('lock-screen');
+    if(sysConfig.idleLock && idleTime >= 180 && !scr.classList.contains('active') && !bootActive) {
+        if(isMediaPlaying) {
+            idleTime = 0; 
+        } else {
+            isDesktopActive = false;
+            scr.classList.remove('slide-up');
+            scr.classList.add('active');
+            document.getElementById('bg-video').pause();
+            let lv = document.getElementById('lock-video');
+            if(lv.style.display !== 'none') lv.play().catch(function(e){});
+        }
+    }
+}, 1000);
+
 window.unlockSystem = function() {
     let scr = document.getElementById('lock-screen');
     scr.classList.add('slide-up');
@@ -1937,84 +1974,32 @@ window.unlockSystem = function() {
             showNotification("Welcome To Seamless V2", "Go to The Seamless Games App to Save Your Progress!");
             welcomeShown = true;
         }
+        startClock();
     }, 600);
     resetIdle();
 };
 
-function applyMediaToElements(url, vidEl, imgEl, isBg) {
-    if(!url) return;
-    let isImg = url.match(/\.(png|jpg|jpeg|gif)$/i);
-    if(isImg) {
-        vidEl.style.display = 'none';
-        vidEl.pause();
-        imgEl.style.display = 'block';
-        imgEl.src = url;
-    } else {
-        imgEl.style.display = 'none';
-        vidEl.style.display = 'block';
-        vidEl.src = url;
-        vidEl.load();
-        if(isBg && isDesktopActive && !sysConfig.optBg) vidEl.play().catch(function(e){});
-        if(!isBg && document.getElementById('lock-screen').classList.contains('active')) vidEl.play().catch(function(e){});
+function skipBootSequence() {
+    if(!bootActive) return;
+    bootActive = false;
+    let lay = document.getElementById('boot-layer');
+    let bv = document.getElementById('boot-video');
+    if(bv) bv.pause();
+    
+    if(lay) {
+        lay.style.opacity = '0';
+        document.getElementById('lock-screen').classList.add('active');
+        
+        let lv = document.getElementById('lock-video');
+        if(lv.style.display !== 'none') {
+            lv.play().catch(function(e) {});
+        }
+        
+        setTimeout(function() { 
+            lay.style.display = 'none'; 
+            startClock();
+        }, 600);
     }
-}
-
-function initWallpapers() {
-    let bV = document.getElementById('bg-video');
-    let bI = document.getElementById('bg-img');
-    let lV = document.getElementById('lock-video');
-    let lI = document.getElementById('lock-img');
-    
-    if(wallpaperRegistry[sysConfig.homeWallpaper]) {
-        applyMediaToElements(wallpaperRegistry[sysConfig.homeWallpaper].url, bV, bI, true);
-    }
-    if(wallpaperRegistry[sysConfig.lockWallpaper]) {
-        applyMediaToElements(wallpaperRegistry[sysConfig.lockWallpaper].url, lV, lI, false);
-    } else {
-        applyMediaToElements("https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/green.mp4", lV, lI, false);
-    }
-    
-    updateWallpaperLoop();
-    let wChk = document.getElementById('wp-loop-chk');
-    if(wChk) wChk.checked = sysConfig.wpLoop;
-}
-
-function updateWallpaperLoop() {
-    let bV = document.getElementById('bg-video');
-    let lV = document.getElementById('lock-video');
-    if(bV) bV.loop = sysConfig.wpLoop;
-    if(lV) lV.loop = sysConfig.wpLoop;
-    if(!sysConfig.optBg && isDesktopActive && bV && bV.paused && bV.style.display !== 'none') {
-        bV.play().catch(function(e){});
-    }
-}
-
-function updateClock() {
-    let n = new Date();
-    let dArr = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
-    let mArr = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
-    
-    let hrs24 = n.getHours();
-    let hrs = hrs24 % 12 || 12;
-    let ampm = hrs24 >= 12 ? 'PM' : 'AM';
-    let min = n.getMinutes().toString().padStart(2, '0');
-    let sec = n.getSeconds().toString().padStart(2, '0');
-    let dNum = n.getDate().toString().padStart(2, '0');
-    let month = mArr[n.getMonth()];
-    
-    // Lock screen & HUD
-    let lDay = document.getElementById('lock-day-large');
-    let lDat = document.getElementById('lock-date');
-    let lTim = document.getElementById('lock-time');
-    let hDay = document.getElementById('lbl-day');
-    
-    if(lDay) lDay.innerText = dArr[n.getDay()];
-    if(hDay) hDay.innerText = dArr[n.getDay()];
-    if(lDat) lDat.innerText = dNum + ' ' + month + ', ' + n.getFullYear() + '.';
-    if(lTim) lTim.innerText = '- ' + hrs + ':' + min + ' ' + ampm + ' -';
-    
-    // Update dock clock
-    updateDockTime(hrs, min, sec, ampm, dNum, month);
 }
 
 function updateDockTime() {
@@ -2057,10 +2042,6 @@ setInterval(function() {
         }
     }
 }, 1000);
-
-
-
-
 
 function populateDrawer() {
     let g = document.getElementById('drawer-grid');
