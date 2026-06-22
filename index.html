@@ -1655,7 +1655,7 @@ function renderUI() {
     let dHTML = 
         '<div class="dock-item" onclick="toggleStartMenu()"><img src="https://missionsupport.archden.org/wp-content/uploads/2022/02/windows11-icon.png"></div>' +
         '<div class="dock-sep"></div>' +
-        // Library / App Drawer Icon (Fixed 3x3 grid)
+        // App Drawer
         '<div class="dock-item" onclick="toggleAppDrawer()" style="display:flex; align-items:center; justify-content:center;">' +
         '<svg width="26" height="26" viewBox="0 0 24 24" fill="#ddd"><path d="M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z"/></svg>' +
         '</div>' +
@@ -1668,7 +1668,7 @@ function renderUI() {
         }
     }
     
-    // Time/Date on the RIGHT - perfectly aligned
+    // Fancy Time + Date on the right
     dHTML += `
         <div class="dock-sep"></div>
         <div id="dock-time" style="padding: 0 14px; font-size: 13px; font-weight: 600; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; min-width: 78px; user-select: none; pointer-events: none; height: 100%;">
@@ -1689,7 +1689,6 @@ function renderUI() {
     pGrid.innerHTML = pHTML;
     
     populateDrawer();
-    
     updateDockTime();   // Initial call
 }
 
@@ -1884,101 +1883,6 @@ function startBootSequence() {
     };
 }
 
-function updateClock() {
-    let n = new Date();
-    let dArr = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
-    let mArr = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
-    
-    let hrs24 = n.getHours();
-    let hrs = hrs24 % 12 || 12;
-    let ampm = hrs24 >= 12 ? 'PM' : 'AM';
-    let min = n.getMinutes().toString().padStart(2, '0');
-    let sec = n.getSeconds().toString().padStart(2, '0');
-    let dNum = n.getDate().toString().padStart(2, '0');
-    let month = mArr[n.getMonth()];
-    
-    let lDay = document.getElementById('lock-day-large');
-    let lDat = document.getElementById('lock-date');
-    let lTim = document.getElementById('lock-time');
-    let hDay = document.getElementById('lbl-day');
-    
-    if(lDay) lDay.innerText = dArr[n.getDay()];
-    if(hDay) hDay.innerText = dArr[n.getDay()];
-    if(lDat) lDat.innerText = dNum + ' ' + month + ', ' + n.getFullYear() + '.';
-    if(lTim) lTim.innerText = '- ' + hrs + ':' + min + ' ' + ampm + ' -';
-    
-    updateDockTime();
-}
-
-function updateDockTime() {
-    let n = new Date();
-    
-    let hrs24 = n.getHours();
-    let hrs = hrs24 % 12 || 12;
-    let ampm = hrs24 >= 12 ? 'PM' : 'AM';
-    let min = n.getMinutes().toString().padStart(2, '0');
-    let sec = n.getSeconds().toString().padStart(2, '0');
-    
-    let month = (n.getMonth() + 1).toString().padStart(2, '0');
-    let day = n.getDate().toString().padStart(2, '0');
-    let year = n.getFullYear();
-    
-    const timeMain = document.getElementById('dock-time-main');
-    const dateSmall = document.getElementById('dock-date-small');
-    
-    if(timeMain) timeMain.textContent = `${hrs}:${min}:${sec} ${ampm}`;
-    if(dateSmall) dateSmall.textContent = `${month}/${day}/${year}`;
-}
-
-function startClock() {
-    updateClock();
-    if (!window.clockInterval) {
-        window.clockInterval = setInterval(updateClock, 1000);
-    }
-}
-
-function resetIdle() { idleTime = 0; }
-document.addEventListener('mousemove', resetIdle);
-document.addEventListener('keypress', resetIdle);
-
-setInterval(function() {
-    idleTime++;
-    let scr = document.getElementById('lock-screen');
-    if(sysConfig.idleLock && idleTime >= 180 && !scr.classList.contains('active') && !bootActive) {
-        if(isMediaPlaying) {
-            idleTime = 0; 
-        } else {
-            isDesktopActive = false;
-            scr.classList.remove('slide-up');
-            scr.classList.add('active');
-            document.getElementById('bg-video').pause();
-            let lv = document.getElementById('lock-video');
-            if(lv.style.display !== 'none') lv.play().catch(function(e){});
-        }
-    }
-}, 1000);
-
-window.unlockSystem = function() {
-    let scr = document.getElementById('lock-screen');
-    scr.classList.add('slide-up');
-    setTimeout(function() {
-        scr.classList.remove('active');
-        isDesktopActive = true;
-        document.getElementById('lock-video').pause();
-        
-        if(!sysConfig.optBg) {
-            let bV = document.getElementById('bg-video');
-            if(bV.style.display !== 'none') bV.play().catch(function(e){});
-        }
-        if(!welcomeShown) {
-            showNotification("Welcome To Seamless V2", "Go to The Seamless Games App to Save Your Progress!");
-            welcomeShown = true;
-        }
-        startClock();
-    }, 600);
-    resetIdle();
-};
-
 function skipBootSequence() {
     if(!bootActive) return;
     bootActive = false;
@@ -1995,23 +1899,134 @@ function skipBootSequence() {
             lv.play().catch(function(e) {});
         }
         
-        setTimeout(function() { 
-            lay.style.display = 'none'; 
-            startClock();
-        }, 600);
+        setTimeout(function() { lay.style.display = 'none'; }, 600);
+        updateClock();
     }
+}
+
+function showNotification(title, msg) {
+    let c = document.getElementById('toast-container');
+    let t = document.createElement('div');
+    t.className = 'toast-notification';
+    t.innerHTML = '<div class="toast-header"><div class="toast-app-info"><div class="toast-icon"><i class="fas fa-bell"></i></div><span>System</span></div><i class="fas fa-times toast-close"></i></div><div class="toast-title">' + title + '</div><div class="toast-body">' + msg + '</div>';
+    c.appendChild(t);
+    
+    setTimeout(function(){ t.classList.add('show'); }, 100);
+    t.onclick = function() {
+        t.classList.remove('show');
+        setTimeout(function(){ t.remove(); }, 400);
+    };
+    setTimeout(t.onclick, 6000);
+}
+
+var welcomeShown = false;
+window.unlockSystem = function() {
+    let scr = document.getElementById('lock-screen');
+    scr.classList.add('slide-up');
+    setTimeout(function() {
+        scr.classList.remove('active');
+        isDesktopActive = true;
+        document.getElementById('lock-video').pause();
+        
+        if(!sysConfig.optBg) {
+            let bV = document.getElementById('bg-video');
+            if(bV.style.display !== 'none') bV.play().catch(function(e){});
+        }
+        if(!welcomeShown) {
+            showNotification("Welcome To Seamless V2", "Go to The Seamless Games App to Save Your Progress!");
+            welcomeShown = true;
+        }
+        
+        // Start clock properly
+        updateClock();
+        if (!window.clockInterval) {
+            window.clockInterval = setInterval(updateClock, 500);
+        }
+    }, 600);
+    resetIdle();
+};
+
+function applyMediaToElements(url, vidEl, imgEl, isBg) {
+    if(!url) return;
+    let isImg = url.match(/\.(png|jpg|jpeg|gif)$/i);
+    if(isImg) {
+        vidEl.style.display = 'none';
+        vidEl.pause();
+        imgEl.style.display = 'block';
+        imgEl.src = url;
+    } else {
+        imgEl.style.display = 'none';
+        vidEl.style.display = 'block';
+        vidEl.src = url;
+        vidEl.load();
+        if(isBg && isDesktopActive && !sysConfig.optBg) vidEl.play().catch(function(e){});
+        if(!isBg && document.getElementById('lock-screen').classList.contains('active')) vidEl.play().catch(function(e){});
+    }
+}
+
+function initWallpapers() {
+    let bV = document.getElementById('bg-video');
+    let bI = document.getElementById('bg-img');
+    let lV = document.getElementById('lock-video');
+    let lI = document.getElementById('lock-img');
+    
+    if(wallpaperRegistry[sysConfig.homeWallpaper]) {
+        applyMediaToElements(wallpaperRegistry[sysConfig.homeWallpaper].url, bV, bI, true);
+    }
+    if(wallpaperRegistry[sysConfig.lockWallpaper]) {
+        applyMediaToElements(wallpaperRegistry[sysConfig.lockWallpaper].url, lV, lI, false);
+    } else {
+        applyMediaToElements("https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/green.mp4", lV, lI, false);
+    }
+    
+    updateWallpaperLoop();
+    let wChk = document.getElementById('wp-loop-chk');
+    if(wChk) wChk.checked = sysConfig.wpLoop;
+}
+
+function updateWallpaperLoop() {
+    let bV = document.getElementById('bg-video');
+    let lV = document.getElementById('lock-video');
+    if(bV) bV.loop = sysConfig.wpLoop;
+    if(lV) lV.loop = sysConfig.wpLoop;
+    if(!sysConfig.optBg && isDesktopActive && bV && bV.paused && bV.style.display !== 'none') {
+        bV.play().catch(function(e){});
+    }
+}
+
+function updateClock() {
+    let n = new Date();
+    let dArr = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+    let mArr = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+    
+    let hrs = n.getHours().toString().padStart(2, '0');
+    let min = n.getMinutes().toString().padStart(2, '0');
+    let dNum = n.getDate().toString().padStart(2, '0');
+    let dName = dArr[n.getDay()];
+    let yr = n.getFullYear();
+    
+    let lDay = document.getElementById('lock-day-large');
+    let lDat = document.getElementById('lock-date');
+    let lTim = document.getElementById('lock-time');
+    let hDay = document.getElementById('lbl-day');
+    
+    if(lDay) lDay.innerText = dName;
+    if(hDay) hDay.innerText = dName;
+    if(lDat) lDat.innerText = dNum + ' ' + mArr[n.getMonth()] + ', ' + yr + '.';
+    if(lTim) lTim.innerText = '- ' + hrs + ':' + min + ' -';
+    
+    updateDockTime();   // ← Add this line
 }
 
 function updateDockTime() {
     let n = new Date();
     
-    let hrs24 = n.getHours();
-    let hrs = hrs24 % 12 || 12;
-    let ampm = hrs24 >= 12 ? 'PM' : 'AM';
+    let hrs = n.getHours() % 12 || 12;
+    let ampm = n.getHours() >= 12 ? 'PM' : 'AM';
     let min = n.getMinutes().toString().padStart(2, '0');
     let sec = n.getSeconds().toString().padStart(2, '0');
     
-    let month = (n.getMonth() + 1).toString().padStart(2, '0');  // 01-12
+    let month = (n.getMonth() + 1).toString().padStart(2, '0');
     let day = n.getDate().toString().padStart(2, '0');
     let year = n.getFullYear();
     
@@ -2022,6 +2037,7 @@ function updateDockTime() {
     if(dateSmall) dateSmall.textContent = `${month}/${day}/${year}`;
 }
 
+var idleTime = 0;
 function resetIdle() { idleTime = 0; }
 document.addEventListener('mousemove', resetIdle);
 document.addEventListener('keypress', resetIdle);
@@ -2042,6 +2058,10 @@ setInterval(function() {
         }
     }
 }, 1000);
+
+
+
+
 
 function populateDrawer() {
     let g = document.getElementById('drawer-grid');
