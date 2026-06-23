@@ -920,6 +920,15 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
     scrollbar-width: thin;
     scrollbar-color: #444 rgba(20, 20, 20, 0.5);
 }
+
+#boot-layer.boot-animation {
+    cursor: none !important;
+}
+
+#boot-layer.boot-animation * {
+    cursor: none !important;
+}
+
 </style>
 </head>
 
@@ -1845,12 +1854,18 @@ function positionContextMenu(menu, e) {
 }
 
 function startBootSequence() {
+    let bootLayer = document.getElementById('boot-layer');
     let cb = document.getElementById('boot-content');
     let bv = document.getElementById('boot-video');
+    
+    // Hide the static boot content
     cb.style.display = 'none';
     bv.style.display = 'block';
     bv.muted = false;
     bv.volume = 1.0;
+    
+    // === START HIDING CURSOR HERE ===
+    bootLayer.classList.add('boot-animation');
     
     if(sysConfig.shortBoot) {
         bv.src = "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/QuickBoot.mp4";
@@ -1864,6 +1879,7 @@ function startBootSequence() {
             bv.play();
         });
     }
+    
     bv.onended = function() {
         if(bootActive) skipBootSequence();
     };
@@ -1872,9 +1888,13 @@ function startBootSequence() {
 function skipBootSequence() {
     if(!bootActive) return;
     bootActive = false;
+    
     let lay = document.getElementById('boot-layer');
     let bv = document.getElementById('boot-video');
     if(bv) bv.pause();
+    
+    // Restore cursor when boot animation ends
+    if(lay) lay.classList.remove('boot-animation');
     
     if(lay) {
         lay.style.opacity = '0';
@@ -1885,7 +1905,9 @@ function skipBootSequence() {
             lv.play().catch(function(e) {});
         }
         
-        setTimeout(function() { lay.style.display = 'none'; }, 600);
+        setTimeout(function() { 
+            lay.style.display = 'none'; 
+        }, 600);
         updateClock();
     }
 }
