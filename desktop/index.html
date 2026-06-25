@@ -920,6 +920,15 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
     scrollbar-width: thin;
     scrollbar-color: #444 rgba(20, 20, 20, 0.5);
 }
+
+#boot-layer.boot-animation {
+    cursor: none !important;
+}
+
+#boot-layer.boot-animation * {
+    cursor: none !important;
+}
+
 </style>
 </head>
 
@@ -970,20 +979,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 <header id="hud-top">
   <div class="hud-day" id="lbl-day">FRIDAY</div>
 </header>
-
-<!-- Right Sidebar refactored with BEM and Semantic tags -->
-<aside id="right-sidebar" aria-label="Quick Access Widget">
-  <section class="sidebar__section">
-    <h3 class="sidebar__title">Widgets</h3>
-    <div class="sidebar__card" onclick="openWindow('widgets', 'Widgets', 'https://menist.free.nf/seamless-widgets/')" role="button" tabindex="0">
-      <div class="sidebar__info">
-        <strong class="txt-highlight">Seamless Widgets</strong>
-        <small>Date, Time, Weather, and more!</small>
-      </div>
-      <i class="fas fa-chevron-right sidebar__chevron" aria-hidden="true"></i>
-    </div>
-  </section>
-</aside>
 
 <div id="drag-proxy" aria-hidden="true">
   <div id="folder-badge" class="hidden-badge">2</div>
@@ -1357,12 +1352,12 @@ var APPS = {
   'geodash': {title: 'Geo Dash', path: 'https://menist.free.nf/big/geometrydash/', icon: 'https://geometrylitepc.com/assets/upload/geometry-dash.webp', pinned: false, openInNewTab: false},
   'geometryvibes': {title: 'geometryvibes', path: 'https://menist.free.nf/core/geometryvibes/', icon: 'https://play-lh.googleusercontent.com/FRj1dX1U-hdtQVSZkEtjzyo1iRh-cVGidQwMo_Mcp_-HBvVw7ojiEhayL7wrsOQNLOk', pinned: false, openInNewTab: false},
   'getontop': {title: 'getontop', path: 'https://menist.free.nf/core/getontop/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=1200,height=1200,fit=cover,f=png/3078616e30ecc5f326bd8e6cad728a03/get-on-top-logo.png', pinned: false, openInNewTab: false},
-  'gettingoverit': {title: 'Getting Over It', path: 'https://menist.free.nf/peak/getting-over-it/', icon: 'https://play-lh.googleusercontent.com/sTsE_AcnSnWtYU0H__k5IDJjupMd_sdKwmaThrJS5R2PJHWK02cAxyaOKNhU0him5joRq8F1TPyVqrYkRApoNDq1N5=w240-h480-rw', pinned: false, openInNewTab: false},
+  'gettingoverit': {title: 'Getting Over It', path: 'https://menist.free.nf/peak/getting-over-it/', icon: 'https://play-lh.googleusercontent.com/sTsE_AcnSnWtYU0H__k5IDJjupMd_sdKwmaThrJS5R2PJHWK02cAxyaOKNhU0_vbGbKrGhfWFCndsoDDkqmayw', pinned: false, openInNewTab: false},
   'googleball': {title: 'googleball', path: 'https://menist.free.nf/core/googlebaseball/', icon: 'https://www.gstatic.com/marketing-cms/07/7a/53c7bbbd487bbbb2d2fbf1c7c495/7.png', pinned: false, openInNewTab: false},
   'granny': {title: 'Granny', path: 'https://menist.free.nf/big/granny/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8X5JjpaXIFfsI2KKuU_kjCFDAGJZxktgz3g&s', pinned: false, openInNewTab: false},
   'guessanswer': {title: 'guessanswer', path: 'https://menist.free.nf/core/guesstheiranswer/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ9alCsyldOea4B8Eo24bdFKa_d8l9psMX-Kw&s', pinned: false, openInNewTab: false},
   'hanger2': {title: 'hanger2', path: 'https://menist.free.nf/core/hanger2/', icon: 'https://www.mathnook.com/img/addthis-fun-games/hanger-2-200x200.png', pinned: false, openInNewTab: false},
-  'hillclimbrace': {title: 'hillclimbrace', path: 'https://menist.free.nf/core/hillclimbracinglite/', icon: 'https://store-images.s-microsoft.com/image/apps.27192.9007199266379485.c1ef97c5-cf2f-4dbd-840d-c4c975f1b009.4c147b04-721a-4ac1-b7e9-136a39ffcc74', pinned: false, openInNewTab: false},
+  'hillclimbrace': {title: 'hillclimbrace', path: 'https://menist.free.nf/core/hillclimbracinglite/', icon: 'https://play-lh.googleusercontent.com/7YJtBKClRTrPRIO-vm-_GoqAEwob4kQ-wJd0qmUMLdbor5Jxj-IKpsXOj6MQejf2XYN9YE0q6IUgYnu-fcAGIg', pinned: false, openInNewTab: false},
   'holeio': {title: 'Hole.io', path: 'https://menist.free.nf/big/hole-io/', icon: 'https://upload.wikimedia.org/wikipedia/en/c/ca/Hole.io_logo.jpg', pinned: false, openInNewTab: false},
   'houseofhazards': {title: 'House of Hazards', path: 'https://menist.free.nf/big/house-of-hazards/', icon: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://houseofhazards.com&size=256', pinned: false, openInNewTab: false},
   'hoverracer': {title: 'hoverracer', path: 'https://menist.free.nf/core/hoverracerdrive/', icon: 'https://store-images.s-microsoft.com/image/apps.45264.14020183947105412.3fca8873-c649-48d4-b9f9-136a39ffcc74.119e5f11-8afe-428c-afa9-039881c92cd5', pinned: false, openInNewTab: false},
@@ -1370,7 +1365,7 @@ var APPS = {
   'impossblequiz': {title: 'impossblequiz', path: 'https://menist.free.nf/core/theimpossiblequiz/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9byk0FzwWAmalfPmfOf3auFJaJdEk209CFg&s', pinned: false, openInNewTab: false},
   'ironsnout': {title: 'ironsnout', path: 'https://menist.free.nf/core/ironsnout/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGX3Kc85UaaHp_9FmEdZDZRPBSdd2Dmyp4Qw&s', pinned: false, openInNewTab: false},
   'jetpackjoy': {title: 'Jetpack Joy', path: 'https://menist.free.nf/big/jetpack-joyride/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRMp6a83tWwzGzLQdtI12IvUwzOThFf2nMMIA&s', pinned: false, openInNewTab: false},
-  'johnnytrigger': {title: 'johnnytrigger', path: 'https://menist.free.nf/core/johnnytrigger/', icon: 'https://play-lh.googleusercontent.com/pEH-pYG8v1WmNjk3haRt6bR4b6pUpvDsQLtVB-xsxt-SR9O6cX6OxnM0him5joRq8F1TPyVqrYkRApoNDq1N5=w240-h480-rw', pinned: false, openInNewTab: false},
+  'johnnytrigger': {title: 'johnnytrigger', path: 'https://menist.free.nf/core/johnnytrigger/', icon: 'https://play-lh.googleusercontent.com/NR_Slq9e64fSySkgeunAHBt1P17pilcqR13FmJwEnD6NmuvhgR0XMu6JF6VD5QuFgUfArraBLVqF2p0xix43Zdc', pinned: false, openInNewTab: false},
   'jumpingshell': {title: 'jumpingshell', path: 'https://menist.free.nf/core/jumpingshell/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRgwqMzZaMBs9BRzbxupy_VYVIrz4YMnpvqqw&s', pinned: false, openInNewTab: false},
   'kartbros': {title: 'kartbros', path: 'https://menist.free.nf/core/kartbros/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ7zEaQ6C_oilQeFWDgihTOBEdKqA6HiQi9Pg&s', pinned: false, openInNewTab: false},
   'learntofly3': {title: 'learntofly3', path: 'https://menist.free.nf/core/learntofly3/', icon: 'https://i.ibb.co/Tx6P30gn/LTF3.png', pinned: false, openInNewTab: false},
@@ -1379,7 +1374,7 @@ var APPS = {
   'mariokart': {title: 'Mario Kart', path: 'https://menist.free.nf/big/mario-kart/', icon: 'https://i.ibb.co/99GTMQLh/mario-kart.png', pinned: false, openInNewTab: false},
   'mario63': {title: 'mario63', path: 'https://menist.free.nf/core/sm63/', icon: 'https://i.ibb.co/99GTMQLh/mario-kart.png', pinned: false, openInNewTab: false},
   'mario64': {title: 'mario64', path: 'https://menist.free.nf/core/sm64/', icon: 'https://i.ibb.co/99GTMQLh/mario-kart.png', pinned: false, openInNewTab: false},
-  'melonground': {title: 'melonground', path: 'https://menist.free.nf/core/melonplayground/', icon: 'https://play-lh.googleusercontent.com/9KgS1cF6vWMF9Fl25S36bKr8zDh0ddkTOeN7WpBcQAE-pKfahG2DjUxbQ8sespNoe3KW', pinned: false, openInNewTab: false},
+  'melonground': {title: 'melonground', path: 'https://menist.free.nf/core/melonplayground/', icon: 'https://play-lh.googleusercontent.com/9KgS1cF6vWMF9Fl25S36bKr8zDh0ddkTOeN7WpBcQAE-pKfahG2DjUxbQ8sespNoe3KW3qbcaVD8H6DfNys6', pinned: false, openInNewTab: false},
   'mergeracers': {title: 'mergeracers', path: 'https://menist.free.nf/core/mergeroundracers/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3bOYEVjyV_CG8C7Fl3VVTeC8YFnqgVQHZyA&s', pinned: false, openInNewTab: false},
   'minecraft': {title: 'Minecraft', path: 'https://menist.free.nf/big/minecraft/', icon: 'https://store-images.s-microsoft.com/image/apps.21661.14216416494490173.9772fa78-5a01-45ce-9b9e-6ec61a10f4e2.f787fea4-1e7a-4458-a112-c5ac10fec5c0', pinned: false, openInNewTab: false},
   'minesweeper': {title: 'minesweeper', path: 'https://menist.free.nf/core/minesweeper/', icon: 'https://m.media-amazon.com/images/I/71TKVp3UnRL.png', pinned: false, openInNewTab: false},
@@ -1410,7 +1405,7 @@ var APPS = {
   'planvszomb': {title: 'Plan Vs Zomb', path: 'https://menist.free.nf/big/plants-zombies/', icon: 'https://downloadr2.apkmirror.com/wp-content/uploads/2022/12/68/639ad89250b0a.png', pinned: false, openInNewTab: false},
   'plonky': {title: 'plonky', path: 'https://menist.free.nf/core/plonky/', icon: 'https://play-lh.googleusercontent.com/N3VuGaJKtkngL342XiZho_eWawRbROVBy1Kg1JyDe4hHvTWEm5yiHgeAS-4tlOu8F1TPyVqrYkRApoNDq1N5=w240-h480-rw', pinned: false, openInNewTab: false},
   'polytrack': {title: 'polytrack', path: 'https://menist.free.nf/core/polytrack/', icon: 'https://polytrackgame.cc/generate.php?path=/uploads/games/main/img_699e8ffc3fbc3.jpg&width=294&height=294', pinned: false, openInNewTab: false},
-  'poorbunny': {title: 'poorbunny', path: 'https://menist.free.nf/core/poorbunny/', icon: 'https://play-lh.googleusercontent.com/BiKJXcAq6rj01nkyVNkJxQmQ3dKUUD76mVIjM9vGAPUuTAsoYexzhHfis8z6MOHn8F1TPyVqrYkRApoNDq1N5=w240-h480-rw', pinned: false, openInNewTab: false},
+  'poorbunny': {title: 'poorbunny', path: 'https://menist.free.nf/core/poorbunny/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT48Wsrfu0-RuB0gcyfx6E0yIGxYT2CioxdNwcpEC-5pQ&s', pinned: false, openInNewTab: false},
   'pou': {title: 'pou', path: 'https://menist.free.nf/core/pou/', icon: 'https://ih1.redbubble.net/image.5451949567.2518/st,small,507x507-pad,600x600,f8f8f8.jpg', pinned: false, openInNewTab: false},
   'raft': {title: 'Raft', path: 'https://menist.free.nf/peak/raft/', icon: 'https://images.steamusercontent.com/ugc/1833541252454295286/49586C84366C361A585FA8CBAD7608DC67D71C97/?imw=512&imh=512&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true', pinned: false, openInNewTab: false},
   'ragdollhit': {title: 'ragdollhit', path: 'https://menist.free.nf/core/ragdollhit/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=314,height=314,fit=cover,f=auto/3c892779be9dabb3589586c83ad3eeed/ragdoll-hit-logo.png', pinned: false, openInNewTab: false},
@@ -1419,7 +1414,7 @@ var APPS = {
   'repo': {title: 'REPO', path: 'https://menist.free.nf/peak/repo/', icon: 'https://images.cults3d.com/Asf3MnfyGvJAja_R98G9bmn4CZo=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/36009852/illustration-file/cc3d5043-387c-496a-bb64-d0135a6f2023/R.E.P.O-2.png', pinned: false, openInNewTab: false},
   'retrobowl': {title: 'Retro Bowl', path: 'https://menist.free.nf/big/retro-bowl/', icon: 'https://play-lh.googleusercontent.com/DrvO8zMElYMrKfmdRtxwyH_kkvk6MJD87mBaC_38Bw1Pkq0DJB0h-SpfbK5SOAkoJQRJ2TpUU0QvW3bSdUe8', pinned: false, openInNewTab: false},
   'retrobowlcol': {title: 'retrobowlcol', path: 'https://menist.free.nf/core/retrobowlcollege/', icon: 'https://play-lh.googleusercontent.com/DrvO8zMElYMrKfmdRtxwyH_kkvk6MJD87mBaC_38Bw1Pkq0DJB0h-SpfbK5SOAkoJQRJ2TpUU0QvW3bSdUe8', pinned: false, openInNewTab: false},
-  'retrohighway': {title: 'retrohighway', path: 'https://menist.free.nf/core/retrohighway/', icon: 'https://play.google.com/store/apps/details?id=com.nicolaigd.retrohighway', pinned: false, openInNewTab: false},
+  'retrohighway': {title: 'retrohighway', path: 'https://menist.free.nf/core/retrohighway/', icon: 'https://play-lh.googleusercontent.com/ntup46vvyYjIOiA-EhS-lmE3F2B6CK9c1GDq5ilNkFyaUVpa5OEII73AddKF1wfLs11X_2ZcXopTDFfCUCsAaA', pinned: false, openInNewTab: false},
   'retropingpong': {title: 'retropingpong', path: 'https://menist.free.nf/core/retropingpong/', icon: 'https://play-lh.googleusercontent.com/FVh_dH6e2VCHHSF90oIBpk_S-Ti7F9xlM9THukSFuktSLhf6kIp73BpWWP14bsTbX_XV=w240-h480-rw', pinned: false, openInNewTab: false},
   'riddleschool5': {title: 'riddleschool5', path: 'https://menist.free.nf/core/riddleschool5/', icon: 'https://img.tapimg.net/market/images/12a2162a12c8e0ce1e5d387905ce452f.png/appicon?t=1', pinned: false, openInNewTab: false},
   'riddletransfer': {title: 'riddletransfer', path: 'https://menist.free.nf/core/riddletransfer/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQjqar1bMjSckN7tvLKBuBM-v3u0cmam5JVNQ&s', pinned: false, openInNewTab: false},
@@ -1443,6 +1438,7 @@ var APPS = {
   'slope2player': {title: 'slope2player', path: 'https://menist.free.nf/core/slope2player/', icon: 'https://play-lh.googleusercontent.com/uJn2i9h7KxYQarC_c3K4qH6o7gLtflFnhD_dN14MNkzHJ1NeNFzCL69jpB5mT0vCoQs', pinned: false, openInNewTab: false},
   'slope3': {title: 'slope3', path: 'https://menist.free.nf/core/slope3/', icon: 'https://play-lh.googleusercontent.com/uJn2i9h7KxYQarC_c3K4qH6o7gLtflFnhD_dN14MNkzHJ1NeNFzCL69jpB5mT0vCoQs', pinned: false, openInNewTab: false},
   'slowroads': {title: 'slowroads', path: 'https://menist.free.nf/core/slowroads/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%9B%A3%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'smashkarts': {title: 'Smash Karts', path: 'https://menist.free.nf/peak/smash-karts/', icon: 'https://play-lh.googleusercontent.com/Bo6DWfQ0pHwcNl-IvDvIpFRmZmf24Hho-DyjZnicm8vKumUyb0YA2GJs-EXxIjUdCpy8BKSuRUwN4mF6LdPpT0s', pinned: false, openInNewTab: false},
     'snowballio': {title: 'snowballio', path: 'https://menist.free.nf/core/snowballio/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%9D%84%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
     'snowrider': {title: 'snowrider', path: 'https://menist.free.nf/core/snowrider/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%9D%84%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
     'snowroad': {title: 'snowroad', path: 'https://menist.free.nf/core/snowroad/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%9D%84%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
@@ -1651,21 +1647,45 @@ document.addEventListener("DOMContentLoaded", function() {
 
 function renderUI() {
     let dock = document.getElementById('dock-container');
-    let dHTML = '<div class="dock-item" onclick="toggleStartMenu()"><img src="https://missionsupport.archden.org/wp-content/uploads/2022/02/windows11-icon.png"></div><div class="dock-sep"></div><div class="dock-item" onclick="toggleAppDrawer()"><svg width="24" height="24" viewBox="0 0 24 24" fill="#aaa"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg></div><div class="dock-sep"></div>';
     
-    let pGrid = document.getElementById('pinned-grid');
-    let pHTML = '';
+    let dHTML = 
+        '<div class="dock-item" onclick="toggleStartMenu()"><img src="https://missionsupport.archden.org/wp-content/uploads/2022/02/windows11-icon.png"></div>' +
+        '<div class="dock-sep"></div>' +
+        // App Drawer
+        '<div class="dock-item" onclick="toggleAppDrawer()" style="display:flex; align-items:center; justify-content:center;">' +
+        '<svg width="26" height="26" viewBox="0 0 24 24" fill="#ddd"><path d="M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z"/></svg>' +
+        '</div>' +
+        '<div class="dock-sep"></div>';
     
+    // Pinned apps
     for(let id in APPS) {
         if(APPS[id].pinned) {
             dHTML += '<div class="dock-item" data-id="'+id+'" onmousedown="DragSystem.start(event,this,\'dock\',\''+id+'\')" onclick="toggleApp(\''+id+'\')" oncontextmenu="openDockCtx(event, \''+id+'\')"><img src="'+APPS[id].icon+'"></div>';
-            pHTML += '<div class="pinned-item" onclick="toggleApp(\''+id+'\')"><img src="'+APPS[id].icon+'"><span>'+APPS[id].title+'</span></div>';
         }
     }
     
+    // Fancy Time + Date on the right
+    dHTML += `
+        <div class="dock-sep"></div>
+        <div id="dock-time" style="padding: 0 14px; font-size: 13px; font-weight: 600; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; min-width: 78px; user-select: none; pointer-events: none; height: 100%;">
+            <div id="dock-time-main" style="letter-spacing: 0.3px;"></div>
+            <div id="dock-date-small" style="font-size: 10.8px; color: #aaa; margin-top: 1px;"></div>
+        </div>
+    `;
+    
     dock.innerHTML = dHTML;
+    
+    let pGrid = document.getElementById('pinned-grid');
+    let pHTML = '';
+    for(let id in APPS) {
+        if(APPS[id].pinned) {
+            pHTML += '<div class="pinned-item" onclick="toggleApp(\''+id+'\')"><img src="'+APPS[id].icon+'"><span>'+APPS[id].title+'</span></div>';
+        }
+    }
     pGrid.innerHTML = pHTML;
+    
     populateDrawer();
+    updateDockTime();   // Initial call
 }
 
 function openDockCtx(e, id) {
@@ -1835,12 +1855,18 @@ function positionContextMenu(menu, e) {
 }
 
 function startBootSequence() {
+    let bootLayer = document.getElementById('boot-layer');
     let cb = document.getElementById('boot-content');
     let bv = document.getElementById('boot-video');
+    
+    // Hide the static boot content
     cb.style.display = 'none';
     bv.style.display = 'block';
     bv.muted = false;
     bv.volume = 1.0;
+    
+    // === START HIDING CURSOR HERE ===
+    bootLayer.classList.add('boot-animation');
     
     if(sysConfig.shortBoot) {
         bv.src = "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/QuickBoot.mp4";
@@ -1854,6 +1880,7 @@ function startBootSequence() {
             bv.play();
         });
     }
+    
     bv.onended = function() {
         if(bootActive) skipBootSequence();
     };
@@ -1862,9 +1889,13 @@ function startBootSequence() {
 function skipBootSequence() {
     if(!bootActive) return;
     bootActive = false;
+    
     let lay = document.getElementById('boot-layer');
     let bv = document.getElementById('boot-video');
     if(bv) bv.pause();
+    
+    // Restore cursor when boot animation ends
+    if(lay) lay.classList.remove('boot-animation');
     
     if(lay) {
         lay.style.opacity = '0';
@@ -1875,7 +1906,9 @@ function skipBootSequence() {
             lv.play().catch(function(e) {});
         }
         
-        setTimeout(function() { lay.style.display = 'none'; }, 600);
+        setTimeout(function() { 
+            lay.style.display = 'none'; 
+        }, 600);
         updateClock();
     }
 }
@@ -1911,6 +1944,12 @@ window.unlockSystem = function() {
         if(!welcomeShown) {
             showNotification("Welcome To Seamless V2", "Go to The Seamless Games App to Save Your Progress!");
             welcomeShown = true;
+        }
+        
+        // Start clock properly
+        updateClock();
+        if (!window.clockInterval) {
+            window.clockInterval = setInterval(updateClock, 500);
         }
     }, 600);
     resetIdle();
@@ -1984,8 +2023,28 @@ function updateClock() {
     if(hDay) hDay.innerText = dName;
     if(lDat) lDat.innerText = dNum + ' ' + mArr[n.getMonth()] + ', ' + yr + '.';
     if(lTim) lTim.innerText = '- ' + hrs + ':' + min + ' -';
+    
+    updateDockTime();   // ← Add this line
 }
-setInterval(updateClock, 1000);
+
+function updateDockTime() {
+    let n = new Date();
+    
+    let hrs = n.getHours() % 12 || 12;
+    let ampm = n.getHours() >= 12 ? 'PM' : 'AM';
+    let min = n.getMinutes().toString().padStart(2, '0');
+    let sec = n.getSeconds().toString().padStart(2, '0');
+    
+    let month = (n.getMonth() + 1).toString().padStart(2, '0');
+    let day = n.getDate().toString().padStart(2, '0');
+    let year = n.getFullYear();
+    
+    const timeMain = document.getElementById('dock-time-main');
+    const dateSmall = document.getElementById('dock-date-small');
+    
+    if(timeMain) timeMain.textContent = `${hrs}:${min}:${sec} ${ampm}`;
+    if(dateSmall) dateSmall.textContent = `${month}/${day}/${year}`;
+}
 
 var idleTime = 0;
 function resetIdle() { idleTime = 0; }
