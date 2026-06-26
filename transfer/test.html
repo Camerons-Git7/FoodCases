@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+    <title>Block Blast Puzzle</title>
+    
+    <link rel="shortcut icon" href="https://cdn.jsdelivr.net/gh/genizy/bl/TemplateData/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/genizy/bl/TemplateData/style.css">
+    <link rel="manifest" href="https://cdn.jsdelivr.net/gh/genizy/bl/manifest.webmanifest">
+
+    <style>
+        * { margin: 0; padding: 0; }
+        body {
+            background: #000;
+            overflow: hidden;
+            touch-action: none;
+            height: 100vh;
+            width: 100vw;
+        }
+        #unity-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        #unity-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #unity-loading-bar {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            text-align: center;
+            color: white;
+        }
+        #unity-progress-bar-empty {
+            background: #333;
+            width: 300px;
+            height: 20px;
+            margin: 10px auto;
+        }
+        #unity-progress-bar-full {
+            background: #4CAF50;
+            height: 100%;
+            width: 0%;
+        }
+    </style>
+</head>
+<body>
+    <div id="unity-container">
+        <canvas id="unity-canvas" tabindex="-1"></canvas>
+        
+        <div id="unity-loading-bar">
+            <div id="unity-logo"></div>
+            <div id="unity-progress-bar-empty">
+                <div id="unity-progress-bar-full"></div>
+            </div>
+            <div id="loading-text">Loading...</div>
+        </div>
+    </div>
+
+    <script>
+        // Basic error logging
+        window.addEventListener('error', (e) => {
+            console.error('Global error:', e.message, e.filename, e.lineno);
+        });
+
+        const canvas = document.querySelector("#unity-canvas");
+        const loadingBar = document.querySelector("#unity-loading-bar");
+        const progressBar = document.querySelector("#unity-progress-bar-full");
+        const loadingText = document.querySelector("#loading-text");
+
+        function showError(msg) {
+            loadingText.innerHTML = `<span style="color:red;">${msg}</span>`;
+            console.error(msg);
+        }
+
+        const buildUrl = "https://cdn.jsdelivr.net/gh/genizy/bl/Build";
+        
+        const config = {
+            dataUrl: buildUrl + "/BlockBlast1.1-8.data.unityweb",
+            frameworkUrl: buildUrl + "/BlockBlast1.1-8.framework.js.unityweb",
+            codeUrl: buildUrl + "/BlockBlast1.1-8.wasm.unityweb",
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "reun",
+            productName: "Block Blast Puzzle",
+            productVersion: "1.1",
+        };
+
+        // Load Unity
+        async function loadGame() {
+            loadingBar.style.display = "block";
+            
+            try {
+                const script = document.createElement("script");
+                script.src = buildUrl + "/BlockBlast1.1-8.loader.js";
+                
+                script.onload = async () => {
+                    try {
+                        const unityInstance = await createUnityInstance(canvas, config, (progress) => {
+                            progressBar.style.width = (100 * progress) + "%";
+                        });
+                        
+                        loadingBar.style.display = "none";
+                    } catch (err) {
+                        showError("Failed to start game: " + err.message);
+                    }
+                };
+                
+                script.onerror = () => showError("Could not load game files");
+                document.body.appendChild(script);
+                
+            } catch (err) {
+                showError("Error loading game");
+            }
+        }
+
+        // Start the game
+        window.addEventListener("load", loadGame);
+    </script>
+</body>
+</html>
