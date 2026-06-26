@@ -21,22 +21,19 @@ const error = document.getElementById("sj-error");
  */
 const errorCode = document.getElementById("sj-error-code");
 
-// Base path for subfolder support (automatically detects current folder)
-const basePath = window.location.pathname.replace(/\/[^/]*$/, '') + '/';
-
 const { ScramjetController } = $scramjetLoadController();
 
 const scramjet = new ScramjetController({
     files: {
-        wasm: basePath + "scram/scramjet.wasm.wasm",
-        all: basePath + "scram/scramjet.all.js",
-        sync: basePath + "scram/scramjet.sync.js",
+        wasm: "scram/scramjet.wasm.wasm",
+        all: "scram/scramjet.all.js",
+        sync: "scram/scramjet.sync.js",
     },
 });
 
 scramjet.init();
 
-const connection = new BareMux.BareMuxConnection(basePath + "baremux/worker.js");
+const connection = new BareMux.BareMuxConnection("baremux/worker.js");
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -52,17 +49,9 @@ form.addEventListener("submit", async (event) => {
 
     const url = search(address.value, searchEngine.value);
 
-    // Dynamic wisp URL based on current folder
-    let wispUrl = 
-        (location.protocol === "https:" ? "wss" : "ws") +
-        "://" + location.host + 
-        basePath + "wisp/";
-
-    if ((await connection.getTransport()) !== basePath + "libcurl/index.mjs") {
-        await connection.setTransport(basePath + "libcurl/index.mjs", [
-            { websocket: wispUrl },
-        ]);
-    }
+    // === WISP DISABLED ===
+    // We set the transport without any Wisp configuration
+    await connection.setTransport("libcurl/index.mjs");
 
     const frame = scramjet.createFrame();
     frame.frame.id = "sj-frame";
@@ -70,7 +59,7 @@ form.addEventListener("submit", async (event) => {
     frame.go(url);
 });
 
-// Auto-submit support
+// Auto URL support
 const params = new URLSearchParams(window.location.search);
 const autoUrl = params.get("url");
 if (autoUrl) {
