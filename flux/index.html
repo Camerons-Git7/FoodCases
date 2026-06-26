@@ -1,96 +1,94 @@
-
 <!DOCTYPE html>
 <html>
 <head>
+  <!-- Google tag -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HJ3Y1WQHM3"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-HJ3Y1WQHM3');
+  </script>
 
-<!-- Google tag -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-HJ3Y1WQHM3"></script>
-<script>
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-HJ3Y1WQHM3');
-</script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7990685115274766"
+    crossorigin="anonymous"></script>
 
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7990685115274766"
-crossorigin="anonymous"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="shortcut icon" href="favicon.ico" />
+  <title>Flux</title>
+  <link rel="stylesheet" href="index.css">
 
-<link rel="shortcut icon" href="favicon.ico" />
-<title>Flux</title>
-<link rel="stylesheet" href="index.css">
+  <style>
+    body{
+      margin:0;
+      height:100vh;
+      overflow:hidden;
+      font-family:'Segoe UI',sans-serif;
+      z-index: 9;
+    }
 
-<style>
-body{
-margin:0;
-height:100vh;
-overflow:hidden;
-font-family:'Segoe UI',sans-serif;
-z-index: 9;
-}
+    #particles-js{
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      z-index:-1;
+    }
 
-#particles-js{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-z-index:-1;
-}
+    .bottom-bar{
+      position:fixed;
+      bottom:20px;
+      left:50%;
+      transform:translateX(-50%);
+      background:rgba(230, 210, 34, 0.897);
+      backdrop-filter:blur(15px);
+      border-radius:30px;
+      padding:12px 30px;
+      display:flex;
+      gap:35px;
+      align-items:center;
+      box-shadow:0 0 25px rgba(255, 187, 0, 0.5);
+      z-index:9999;
+    }
 
-.bottom-bar{
-position:fixed;
-bottom:20px;
-left:50%;
-transform:translateX(-50%);
-background:rgba(230, 210, 34, 0.897);
-backdrop-filter:blur(15px);
-border-radius:30px;
-padding:12px 30px;
-display:flex;
-gap:35px;
-align-items:center;
-box-shadow:0 0 25px rgba(255, 187, 0, 0.5);
-z-index:9999;
-}
+    .bottom-bar button{
+      all:unset; 
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+    }
 
-.bottom-bar button{
-all:unset; 
-display:flex;
-align-items:center;
-justify-content:center;
-cursor:pointer;
-}
+    .bottom-bar img{
+      width:26px;
+      height:26px;
+      opacity:0.9;
+      transition:0.25s;
+      background:transparent;
+      filter: drop-shadow(0 0 4px rgba(255,255,255,0.2));
+    }
 
-.bottom-bar img{
-width:26px;
-height:26px;
-opacity:0.9;
-transition:0.25s;
-background:transparent;
-filter: drop-shadow(0 0 4px rgba(255,255,255,0.2));
-}
+    .bottom-bar button:hover img{
+      opacity:1;
+      transform:scale(1.2);
+      filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));
+    }
 
-.bottom-bar button:hover img{
-opacity:1;
-transform:scale(1.2);
-filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));
-}
+    .content-area{
+      width:100%;
+      height:100vh;
+    }
 
-.content-area{
-width:100%;
-height:100vh;
-}
-
-.content-area iframe{
-width:100%;
-height:100%;
-border:none;
-}
-</style>
-<script src="https://pl29046809.profitablecpmratenetwork.com/14/33/1c/14331ca261ae4e4ad2cabdbede9fb119.js"></script>
+    .content-area iframe{
+      width:100%;
+      height:100%;
+      border:none;
+    }
+  </style>
+  <script src="https://pl29046809.profitablecpmratenetwork.com/14/33/1c/14331ca261ae4e4ad2cabdbede9fb119.js"></script>
 </head>
 
 <!-- particles.js container -->
@@ -101,65 +99,61 @@ border:none;
 <script src="https://threejs.org/examples/js/libs/stats.min.js"></script>
 
 <body>
+  <main class="content-area">
+    <iframe src="proxy.html"></iframe>
+  </main>
 
-<main class="content-area">
-<iframe src="proxy.html"></iframe>
-</main>
+  <div class="bottom-bar">
+    <button onclick="location.href='index.html'">
+      <img src="icons/home.svg">
+    </button>
 
-<div class="bottom-bar">
+    <button onclick="location.href='games/index.html'">
+      <img src="icons/games.svg">
+    </button>
 
-<button onclick="location.href='index.html'">
-<img src="icons/home.svg">
-</button>
+    <button onclick="location.href='apps/index.html'">
+      <img src="icons/apps.svg">
+    </button>
 
-<button onclick="location.href='games/index.html'">
-<img src="icons/games.svg">
-</button>
+    <button onclick="location.href='godgames/index.html'">
+      <img src="icons/specials.svg">
+    </button>
 
-<button onclick="location.href='apps/index.html'">
-<img src="icons/apps.svg">
-</button>
-
-<button onclick="location.href='godgames/index.html'">
-<img src="icons/specials.svg">
-</button>
-
-<button onclick="location.href='settings/index.html'">
-<img src="icons/settings.svg">
-</button>
-
-</div>
-
+    <button onclick="location.href='settings/index.html'">
+      <img src="icons/settings.svg">
+    </button>
+  </div>
 </body>
 
 <script>
-particlesJS("particles-js",
-{"particles":{"number":{"value":80,"density":{"enable":true,"value_area":800}},"color":{"value":"#ffd100"},
-"shape":{"type":"circle","stroke":{"width":0,"color":"#000000"},
-"polygon":{"nb_sides":5},"image":{"src":"img/github.svg","width":100,"height":100}},
-"opacity":{"value":0.5,"random":false,"anim":{"enable":false,"speed":1,"opacity_min":0.1,"sync":false}},
-"size":{"value":3,"random":true,"anim":{"enable":false,"speed":40,"size_min":0.1,"sync":false}},
-"line_linked":{"enable":true,"distance":150,"color":"#ffffff","opacity":0.4,"width":1},
-"move":{"enable":true,"speed":6,"direction":"none","random":false,"straight":false,"out_mode":"out","bounce":false}},
-"interactivity":{"detect_on":"canvas","events":{"onhover":{"enable":true,"mode":"grab"},
-"onclick":{"enable":true,"mode":"push"},"resize":true},
-"modes":{"grab":{"distance":400,"line_linked":{"opacity":1}},
-"push":{"particles_nb":4}}},
-"retina_detect":true});
+  particlesJS("particles-js", {
+    "particles": {
+      "number": {"value":80,"density":{"enable":true,"value_area":800}},
+      "color":{"value":"#ffd100"},
+      "shape":{"type":"circle","stroke":{"width":0,"color":"#000000"},"polygon":{"nb_sides":5},"image":{"src":"img/github.svg","width":100,"height":100}},
+      "opacity":{"value":0.5,"random":false,"anim":{"enable":false,"speed":1,"opacity_min":0.1,"sync":false}},
+      "size":{"value":3,"random":true,"anim":{"enable":false,"speed":40,"size_min":0.1,"sync":false}},
+      "line_linked":{"enable":true,"distance":150,"color":"#ffffff","opacity":0.4,"width":1},
+      "move":{"enable":true,"speed":6,"direction":"none","random":false,"straight":false,"out_mode":"out","bounce":false}
+    },
+    "interactivity":{"detect_on":"canvas","events":{"onhover":{"enable":true,"mode":"grab"},"onclick":{"enable":true,"mode":"push"},"resize":true},
+    "modes":{"grab":{"distance":400,"line_linked":{"opacity":1}},"push":{"particles_nb":4}}},
+    "retina_detect":true
+  });
 
-var stats = new Stats();
-stats.setMode(0);
-stats.domElement.style.position = 'absolute';
-stats.domElement.style.left = '0px';
-stats.domElement.style.top = '0px';
-document.body.appendChild(stats.domElement);
+  var stats = new Stats();
+  stats.setMode(0);
+  stats.domElement.style.position = 'absolute';
+  stats.domElement.style.left = '0px';
+  stats.domElement.style.top = '0px';
+  document.body.appendChild(stats.domElement);
 
-function update() {
-stats.begin();
-stats.end();
-requestAnimationFrame(update);
-}
-requestAnimationFrame(update);
+  function update() {
+    stats.begin();
+    stats.end();
+    requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
 </script>
-
 </html>
