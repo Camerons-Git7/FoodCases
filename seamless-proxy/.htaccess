@@ -1,6 +1,15 @@
+AddType text/html .html
 AddType text/javascript .js
-ForceType text/javascript
+AddType text/javascript .mjs
+
+<Files "index.html">
+    ForceType text/html
+</Files>
 
 <Files "sw.js">
+    ForceType text/javascript
+</Files>
+
+<Files "proxy.js">
     ForceType text/javascript
 </Files>
