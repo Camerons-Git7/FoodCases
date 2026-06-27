@@ -1,4 +1,0 @@
-AddType text/javascript .js
-<Files "sw.js">
-    ForceType text/javascript
-</Files>
