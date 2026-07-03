@@ -946,22 +946,17 @@
       margin-bottom: 20px;
     }
 
-    /* 渐变圆形（logo 圆） */
-    .circle {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background: linear-gradient(225deg,
-          #ffcd85 0%,
-          #ffb07c 25%,
-          #ff8fa3 40%,
-          #8e44ad 100%);
-      /*-webkit-mask: radial-gradient(farthest-side, black 90%, transparent 100%);*/
-      /*-webkit-mask-composite: destination-in;*/
-      mask-composite: intersect;
-      position: relative;
-      z-index: 1;
-    }
+/* 渐变圆形（logo 圆） */
+.circle {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: url('https://i.ibb.co/FGzH1jK/Seamless-Cloud.png') center/contain no-repeat;
+  background-color: transparent;
+  mask-composite: intersect;
+  position: relative;
+  z-index: 1;
+}
 
     /* 云朵 */
     .cloud {
@@ -1459,7 +1454,7 @@
     </div>
     <div id="loading" class="loading" v-if="showLoadingProgress < 100">
       <div class="loader">
-        <div class="circle"></div>
+        <div class="circle" style="background: url('https://i.ibb.co/FGzH1jK/Seamless-Cloud.png') center/contain no-repeat; background-color: transparent;"></div>
         <div class="cloud cloud1"></div>
         <div class="cloud cloud2"></div>
       </div>
