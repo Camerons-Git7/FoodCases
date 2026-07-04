@@ -1,13 +1,12 @@
 name: Replace Favicon URL
 
 on:
-  workflow_dispatch:           # Recommended: run manually
+  workflow_dispatch:
   pull_request:
     branches: [ main, master ]
   push:
     branches: [ main, master ]
 
-# Grant necessary permissions
 permissions:
   contents: write
   pull-requests: write
@@ -19,20 +18,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Replace https://math.hws.edu/favicon.ico with /favicon.ico
         run: |
           echo "🔍 Searching and replacing favicon URL..."
-          
-          find . -type f \
-            ! -path '*/.git/*' \
-            ! -path '*/node_modules/*' \
-            ! -path '*/.venv/*' \
-            ! -path '*/.github/workflows/*' \   # Protect workflow files
-            -exec grep -l "https://math.hws.edu/favicon.ico" {} + \
-            | xargs sed -i 's|https://math.hws.edu/favicon.ico|/favicon.ico|g'
+
+          # Safer find + sed command
+          grep -rl "https://math.hws.edu/favicon.ico" . \
+            --exclude-dir=.git \
+            --exclude-dir=node_modules \
+            --exclude-dir=.venv \
+            --exclude-dir=.github/workflows \
+            --exclude="*.{png,jpg,jpeg,gif,ico,svg,woff,ttf,eot}" | \
+          xargs sed -i 's|https://math.hws.edu/favicon.ico|/favicon.ico|g'
 
           echo "✅ Replacement completed."
 
@@ -41,10 +39,10 @@ jobs:
         run: |
           if git diff --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "No changes detected."
+            echo "No changes found."
           else
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Changes detected."
+            echo "Changes were made."
           fi
 
       - name: Commit and push changes
