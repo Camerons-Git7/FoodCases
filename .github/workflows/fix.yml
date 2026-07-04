@@ -1,0 +1,60 @@
+name: Fix Melon Subdirectory Paths
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'melon/**'
+  workflow_dispatch:
+
+jobs:
+  fix-paths:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # For proper git history if needed
+
+      - name: Update file paths for melon subdirectory
+        run: |
+          cd melon
+          
+          echo "Updating paths in index.html and related files..."
+          
+          # Make paths relative or prefixed correctly for /melon/ subdir
+          # 1. Fix dataFile absolute path (remove leading /)
+          sed -i 's|var dataFile = "/|var dataFile = "|g' index.html
+          
+          # 2. Update buildUrl if needed (it's already relative, but ensure consistency)
+          # buildUrl = "Build"; is fine, but confirm other references
+          
+          # 3. Make sure all asset paths are relative (no leading / except for external)
+          # Replace any absolute paths starting with / that point to local assets
+          find . -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" \) -exec sed -i 's|href="/|href="|g' {} +
+          find . -type f \( -name "*.html" -o -name "*.js" -o -name "*.css" \) -exec sed -i 's|src="/|src="|g' {} +
+          
+          # Specific fixes for Unity build
+          sed -i 's|dataUrl: buildUrl + dataFile|dataUrl: buildUrl + dataFile|g' index.html  # Usually fine
+          
+          # Ensure Modules, TemplateData, FileBrowser, Build paths are relative
+          # They already are in most places ("Modules/...", "TemplateData/..."), which should work when served from /melon/
+          
+          echo "Path fixes applied."
+          
+          # Show changes
+          git diff --name-only
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --quiet; then
+            echo "No changes to commit."
+          else
+            git add melon/
+            git commit -m "fix: update melon paths for subdirectory deployment"
+            git push
+          fi
