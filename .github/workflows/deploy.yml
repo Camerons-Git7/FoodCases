@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+       
       - name: Clear sync state (Force Full Sync)
         if: github.event.inputs.force_full_sync == 'true'
         run: |
@@ -33,6 +33,15 @@ jobs:
           echo "Sync state cleared. All files will be re-uploaded."
 
       # ─── FIRST WEBSITE ─────────────────────────────
+      - name: Replace .ico with .png in desktop/index.html for Site 1 deploy
+        run: |
+          if [ -f "desktop/index.html" ]; then
+            sed -i 's/\.ico/\.png/g' desktop/index.html || true
+            echo "Replacement completed for Site 1 (or skipped if no changes)"
+          else
+            echo "desktop/index.html not found, skipping replacement"
+          fi
+
       - name: Deploy to InfinityFree Site 1
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -66,6 +75,15 @@ jobs:
             ! -name '.ftp-sync-state-1.json' \
             ! -name '.ftp-sync-state-3.json' \
             -exec sed -i 's/menist/seamless-os/g' {} +
+
+      - name: Replace .ico with .png in desktop/index.html for Site 3 deploy
+        run: |
+          if [ -f "desktop/index.html" ]; then
+            sed -i 's/\.ico/\.png/g' desktop/index.html || true
+            echo "Replacement completed for Site 3 (or skipped if no changes)"
+          else
+            echo "desktop/index.html not found, skipping replacement"
+          fi
 
       - name: Deploy to InfinityFree Site 3
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
