@@ -72,7 +72,7 @@
         /* Continue Watching */
         .continue-section { margin-bottom: 40px; }
         .section-title { font-size: 1.4rem; font-weight: 600; margin-bottom: 16px; padding: 0 4px; }
-       
+      
         .continue-grid {
             display: flex;
             gap: 16px;
@@ -139,7 +139,7 @@
         }
         main { max-width: 1400px; margin: 30px auto; padding: 0 20px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
-      
+     
         .card {
             background: linear-gradient(180deg, var(--card), #0e0e0e);
             border: 1px solid var(--border);
@@ -243,11 +243,11 @@
         }
         .modal-btn:hover { background: rgba(0, 0, 0, 0.2); }
         .close { font-weight: 700; font-size: 1.6rem; }
-        .modal iframe { 
-            width: 100%; 
-            height: 560px; 
-            border: none; 
-            background: #000; 
+        .modal iframe {
+            width: 100%;
+            height: 560px;
+            border: none;
+            background: #000;
         }
     </style>
 </head>
@@ -284,13 +284,13 @@
                     <button class="modal-btn close" onclick="closeModal()" title="Close">✕</button>
                 </div>
             </div>
-            <iframe id="player" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals"></iframe>
+            <iframe id="player"></iframe>
         </div>
     </div>
     <script>
         const IMG = "https://image.tmdb.org/t/p/w500";
         const API_KEY = "2713804610e1e236b1cf44bfac3a7776";
-  
+ 
         const grid = document.getElementById('grid');
         const modal = document.getElementById('modal');
         const player = document.getElementById('player');
@@ -302,7 +302,6 @@
         const continueSection = document.getElementById('continueSection');
         const continueGrid = document.getElementById('continueGrid');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
-
         let currentContent = null;
         let mode = 'movie';
         let currentPage = 1;
@@ -311,13 +310,11 @@
         let hasMore = true;
         let currentSeasons = [];
         let currentEpisodes = [];
-
         const FALLBACK_MOVIES = [
             { id: 157336, title: 'Interstellar', poster_path: '/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg', vote_average: 8.4 },
             { id: 155, title: 'The Dark Knight', poster_path: '/qJ2tW6WMUDux911r6m7haRef0WH.jpg', vote_average: 8.5 },
             { id: 27205, title: 'Inception', poster_path: '/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg', vote_average: 8.3 }
         ];
-
         function getContinueWatching() { return JSON.parse(localStorage.getItem('continueWatching') || '[]'); }
         function saveContinueWatching(item) {
             let list = getContinueWatching();
@@ -341,12 +338,12 @@
             }
             continueSection.style.display = 'block';
             continueGrid.innerHTML = '';
-         
+        
             list.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'continue-card';
                 const progressText = item.type === 'tv' ? `S${item.season} E${item.episode}` : 'Movie';
-             
+            
                 card.innerHTML = `
                     <img src="${IMG + item.poster_path}" alt="${item.title}">
                     <button class="remove-btn" title="Remove">
@@ -357,23 +354,22 @@
                         <div class="continue-progress">${progressText}</div>
                     </div>
                 `;
-              
+             
                 card.addEventListener('click', (e) => {
                     if (!e.target.closest('.remove-btn')) {
                         openContent(item, true);
                     }
                 });
-              
+             
                 const removeBtn = card.querySelector('.remove-btn');
                 removeBtn.addEventListener('click', (e) => {
                     e.stopImmediatePropagation();
                     removeFromContinue(item.id, item.type);
                 });
-              
+             
                 continueGrid.appendChild(card);
             });
         }
-
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 player.requestFullscreen().catch(() => {});
@@ -382,16 +378,15 @@
             }
         }
         fullscreenBtn.addEventListener('click', toggleFullscreen);
-
         async function openContent(content, fromContinue = false) {
             currentContent = content;
             modal.classList.add('open');
-         
+        
             const isTV = content.type === 'tv' ||
                         content.media_type === 'tv' ||
                         !!content.name ||
                         (content.season !== undefined && content.episode !== undefined);
-          
+         
             if (!isTV) {
                 saveContinueWatching({
                     id: content.id,
@@ -401,7 +396,7 @@
                     timestamp: Date.now()
                 });
             }
-         
+        
             if (isTV) {
                 episodeSelector.style.display = 'flex';
                 await fetchTVDetails(content.id);
@@ -416,10 +411,9 @@
                 }
             } else {
                 episodeSelector.style.display = 'none';
-                loadVidcodinPlayer();
+                loadVidgodPlayer();
             }
         }
-
         async function fetchTVDetails(tvId) {
             try {
                 const res = await fetch(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${API_KEY}`);
@@ -431,7 +425,6 @@
                 populateSeasonSelect();
             }
         }
-
         function populateSeasonSelect() {
             seasonSelect.innerHTML = '';
             currentSeasons.forEach(s => {
@@ -443,7 +436,6 @@
             seasonSelect.onchange = () => loadSeasonEpisodes(parseInt(seasonSelect.value));
             if (currentSeasons.length) loadSeasonEpisodes(currentSeasons[0].season_number);
         }
-
         async function loadSeasonEpisodes(seasonNumber) {
             try {
                 const res = await fetch(`https://api.themoviedb.org/3/tv/${currentContent.id}/season/${seasonNumber}?api_key=${API_KEY}`);
@@ -460,10 +452,9 @@
                 if (currentEpisodes.length) updateEpisode();
             } catch(e) { console.warn(e); }
         }
-
         function updateEpisode() {
             const s = parseInt(seasonSelect.value), e = parseInt(episodeSelect.value);
-            loadVidcodinPlayer(s, e);
+            loadVidgodPlayer(s, e);
             saveContinueWatching({
                 id: currentContent.id,
                 type: 'tv',
@@ -474,31 +465,26 @@
                 timestamp: Date.now()
             });
         }
-
-        function loadVidcodinPlayer(season=1, episode=1) {
+        function loadVidgodPlayer(season=1, episode=1) {
             const isTV = currentContent.type === 'tv' ||
                         currentContent.media_type === 'tv' ||
                         !!currentContent.name ||
                         (currentContent.season !== undefined && currentContent.episode !== undefined);
-         
+        
             let embedUrl;
             if (!isTV) {
-                // Vidcodin movie embed (assumed pattern based on similar services)
-                embedUrl = `https://vidcodin.net/embed/movie/${currentContent.id}`;
+                embedUrl = `https://vidgod.net/movie/${currentContent.id}`;
             } else {
-                // Vidcodin TV embed
-                embedUrl = `https://vidcodin.net/embed/tv/${currentContent.id}/${season}/${episode}`;
+                embedUrl = `https://vidgod.net/tv/${currentContent.id}/${season}/${episode}`;
             }
             player.src = embedUrl;
         }
-
         function closeModal() {
             modal.classList.remove('open');
             player.src = '';
             episodeSelector.style.display = 'none';
             if (document.fullscreenElement) document.exitFullscreen();
         }
-
         function renderContent(list) {
             grid.innerHTML = '';
             list.forEach(m => {
@@ -510,7 +496,6 @@
                 grid.appendChild(d);
             });
         }
-
         async function loadPopular(loadMore = false) {
             if (isLoading || !hasMore) return;
             isLoading = true;
@@ -535,7 +520,6 @@
                 isLoading = false;
             }
         }
-
         function setupInfiniteScroll() {
             window.addEventListener('scroll', () => {
                 if (isLoading || !hasMore || searchInput.value.trim().length >= 2) return;
@@ -544,7 +528,6 @@
                 }
             });
         }
-
         searchInput.addEventListener('input', async () => {
             const query = searchInput.value.trim();
             if (query.length < 2) {
@@ -559,7 +542,6 @@
                 renderContent(currentList);
             } catch (e) { console.warn(e); }
         });
-
         const moviesBtn = document.getElementById('moviesBtn');
         const tvBtn = document.getElementById('tvBtn');
         function updateButtons() {
@@ -585,7 +567,6 @@
             updateButtons();
             loadPopular(false);
         });
-
         updateButtons();
         loadPopular(false);
         renderContinueWatching();
