@@ -1,0 +1,2009 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="Figure Cloud is a simple and clean place to play your favorite games directly in your browser.">
+<link rel="icon" type="image/jpeg" href="Cloud.jpg">
+<title>Figure Cloud</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Great+Vibes&display=swap');
+
+:root {
+  --bg: #050505;
+  --glass: rgba(18, 18, 22, 0.75);
+  --glass-hover: rgba(30, 30, 36, 0.85);
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #f5f5f7;
+  --muted: #888890; 
+  --accent: #ffffff;
+}
+
+body {
+  margin: 0; padding: 0; background: var(--bg); color: var(--text);
+  font-family: 'Inter', sans-serif; overflow-x: hidden;
+  -webkit-font-smoothing: antialiased; user-select: none;
+  height: 100vh; display: flex; flex-direction: column;
+  contain: content;
+}
+
+::-webkit-scrollbar { width: 0; height: 0; }
+
+.top-notch-container {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(0);
+  z-index: 1000;
+  display: flex;
+  gap: 10px;
+  background: rgba(10, 10, 12, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 40px;
+  padding: 5px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.top-notch {
+  background: transparent;
+  border-radius: 30px;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.top-notch:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.top-notch.active-tab {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.top-notch img { width: 18px; height: 18px; opacity: 0.95; object-fit: contain; }
+.top-notch span { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #fff;}
+
+#new-boot {
+  position: fixed; inset: 0; background: #000; z-index: 9999999;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  transition: opacity 0.6s ease;
+  will-change: opacity;
+}
+
+.fig-title {
+  font-size: 44px; font-weight: 800; color: #fff; text-transform: uppercase;
+  letter-spacing: 20px; margin-left: 20px; opacity: 0;
+  animation: txtIn 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.fig-line {
+  width: 0; height: 2px; background: #fff; margin-top: 15px; opacity: 0;
+  box-shadow: 0 0 10px #fff; animation: lineGrow 1.5s ease 0.5s forwards;
+}
+
+@keyframes txtIn {
+  0% { letter-spacing: 0px; opacity: 0; filter: blur(10px); transform:scale(0.9);}
+  100% { letter-spacing: 12px; opacity: 1; filter: blur(0px); transform:scale(1);}
+}
+
+@keyframes lineGrow {
+  0% { width: 0; opacity: 0; }
+  10% { opacity: 1; }
+  100% { width: 180px; opacity: 1; }
+}
+
+#bg-amb {
+  position: fixed; inset: 0; object-fit: cover; opacity: 0.05; 
+  filter: blur(40px); z-index: -1; 
+  transition: opacity 1s ease; width: 100vw; height: 100vh;
+  pointer-events: none;
+  transform: translateZ(0);
+}
+
+#app-wrap {
+  flex: 1; overflow-y: auto; padding: 110px 105px 140px 50px; scroll-behavior: smooth;
+  transition: padding-right 0.3s ease;
+  contain: layout style;
+}
+
+#app-wrap.sidebar-expanded {
+  padding-right: 340px;
+}
+
+#cine-content, .grid-v, .settings-box {
+  max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box;
+}
+
+.tab-view { display: none; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.tab-view.active { display: block; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+.sec-head {
+  font-size: 22px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 20px; margin-top: 50px;
+  display: flex; align-items: center; gap: 12px; color: #fff; max-width: 1400px; margin-left: auto; margin-right: auto;
+}
+.sec-head::before { content: ''; width: 4px; height: 18px; background: #fff; border-radius: 4px; }
+
+.lib-search-wrap { margin-bottom: 30px; position: relative; max-width: 1400px; margin-left: auto; margin-right: auto;}
+.lib-search-wrap input {
+  width: 100%; padding: 18px 24px 18px 50px; border-radius: 16px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  color: #fff; font-size: 15px; outline: none; transition: 0.2s;
+  font-family: 'Inter', sans-serif; box-sizing: border-box;
+}
+.lib-search-wrap input:focus { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
+.lib-search-wrap svg { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; stroke: #aaa; }
+
+.marquee-wrap { width: 100%; overflow: hidden; position: relative; padding: 10px 0; border-radius: 16px; max-width: 1400px; margin: 0 auto;}
+.marquee-track { display: flex; gap: 20px; width: max-content; animation: slideLeft 45s linear infinite; will-change: transform; }
+.marquee-track:hover { animation-play-state: paused; }
+@keyframes slideLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+.hero-cont {
+  width: 100%; height: 460px; border-radius: 20px; overflow: hidden; position: relative;
+  cursor: pointer; border: 1px solid var(--border);
+  transition: transform 0.3s ease, border-color 0.3s ease;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5); max-width: 1400px; margin: 0 auto;
+  will-change: transform;
+}
+
+.hero-cont:hover {
+  transform: translateY(-4px); border-color: rgba(255,255,255,0.2);
+}
+
+.h-img { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.4s ease, transform 0.5s ease; opacity: 0.85;}
+.hero-cont:hover .h-img { transform: scale(1.02); opacity: 1;}
+
+.h-over {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.2) 60%, transparent 100%);
+  display: flex; flex-direction: column; justify-content: flex-end; padding: 50px;
+}
+
+.h-tag {
+  background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.2);
+  padding: 8px 18px; font-size: 11px; font-weight: 700; border-radius: 100px; letter-spacing: 1px;
+  margin-bottom: 16px; align-self: flex-start; text-transform: uppercase;
+}
+
+.h-title { font-size: 52px; font-weight: 800; margin: 0 0 10px 0; letter-spacing: -2px; }
+.h-stat { font-size: 14px; color: #aaa; display: flex; gap: 20px; font-weight: 500;}
+
+.grid-h { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; max-width: 1400px; margin: 0 auto; }
+.grid-v { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px; }
+
+.c-h {
+  position: relative; aspect-ratio: 16/9; border-radius: 14px; overflow: hidden; cursor: pointer;
+  background: #080808; border: 1px solid var(--border); flex-shrink: 0;
+  transition: transform 0.3s ease, border-color 0.3s ease; width: 300px;
+  will-change: transform;
+}
+.grid-h .c-h { width: 100%; }
+
+.c-v {
+  position: relative; aspect-ratio: 3/4; border-radius: 12px; overflow: hidden; cursor: pointer;
+  background: #080808; border: 1px solid var(--border);
+  transition: transform 0.3s ease, border-color 0.3s ease;
+  will-change: transform;
+}
+
+.c-h img.c-h-banner, .c-v img.c-v-banner { width: 100%; height: 100%; object-fit: cover; opacity: 0.7; transition: opacity 0.3s, transform 0.3s; }
+.c-h:hover img.c-h-banner, .c-v:hover img.c-v-banner { opacity: 0.9; transform: scale(1.03); }
+
+.c-icon-container {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.c-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.c-h:hover .c-icon-container, .c-v:hover .c-icon-container {
+  transform: scale(1.05);
+}
+
+.c-inf {
+  position: absolute; bottom: 0; left: 0; width: 100%; padding: 40px 20px 20px; box-sizing: border-box;
+  background: linear-gradient(to top, rgba(0,0,0,0.95), transparent);
+  opacity: 0; transform: translateY(10px); transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 4;
+}
+.c-h:hover .c-inf, .c-v:hover .c-inf { opacity: 1; transform: translateY(0); }
+.c-inf h3 { font-size: 15px; font-weight: 600; margin: 0 0 4px 0; letter-spacing: -0.5px;}
+.c-inf span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 500;}
+
+.c-time-hover {
+  display: flex; align-items: center; gap: 6px; font-size: 10px; color: #aaa;
+  margin-top: 6px; font-weight: 600;
+}
+.c-time-hover svg { width: 12px; height: 12px; stroke: #aaa; }
+
+.sidebar {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 75px;
+  background: rgba(12, 12, 15, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+  will-change: width;
+}
+
+.sidebar.expanded {
+  width: 300px;
+}
+
+.sb-header {
+  padding: 20px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+#sb-toggle {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#sb-toggle:hover { background: rgba(255, 255, 255, 0.06); }
+#sb-toggle svg { width: 22px; height: 22px; }
+
+.sb-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 12px;
+}
+
+.sb-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.sb-nav-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sb-nav-item.active {
+  color: #000;
+  background: #fff;
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+}
+
+.sb-icon { width: 22px; height: 22px; flex-shrink: 0; }
+.sb-label {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar.expanded .sb-label {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.sb-history-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sb-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--muted);
+  margin-bottom: 12px;
+  padding-left: 14px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.sidebar.expanded .sb-section-title { opacity: 1; }
+
+.sb-history-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 20px;
+}
+
+.sb-hist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sb-hist-item:hover { background: rgba(255, 255, 255, 0.05); }
+
+.sb-hist-img {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sb-hist-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.sidebar.expanded .sb-hist-info { opacity: 1; }
+
+.sb-hist-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.sb-hist-time { font-size: 11px; color: var(--muted); }
+
+.sb-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(8, 8, 12, 0.4);
+}
+
+.sb-footer-row { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+
+.sb-clock-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sb-clock-wrap svg { width: 16px; height: 16px; stroke: var(--muted); }
+
+.sb-total-time-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  opacity: 0;
+  height: 0;
+  overflow: hidden;
+  transition: opacity 0.2s, height 0.2s;
+}
+
+.sidebar.expanded .sb-total-time-row { opacity: 1; height: auto; }
+
+.sb-total-lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.sb-total-val { font-size: 14px; font-weight: 700; color: #fff; }
+
+.sb-audio-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.sb-audio-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.04); }
+
+.sidebar:not(.expanded) #tk .tw-txt,
+.sidebar:not(.expanded) #tk .tw-btn { display: none !important; }
+.sidebar:not(.expanded) #tk { justify-content: center; padding: 8px 0; }
+
+#modal-ui {
+  position: fixed; inset: 0; background: var(--bg); z-index: 100000; display: none; opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1); overflow-y: auto; scroll-behavior: smooth;
+  will-change: opacity;
+}
+
+.m-bg {
+  position: absolute; top: 0; left: 0; width: 100%; height: 80vh;
+  object-fit: cover; opacity: 0.15; filter: blur(25px);
+  mask-image: linear-gradient(to bottom, black 10%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 10%, transparent 100%);
+}
+
+.m-close {
+  position: fixed; top: 20px; right: 25px; display:flex; align-items:center; z-index: 100001;
+}
+.m-close-btn {
+  width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.12);
+  border: 1px solid var(--border); display: flex; justify-content: center; align-items: center;
+  cursor: pointer; transition: 0.2s;
+}
+.m-close-btn:hover { background: #fff; transform: scale(1.05); }
+.m-close-btn:hover svg { stroke: #000; }
+
+.m-grid {
+  position: relative; z-index: 2; padding: 80px 60px; max-width: 1300px; margin: 0 auto;
+  display: flex; gap: 60px; align-items: flex-start;
+}
+
+.m-l { width: 320px; flex-shrink: 0; }
+.m-l img { width: 100%; border-radius: 16px; box-shadow: 0 30px 60px rgba(0,0,0,0.8); border: 1px solid var(--border); margin-bottom: 25px;}
+
+.m-play {
+  width: 100%; background: #fff; color: #000; border: none; padding: 18px 0; font-size: 15px; font-weight: 700;
+  border-radius: 12px; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 2px;
+  display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 25px;
+}
+.m-play:hover { background: #e0e0e0; transform: translateY(-2px); }
+
+.m-stats { background: rgba(20,20,20,0.5); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.m-rw { display: flex; justify-content: space-between; align-items: center; }
+.m-rw small { font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: 600; letter-spacing: 1px; }
+.m-rw span { font-size: 14px; font-weight: 500; color: #fff; }
+
+.m-r { flex: 1; padding-top: 10px;}
+.m-t { font-size: 60px; font-weight: 800; letter-spacing: -2px; margin: 0 0 10px 0; line-height: 1; }
+.m-d { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 500; margin-bottom: 30px; }
+
+.m-tgs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; }
+.m-tg { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 100px; font-size: 12px; font-weight: 500; color: #ccc; }
+
+.m-desc { font-size: 15px; line-height: 1.7; color: #aaa; margin-bottom: 40px; max-width: 800px; font-weight: 300; }
+
+.m-req { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; border-top: 1px solid var(--border); padding-top: 30px; }
+.m-rc h4 { font-size: 13px; color: #fff; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 16px 0; font-weight: 600;}
+.m-ri { margin-bottom: 12px; }
+.m-ri small { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; font-weight: 600; letter-spacing: 1px;}
+.m-ri span { display: block; font-size: 13px; color: #ccc; font-weight: 400; line-height: 1.4;}
+
+.popup-wrap {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  display: flex; justify-content: center; align-items: center; z-index: 99999999;
+  opacity: 0; visibility: hidden; transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.popup-wrap.show { opacity: 1; visibility: visible; }
+.popup-box {
+  background: rgba(18, 18, 22, 0.95); border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 35px; border-radius: 20px; text-align: center; max-width: 420px; width: 90%;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+  transform: scale(0.95); transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.popup-wrap.show .popup-box { transform: scale(1); }
+.popup-icon-container {
+  width: 56px; height: 56px; border-radius: 50%; background: rgba(255, 255, 255, 0.05);
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.popup-box h2 { margin: 0 0 10px 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px; color: #fff;}
+.popup-box p { color: #aaa; font-size: 14px; line-height: 1.5; margin: 0 0 20px 0; font-weight: 400; }
+.popup-btn-row { display: flex; gap: 10px; justify-content: center; }
+.popup-btn { 
+  padding: 12px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; font-size: 14px; transition: 0.2s; flex: 1;
+}
+.popup-btn.primary { background: #fff; color: #000; }
+.popup-btn.primary:disabled { background: #444; color: #888; cursor: not-allowed; }
+.popup-btn.secondary { background: rgba(255,255,255,0.1); color: #fff; }
+
+.settings-box {
+  background: var(--glass); border:1px solid var(--border); padding:30px; border-radius:20px;
+}
+
+.swatch-btn {
+  width: 46px; height: 46px; border-radius: 12px; cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.1); transition: 0.2s;
+}
+.swatch-btn:hover { transform: scale(1.08); }
+.swatch-btn.active { transform: scale(1.12); border-color: #fff; }
+
+.p-card {
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08);
+  padding: 14px; border-radius: 12px; text-align: center; cursor: pointer;
+  transition: 0.2s; min-width: 80px; display: flex; flex-direction: column; gap: 8px; align-items: center;
+}
+.p-card:hover { background: rgba(255,255,255,0.05); }
+.p-card-active { border-color: #fff; background: rgba(255,255,255,0.08); }
+.p-card span { font-size: 12px; font-weight: 600; color: #fff; }
+.p-card svg { stroke: #fff; opacity: 0.8; }
+
+.gp-focus { outline: 3px solid #fff !important; box-shadow: 0 0 20px #fff !important; border-radius: inherit; }
+
+.settings-audio-btn {
+  background: #0c0c0d;
+  color: #a1a1aa;
+  border: 1px solid #18181b;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.settings-audio-btn:hover {
+  background: #18181b;
+  color: #ffffff;
+}
+
+.hazard-stripe {
+  height: 12px;
+  background: repeating-linear-gradient(
+    -45deg,
+    #f1c40f,
+    #f1c40f 15px,
+    #111 15px,
+    #111 30px
+  );
+  border-radius: 4px;
+}
+
+.restricted-box {
+  background: rgba(18, 18, 22, 0.85);
+  border: 1px solid rgba(241, 196, 15, 0.3);
+  border-radius: 16px;
+  padding: 15px;
+  text-align: center;
+  max-width: 600px;
+  margin: 40px auto;
+}
+
+.restricted-content {
+  padding: 30px 20px;
+}
+
+.restricted-content h2 {
+  color: #f1c40f;
+  letter-spacing: 2px;
+  font-size: 20px;
+  margin: 15px 0 10px 0;
+  font-weight: 800;
+}
+
+.restricted-content p {
+  color: #aaa;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.game-mobl-bar {
+  display: none;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 9005;
+  gap: 10px;
+}
+
+.game-mobl-btn {
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#mobl-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 65px;
+  background: rgba(10, 10, 12, 0.92);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 10000;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  justify-content: space-around;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mobl-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #888890;
+  background: none;
+  border: none;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 10px;
+}
+
+.mobl-nav-btn.active {
+  color: #ffffff;
+}
+
+.mobl-nav-btn svg, .mobl-nav-btn img {
+  width: 20px;
+  height: 20px;
+}
+
+body.is-mobile-device #sidebar-nav {
+  display: none !important;
+}
+
+body.is-mobile-device #mobl-nav {
+  display: flex;
+}
+
+body.is-mobile-device .game-mobl-bar {
+  display: flex;
+}
+
+body.is-mobile-device #app-wrap {
+  padding: 80px 16px 100px 16px !important;
+}
+
+body.is-mobile-device .hero-cont {
+  height: 250px;
+  border-radius: 14px;
+}
+
+body.is-mobile-device .h-title {
+  font-size: 26px;
+  letter-spacing: -1px;
+}
+
+body.is-mobile-device .h-over {
+  padding: 20px;
+}
+
+body.is-mobile-device .sec-head {
+  font-size: 17px;
+  margin-top: 30px;
+  margin-bottom: 12px;
+}
+
+body.is-mobile-device .grid-h {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 10px;
+  gap: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.is-mobile-device .grid-h .c-h {
+  width: 240px;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  border-radius: 12px;
+}
+
+body.is-mobile-device .grid-v {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+body.is-mobile-device .c-v {
+  border-radius: 10px;
+}
+
+body.is-mobile-device .c-inf {
+  padding: 15px 10px 10px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+body.is-mobile-device .c-inf h3 {
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+body.is-mobile-device .c-inf span {
+  font-size: 9px;
+}
+
+body.is-mobile-device .m-grid {
+  flex-direction: column;
+  padding: 20px;
+  gap: 20px;
+  margin-top: 40px;
+}
+
+body.is-mobile-device .m-l {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+body.is-mobile-device .m-l img {
+  width: 130px;
+  height: 170px;
+  object-fit: cover;
+  margin-bottom: 15px;
+}
+
+body.is-mobile-device .m-r {
+  width: 100%;
+  padding-top: 0;
+  text-align: center;
+}
+
+body.is-mobile-device .m-t {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+body.is-mobile-device .m-d {
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+body.is-mobile-device .m-tgs {
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+body.is-mobile-device .m-desc {
+  font-size: 13px;
+  text-align: left;
+}
+
+body.is-mobile-device .m-req {
+  grid-template-columns: 1fr;
+  gap: 16px;
+  text-align: left;
+}
+
+body.is-mobile-device .m-close {
+  top: 15px;
+  right: 15px;
+}
+
+body.is-mobile-device .top-notch-container {
+  top: 10px;
+  padding: 4px;
+}
+
+body.is-mobile-device .top-notch {
+  padding: 5px 12px;
+}
+
+body.is-mobile-device .top-notch span {
+  font-size: 10px;
+}
+
+</style>
+</head>
+<body>
+
+<div class="top-notch-container">
+  <div class="top-notch active-tab" id="tn-main" onclick="tglV('h')">
+    <img src="Cloud.jpg" alt="Logo">
+    <span>Figure Cloud by F.S</span>
+  </div>
+  <div class="top-notch" id="n-game" onclick="tglV('g')" style="display: none;">
+    <span id="n-game-title" style="color: #fff;">Game</span>
+    <span onclick="clsGm(event)" style="margin-left: 8px; color: #ff4d4d; font-weight: bold; font-size: 16px;">x</span>
+  </div>
+</div>
+
+<div id="new-boot">
+  <div class="fig-title">FIGURE V2</div>
+  <div class="fig-line"></div>
+</div>
+
+<img src="" id="bg-amb">
+<canvas id="bg-particles" style="position:fixed; inset:0; pointer-events:none; z-index:-1;"></canvas>
+
+<div id="app-wrap">
+
+  <div id="v-cine" class="tab-view active">
+    <div id="error-fallback" style="display:none; text-align:center; padding:50px; color:#ff4d4d; font-weight:bold;">Failed to load game library.</div>
+    
+    <div id="cine-content">
+      <div class="sec-head" id="hc-head" style="margin-top:0;">Continue Playing</div>
+      <div class="hero-cont" id="hc-box" onclick="">
+        <img src="" id="hc-img" class="h-img">
+        <div class="h-over">
+          <div class="h-tag" id="hc-tag">RESUME</div>
+          <h1 class="h-title" id="hc-title">...</h1>
+          <div class="h-stat">
+            <span id="hc-time"></span>
+            <span id="hc-dev"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec-head">Games We Recommend</div>
+      <div class="marquee-wrap">
+        <div class="marquee-track" id="g-recom-track"></div>
+      </div>
+
+      <div class="sec-head">Quick Play Arcade</div>
+      <div class="grid-h" id="g-arcade"></div>
+
+      <div class="sec-head">Poppy Playtime Universe</div>
+      <div class="grid-h" id="g-poppy"></div>
+
+      <div class="sec-head">Action & Shooter</div>
+      <div class="grid-h" id="g-action"></div>
+
+      <div class="sec-head">Racing & Driving</div>
+      <div class="grid-h" id="g-race"></div>
+
+      <div class="sec-head">Puzzle & Strategy</div>
+      <div class="grid-h" id="g-puzzle"></div>
+
+      <div class="sec-head">Daily Picks</div>
+      <div class="grid-h" id="g-day"></div>
+
+      <div class="sec-head">Trending Now</div>
+      <div class="grid-h" id="g-trnd"></div>
+
+      <div class="sec-head">All Time Classics</div>
+      <div class="grid-h" id="g-classics"></div>
+    </div>
+  </div>
+
+  <div id="v-lib" class="tab-view">
+    <div class="sec-head" style="margin-top:0;">Complete Library</div>
+    <div class="lib-search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="lib-search" placeholder="Search games by name, tag, or genre..." onkeyup="onSearchKeyup()">
+    </div>
+    <div class="grid-v" id="g-lib"></div>
+  </div>
+
+  <div id="v-set" class="tab-view">
+    <div class="sec-head" style="margin-top:0;">Settings</div>
+    <div class="settings-box">
+      <h3 style="margin:0 0 15px 0; font-size:18px; color:#fff;">Themes</h3>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="swatch-btn btn-dark" style="background:#050505;" onclick="setTheme('dark')"></div>
+        <div class="swatch-btn btn-figure" style="background:#ff4d4d;" onclick="setTheme('figure')"></div>
+        <div class="swatch-btn btn-neon" style="background:#00d2ff;" onclick="setTheme('neon')"></div>
+        <div class="swatch-btn btn-forest" style="background:#05c46b;" onclick="setTheme('forest')"></div>
+        <div class="swatch-btn btn-sunset" style="background:#f53b57;" onclick="setTheme('sunset')"></div>
+        <div class="swatch-btn btn-amethyst" style="background:#a55eea;" onclick="setTheme('amethyst')"></div>
+        <div class="swatch-btn btn-gold" style="background:#f1c40f;" onclick="setTheme('gold')"></div>
+        <div class="swatch-btn btn-hacker" style="background:#0f0;" onclick="setTheme('hacker')"></div>
+        <div class="swatch-btn btn-ocean" style="background:#0abde3;" onclick="setTheme('ocean')"></div>
+        <div class="swatch-btn btn-lava" style="background:#ee5253;" onclick="setTheme('lava')"></div>
+        <div class="swatch-btn btn-cyberp" style="background:#D980FA;" onclick="setTheme('cyberp')"></div>
+        <div class="swatch-btn btn-ice" style="background:#c8d6e5;" onclick="setTheme('ice')"></div>
+        <div class="swatch-btn btn-rose" style="background:#f368e0;" onclick="setTheme('rose')"></div>
+        <div class="swatch-btn btn-mint" style="background:#1dd1a1;" onclick="setTheme('mint')"></div>
+        <div class="swatch-btn btn-crimson" style="background:#c23616;" onclick="setTheme('crimson')"></div>
+      </div>
+      
+      <h3 style="margin:35px 0 15px 0; font-size:18px; color:#fff;">Particles</h3>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="p-card card-none" onclick="setParticles('none')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+          <span>None</span>
+        </div>
+        <div class="p-card card-snow" onclick="setParticles('snow')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="12" x2="19" y2="19"></line><line x1="12" y1="12" x2="5" y2="5"></line><line x1="12" y1="12" x2="19" y2="5"></line><line x1="12" y1="12" x2="5" y2="19"></line></svg>
+          <span>Snow</span>
+        </div>
+        <div class="p-card card-rain" onclick="setParticles('rain')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="16" y1="13" x2="16" y2="21"></line><line x1="8" y1="13" x2="8" y2="21"></line><line x1="12" y1="15" x2="12" y2="23"></line><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path></svg>
+          <span>Rain</span>
+        </div>
+        <div class="p-card card-stars" onclick="setParticles('stars')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          <span>Stars</span>
+        </div>
+        <div class="p-card card-cyber" onclick="setParticles('cyber')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          <span>Cyber</span>
+        </div>
+        <div class="p-card card-matrix" onclick="setParticles('matrix')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 17l6-6-6-6"></path><path d="M12 19h8"></path></svg>
+          <span>Matrix</span>
+        </div>
+        <div class="p-card card-bubbles" onclick="setParticles('bubbles')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+          <span>Bubbles</span>
+        </div>
+        <div class="p-card card-fireflies" onclick="setParticles('fireflies')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path></svg>
+          <span>Fireflies</span>
+        </div>
+        <div class="p-card card-nexus" onclick="setParticles('nexus')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="6" cy="6" r="3"></circle><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="6" r="3"></circle><line x1="8" y1="8" x2="16" y2="16"></line><line x1="8" y1="16" x2="16" y2="8"></line></svg>
+          <span>Nexus</span>
+        </div>
+      </div>
+
+      <h3 style="margin:35px 0 15px 0; font-size:18px; color:#fff;">Audio & Controls</h3>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+        <button id="music-toggle-btn" class="settings-audio-btn" onclick="toggleBGM()">Mute Music</button>
+        <button class="settings-audio-btn" onclick="clearLocalHistoryData()">Clear Play History</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="v-log" class="tab-view">
+    <div class="sec-head" style="margin-top:0;">Account & Sync</div>
+    <div class="restricted-box">
+      <div class="hazard-stripe"></div>
+      <div class="restricted-content">
+        <div style="width:50px; height:50px; border-radius:50%; background:rgba(241,196,15,0.1); display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f1c40f" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        </div>
+        <h2>RESTRICTED AREA</h2>
+        <p>idk why I'm putting this here but there is going to be a login feature for better saving ;p</p>
+      </div>
+      <div class="hazard-stripe"></div>
+    </div>
+  </div>
+
+</div>
+
+<div id="sidebar-nav" class="sidebar">
+  <div class="sb-header">
+    <button id="sb-toggle" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <div class="sb-nav-list">
+    <div class="sb-nav-item active" id="b-cine" onclick="chgTab('cine')">
+      <img src="Cloud.jpg" class="sb-fig-img" style="width: 22px; height: 22px; border-radius: 6px; object-fit: cover; flex-shrink: 0;">
+      <span class="sb-label">Figure</span>
+    </div>
+    <div class="sb-nav-item" id="b-lib" onclick="chgTab('lib')">
+      <svg class="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+      </svg>
+      <span class="sb-label">Library</span>
+    </div>
+    <div class="sb-nav-item" id="b-set" onclick="chgTab('set')">
+      <svg class="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+      <span class="sb-label">Settings</span>
+    </div>
+    <div class="sb-nav-item" id="b-log" onclick="chgTab('log')">
+      <svg class="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span class="sb-label">Login</span>
+    </div>
+  </div>
+
+  <div class="trk-widg" id="tk" onclick="tkAction()" style="margin: 10px 12px; width: calc(100% - 24px); max-width: none; border-radius: 14px; height: auto; padding: 10px; display: none; flex-direction: row; align-items: center; gap: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border);">
+    <img src="" class="tw-img" id="tk-img" style="width: 36px; height: 36px; border-radius: 8px;">
+    <div class="tw-txt" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+      <small id="tk-lbl" style="font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 700;">Last Played</small>
+      <strong id="tk-nm" style="font-size: 12px; color: #fff; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 140px; font-weight: 600;">...</strong>
+    </div>
+    <button class="tw-btn" id="tk-btn" style="padding: 6px 12px; font-size: 10px; border-radius: 6px;"></button>
+  </div>
+
+  <div class="sb-history-section">
+    <div class="sb-section-title">Played History</div>
+    <div class="sb-history-list" id="sb-history-container"></div>
+  </div>
+
+  <div class="sb-footer">
+    <div class="sb-footer-row">
+      <div class="sb-clock-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span id="sb-clock">--:--</span>
+      </div>
+    </div>
+    <div class="sb-footer-row sb-total-time-row">
+      <span class="sb-total-lbl">Total Played Time:</span>
+      <span id="sb-total-time" class="sb-total-val">0m</span>
+    </div>
+    <div class="sb-footer-row">
+      <button id="music-toggle-btn-sidebar" class="sb-audio-btn" onclick="toggleBGM()">
+        <svg class="sb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+        <span class="sb-label">Mute Music</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="mobl-nav">
+  <button class="mobl-nav-btn active" id="mb-cine" onclick="chgTab('cine')">
+    <img src="Cloud.jpg" style="border-radius: 4px; object-fit: cover;">
+    <span>Figure</span>
+  </button>
+  <button class="mobl-nav-btn" id="mb-lib" onclick="chgTab('lib')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+    </svg>
+    <span>Library</span>
+  </button>
+  <button class="mobl-nav-btn" id="mb-set" onclick="chgTab('set')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+    <span>Settings</span>
+  </button>
+  <button class="mobl-nav-btn" id="mb-log" onclick="chgTab('log')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+      <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+    <span>Login</span>
+  </button>
+</div>
+
+<div id="modal-ui">
+  <img src="" class="m-bg" id="mdl-bg">
+  <div class="m-close">
+    <div id="b-btn-hint" style="display:none; background:#ff4d4d; color:#fff; font-weight:800; border-radius:50%; width:22px; height:22px; justify-content:center; align-items:center; font-size:12px; margin-right:10px; box-shadow:0 0 10px rgba(255,77,77,0.5);">B</div>
+    <div class="m-close-btn" onclick="clsMdl()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </div>
+  </div>
+  
+  <div class="m-grid">
+    <div class="m-l">
+      <img src="" id="mdl-post">
+      <button class="m-play" onclick="try2launch()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#000"><path d="M8 5v14l11-7z"/></svg>
+        Play
+      </button>
+      <div class="m-stats">
+        <div class="m-rw"><small>Play Time</small><span id="mdl-tm"></span></div>
+        <div class="m-rw"><small>Last Played</small><span id="mdl-lp"></span></div>
+        <div class="m-rw"><small>Achievements</small><span id="mdl-ac"></span></div>
+      </div>
+    </div>
+    
+    <div class="m-r">
+      <h1 class="m-t" id="mdl-t"></h1>
+      <div class="m-d" id="mdl-d"></div>
+      
+      <div class="m-tgs" id="mdl-tg"></div>
+      <div class="m-desc" id="mdl-dc"></div>
+      
+      <div class="m-req">
+        <div class="m-rc">
+          <h4>Minimum</h4>
+          <div class="m-ri"><small>OS</small><span id="qm-os"></span></div>
+          <div class="m-ri"><small>Processor</small><span id="qm-cpu"></span></div>
+          <div class="m-ri"><small>Memory</small><span id="qm-ram"></span></div>
+          <div class="m-ri"><small>Graphics</small><span id="qm-gpu"></span></div>
+        </div>
+        <div class="m-rc">
+          <h4>Recommended</h4>
+          <div class="m-ri"><small>OS</small><span id="qr-os"></span></div>
+          <div class="m-ri"><small>Processor</small><span id="qr-cpu"></span></div>
+          <div class="m-ri"><small>Memory</small><span id="qr-ram"></span></div>
+          <div class="m-ri"><small>Graphics</small><span id="qr-gpu"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="popup-wrap" id="p-legal-block">
+  <div class="popup-box" style="max-width: 480px;">
+    <div class="popup-icon-container" style="background:rgba(255,200,0,0.1); border:1px solid rgba(255,200,0,0.2);">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffc800" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+    </div>
+    <h2>Legal Notice & Disclaimer</h2>
+    <div id="legal-scroll" style="max-height:150px; overflow-y:auto; font-size:13px; line-height: 1.6; color:#aaa; text-align:left; padding:12px; background:rgba(0,0,0,0.3); border-radius:12px; margin-bottom:18px; border: 1px solid var(--border);" onscroll="checkLegalScroll(this)">
+      <p><strong>Please read carefully before proceeding.</strong></p>
+      <p>Cine Softwares and the Cine-Cloud platform are not hosting, storing, or distributing any of the games presented on this application. All games are merely embedded via standard iFrames pointing directly to their original providers.</p>
+      <p>We do not claim ownership of any trademarks, copyrighted materials, or intellectual property displayed within the application. If there are any legal disputes or DMCA claims regarding the hosting and playing of these games, they should be directed towards the source host, <strong>Raccoon Games</strong>.</p>
+      <p>By clicking "I Agree", you acknowledge that Cine Softwares acts solely as a UI aggregator and is free from any liability regarding third-party content.</p>
+      <p><em>Scroll to the bottom to accept. NOTE THIS PLEASE, YOU MUST ALLOW POP UPS!</em></p><br><br><br>
+      <p>End of notice.</p>
+    </div>
+    <div class="popup-btn-row">
+      <button class="popup-btn primary" id="btn-legal-accept" disabled onclick="acceptLegal()" style="width:100%;">I Agree</button>
+    </div>
+  </div>
+</div>
+
+<div class="popup-wrap" id="p-sess-block" onclick="closePopupClick(event)">
+  <div class="popup-box">
+    <div class="popup-icon-container" style="background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.2);">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+    </div>
+    <h2>Session Active</h2>
+    <p>You're already playing a game! Make sure to exit your current session before starting a new one.</p>
+    <div class="popup-btn-row">
+      <button class="popup-btn primary" style="width: 100%;" onclick="hidePopup('p-sess-block')">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div id="m-a2hs" style="position:fixed; bottom:-200px; left:0; width:100%; background:var(--glass); border-top:1px solid var(--border); border-top-left-radius:20px; border-top-right-radius:20px; padding:20px; box-sizing:border-box; z-index:99999999999; transition:bottom 0.4s ease; box-shadow:0 -10px 30px rgba(0,0,0,0.5);">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+    <h3 style="margin:0; color:#fff; font-size:15px;">Add Figure to Home Screen</h3>
+    <svg onclick="clsA2hs()" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2" style="cursor:pointer;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+  </div>
+  <p style="margin:0; font-size:12px; color:#aaa; line-height:1.5;">For the ultimate fullscreen experience, tap <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="vertical-align:middle;margin:0 2px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg> (iOS) or <b style="color:#fff;">&#8942;</b> (Android) and select <b>Add to Home Screen</b>.</p>
+</div>
+
+<div id="game-layer" style="display:none; position:fixed; inset:0; background:#000; z-index:900;">
+  <div class="game-mobl-bar">
+    <button class="game-mobl-btn" onclick="trigMoblFullscreen()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+      Fullscreen
+    </button>
+  </div>
+
+  <div id="bS" style="position:absolute; inset:0; background:#000; z-index:9002; display:flex; flex-direction:column; justify-content:center; align-items:center; color:#fff; font-family:sans-serif;">
+    <h2 id="bS-t" style="margin:0 0 15px 0;">Loading...</h2>
+    <span style="font-size:13px; color:#aaa; text-align:center; max-width:400px; line-height:1.5;">Notice: If you exit fullscreen, it might break.</span>
+  </div>
+  <div id="lO" style="position:absolute; inset:0; background:rgba(10,10,15,0.95); z-index:9003; display:none; justify-content:center; align-items:center; flex-direction:column; color:#fff; font-family:sans-serif;">
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="2" style="margin-bottom:16px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+    <h1 style="margin:0 0 8px 0; font-size:28px; font-weight:700;">Session Expired</h1>
+    <p style="color:#aaa; font-size:15px; max-width:400px; line-height:1.5; margin-bottom: 25px;">Logged out. Session needs renewal.</p>
+    <button onclick="clsGm()" style="padding:12px 30px; background:#fff; color:#000; border:none; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer;">Close</button>
+  </div>
+  <div id="tD" style="position:absolute; top:-100px; left:50%; transform:translateX(-50%); z-index:9004; background:#000; border:2px solid #fff; border-radius:50%; width:46px; height:46px; display:flex; justify-content:center; align-items:center; color:#fff; font-family:sans-serif; font-weight:bold; font-size:18px; transition:top 0.3s ease;">3</div>
+  <div id="eD" style="position:absolute; top:-100px; left:50%; transform:translateX(-50%); z-index:9004; background:#ff4d4d; border:2px solid #fff; border-radius:50%; width:46px; height:46px; display:flex; justify-content:center; align-items:center; color:#fff; font-family:sans-serif; font-weight:bold; font-size:18px; transition:top 0.3s ease;">3</div>
+  
+  <div id="pointer-lock-overlay" style="position:absolute; inset:0; background:rgba(0,0,0,0.5); z-index:9000; display:none; justify-content:center; align-items:center; cursor:pointer;">
+    <div style="text-align:center; background:rgba(0,0,0,0.85); border:1px solid rgba(255,255,255,0.2); padding:18px; border-radius:12px; max-width:280px;">
+      <p style="margin:0 0 8px 0; font-weight:bold; color:#fff;">Pointer Lock Lost</p>
+      <p style="margin:0; font-size:12px; color:#aaa;">Click anywhere to lock mouse and resume controls.</p>
+    </div>
+  </div>
+
+  <iframe id="gF" allow="autoplay;fullscreen;keyboard-map;clipboard-read;clipboard-write;gamepad" style="width:100%; height:100%; border:none; display:block; outline:none;"></iframe>
+</div>
+
+<script src="./random/gamelayout.js"></script>
+
+<script>
+let lsDB=JSON.parse(localStorage.getItem('cine_store_v10')||'{}');
+function sLS(){localStorage.setItem('cine_store_v10',JSON.stringify(lsDB));}
+function msToTm(s){if(!s)return"0m";let h=Math.floor(s/3600);let m=Math.floor((s%3600)/60);return h>0 ? h + "h " + m + "m" : m + "m";}
+function tsToDt(t){if(!t)return"Never";let d=Date.now()-t;if(d<86400000)return"Today";if(d<172800000)return"Yesterday";return new Date(t).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}
+function formatPlaytimeHover(secs){if(!secs)return"00d:00h:00m";let d=Math.floor(secs/86400);let h=Math.floor((secs%86400)/3600);let m=Math.floor((secs%3600)/60);return d.toString().padStart(2,'0') + "d:" + h.toString().padStart(2,'0') + "h:" + m.toString().padStart(2,'0') + "m";}
+
+function showToast(msg) {
+  let t = document.createElement('div');
+  t.innerText = msg;
+  t.style.cssText = "position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); padding:10px 20px; border-radius:100px; color:#fff; font-size:13px; font-weight:600; z-index:9999999999; opacity:0; transition:opacity 0.3s;";
+  document.body.appendChild(t);
+  setTimeout(function() { t.style.opacity='1'; }, 50);
+  setTimeout(function() { t.style.opacity='0'; setTimeout(function() { t.remove(); }, 300); }, 2500);
+}
+
+function clsA2hs() {
+  localStorage.setItem('fig_a2hs', '1');
+  document.getElementById('m-a2hs').style.bottom = '-200px';
+}
+
+function toggleSidebar() {
+  let sb = document.getElementById('sidebar-nav');
+  let aw = document.getElementById('app-wrap');
+  if (sb && aw) {
+    sb.classList.toggle('expanded');
+    aw.classList.toggle('sidebar-expanded');
+  }
+}
+
+function isMobileDeviceDetected() {
+  let u = navigator.userAgent || navigator.vendor || window.opera || "";
+  let isMblStr = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet/i.test(u.toLowerCase());
+  let hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+  let isNavTouch = navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
+  return isMblStr || (hasTouch && isNavTouch);
+}
+
+function populatHistry() {
+  let container = document.getElementById('sb-history-container');
+  if (!container) return;
+  let playedIds = Object.keys(lsDB)
+    .filter(function(k) { return lsDB[k] && lsDB[k].t > 0; })
+    .sort(function(a, b) { return (lsDB[b].l || 0) - (lsDB[a].l || 0); });
+  
+  if (playedIds.length === 0) {
+    container.innerHTML = '<div style="padding:15px; font-size:11px; color:var(--muted); text-align:center; font-weight:500;">No History</div>';
+    return;
+  }
+  
+  let htmlStr = '';
+  let maxShow = 15;
+  playedIds.slice(0, maxShow).forEach(function(id) {
+    let g = G_DATA.find(function(x) { return x.id === id; });
+    if (g) {
+      let timeStr = msToTm(lsDB[id].t);
+      htmlStr += '<div class="sb-hist-item" onclick="opMdl(\''+g.id+'\')" title="'+g.n+'"><img src="'+g.img+'" class="sb-hist-img" loading="lazy"><div class="sb-hist-info"><span class="sb-hist-name">'+g.n+'</span><span class="sb-hist-time">Played: '+timeStr+'</span></div></div>';
+    }
+  });
+  container.innerHTML = htmlStr;
+}
+
+function updateLiveStats() {
+  let now = new Date();
+  let hrs = now.getHours();
+  let mins = now.getMinutes().toString().padStart(2, '0');
+  let ampm = hrs >= 12 ? 'PM' : 'AM';
+  hrs = hrs % 12;
+  hrs = hrs ? hrs : 12;
+  let clockEl = document.getElementById('sb-clock');
+  if (clockEl) clockEl.innerText = hrs + ':' + mins + ' ' + ampm;
+
+  let sitePlaytme = Object.values(lsDB).reduce(function(acc, curr) { return acc + (curr.t || 0); }, 0);
+  let totalEl = document.getElementById('sb-total-time');
+  if (totalEl) {
+    totalEl.innerText = msToTm(sitePlaytme);
+  }
+}
+
+window.addEventListener('DOMContentLoaded',function() {
+  let link = document.querySelector("link[rel~='icon']");
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  link.href = 'Cloud.jpg';
+
+  let mblCheck = isMobileDeviceDetected();
+  if (mblCheck) {
+    document.body.classList.add('is-mobile-device');
+    setTimeout(function() { showToast("Mobile Mode Enabled"); }, 1500);
+    let isStandAlone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://');
+    if (!localStorage.getItem('fig_a2hs') && !isStandAlone) {
+      setTimeout(function() {
+        let el = document.getElementById('m-a2hs');
+        if (el) el.style.bottom = '0px';
+      }, 4000);
+    }
+  }
+
+  let b = document.getElementById('new-boot');
+  let aw = document.getElementById('app-wrap');
+  
+  setTimeout(function() {
+    b.style.opacity = '0';
+    setTimeout(function() { b.style.display = 'none'; aw.style.opacity = '1'; }, 600);
+  }, 2200);
+
+  let t = localStorage.getItem('figure_theme') || 'dark'; setTheme(t);
+  let p = localStorage.getItem('fig_particles') || 'none'; 
+  setParticles(p);
+  
+  let uP = new URLSearchParams(window.location.search);
+  let gParam = uP.get('game'); let embParam = uP.get('embed');
+  
+  if (embParam) {
+    let s = document.createElement('script');
+    s.src = './random/gamelayout.js';
+    document.head.appendChild(s);
+    let chI = setInterval(function() {
+      if (typeof G_DATA !== 'undefined') {
+        clearInterval(chI);
+        let f = G_DATA.find(function(x) { return x.id === gParam; });
+        if (f) {
+           document.body.innerHTML = '<iframe src="' + (f.url || f.path) + '" style="position:fixed;inset:0;width:100%;height:100%;border:none;z-index:99999999;"></iframe>';
+        }
+      }
+    }, 50);
+    return;
+  }
+  
+  if (!localStorage.getItem('cine_legal_accepted')) showPopup('p-legal-block');
+
+  let checkAttempts = 0;
+  let checkG = setInterval(function() {
+    if (typeof G_DATA !== 'undefined' && Array.isArray(G_DATA)) {
+      clearInterval(checkG);
+      let ef = document.getElementById('error-fallback'); if (ef) ef.style.display = 'none';
+      dodeLayout();
+      if (gParam) {
+        let g = G_DATA.find(function(x) { return x.id === gParam; });
+        if (g) {
+          cxG = g;
+          opMdl(g.id); setTimeout(try2launch, 400);
+        }
+      }
+    } else {
+      checkAttempts++;
+      if (checkAttempts === 15) {
+        let s = document.createElement('script');
+        s.src = './random/gamelayout.js';
+        document.head.appendChild(s);
+      }
+      if (checkAttempts > 80) {
+        clearInterval(checkG);
+        let ef = document.getElementById('error-fallback');
+        if (ef) ef.style.display = 'block';
+      }
+    }
+  }, 40);
+
+  rSz(); aP();
+  populatHistry();
+  updateLiveStats();
+  setInterval(updateLiveStats, 2000);
+});
+
+let bgM = new Audio('backgroundmusic.mp3'); bgM.loop = true; let bgMuted = localStorage.getItem('bg_muted') === 'true'; let aInit = false;
+function initAudio() { if (!aInit && !bgMuted) { bgM.play().catch(function(e) { console.log(e); }); aInit = true; } }
+window.addEventListener('pointerdown', initAudio, {once: true});
+window.addEventListener('keydown', initAudio, {once: true});
+
+let gpLoop, lastGpState = {}, focusedEl = null, lastGppMove = 0, curntTabIdx = 0;
+const TABS = ['cine', 'lib', 'set', 'log'];
+
+function gpInit() {
+  if (gpLoop) return;
+  gpLoop = requestAnimationFrame(gpUpdate);
+}
+
+function gpUpdate() {
+  let gps = navigator.getGamepads ? navigator.getGamepads() : [];
+  if (gps[0]) {
+    let bA = gps[0].buttons[0].pressed;
+    let bB = gps[0].buttons[1].pressed;
+    let LB = gps[0].buttons[4].pressed;
+    let RB = gps[0].buttons[5].pressed;
+    let dU = gps[0].buttons[12].pressed || gps[0].axes[1] < -0.5;
+    let dD = gps[0].buttons[13].pressed || gps[0].axes[1] > 0.5;
+    let dL = gps[0].buttons[14].pressed || gps[0].axes[0] < -0.5;
+    let dR = gps[0].buttons[15].pressed || gps[0].axes[0] > 0.5;
+
+    if (bB && !lastGpState.B) {
+      if (document.getElementById('modal-ui').style.display === 'block') clsMdl();
+    }
+    if (bA && !lastGpState.A && focusedEl) focusedEl.click();
+    
+    if (LB && !lastGpState.LB) { curntTabIdx = (curntTabIdx - 1 + TABS.length) % TABS.length; chgTab(TABS[curntTabIdx]); }
+    if (RB && !lastGpState.RB) { curntTabIdx = (curntTabIdx + 1) % TABS.length; chgTab(TABS[curntTabIdx]); }
+
+    let now = Date.now();
+    if ((dU || dD || dL || dR)) {
+      if (now - lastGppMove > 140) {
+        moveFocus(dU, dD, dL, dR);
+        lastGppMove = now;
+      }
+    } else {
+      lastGppMove = 0;
+    }
+
+    lastGpState = {A: bA, B: bB, LB: LB, RB: RB, U: dU, D: dD, L: dL, R: dR};
+    let hint = document.getElementById('b-btn-hint');
+    if (hint) hint.style.display = 'flex';
+  }
+  requestAnimationFrame(gpUpdate);
+}
+
+function moveFocus(u, d, l, r) {
+  let els = Array.from(document.querySelectorAll('.c-h, .c-v, .sb-nav-item, .m-play, .m-close-btn, .settings-audio-btn, .hero-cont, .swatch-btn, .p-card')).filter(function(e) { return e.offsetParent !== null; });
+  if (els.length === 0) return;
+  if (!focusedEl || els.indexOf(focusedEl) === -1) {
+    focusedEl = els[0];
+    updateFocusUI();
+    return;
+  }
+  let curRect = focusedEl.getBoundingClientRect();
+  let best = null;
+  let bestDist = Infinity;
+  els.forEach(function(el) {
+    if (el === focusedEl) return;
+    let rect = el.getBoundingClientRect();
+    let dx = rect.left - curRect.left;
+    let dy = rect.top - curRect.top;
+    let dist = Math.sqrt(dx * dx + dy * dy);
+    let valid = false;
+    if (u && dy < -10 && Math.abs(dx) < Math.abs(dy) * 2) valid = true;
+    if (d && dy > 10 && Math.abs(dx) < Math.abs(dy) * 2) valid = true;
+    if (l && dx < -10 && Math.abs(dy) < Math.abs(dx) * 2) valid = true;
+    if (r && dx > 10 && Math.abs(dy) < Math.abs(dx) * 2) valid = true;
+    if (valid && dist < bestDist) { bestDist = dist; best = el; }
+  });
+  if (best) {
+    focusedEl = best;
+    updateFocusUI();
+    best.scrollIntoView({behavior: "smooth", block: "center", inline: "center"});
+  }
+}
+
+function updateFocusUI() {
+  document.querySelectorAll('.gp-focus').forEach(function(e) { e.classList.remove('gp-focus'); });
+  if (focusedEl) focusedEl.classList.add('gp-focus');
+}
+
+window.addEventListener("gamepadconnected", function() {
+  showToast("Controller Connected");
+  gpInit();
+});
+
+let heroArr = []; let hIdx = 0; let heroInterval;
+
+function dodeLayout() {
+  try {
+    heroArr = [];
+    let pg = Object.keys(lsDB).filter(function(k) { return lsDB[k] && lsDB[k].t > 0; }).sort(function(a,b) { return ((lsDB[b] ? lsDB[b].l : 0) - (lsDB[a] ? lsDB[a].l : 0)); });
+    if (pg.length > 0) {
+      let lp = G_DATA.find(function(x) { return x.id === pg[0]; });
+      if (lp) heroArr.push(Object.assign({}, lp, {tag: 'RESUME', sub: msToTm(lsDB[lp.id].t) + ' Played'}));
+    }
+    let rnd = G_DATA.slice().sort(function() { return 0.5 - Math.random(); }).slice(0, 4);
+    rnd.forEach(function(r) {
+      if (!heroArr.find(function(x) { return x.id === r.id; })) {
+        heroArr.push(Object.assign({}, r, {tag: 'FEATURED', sub: (r.tags || []).join(" • ")}));
+      }
+    });
+
+    rendertheBanner();
+    if (heroInterval) clearInterval(heroInterval);
+    heroInterval = setInterval(function() { hIdx = (hIdx + 1) % heroArr.length; rendertheBanner(); }, 6000);
+
+    let popFilter = G_DATA.filter(function(g) { return g.n.toLowerCase().includes('poppy') || (g.tags || []).indexOf('Poppy') !== -1; });
+    let raceFilter = G_DATA.filter(function(g) { return (g.tags || []).indexOf('Racing') !== -1 || (g.tags || []).indexOf('Driving') !== -1; });
+    let actnFilter = G_DATA.filter(function(g) { return (g.tags || []).indexOf('Action') !== -1 || (g.tags || []).indexOf('Shooter') !== -1; });
+    let pzzlFilter = G_DATA.filter(function(g) { return (g.tags || []).indexOf('Puzzle') !== -1 || (g.tags || []).indexOf('Strategy') !== -1; });
+    let arcdFilter = G_DATA.filter(function(g) { return (g.tags || []).indexOf('Arcade') !== -1 || (g.tags || []).indexOf('Casual') !== -1; });
+
+    let recFilter = G_DATA.slice().sort(function() { return 0.5 - Math.random(); }).slice(0, 10);
+    
+    let dayHtml = '', trndHtml = '', libHtml = '', classcHtml = '';
+
+    G_DATA.forEach(function(g, i) {
+      libHtml += makethecard(g, 'v');
+      if (i < 5) dayHtml += makethecard(g, 'h');
+      else if (i >= 5 && i < 10) trndHtml += makethecard(g, 'h');
+      else if (i >= 10 && i < 15) classcHtml += makethecard(g, 'h');
+    });
+
+    let recCards = recFilter.map(function(g) { return makethecard(g, 'h'); }).join('');
+    document.getElementById('g-recom-track').innerHTML = recCards + recCards;
+
+    let arcTarget = document.getElementById('g-arcade');
+    if (arcTarget) arcTarget.innerHTML = arcdFilter.length ? arcdFilter.slice(0, 6).map(function(g) { return makethecard(g, 'h'); }).join('') : dayHtml;
+
+    document.getElementById('g-poppy').innerHTML = popFilter.map(function(g) { return makethecard(g, 'h'); }).join('');
+    
+    let actTarget = document.getElementById('g-action');
+    if (actTarget) actTarget.innerHTML = actnFilter.slice(0, 6).map(function(g) { return makethecard(g, 'h'); }).join('');
+
+    document.getElementById('g-race').innerHTML = raceFilter.slice(0, 6).map(function(g) { return makethecard(g, 'h'); }).join('');
+    
+    let pzlTarget = document.getElementById('g-puzzle');
+    if (pzlTarget) pzlTarget.innerHTML = pzzlFilter.slice(0, 6).map(function(g) { return makethecard(g, 'h'); }).join('');
+
+    document.getElementById('g-day').innerHTML = dayHtml;
+    document.getElementById('g-trnd').innerHTML = trndHtml;
+
+    let clsTarget = document.getElementById('g-classics');
+    if (clsTarget) clsTarget.innerHTML = classcHtml || trndHtml;
+
+    document.getElementById('g-lib').innerHTML = libHtml;
+    rfrTrk();
+    populatHistry();
+  } catch(e) { console.log(e); }
+}
+
+function rendertheBanner() {
+  if (!heroArr.length) return;
+  let g = heroArr[hIdx];
+  document.getElementById('hc-tag').innerText = g.tag;
+  document.getElementById('hc-title').innerText = g.n;
+  document.getElementById('hc-time').innerText = g.sub;
+  document.getElementById('hc-dev').innerText = g.dev || "";
+  let imgEl = document.getElementById('hc-img');
+  imgEl.style.opacity = '0.3';
+  setTimeout(function() { imgEl.src = g.bg; imgEl.style.opacity = '0.85'; }, 200);
+  document.getElementById('hc-box').onclick = function() { opMdl(g.id); };
+}
+
+function makethecard(g, type) {
+  let tStr = formatPlaytimeHover(lsDB[g.id] ? lsDB[g.id].t : 0);
+  let th = '<div class="c-time-hover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>Played: '+tStr+'</div>';
+  let src = (g.n + ' ' + (g.tags || []).join(' ') + ' ' + (g.dev || '')).toLowerCase();
+  return '<div class="c-'+type+'" onclick="opMdl(\''+g.id+'\')" data-search="'+src+'"><img src="'+g.bg+'" class="c-'+type+'-banner" loading="lazy"><div class="c-icon-container"><img src="'+g.img+'" class="c-icon-badge" loading="lazy"></div><div class="c-inf"><h3>'+g.n+'</h3><span>'+(g.dev || "Game")+'</span>'+th+'</div></div>';
+}
+
+let searchTimer;
+function onSearchKeyup() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(filterLib, 150);
+}
+
+function filterLib() {
+  let q = document.getElementById('lib-search').value.toLowerCase().trim();
+  let cards = document.querySelectorAll('#g-lib .c-v');
+  for (let i = 0; i < cards.length; i++) {
+    let c = cards[i];
+    if (!q) {
+      c.style.display = 'block';
+    } else {
+      let sData = c.getAttribute('data-search');
+      c.style.display = sData.includes(q) ? 'block' : 'none';
+    }
+  }
+}
+
+function chgTab(v) {
+  clsMdl();
+  document.querySelectorAll('.sb-nav-item').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.mobl-nav-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-view').forEach(function(s) { s.classList.remove('active'); });
+  
+  let btn = document.getElementById('b-' + v);
+  let mBtn = document.getElementById('mb-' + v);
+  let view = document.getElementById('v-' + v);
+  
+  if (btn) btn.classList.add('active');
+  if (mBtn) mBtn.classList.add('active');
+  if (view) view.classList.add('active');
+  fdM(0.5, 600);
+}
+
+function showPopup(id) { let el = document.getElementById(id); if (el) { el.style.display = 'flex'; setTimeout(function() { el.classList.add('show'); }, 10); } }
+function hidePopup(id) { let el = document.getElementById(id); if (el) { el.classList.remove('show'); setTimeout(function() { el.style.display = 'none'; }, 200); } }
+function closePopupClick(e) { if (e.target.classList.contains('popup-wrap') && e.target.id !== 'p-legal-block') hidePopup(e.target.id); }
+function checkLegalScroll(el) { if (Math.ceil(el.scrollHeight - el.scrollTop) <= el.clientHeight + 15) document.getElementById('btn-legal-accept').disabled = false; }
+function acceptLegal() { localStorage.setItem('cine_legal_accepted', 'true'); hidePopup('p-legal-block'); }
+
+let cxG = null;
+function opMdl(id) {
+  cxG = G_DATA.find(function(x) { return x.id === id; });
+  if (!cxG) return;
+  let d = lsDB[id] || {t: 0, l: null};
+  document.getElementById('mdl-bg').src = cxG.bg;
+  document.getElementById('mdl-post').src = cxG.img;
+  document.getElementById('mdl-t').innerText = cxG.n;
+  document.getElementById('mdl-d').innerText = cxG.dev || "";
+  document.getElementById('mdl-dc').innerText = cxG.desc || "";
+  document.getElementById('mdl-tm').innerText = msToTm(d.t);
+  document.getElementById('mdl-lp').innerText = tsToDt(d.l);
+  document.getElementById('mdl-ac').innerText = cxG.ach || "0/0";
+  document.getElementById('mdl-tg').innerHTML = (cxG.tags || []).map(function(t) { return '<div class="m-tg">'+t+'</div>'; }).join('');
+  
+  if (cxG.rm) {
+    document.getElementById('qm-os').innerText = cxG.rm.os || "Any";
+    document.getElementById('qm-cpu').innerText = cxG.rm.cpu || "Any";
+    document.getElementById('qm-ram').innerText = cxG.rm.ram || "Any";
+    document.getElementById('qm-gpu').innerText = cxG.rm.gpu || "Any";
+  }
+  if (cxG.rr) {
+    document.getElementById('qr-os').innerText = cxG.rr.os || "Any";
+    document.getElementById('qr-cpu').innerText = cxG.rr.cpu || "Any";
+    document.getElementById('qr-ram').innerText = cxG.rr.ram || "Any";
+    document.getElementById('qr-gpu').innerText = cxG.rr.gpu || "Any";
+  }
+
+  let m = document.getElementById('modal-ui');
+  m.style.display = 'block';
+  setTimeout(function() { m.style.opacity = '1'; }, 10);
+  
+  let tn = document.querySelector('.top-notch-container');
+  if (tn) tn.style.display = 'none';
+  evalBgMusic();
+}
+
+function clsMdl() {
+  let m = document.getElementById('modal-ui');
+  if (!m) return;
+  m.style.opacity = '0';
+  setTimeout(function() { m.style.display = 'none'; }, 250);
+  let tn = document.querySelector('.top-notch-container');
+  if (tn) tn.style.display = 'flex';
+  evalBgMusic();
+}
+
+let gmWin = null; let gmId = null; let gInt = null; let gSs = 0;
+
+function try2launch() {
+  rnLd();
+}
+
+function trigMoblFullscreen() {
+  let gl = document.getElementById('game-layer');
+  if (!gl) return;
+  if (!document.fullscreenElement) {
+    if (gl.requestFullscreen) gl.requestFullscreen().catch(function() {});
+    else if (gl.webkitRequestFullscreen) gl.webkitRequestFullscreen();
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen().catch(function() {});
+  }
+}
+
+function tglV(v) {
+  let tnMain = document.getElementById('tn-main');
+  let tnGame = document.getElementById('n-game');
+  let appWrap = document.getElementById('app-wrap');
+  let sbNav = document.getElementById('sidebar-nav');
+  let gLayer = document.getElementById('game-layer');
+
+  if (v === 'h') {
+    appWrap.style.display = 'block';
+    if (!document.body.classList.contains('is-mobile-device')) sbNav.style.display = 'flex';
+    gLayer.style.display = 'none';
+    if (tnMain) tnMain.classList.add('active-tab');
+    if (tnGame) tnGame.classList.remove('active-tab');
+    fdM(0.5, 600);
+  } else {
+    appWrap.style.display = 'none';
+    sbNav.style.display = 'none';
+    gLayer.style.display = 'block';
+    if (tnMain) tnMain.classList.remove('active-tab');
+    if (tnGame) tnGame.classList.add('active-tab');
+    fdM(0, 600);
+  }
+}
+
+function clsGm(e) {
+  if (e) e.stopPropagation();
+  document.getElementById('n-game').style.display = 'none';
+  document.getElementById('gF').src = "";
+  if (gmWin) gmWin.closed = true;
+  if (document.exitFullscreen) document.exitFullscreen().catch(function() {});
+  if (document.exitPointerLock) document.exitPointerLock();
+  if (navigator.keyboard) navigator.keyboard.unlock();
+  tglV('h');
+}
+
+function mnLk() {
+  let f = document.getElementById('gF');
+  let gl = document.getElementById('game-layer');
+  if (!document.fullscreenElement) {
+    if (gl.requestFullscreen) gl.requestFullscreen().then(function() { if (navigator.keyboard) navigator.keyboard.lock(['Escape']); }).catch(function() {});
+    else if (gl.webkitRequestFullscreen) gl.webkitRequestFullscreen();
+  }
+  if (f.requestPointerLock) f.requestPointerLock();
+  f.focus();
+}
+
+let aZd = false, aZi = null, aZc = 3;
+let aCd = false, aCi = null, aCc = 3;
+window.addEventListener('keydown', function(e) {
+  if (e.altKey && e.key.toLowerCase() === 'z') {
+    if (!aZd && document.getElementById('game-layer').style.display === 'block') {
+      let d = document.getElementById('tD'); aZd = true; aZc = 3; d.innerText = aZc; d.style.top = '20px';
+      aZi = setInterval(function() { aZc--; if (aZc > 0) d.innerText = aZc; else { clearInterval(aZi); d.style.top = '-100px'; mnLk(); } }, 1000);
+    }
+  }
+  if (e.altKey && e.key.toLowerCase() === 'c') {
+    if (!aCd && document.getElementById('game-layer').style.display === 'block') {
+      let d = document.getElementById('eD'); aCd = true; aCc = 3; d.innerText = aCc; d.style.top = '20px';
+      aCi = setInterval(function() { aCc--; if (aCc > 0) d.innerText = aCc; else { clearInterval(aCi); d.style.top = '-100px'; if (document.exitFullscreen) document.exitFullscreen().catch(function() {}); if (document.exitPointerLock) document.exitPointerLock(); } }, 1000);
+    }
+  }
+});
+
+window.addEventListener('keyup', function(e) {
+  if (e.key.toLowerCase() === 'z' || e.key === 'Alt') { aZd = false; clearInterval(aZi); let td = document.getElementById('tD'); if (td) td.style.top = '-100px'; }
+  if (e.key.toLowerCase() === 'c' || e.key === 'Alt') { aCd = false; clearInterval(aCi); let ed = document.getElementById('eD'); if (ed) ed.style.top = '-100px'; }
+});
+
+function rnLd() {
+  clsMdl();
+  let rawGameUrl = cxG.url || cxG.path;
+  let toolUrl = "https://solitary-cell-b88d.cine-softwares.workers.dev/autosignup/autoplay?URL=" + encodeURIComponent(rawGameUrl);
+  
+  document.getElementById('n-game-title').innerText = cxG.n;
+  document.getElementById('n-game').style.display = 'flex';
+  
+  let f = document.getElementById('gF'), s = document.getElementById('bS'), bt = document.getElementById('bS-t'), lo = document.getElementById('lO');
+  if (bt) bt.innerText = 'Loading ' + cxG.n + '...';
+  s.style.display = 'flex'; s.style.opacity = '1'; lo.style.display = 'none'; tglV('g');
+  gmWin = {closed: false, close: function() { clsGm(); }};
+  
+  setTimeout(function() {
+    f.src = toolUrl;
+    setTimeout(function() { if (s) { s.style.opacity = '0'; setTimeout(function() { s.style.display = 'none'; }, 600); } }, 1200);
+  }, 1400);
+  trStart(cxG.id);
+}
+
+function trStart(id) {
+  if (gInt) clearInterval(gInt);
+  gmId = id;
+  if (!lsDB[id]) lsDB[id] = {t: 0, l: Date.now()};
+  lsDB[id].l = Date.now();
+  sLS();
+  gSs = lsDB[id].t;
+  rfrTrk();
+  populatHistry();
+
+  gInt = setInterval(function() {
+    if (gmWin && !gmWin.closed) {
+      gSs++;
+      if (gSs % 5 === 0) {
+        lsDB[id].t = gSs;
+        lsDB[id].l = Date.now();
+        sLS();
+        populatHistry();
+      }
+    } else {
+      clearInterval(gInt);
+      lsDB[id].t = gSs;
+      lsDB[id].l = Date.now();
+      sLS();
+      gmWin = null; gmId = null; gInt = null;
+      rfrTrk(); dodeLayout(); populatHistry();
+    }
+  }, 1000);
+}
+
+function rfrTrk() {
+  let widg = document.getElementById('tk');
+  if (!widg) return;
+  if (gmWin && gmId) {
+    let g = G_DATA.find(function(x) { return x.id === gmId; });
+    if (g) {
+      document.getElementById('tk-img').src = g.img;
+      document.getElementById('tk-lbl').innerText = "Playing Now";
+      document.getElementById('tk-lbl').style.color = "#fff";
+      document.getElementById('tk-nm').innerText = g.n;
+      let btn = document.getElementById('tk-btn');
+      btn.className = "tw-btn quit"; btn.innerText = "Quit";
+      widg.style.display = "flex";
+    }
+  } else {
+    let pg = Object.keys(lsDB).filter(function(k) { return lsDB[k].t > 0; });
+    if (pg.length > 0) {
+      let bId = pg.sort(function(a,b) { return lsDB[b].l - lsDB[a].l; })[0];
+      let g = G_DATA.find(function(x) { return x.id === bId; });
+      if (g) {
+        document.getElementById('tk-img').src = g.img;
+        document.getElementById('tk-lbl').innerText = "Last Played";
+        document.getElementById('tk-lbl').style.color = "#a1a1a6";
+        document.getElementById('tk-nm').innerText = g.n;
+        let btn = document.getElementById('tk-btn');
+        btn.className = "tw-btn"; btn.innerText = "Launch";
+        widg.style.display = "flex";
+      }
+    } else widg.style.display = "none";
+  }
+}
+
+function tkAction() {
+  if (gmWin && !gmWin.closed) gmWin.close();
+  else {
+    let pg = Object.keys(lsDB).filter(function(k) { return lsDB[k].t > 0; });
+    if (pg.length > 0) {
+      let bId = pg.sort(function(a,b) { return lsDB[b].l - lsDB[a].l; })[0];
+      cxG = G_DATA.find(function(x) { return x.id === bId; });
+      try2launch();
+    }
+  }
+}
+
+function fdM(tg, d) {
+  if (bgMuted) return;
+  if (tg > 0 && bgM.paused) { bgM.volume = 0; bgM.play().catch(function() {}); }
+  let s = bgM.volume, st = Date.now();
+  if (window.fdIv) clearInterval(window.fdIv);
+  window.fdIv = setInterval(function() {
+    let pct = (Date.now() - st) / d;
+    if (pct >= 1) { clearInterval(window.fdIv); bgM.volume = tg; if (tg === 0) bgM.pause(); }
+    else bgM.volume = s + (tg - s) * pct;
+  }, 20);
+}
+
+function evalBgMusic() {
+  if (bgMuted || document.getElementById('game-layer').style.display === 'block') {
+    if (window.fdIv) clearInterval(window.fdIv);
+    bgM.pause();
+    return;
+  }
+  fdM(0.5, 600);
+}
+
+function toggleBGM() {
+  bgMuted = !bgMuted;
+  localStorage.setItem('bg_muted', bgMuted);
+  let btn1 = document.getElementById('music-toggle-btn');
+  let btn2 = document.getElementById('music-toggle-btn-sidebar');
+  if (btn1) btn1.innerText = bgMuted ? "Unmute Music" : "Mute Music";
+  if (btn2) {
+    let label = btn2.querySelector('.sb-label');
+    if (label) label.innerText = bgMuted ? "Unmute Music" : "Mute Music";
+  }
+  if (bgMuted) {
+    if (window.fdIv) clearInterval(window.fdIv);
+    bgM.pause();
+  } else {
+    evalBgMusic();
+  }
+}
+
+function clearLocalHistoryData() {
+  if (confirm("Are you sure you want to clear your local game history?")) {
+    lsDB = {};
+    sLS();
+    populatHistry();
+    updateLiveStats();
+    showToast("History Cleared");
+  }
+}
+
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden) { if (!bgMuted && !bgM.paused) fdM(0, 400); }
+  else { evalBgMusic(); }
+});
+
+function setTheme(t) {
+  let r = document.documentElement;
+  if (t==='dark'){r.style.setProperty('--bg','#050505');r.style.setProperty('--accent','#ffffff');r.style.setProperty('--border','rgba(255, 255, 255, 0.08)');}
+  else if(t==='figure'){r.style.setProperty('--bg','#0c0202');r.style.setProperty('--accent','#ff3333');r.style.setProperty('--border','rgba(255, 50, 50, 0.15)');}
+  else if(t==='neon'){r.style.setProperty('--bg','#020b14');r.style.setProperty('--accent','#00d2ff');r.style.setProperty('--border','rgba(0, 210, 255, 0.15)');}
+  else if(t==='forest'){r.style.setProperty('--bg','#010f08');r.style.setProperty('--accent','#05c46b');r.style.setProperty('--border','rgba(5, 196, 107, 0.15)');}
+  else if(t==='sunset'){r.style.setProperty('--bg','#120410');r.style.setProperty('--accent','#f53b57');r.style.setProperty('--border','rgba(245, 59, 87, 0.15)');}
+  else if(t==='amethyst'){r.style.setProperty('--bg','#0a0310');r.style.setProperty('--accent','#a55eea');r.style.setProperty('--border','rgba(165, 94, 234, 0.15)');}
+  else if(t==='gold'){r.style.setProperty('--bg','#0f0e05');r.style.setProperty('--accent','#f1c40f');r.style.setProperty('--border','rgba(241, 196, 15, 0.15)');}
+  else if(t==='hacker'){r.style.setProperty('--bg','#020802');r.style.setProperty('--accent','#0f0');r.style.setProperty('--border','rgba(0, 255, 0, 0.15)');}
+  else if(t==='ocean'){r.style.setProperty('--bg','#020914');r.style.setProperty('--accent','#0abde3');r.style.setProperty('--border','rgba(10, 189, 227, 0.15)');}
+  else if(t==='lava'){r.style.setProperty('--bg','#140402');r.style.setProperty('--accent','#ee5253');r.style.setProperty('--border','rgba(238, 82, 83, 0.15)');}
+  else if(t==='cyberp'){r.style.setProperty('--bg','#110214');r.style.setProperty('--accent','#D980FA');r.style.setProperty('--border','rgba(217, 128, 250, 0.15)');}
+  else if(t==='ice'){r.style.setProperty('--bg','#050a0f');r.style.setProperty('--accent','#c8d6e5');r.style.setProperty('--border','rgba(200, 214, 229, 0.15)');}
+  else if(t==='rose'){r.style.setProperty('--bg','#14020a');r.style.setProperty('--accent','#f368e0');r.style.setProperty('--border','rgba(243, 104, 224, 0.15)');}
+  else if(t==='mint'){r.style.setProperty('--bg','#02140d');r.style.setProperty('--accent','#1dd1a1');r.style.setProperty('--border','rgba(29, 209, 161, 0.15)');}
+  else if(t==='crimson'){r.style.setProperty('--bg','#140101');r.style.setProperty('--accent','#c23616');r.style.setProperty('--border','rgba(194, 54, 22, 0.15)');}
+  localStorage.setItem('figure_theme', t);
+  document.querySelectorAll('.swatch-btn').forEach(function(s) { s.classList.remove('active'); });
+  let act = document.querySelector('.btn-' + t); if (act) act.classList.add('active');
+}
+
+document.addEventListener('pointerlockchange', function() {
+  let o = document.getElementById('pointer-lock-overlay');
+  if (document.getElementById('game-layer').style.display === 'block') {
+    if (!document.pointerLockElement) o.style.display = 'flex'; else o.style.display = 'none';
+  }
+});
+
+let pC, pCtx, pArr = [], pType = 'none';
+function rSz() {
+  pC = document.getElementById('bg-particles'); if (!pC) return;
+  pCtx = pC.getContext('2d');
+  pC.width = window.innerWidth;
+  pC.height = window.innerHeight;
+  iP();
+}
+window.addEventListener('resize', rSz);
+
+function iP() {
+  pArr = [];
+  if (pType === 'none') return;
+  let cnt = (pType === 'snow' || pType === 'rain' || pType === 'matrix') ? 40 : 25;
+  for (let i = 0; i < cnt; i++) {
+    pArr.push({
+      x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight,
+      r: pType === 'snow' ? Math.random() * 2 + 1 : pType === 'bubbles' ? Math.random() * 3 + 1 : 2,
+      vy: pType === 'snow' ? Math.random() * 0.8 + 0.3 : pType === 'rain' ? Math.random() * 10 + 6 : pType === 'bubbles' ? -(Math.random() * 1.5 + 0.5) : (Math.random() * 1 - 0.5),
+      vx: pType === 'snow' ? Math.random() * 0.6 - 0.3 : (Math.random() * 1 - 0.5),
+      l: pType === 'rain' ? Math.random() * 15 + 8 : 0,
+      c: pType === 'matrix' ? '#0f0' : pType === 'cyber' ? 'rgba(0,210,255,0.4)' : 'rgba(255,255,255,0.4)',
+      char: String.fromCharCode(0x30A0 + Math.random() * 96)
+    });
+  }
+}
+
+function aP() {
+  if (!pCtx) {
+    requestAnimationFrame(aP);
+    return;
+  }
+  pCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  if (pType !== 'none') {
+    pArr.forEach(function(p) {
+      pCtx.beginPath();
+      if (pType === 'rain') { pCtx.rect(p.x, p.y, 1, p.l); pCtx.fillStyle = p.c; }
+      else if (pType === 'matrix') { pCtx.font = "12px monospace"; pCtx.fillStyle = p.c; pCtx.fillText(p.char, p.x, p.y); }
+      else { pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2); pCtx.fillStyle = p.c; }
+      pCtx.fill();
+      
+      p.x += p.vx; p.y += p.vy;
+      if (p.y > window.innerHeight) { p.y = -10; p.x = Math.random() * window.innerWidth; }
+      if (p.y < -10) { p.y = window.innerHeight + 10; p.x = Math.random() * window.innerWidth; }
+    });
+  }
+  requestAnimationFrame(aP);
+}
+
+function setParticles(t) {
+  pType = t; localStorage.setItem('fig_particles', t); iP();
+  document.querySelectorAll('.p-card').forEach(function(c) { c.classList.remove('p-card-active'); });
+  let act = document.querySelector('.card-' + t); if (act) act.classList.add('p-card-active');
+}
+
+</script>
+</body>
+</html>
