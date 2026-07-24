@@ -2992,9 +2992,82 @@ function drawFV() {
 }
 drawFV();
 
+var qualityLevel = 1;
 var fLT = performance.now();
 var fFr = 0;
 var fLC = 0;
+
+var qualityLevel = 3;
+
+function applyQualityLevel() {
+    const videos = [document.getElementById('bg-video'), document.getElementById('lock-video')];
+    videos.forEach(v => {
+        if (!v) return;
+        switch(qualityLevel) {
+            case 1:
+                v.style.filter = '';
+                v.style.imageRendering = '';
+                v.style.transform = 'scale(1)';
+                break;
+            case 2:
+                v.style.filter = 'contrast(0.95)';
+                v.style.imageRendering = 'optimizeSpeed';
+                v.style.transform = 'scale(0.95)';
+                break;
+            case 3:
+                v.style.filter = 'contrast(0.9)';
+                v.style.imageRendering = 'optimizeSpeed';
+                v.style.transform = 'scale(0.85)';
+                break;
+            case 4:
+                v.style.filter = 'contrast(0.85) brightness(0.95)';
+                v.style.imageRendering = 'optimizeSpeed';
+                v.style.transform = 'scale(0.75)';
+                break;
+            case 5:
+                v.style.filter = 'contrast(0.8)';
+                v.style.imageRendering = 'optimizeSpeed';
+                v.style.transform = 'scale(0.65)';
+                break;
+        }
+    });
+}
+
+var qualityLevel = 1;
+
+function applyQualityLevel() {
+    const videos = [document.getElementById('bg-video'), document.getElementById('lock-video')];
+    videos.forEach(v => {
+        if (!v) return;
+        switch(qualityLevel) {
+            case 1:
+                v.style.filter = '';
+                v.style.imageRendering = '';
+                v.style.transform = 'scale(1)';
+                break;
+            case 2:
+                v.style.filter = 'contrast(0.95)';
+                v.style.imageRendering = 'optimizeSpeed';
+                v.style.transform = 'scale(0.95)';
+                break;
+            case 3:
+                v.style.filter = 'contrast(0.9)';
+                v.style.imageRendering = 'optimizeSpeed';
+                v.style.transform = 'scale(0.85)';
+                break;
+            case 4:
+                v.style.filter = 'contrast(0.85) brightness(0.95)';
+                v.style.imageRendering = 'optimizeSpeed';
+                v.style.transform = 'scale(0.75)';
+                break;
+            case 5:
+                v.style.filter = 'contrast(0.8)';
+                v.style.imageRendering = 'optimizeSpeed';
+                v.style.transform = 'scale(0.65)';
+                break;
+        }
+    });
+}
 
 function chkFps() {
     let nw = performance.now();
@@ -3004,19 +3077,23 @@ function chkFps() {
         let fv = document.getElementById('fps-val');
         if(fv) fv.innerText = cFps;
 
-        if(cFps <= 20) {
+        if(cFps <= 25) {
             fLC++;
-            if(fLC >= 5 && !sysConfig.optBg) {
+            if(fLC >= 4) {
+                if(qualityLevel < 5) qualityLevel++;
                 sysConfig.optBg = true;
                 localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
-                let bv = document.getElementById('bg-video');
-                let lv = document.getElementById('lock-video');
-                if(bv) bv.pause();
-                if(lv) lv.pause();
-                showNotification("System Optimized", "Low FPS detected. Backgrounds paused.");
+                applyQualityLevel();
+                showNotification("Performance Mode", "Background quality lowered");
             }
         } else {
-            fLC = 0;
+            fLC = Math.max(0, fLC - 1);
+            if(fLC <= 1 && qualityLevel > 1) {
+                qualityLevel--;
+                if(qualityLevel === 1) sysConfig.optBg = false;
+                localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
+                applyQualityLevel();
+            }
         }
         
         fFr = 0;
