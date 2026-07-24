@@ -4417,20 +4417,26 @@ window.addEventListener('keyup', function(e) {
 function rnLd() {
   clsMdl();
   let rawGameUrl = cxG.url || cxG.path;
-  let toolUrl = "https://menist.free.nf/seamless-cloud/2/autosignup?URL=" + encodeURIComponent(rawGameUrl);
+  if (!rawGameUrl) return showToast("No game URL");
+
   
+  let toolUrl = "https://menist.free.nf/seamless-cloud/2/autosignup/index.html?URL=" + encodeURIComponent(rawGameUrl);
+
   document.getElementById('n-game-title').innerText = cxG.n;
   document.getElementById('n-game').style.display = 'flex';
   
-  let f = document.getElementById('gF'), s = document.getElementById('bS'), bt = document.getElementById('bS-t'), lo = document.getElementById('lO');
-  if (bt) bt.innerText = 'Loading ' + cxG.n + '...';
-  s.style.display = 'flex'; s.style.opacity = '1'; lo.style.display = 'none'; tglV('g');
-  gmWin = {closed: false, close: function() { clsGm(); }};
+  let f = document.getElementById('gF');
+  let s = document.getElementById('bS');
   
-  setTimeout(function() {
+  s.style.display = 'flex';
+  s.style.opacity = '1';
+  tglV('g');
+
+  setTimeout(() => {
     f.src = toolUrl;
-    setTimeout(function() { if (s) { s.style.opacity = '0'; setTimeout(function() { s.style.display = 'none'; }, 600); } }, 1200);
-  }, 1400);
+    setTimeout(() => { s.style.opacity = '0'; }, 1000);
+  }, 400);
+
   trStart(cxG.id);
 }
 
