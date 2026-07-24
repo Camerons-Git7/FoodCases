@@ -2997,74 +2997,60 @@ var fLT = performance.now();
 var fFr = 0;
 var fLC = 0;
 
-var qualityLevel = 3;
-
-function applyQualityLevel() {
-    const videos = [document.getElementById('bg-video'), document.getElementById('lock-video')];
-    videos.forEach(v => {
-        if (!v) return;
-        switch(qualityLevel) {
-            case 1:
-                v.style.filter = '';
-                v.style.imageRendering = '';
-                v.style.transform = 'scale(1)';
-                break;
-            case 2:
-                v.style.filter = 'contrast(0.95)';
-                v.style.imageRendering = 'optimizeSpeed';
-                v.style.transform = 'scale(0.95)';
-                break;
-            case 3:
-                v.style.filter = 'contrast(0.9)';
-                v.style.imageRendering = 'optimizeSpeed';
-                v.style.transform = 'scale(0.85)';
-                break;
-            case 4:
-                v.style.filter = 'contrast(0.85) brightness(0.95)';
-                v.style.imageRendering = 'optimizeSpeed';
-                v.style.transform = 'scale(0.75)';
-                break;
-            case 5:
-                v.style.filter = 'contrast(0.8)';
-                v.style.imageRendering = 'optimizeSpeed';
-                v.style.transform = 'scale(0.65)';
-                break;
-        }
-    });
-}
-
 var qualityLevel = 1;
 
 function applyQualityLevel() {
     const videos = [document.getElementById('bg-video'), document.getElementById('lock-video')];
     videos.forEach(v => {
         if (!v) return;
+
+        // Reset all quality-related styles first
+        v.style.filter = '';
+        v.style.imageRendering = '';
+        v.style.transform = '';
+        v.style.width = '';
+        v.style.height = '';
+        v.style.left = '';
+        v.style.top = '';
+
+        let scale = 1;
+
         switch(qualityLevel) {
             case 1:
-                v.style.filter = '';
-                v.style.imageRendering = '';
-                v.style.transform = 'scale(1)';
+                // Default — no adjustments
                 break;
             case 2:
                 v.style.filter = 'contrast(0.95)';
                 v.style.imageRendering = 'optimizeSpeed';
-                v.style.transform = 'scale(0.95)';
+                scale = 0.95;
                 break;
             case 3:
                 v.style.filter = 'contrast(0.9)';
                 v.style.imageRendering = 'optimizeSpeed';
-                v.style.transform = 'scale(0.85)';
+                scale = 0.85;
                 break;
             case 4:
                 v.style.filter = 'contrast(0.85) brightness(0.95)';
                 v.style.imageRendering = 'optimizeSpeed';
-                v.style.transform = 'scale(0.75)';
+                scale = 0.75;
                 break;
             case 5:
                 v.style.filter = 'contrast(0.8)';
                 v.style.imageRendering = 'optimizeSpeed';
-                v.style.transform = 'scale(0.65)';
+                scale = 0.65;
                 break;
+        }
+
+        // Compensate for the scale so the video still fills the screen
+        if (scale < 1) {
+            const invScale = 1 / scale;           // e.g. 0.75 → 133.33%
+            const offset = ((invScale - 1) / 2) * 100; // e.g. 16.67%
+
+            v.style.width = `${invScale * 100}%`;
+            v.style.height = `${invScale * 100}%`;
+            v.style.left = `${-offset}%`;
+            v.style.top = `${-offset}%`;
+            v.style.transform = `scale(${scale})`;
         }
     });
 }
