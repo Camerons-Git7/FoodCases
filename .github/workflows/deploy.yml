@@ -29,7 +29,7 @@ jobs:
         if: github.event.inputs.force_full_sync == 'true'
         run: |
           echo "Force full sync requested - will delete local sync state if it exists"
-          rm -f .ftp-sync-state-1.json .ftp-sync-state-3.json
+          rm -f .ftp-sync-state-1.json .ftp-sync-state-2.json .ftp-sync-state-3.json
           echo "Sync state cleared. All files will be re-uploaded."
 
       # ─── FIRST WEBSITE ─────────────────────────────
@@ -60,6 +60,52 @@ jobs:
             README.md
             .gitignore
             .ftp-sync-state-1.json
+            .ftp-sync-state-2.json
+            .ftp-sync-state-3.json
+          log-level: standard
+
+      # ─── SECOND WEBSITE ────────────────────────────
+      - name: Restore original code for Site 2
+        run: git checkout .
+
+      - name: Replace "free.nf" with "free.je" for Site 2 deploy
+        run: |
+          find . -type f \
+            ! -path './.git/*' \
+            ! -path './.github/*' \
+            ! -name '.ftp-sync-state-1.json' \
+            ! -name '.ftp-sync-state-2.json' \
+            ! -name '.ftp-sync-state-3.json' \
+            -exec sed -i 's/free\.nf/free.je/g' {} +
+
+      - name: Replace .ico with .png in desktop/index.html for Site 2 deploy
+        run: |
+          if [ -f "desktop/index.html" ]; then
+            sed -i 's/\.ico/\.png/g' desktop/index.html || true
+            echo "Replacement completed for Site 2 (or skipped if no changes)"
+          else
+            echo "desktop/index.html not found, skipping replacement"
+          fi
+
+      - name: Deploy to InfinityFree Site 2
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME_2 }}
+          password: ${{ secrets.FTP_PASSWORD_2 }}
+          protocol: ftp
+          port: 21
+          server-dir: htdocs/
+          local-dir: ./
+          state-name: .ftp-sync-state-2.json
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            README.md
+            .gitignore
+            .ftp-sync-state-1.json
+            .ftp-sync-state-2.json
             .ftp-sync-state-3.json
           log-level: standard
 
@@ -73,6 +119,7 @@ jobs:
             ! -path './.git/*' \
             ! -path './.github/*' \
             ! -name '.ftp-sync-state-1.json' \
+            ! -name '.ftp-sync-state-2.json' \
             ! -name '.ftp-sync-state-3.json' \
             -exec sed -i 's/menist/seamless-os/g' {} +
 
@@ -103,5 +150,6 @@ jobs:
             README.md
             .gitignore
             .ftp-sync-state-1.json
+            .ftp-sync-state-2.json
             .ftp-sync-state-3.json
           log-level: standard
