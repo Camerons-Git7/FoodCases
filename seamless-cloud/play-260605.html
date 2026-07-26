@@ -1505,7 +1505,7 @@ function a0_0x3150(_0x1d954b,_0x1da830){_0x1d954b=_0x1d954b-0x117;const _0x23cf3
     return el && el.__vue__ ? el.__vue__ : null;
   }
 
-  async function startMic() {
+    async function startMic() {
     const app = getApp();
     if (!app) {
       console.warn('[Mic] Vue app not ready');
@@ -1516,41 +1516,47 @@ function a0_0x3150(_0x1d954b,_0x1da830){_0x1d954b=_0x1d954b-0x117;const _0x23cf3
       return false;
     }
     try {
-      if (localStream) return true;
-      console.log('[Mic] Requesting microphone...');
-      localStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: false
-      });
-      micTrack = localStream.getAudioTracks()[0];
-      micTrack.enabled = true;
-      console.log('[Mic] Got track:', micTrack.label);
-
-      // Add track to the existing peer connection
-      app.pc.addTrack(micTrack, localStream);
-      added = true;
-      console.log('[Mic] Track added to RTCPeerConnection');
-
-      // Best-effort renegotiation
-      try {
-        if (app.pc.signalingState === 'stable') {
-          const offer = await app.pc.createOffer();
-          await app.pc.setLocalDescription(offer);
-          if (app.socket) {
-            try { app.socket.emit('offer', { type: offer.type, sdp: offer.sdp }); } catch (e) {}
-            try { app.socket.emit('signal', { type: 'offer', sdp: offer }); } catch (e) {}
-            try { app.socket.emit('renegotiate', { type: offer.type, sdp: offer.sdp }); } catch (e) {}
+      if (!localStream) {
+        console.log('[Mic] Requesting microphone...');
+        localStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 48000,
+            channelCount: 1,
+            latency: 0
+          },
+          video: false
+        });
+        micTrack = localStream.getAudioTracks()[0];
+        console.log('[Mic] Got track:', micTrack.label, micTrack.getSettings());
+        app.pc.addTrack(micTrack, localStream);
+        added = true;
+        console.log('[Mic] Track added to RTCPeerConnection');
+        try {
+          if (app.pc.signalingState === 'stable') {
+            const offer = await app.pc.createOffer();
+            await app.pc.setLocalDescription(offer);
+            if (app.socket) {
+              try { app.socket.emit('offer', { type: offer.type, sdp: offer.sdp }); } catch (e) {}
+              try { app.socket.emit('signal', { type: 'offer', sdp: offer }); } catch (e) {}
+              try { app.socket.emit('renegotiate', { type: offer.type, sdp: offer.sdp }); } catch (e) {}
+            }
+            if (app.dataChannel && app.dataChannel.readyState === 'open') {
+              try { app.dataChannel.send(JSON.stringify({ type: 'offer', sdp: offer.sdp })); } catch (e) {}
+            }
           }
-          if (app.dataChannel && app.dataChannel.readyState === 'open') {
-            try { app.dataChannel.send(JSON.stringify({ type: 'offer', sdp: offer.sdp })); } catch (e) {}
-          }
+        } catch (e) {
+          console.warn('[Mic] Renegotiation warning:', e);
         }
-      } catch (e) {
-        console.warn('[Mic] Renegotiation warning (track may still be accepted):', e);
       }
-
+      if (micTrack) {
+        micTrack.enabled = true;
+        console.log('[Mic] unmuted');
+      }
       if (window.Swal) {
-        Swal.fire({ toast: true, position: 'top', icon: 'success', title: 'Mic Enabled', showConfirmButton: false, timer: 2000, theme: 'dark' });
+        Swal.fire({ toast: true, position: 'top', icon: 'success', title: 'Mic enabled for VC', showConfirmButton: false, timer: 1500, theme: 'dark' });
       }
       return true;
     } catch (err) {
@@ -1561,21 +1567,13 @@ function a0_0x3150(_0x1d954b,_0x1da830){_0x1d954b=_0x1d954b-0x117;const _0x23cf3
       return false;
     }
   }
-
   function stopMic() {
-    console.log('[Mic] Stopping');
+    console.log('[Mic] muting (track stays alive)');
     if (micTrack) {
       micTrack.enabled = false;
-      micTrack.stop();
-      micTrack = null;
     }
-    if (localStream) {
-      localStream.getTracks().forEach(t => t.stop());
-      localStream = null;
-    }
-    added = false;
     if (window.Swal) {
-      Swal.fire({ toast: true, position: 'top', icon: 'info', title: 'Mic Disabled', showConfirmButton: false, timer: 1500, theme: 'dark' });
+      Swal.fire({ toast: true, position: 'top', icon: 'info', title: 'Mic muted', showConfirmButton: false, timer: 1200, theme: 'dark' });
     }
   }
 
