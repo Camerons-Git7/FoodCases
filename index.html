@@ -955,7 +955,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
     <button id="boot-btn" onclick="startBootSequence()" tabindex="1">Enter SEAMLESS</button>
     <div class="boot__hint">Double-Tap ENTER to skip sequence</div>
   </div>
-  <video id="boot-video" playsinline aria-hidden="true"><source src="https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Boot.mp4" type="video/mp4"></video>
+  <video id="boot-video" playsinline aria-hidden="true"><source src="cine-os/Videos/Boot.mp4" type="video/mp4"></video>
 </section>
 
 <main id="lock-screen" onclick="unlockSystem()" role="presentation">
@@ -1514,36 +1514,36 @@ function syncPins() {
 }
 
 var wallpaperRegistry = {
-    "Snake": {id: "Snake", name: "Snake Skeleton", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/default.mp4", locked: false},
-    "green": {id: "green", name: "Green Anime", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/green.mp4", locked: false},
-    "33A56": {id: "hunt_trait", name: "Hunt Showdown", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/33A56.mp4", locked: false},
-    "45E33": {id: "45E33", name: "45E33", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/45E33.mp4", locked: false},
-    "55Cine": {id: "55Cine", name: "Cine 55", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/55Cine.PNG", locked: false},
-    "99Med": {id: "99Med", name: "99 Med", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/99Med.mp4", locked: false},
-    "Brother": {id: "Brother", name: "Brother", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Brother.mp4", locked: false},
-    "F-1": {id: "F-1", name: "F-1 Formula", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/F-1.mp4", locked: false},
-    "Gojo-Sukuna": {id: "Gojo-Sukuna", name: "Gojo vs Sukuna", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Gojo-Sukuna.mp4", locked: false},
-    "Hunt": {id: "Hunt", name: "Hunt Showdown 2", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Hunt.mp4", locked: false},
-    "Minecraft01": {id: "Minecraft01", name: "Minecraft 01", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Minecraft01.mp4", locked: false},
-    "Minecraft02": {id: "Minecraft02", name: "Minecraft 02", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Minecraft02.mp4", locked: false},
-    "Minecraft03": {id: "Minecraft03", name: "Minecraft 03", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Minecraft03.mp4", locked: false},
-    "Monkey": {id: "Monkey", name: "Monkey", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Monkey.mp4", locked: false},
-    "Skello": {id: "Skello", name: "Skello", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Skello.MP4", locked: false},
-    "SnowFox": {id: "SnowFox", name: "Snow Fox", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/SnowFox.mp4", locked: false},
-    "Supra": {id: "Supra", name: "Supra Drift", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Supra.PNG", locked: false},
-    "Yuji52": {id: "Yuji52", name: "Yuji 52", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Yuji52.mp4", locked: false},
-    "sukuna-fire": {id: "sukuna-fire", name: "Sukuna Fire", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/sukuna-fire.mp4", locked: false},
-    "CozyFox": {id: "CozyFox", name: "Cozy Fox", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/CozyFox.mp4", locked: false},
-    "RainyCity": {id: "RainyCity", name: "Rainy City", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/RainyCity.mp4", locked: false},
-    "Gojo": {id: "Gojo", name: "Gojo", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Gojo.mp4", locked: false},
-    "BlackHole": {id: "BlackHole", name: "Black Hole", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/BlackHole.mp4", locked: false},
-    "Yuta": {id: "Yuta", name: "Yuta", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Yuta.mp4", locked: false},
-    "Desktop": {id: "Desktop", name: "Desktop Lines", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Desktop.mp4", locked: false},
-    "MacOS": {id: "MacOS", name: "MacOS", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/MacOS.png", locked: false},
-    "Rainy-Lambo": { id: "RainyLambo", name: "Rainy Lambo", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Rainy-Lambo.mp4", locked: false },
-    "Backrooms": { id: "Backrooms", name: "Backrooms", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Backrooms.mp4", locked: false },
-    "Home": { id: "Home", name: "Default Home Screen", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Rog-Home-Screen.png", locked: false },
-    "Lock": { id: "Lock", name: "Default Lock Screen", url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/Rog-Lockscreen.png", locked: false }
+    "Snake": {id: "Snake", name: "Snake Skeleton", url: "cine-os/Videos/default.mp4", locked: false},
+    "green": {id: "green", name: "Green Anime", url: "cine-os/Videos/green.mp4", locked: false},
+    "33A56": {id: "hunt_trait", name: "Hunt Showdown", url: "cine-os/Videos/33A56.mp4", locked: false},
+    "45E33": {id: "45E33", name: "45E33", url: "cine-os/Videos/45E33.mp4", locked: false},
+    "55Cine": {id: "55Cine", name: "Cine 55", url: "cine-os/Videos/55Cine.PNG", locked: false},
+    "99Med": {id: "99Med", name: "99 Med", url: "cine-os/Videos/99Med.mp4", locked: false},
+    "Brother": {id: "Brother", name: "Brother", url: "cine-os/Videos/Brother.mp4", locked: false},
+    "F-1": {id: "F-1", name: "F-1 Formula", url: "cine-os/Videos/F-1.mp4", locked: false},
+    "Gojo-Sukuna": {id: "Gojo-Sukuna", name: "Gojo vs Sukuna", url: "cine-os/Videos/Gojo-Sukuna.mp4", locked: false},
+    "Hunt": {id: "Hunt", name: "Hunt Showdown 2", url: "cine-os/Videos/Hunt.mp4", locked: false},
+    "Minecraft01": {id: "Minecraft01", name: "Minecraft 01", url: "cine-os/Videos/Minecraft01.mp4", locked: false},
+    "Minecraft02": {id: "Minecraft02", name: "Minecraft 02", url: "cine-os/Videos/Minecraft02.mp4", locked: false},
+    "Minecraft03": {id: "Minecraft03", name: "Minecraft 03", url: "cine-os/Videos/Minecraft03.mp4", locked: false},
+    "Monkey": {id: "Monkey", name: "Monkey", url: "cine-os/Videos/Monkey.mp4", locked: false},
+    "Skello": {id: "Skello", name: "Skello", url: "cine-os/Videos/Skello.MP4", locked: false},
+    "SnowFox": {id: "SnowFox", name: "Snow Fox", url: "cine-os/Videos/SnowFox.mp4", locked: false},
+    "Supra": {id: "Supra", name: "Supra Drift", url: "cine-os/Videos/Supra.PNG", locked: false},
+    "Yuji52": {id: "Yuji52", name: "Yuji 52", url: "cine-os/Videos/Yuji52.mp4", locked: false},
+    "sukuna-fire": {id: "sukuna-fire", name: "Sukuna Fire", url: "cine-os/Videos/sukuna-fire.mp4", locked: false},
+    "CozyFox": {id: "CozyFox", name: "Cozy Fox", url: "cine-os/Videos/CozyFox.mp4", locked: false},
+    "RainyCity": {id: "RainyCity", name: "Rainy City", url: "cine-os/Videos/RainyCity.mp4", locked: false},
+    "Gojo": {id: "Gojo", name: "Gojo", url: "cine-os/Videos/Gojo.mp4", locked: false},
+    "BlackHole": {id: "BlackHole", name: "Black Hole", url: "cine-os/Videos/BlackHole.mp4", locked: false},
+    "Yuta": {id: "Yuta", name: "Yuta", url: "cine-os/Videos/Yuta.mp4", locked: false},
+    "Desktop": {id: "Desktop", name: "Desktop Lines", url: "cine-os/Videos/Desktop.mp4", locked: false},
+    "MacOS": {id: "MacOS", name: "MacOS", url: "cine-os/Videos/MacOS.png", locked: false},
+    "Rainy-Lambo": { id: "RainyLambo", name: "Rainy Lambo", url: "cine-os/Videos/Rainy-Lambo.mp4", locked: false },
+    "Backrooms": { id: "Backrooms", name: "Backrooms", url: "cine-os/Videos/Backrooms.mp4", locked: false },
+    "Home": { id: "Home", name: "Default Home Screen", url: "cine-os/Videos/Rog-Home-Screen.png", locked: false },
+    "Lock": { id: "Lock", name: "Default Lock Screen", url: "cine-os/Videos/Rog-Lockscreen.png", locked: false }
 };
 
 var sysConfig = JSON.parse(localStorage.getItem('cine_sys_config')) || {};
@@ -1873,7 +1873,7 @@ function startBootSequence() {
     bootLayer.classList.add('boot-animation');
     
     if(sysConfig.shortBoot) {
-        bv.src = "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/QuickBoot.mp4";
+        bv.src = "cine-os/Videos/QuickBoot.mp4";
         bv.load();
     }
     
@@ -1989,7 +1989,7 @@ function initWallpapers() {
     if(wallpaperRegistry[sysConfig.lockWallpaper]) {
         applyMediaToElements(wallpaperRegistry[sysConfig.lockWallpaper].url, lV, lI, false);
     } else {
-        applyMediaToElements("https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cine-os/Videos/green.mp4", lV, lI, false);
+        applyMediaToElements("cine-os/Videos/green.mp4", lV, lI, false);
     }
     
     updateWallpaperLoop();
