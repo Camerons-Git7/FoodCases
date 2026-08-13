@@ -2272,13 +2272,29 @@ function toggleFullscreen(id) {
 function startImmersiveMode(win) {
     document.getElementById('dock-container').classList.add('dock-hidden');
     win.classList.remove('header-visible');
+
+    // Disable desktop background while an app window is active
+    if (!sysConfig.optBg) {
+        let bV = document.getElementById('bg-video');
+        if (bV && bV.style.display !== 'none') {
+            bV.pause();
+        }
+    }
 }
 
 function endImmersiveMode() {
     let aw = document.querySelectorAll('.window.active:not(.minimized)');
-    if(aw.length === 0) {
+    if (aw.length === 0) {
         document.getElementById('dock-container').classList.remove('dock-hidden');
         activeWindowId = null;
+
+        // Re-enable desktop background when no apps are open
+        if (!sysConfig.optBg) {
+            let bV = document.getElementById('bg-video');
+            if (bV && bV.style.display !== 'none') {
+                bV.play().catch(function(e){});
+            }
+        }
     } else {
         let t = aw[aw.length - 1];
         activeWindowId = t.id.replace('win-', '');
