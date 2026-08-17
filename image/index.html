@@ -180,6 +180,58 @@
 
   #fileInput, #folderInput { display: none; }
 
+  .url-upload {
+    padding: 1.25rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .image-url-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    outline: none;
+  }
+
+  .image-url-input:focus {
+    border-color: var(--accent);
+  }
+
+  .image-url-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0 1rem;
+    cursor: pointer;
+    border-radius: var(--radius);
+    white-space: nowrap;
+  }
+
+  .image-url-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  @media (max-width: 520px) {
+    .url-upload {
+      flex-direction: column;
+    }
+
+    .image-url-btn {
+      padding: 0.75rem 1rem;
+    }
+  }
+
   .preview-section {
     display: none;
     padding: 1.5rem;
@@ -633,6 +685,17 @@
     <input type="file" id="folderInput" accept="image/*,video/*" webkitdirectory directory multiple>
   </div>
 
+  <div class="url-upload">
+    <input
+      type="url"
+      id="imageUrlInput"
+      class="image-url-input"
+      placeholder="Paste an image URL (https://...)"
+      autocomplete="off"
+    >
+    <button type="button" class="image-url-btn" id="addImageUrlBtn">Add URL</button>
+  </div>
+
   <div class="preview-section" id="previewSection">
     <div class="preview-grid" id="previewGrid"></div>
     <div class="file-meta">
@@ -671,6 +734,8 @@
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
   const folderInput = document.getElementById('folderInput');
+  const imageUrlInput = document.getElementById('imageUrlInput');
+  const addImageUrlBtn = document.getElementById('addImageUrlBtn');
   const browseLink = document.getElementById('browseLink');
   const folderLink = document.getElementById('folderLink');
   const previewSection = document.getElementById('previewSection');
@@ -856,8 +921,56 @@
     if (folderInput.files.length) await processFiles(Array.from(folderInput.files));
   });
 
+  function createRemoteImage(url) {
+    return {
+      name: url.split('/').pop().split('?')[0] || 'remote-image',
+      type: 'image/remote',
+      size: 0,
+      remoteUrl: url
+    };
+  }
+
+  async function addImageFromUrl() {
+    const rawUrl = imageUrlInput.value.trim();
+
+    if (!rawUrl) {
+      showError('Please paste an image URL.');
+      return;
+    }
+
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(rawUrl);
+    } catch {
+      showError('Please enter a valid image URL.');
+      return;
+    }
+
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      showError('Only http:// and https:// image URLs are supported.');
+      return;
+    }
+
+    // Let the browser verify that the URL points to something it can display.
+    const testImage = new Image();
+    testImage.onload = () => {
+      const remoteFile = createRemoteImage(parsedUrl.href);
+      addFiles([remoteFile]);
+      imageUrlInput.value = '';
+    };
+    testImage.onerror = () => {
+      showError('That URL could not be loaded as an image. Make sure it is a direct image URL.');
+    };
+    testImage.src = parsedUrl.href;
+  }
+
+  addImageUrlBtn.addEventListener('click', addImageFromUrl);
+  imageUrlInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') addImageFromUrl();
+  });
+
   function addFiles(files) {
-    const mediaFiles = files.filter(f => isImageFile(f) || isVideoFile(f));
+    const mediaFiles = files.filter(f => f.remoteUrl || isImageFile(f) || isVideoFile(f));
     if (mediaFiles.length === 0) {
       showError('Please select image or video files only.');
       return;
@@ -909,6 +1022,17 @@
           URL.revokeObjectURL(videoUrl);
           removeFile(index);
         });
+      } else if (file.remoteUrl) {
+        item.innerHTML = `
+          <img src="${file.remoteUrl}" alt="${file.name}">
+          <button class="remove-btn" data-index="${index}" title="Remove">×</button>
+          <div class="file-name">URL: ${file.name}</div>
+        `;
+        item.querySelector('.remove-btn').addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          removeFile(index);
+        });
+        previewGrid.appendChild(item);
       } else {
         const reader = new FileReader();
         reader.onload = e => {
@@ -988,10 +1112,17 @@
         url = data.link;
         thumbUrl = url;
       } else {
-        const base64 = await toBase64(file);
         const formData = new FormData();
-        formData.append('image', base64.split(',')[1]);
-        formData.append('name', file.name.replace(/\.[^.]+$/, ''));
+
+        // ImgBB accepts either base64 image data or a direct image URL.
+        if (file.remoteUrl) {
+          formData.append('image', file.remoteUrl);
+          formData.append('name', file.name.replace(/\.[^.]+$/, '') || 'remote-image');
+        } else {
+          const base64 = await toBase64(file);
+          formData.append('image', base64.split(',')[1]);
+          formData.append('name', file.name.replace(/\.[^.]+$/, ''));
+        }
 
         const res = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}`, {
           method: 'POST',
@@ -1143,6 +1274,7 @@
     currentFiles = [];
     fileInput.value = '';
     folderInput.value = '';
+    imageUrlInput.value = '';
     previewSection.classList.remove('visible');
     resultSection.classList.remove('visible');
     errorMsg.classList.remove('visible');
