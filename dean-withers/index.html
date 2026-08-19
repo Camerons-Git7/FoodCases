@@ -28,7 +28,7 @@
       height: 100vh;
       border: 0;
 
-      pointer-events: none;
+      pointer-events: auto;
       user-select: none;
       -webkit-user-select: none;
     }
@@ -38,10 +38,30 @@
 <body>
 
   <iframe
+    id="videoFrame"
     src="https://www.youtube-nocookie.com/embed/live_stream?channel=UC7d2WmQqHxc9PTJyj3bVFgw&autoplay=1&controls=0&disablekb=1&rel=0&playsinline=1&fs=0"
     allow="autoplay; fullscreen"
     allowfullscreen>
   </iframe>
+
+  <script>
+    const iframe = document.getElementById("videoFrame");
+
+    let firstPressAllowed = true;
+    let interactionDisabled = false;
+
+    window.addEventListener("blur", () => {
+      if (firstPressAllowed && !interactionDisabled) {
+        setTimeout(() => {
+          iframe.style.pointerEvents = "none";
+          interactionDisabled = true;
+          firstPressAllowed = false;
+        }, 100);
+      }
+    });
+
+    iframe.style.pointerEvents = "auto";
+  </script>
 
 </body>
 </html>
