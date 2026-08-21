@@ -1608,83 +1608,8 @@ function a0_0x3150(_0x1d954b,_0x1da830){_0x1d954b=_0x1d954b-0x117;const _0x23cf3
   window.__enableMic = startMic;
   window.__disableMic = stopMic;
 })();
-
-<script>
-(function () {
-  const BALL_SIZE = 40;
-  const MARGIN = 0;
-  const TOLERANCE = 20;
-
-  function getApp() {
-    const el = document.getElementById('app');
-    return el && el.__vue__ ? el.__vue__ : null;
-  }
-
-  function bottomLeftPos() {
-    return {
-      x: MARGIN,
-      y: window.innerHeight - BALL_SIZE - MARGIN
-    };
-  }
-
-  function isAtBottomLeft(pos) {
-    if (!pos) return false;
-    const target = bottomLeftPos();
-    return Math.abs(pos.x - target.x) <= TOLERANCE &&
-           Math.abs(pos.y - target.y) <= TOLERANCE;
-  }
-
-  function snapBottomLeft(app) {
-    if (!app) return;
-    var pos = bottomLeftPos();
-    app.ballPosition.x = pos.x;
-    app.ballPosition.y = pos.y;
-    if (app.$forceUpdate) app.$forceUpdate();
-  }
-
-  function clampOnly(app) {
-    if (!app || !app.ballPosition) return;
-    var maxX = Math.max(0, window.innerWidth - BALL_SIZE);
-    var maxY = Math.max(0, window.innerHeight - BALL_SIZE);
-    app.ballPosition.x = Math.max(0, Math.min(app.ballPosition.x, maxX));
-    app.ballPosition.y = Math.max(0, Math.min(app.ballPosition.y, maxY));
-  }
-
-  function onFullscreenChange() {
-    var app = getApp();
-    if (!app) return;
-    snapBottomLeft(app);
-    setTimeout(function () { snapBottomLeft(app); }, 50);
-    setTimeout(function () { snapBottomLeft(app); }, 200);
-    setTimeout(function () { snapBottomLeft(app); }, 400);
-  }
-
-  function onResize() {
-    var app = getApp();
-    if (!app) return;
-    if (isAtBottomLeft(app.ballPosition)) {
-      snapBottomLeft(app);
-    } else {
-      clampOnly(app);
-    }
-  }
-
-  document.addEventListener('fullscreenchange', onFullscreenChange);
-  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
-  document.addEventListener('mozfullscreenchange', onFullscreenChange);
-  document.addEventListener('MSFullscreenChange', onFullscreenChange);
-  window.addEventListener('resize', onResize);
-
-  var tryInit = setInterval(function () {
-    var app = getApp();
-    if (app && app.ballPosition) {
-      snapBottomLeft(app);
-      clearInterval(tryInit);
-    }
-  }, 200);
-})();
+  
 </script>
-
 </body>
 
 </html>
