@@ -29,6 +29,7 @@
       padding: 20px;
       text-align: center;
       max-width: 90%;
+      display: none;
     }
     iframe {
       display: block;
@@ -39,23 +40,21 @@
   </style>
 </head>
 <body>
+  <div id="loading">
+    <div>Loading Game...</div>
+    <div style="margin-top:12px; opacity:0.7; font-size:0.9rem;">Please Wait — Loading May Take Up To 1 Minute</div>
+  </div>
 
-<div id="loading">
-  <div>Loading Game...</div>
-  <div style="margin-top:12px; opacity:0.7; font-size:0.9rem;">Please Wait — Loading May Take Up To 1 Minute</div>
-</div>
-
-<iframe id="gameframe" style="display:none;"></iframe>
-
-<div id="error" style="display:none;"></div>
+  <iframe id="gameframe" style="display:none;"></iframe>
+  <div id="error"></div>
 
 <script>
 const GAME_URL = "https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/fnaf2.html";
 
 async function start() {
   const loading = document.getElementById('loading');
-  const frame = document.getElementById('gameframe');
-  const errDiv = document.getElementById('error');
+  const frame   = document.getElementById('gameframe');
+  const errDiv  = document.getElementById('error');
 
   try {
     const resp = await fetch(GAME_URL);
@@ -63,38 +62,39 @@ async function start() {
       throw new Error(`GitHub responded ${resp.status} — maybe rate limit or file moved`);
     }
 
-    const text = await resp.text();
+    let text = await resp.text();
 
-    // This is the key part — same technique your runner uses
+    text = text.replace(
+      /\(asset\)\s*=>\s*new URL\(\s*['"]\.\/assets\/['"]\s*\+\s*asset\.assetId\s*\+\s*['"]\.['"]\s*\+\s*asset\.dataFormat\s*,\s*location\s*\)\.href/g,
+      `(asset) => './assets/' + asset.assetId + '.' + asset.dataFormat`
+    );
+
     const blob = new Blob([text], { type: 'text/html;charset=utf-8' });
     const blobUrl = URL.createObjectURL(blob);
 
     frame.src = blobUrl;
+
     frame.onload = () => {
       loading.style.display = 'none';
       frame.style.display = 'block';
-      // Optional: clean up after a delay
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
     };
 
   } catch (err) {
     loading.style.display = 'none';
-    errDiv.style.display = 'flex';
+    errDiv.style.display = 'block';
     errDiv.innerHTML = `
       <strong>Failed to load game</strong><br><br>
       ${err.message}<br><br>
       • Check your internet<br>
       • GitHub may be throttling<br>
-      • File might have been removed/renamed<br><br>
-      Size hint: original file is ~36 MB — large downloads can fail on slow/unstable connections.
+      • File might have been removed/renamed
     `;
     console.error(err);
   }
 }
 
-// Go immediately
 start();
 </script>
-
 </body>
 </html>
