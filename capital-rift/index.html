@@ -1,0 +1,1534 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capital Rift</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="alternate icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+<!-- Self-hosted (2026-07-15). Was fonts.googleapis.com, which handed Google every
+     visitor's IP + UA on load, before consent, on the page that also takes payment.
+     Same woff2 bytes Google served; regenerate per docs/deploy.md. -->
+<link rel="stylesheet" href="/theme/fonts.css">
+<style>
+  :root {
+    --cr-bg: #161618;
+    --cr-radius: 4px; /* ONE corner radius for every box on the page (Nik 2026-07-09) */
+    --cr-panel-bg: rgba(34,34,38,0.62);
+    --cr-surface: rgba(38,38,42,0.8);
+    --cr-surface-2: rgba(50,50,55,0.92);
+    --cr-rim: #38383d;
+    --cr-rim-lit: #4c4c52;
+    /* Box outlines are OFF (Nik 2026-08-09: "remove the light outlines around all
+       the boxes, it looks tacky"). The 1px is kept so nothing reflows; flip these
+       back to --cr-rim / --cr-rim-lit to restore the outlined look. Dividers keep
+       --cr-rim, and metal controls keep their own #b4b4b4 edge. */
+    --cr-edge: transparent;
+    --cr-edge-lit: transparent;
+    /* Separator lines are off too (Nik 2026-08-09, right after the outlines):
+       the 1px stays so nothing shifts, one flip brings every divider back. */
+    --cr-rule: transparent;
+    --cr-text: #d7d7d7;
+    --cr-bright: #ececec;
+    --cr-ink: #cfcfcf;
+    --cr-muted: #9b9b9b;
+    --cr-label: #949494;
+    --cr-faint: #808080;
+    --cr-green: #34d399;
+    --cr-green-bg: rgba(52,211,153,0.12);
+    --cr-red: #f87171;
+    --cr-red-bg: rgba(248,113,113,0.12);
+    --cr-gold: #fbbf24;
+    --cr-gold-bg: rgba(251,191,36,0.12);
+    --cr-metal: linear-gradient(180deg, #f4f4f4, #d4d4d4);
+    --cr-metal-hover: linear-gradient(180deg, #ffffff, #e2e2e2);
+    --cr-display: 'Lilita One', cursive;
+    --cr-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  html, body { margin: 0; background: var(--cr-bg); }
+  #root { min-height: 100vh; }
+  ::placeholder { color: #808080; font-family: 'Nunito', sans-serif; font-weight: 600; }
+
+  .cr-word {
+    font-family: var(--cr-display); letter-spacing: 2px; line-height: 1.05; white-space: nowrap;
+    background: linear-gradient(95deg, #54d6a0 5%, #6fe0b4 30%, #a974f5 75%);
+    background-size: 220% 100%; -webkit-background-clip: text; background-clip: text;
+    color: transparent; animation: cr-wordflow 9s ease-in-out infinite;
+    filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.55));
+  }
+  /* Border methodology (Nik 2026-07-09): boxes are FILLS, not outlines. Only the
+     outer glass panel keeps a 1px rim (it is the window frame) and metal-material
+     controls keep their lit metal edge. Inputs are borderless wells (focus ring
+     only); the DELETE-confirm input keeps a red outline as a danger signal. */
+  .cr-input {
+    width: 100%; box-sizing: border-box; font-family: 'Nunito', sans-serif; font-weight: 600;
+    font-size: 14.5px; color: var(--cr-text); padding: 11px 13px; border: 1px solid transparent;
+    border-radius: var(--cr-radius); background: #121214; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .cr-input:focus { box-shadow: 0 0 0 3px rgba(255,255,255,0.08); }
+  .cr-input:disabled { cursor: not-allowed; opacity: 0.55; }
+  .cr-input.mono { font-family: var(--cr-mono); font-size: 14px; }
+  .cr-input.reddanger { border-color: rgba(248,113,113,0.4); font-family: var(--cr-mono); font-size: 13px; }
+  .cr-input.reddanger:focus { border-color: var(--cr-red); box-shadow: 0 0 0 3px rgba(248,113,113,0.12); }
+  .cr-btn-metal {
+    font-family: var(--cr-display); letter-spacing: 1px; color: #0c0c0c; border-radius: var(--cr-radius);
+    border: 1px solid #b4b4b4; background: var(--cr-metal);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(0,0,0,0.4);
+    cursor: pointer; transition: background 0.14s, transform 0.08s;
+  }
+  .cr-btn-metal:hover:not(:disabled) { background: var(--cr-metal-hover); }
+  .cr-btn-metal:active:not(:disabled) { transform: translateY(1px) scale(0.99); }
+  .cr-btn-metal:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+  .cr-btn-metal.goldfull { background: var(--cr-gold-bg); border: 1px solid transparent; color: var(--cr-gold); box-shadow: none; opacity: 1; filter: none; cursor: not-allowed; }
+  .cr-btn-ghost {
+    font-family: 'Nunito', sans-serif; font-weight: 800; border: 1px solid transparent;
+    border-radius: var(--cr-radius); background: var(--cr-surface-2); color: var(--cr-ink); cursor: pointer;
+    transition: background 0.14s, color 0.14s;
+  }
+  .cr-btn-ghost:hover { background: rgba(255,255,255,0.08); color: var(--cr-bright); }
+  .cr-btn-ghost.dangersoft:hover { background: var(--cr-red-bg); color: var(--cr-red); }
+  .cr-btn-ghost.dangerarm { color: var(--cr-red); }
+  .cr-btn-ghost.dangerarm:hover { background: var(--cr-red); color: #ffffff; }
+  .cr-btn-confirm-dead { background: var(--cr-surface-2); border: 1px solid transparent; color: var(--cr-faint); cursor: not-allowed; opacity: 0.6; }
+  .cr-btn-confirm-live { background: var(--cr-red); border: 1px solid transparent; color: #ffffff; cursor: pointer; }
+  .cr-link { cursor: pointer; }
+  .cr-link:hover { color: var(--cr-bright) !important; }
+  /* Legal footer links: quiet by default, brighten on hover. Inherit the row's
+     mono/size/tracking so they read as one strip, not three buttons. */
+  .cr-legal { color: inherit; text-decoration: none; }
+  .cr-legal:hover { color: var(--cr-bright); }
+  .cr-nav {
+    text-align: left; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 13.5px;
+    padding: 10px 12px; border-radius: var(--cr-radius); cursor: pointer; background: transparent;
+    border: 1px solid transparent; color: var(--cr-muted); transition: background 0.14s, color 0.14s;
+  }
+  .cr-nav.on { background: var(--cr-metal); border: 1px solid #b4b4b4; color: #0c0c0c; box-shadow: inset 0 1px 0 rgba(255,255,255,0.8); }
+  .cr-nav.danger { color: var(--cr-red); }
+  .cr-x {
+    position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: var(--cr-radius);
+    border: none; background: rgba(255,255,255,0.03); color: var(--cr-ink);
+    display: grid; place-items: center; cursor: pointer; font-size: 14px; line-height: 1;
+    transition: background 0.14s, color 0.14s;
+  }
+  .cr-x:hover { background: rgba(255,255,255,0.07); color: var(--cr-bright); }
+  .cr-tgl {
+    position: relative; width: 42px; height: 24px; border-radius: 999px; cursor: pointer; flex-shrink: 0;
+    transition: background 0.2s; background: var(--cr-surface-2); border: 1px solid transparent;
+  }
+  .cr-tgl.on { background: var(--cr-metal); border: 1px solid #b4b4b4; box-shadow: inset 0 1px 0 rgba(255,255,255,0.7); }
+  .cr-tgl .knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 999px; transition: left 0.2s, background 0.2s; background: #9b9b9b; }
+  .cr-tgl.on .knob { left: 20px; background: #1a1a1a; }
+  .cr-acct-grid { display: grid; grid-template-columns: 208px 1fr; min-height: 520px; }
+  .cr-acct-rail {
+    border-right: 1px solid var(--cr-rule); padding: 16px 12px; display: flex; flex-direction: column;
+    gap: 4px; background: rgba(22, 22, 25, 0.35);
+  }
+  @media (max-width: 760px) {
+    .cr-acct-grid { grid-template-columns: 1fr; }
+    .cr-acct-rail { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--cr-rule); align-items: center; }
+  }
+
+  @keyframes cr-wordflow { 0%, 100% { background-position: 0% 0; } 50% { background-position: 100% 0; } }
+  @keyframes crBob { 0%, 100% { transform: rotate(2deg); } 50% { transform: rotate(6deg); } }
+  @keyframes crBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.15; } }
+  @keyframes crLiquidA {
+    0% { transform: translate(0, 0) scale(1) rotate(0deg); border-radius: 48% 52% 55% 45% / 50% 46% 54% 50%; }
+    50% { transform: translate(4vw, -5vh) scale(1.18) rotate(9deg); border-radius: 60% 40% 44% 56% / 42% 60% 44% 58%; }
+    100% { transform: translate(-3vw, 4vh) scale(0.92) rotate(-7deg); border-radius: 44% 56% 62% 38% / 56% 44% 52% 48%; }
+  }
+  @keyframes crLiquidB {
+    0% { transform: translate(0, 0) scale(1.1) rotate(0deg); border-radius: 55% 45% 42% 58% / 48% 54% 46% 52%; }
+    50% { transform: translate(-5vw, 4vh) scale(0.9) rotate(-10deg); border-radius: 42% 58% 56% 44% / 60% 40% 56% 44%; }
+    100% { transform: translate(4vw, -3vh) scale(1.22) rotate(6deg); border-radius: 58% 42% 48% 52% / 44% 56% 42% 58%; }
+  }
+  @keyframes crLiquidC {
+    0% { transform: translate(0, 0) scale(0.95) rotate(0deg); border-radius: 50% 50% 45% 55% / 52% 48% 55% 45%; }
+    50% { transform: translate(3vw, 5vh) scale(1.15) rotate(12deg); border-radius: 62% 38% 52% 48% / 40% 62% 46% 54%; }
+    100% { transform: translate(-4vw, -4vh) scale(1) rotate(-8deg); border-radius: 45% 55% 58% 42% / 58% 42% 50% 50%; }
+  }
+  /* Global rule: all decorative motion stops under reduced-motion. */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; }
+  }
+</style>
+<script src="./react.production.min.js"></script>
+<script src="./react-dom.production.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/*
+  Capital Rift Access: the capitalrift.com front door (Access.v1).
+
+  A faithful port of the "Capital Rift Access" Claude Design mockup: the auth gate
+  (countdown / coming soon / open / servers full), the beta purchase flow, the
+  player account portal, the checkout modal, the toast, and the bottom ticker.
+
+  What differs from the mockup, because it is real here:
+    - Auth is Google only (oauth2-proxy at play.capitalrift.com, cookie scoped to
+      .capitalrift.com). The email/password form was REMOVED 2026-07-09 (Nik call:
+      Google-only during the closed beta as a security stance, said so on-page);
+      other sign-in options return with the full release (Access.v2 cutover must
+      restore the form UI, see docs/access-v2.md + git history of this file).
+    - The bottom ticker renders REAL live-world stats (status.world from
+      /api/access/status: players/carts/leases/net worth/24h GDP + the exchange's
+      fixed commodity quotes). Zero-valued stats are skipped, never shown as 0.
+    - UI methodology (Nik 2026-07-09, applies to future Capital Rift UI too):
+      ONE small corner radius everywhere (--cr-radius), icons are never boxed or
+      bordered, short helper text is icon + text (no box), and inner cards are
+      borderless fills; only the outer glass panel and metal controls keep edges.
+    - The card form in the checkout modal is replaced by Stripe HOSTED Checkout:
+      the modal is an order summary whose PAY button redirects to Stripe. No card
+      data ever touches this page. The PayPal tab is dropped (not available on our
+      Stripe account region).
+    - Gate state (coming_soon | countdown | open, price, servers full, players
+      online) is SERVER driven: GET /api/access/status, flipped live via the
+      server CLI (pnpm gate ...), no page edits needed.
+    - The account portal is real: profile rename, notification prefs, purchase
+      receipt, type-DELETE account deletion. Security is honest about Google-only
+      auth (no fake password/2FA controls); sessions list is this device only.
+
+  Wiring: /api/* on THIS origin (nginx proxies with the oauth2-proxy identity
+  header; capitalrift.com carries the same session cookie as play.). Google flow
+  starts on play. (which owns oauth2-proxy) and returns here via rd.
+*/
+
+var e = React.createElement;
+
+/* ------------------------------------------------------------------ topology */
+
+var IS_APEX = (window.location.hostname === 'capitalrift.com' || window.location.hostname === 'www.capitalrift.com');
+var OAUTH_BASE = IS_APEX ? 'https://play.capitalrift.com' : '';
+var GATE_ORIGIN = IS_APEX ? 'https://capitalrift.com' : window.location.origin;
+var PLAY_URL = 'https://play.capitalrift.com/';
+
+function destAllowed(rd) {
+  try {
+    var u = new URL(rd, window.location.origin);
+    if (u.protocol !== 'https:') return false;
+    if (rd.indexOf(window.location.origin) === 0) return true;
+    return u.hostname === 'capitalrift.com' || u.hostname === 'www.capitalrift.com' || u.hostname.endsWith('.capitalrift.com');
+  } catch (err) { return false; }
+}
+function requestedRd() {
+  try {
+    var rd = new URLSearchParams(window.location.search).get('rd');
+    if (rd && destAllowed(rd)) return rd;
+  } catch (err) {}
+  return null;
+}
+/* Where ENTER THE RIFT goes: the rd the visitor arrived with (a bounced play URL), else play. */
+function riftDest() { return requestedRd() || PLAY_URL; }
+
+/* After Google, always come back HERE first (the gate routes by access state),
+   carrying the original rd forward so a bounced play visit still ends in the game. */
+function googleStart() {
+  var back = GATE_ORIGIN + '/';
+  var rd = requestedRd();
+  if (rd) back += '?rd=' + encodeURIComponent(rd);
+  window.location.href = OAUTH_BASE + '/oauth2/start?rd=' + encodeURIComponent(back);
+}
+function signOut() {
+  var done = function () {
+    window.location.href = OAUTH_BASE + '/oauth2/sign_out?rd=' + encodeURIComponent(GATE_ORIGIN + '/');
+  };
+  // Clear the Access.v2 email-account cookie first (harmless if there is none), then
+  // run the oauth2-proxy sign-out (clears a Google session, or just bounces to the gate).
+  try { api('/auth/logout', { method: 'POST' }).then(done, done); } catch (e) { done(); }
+}
+
+/* ------------------------------------------------------------------ api ----- */
+
+function api(path, opts) {
+  opts = opts || {};
+  var init = { method: opts.method || 'GET', credentials: 'same-origin', headers: {} };
+  if (opts.body !== undefined) {
+    init.headers['content-type'] = 'application/json';
+    init.body = JSON.stringify(opts.body);
+  }
+  return fetch('/api' + path, init).then(function (res) {
+    return res.json().catch(function () { return null; }).then(function (body) {
+      return { status: res.status, ok: res.ok, body: body };
+    });
+  }, function () { return { status: 0, ok: false, body: null }; });
+}
+
+/* ------------------------------------------------------------------ helpers - */
+
+var REDUCED_MOTION = false;
+try { REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (err) {}
+
+var styleMemo = new Map();
+function s(css) {
+  var hit = styleMemo.get(css);
+  if (hit) return hit;
+  var o = {};
+  css.split(';').forEach(function (d) {
+    var i = d.indexOf(':');
+    if (i < 0) return;
+    var k = d.slice(0, i).trim();
+    var v = d.slice(i + 1).trim();
+    if (!k) return;
+    var ck = k.indexOf('--') === 0 ? k : k.replace(/-([a-z])/g, function (m, c) { return c.toUpperCase(); });
+    o[ck] = v;
+  });
+  styleMemo.set(css, o);
+  return o;
+}
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function fmtMoney(cents) { return '$' + (cents / 100).toFixed(2); }
+function fmtMoneyShort(cents) { return cents % 100 === 0 ? '$' + (cents / 100) : fmtMoney(cents); }
+/* Compact in-game money for the ticker ($87.8K / $4.1M style; n is DOLLARS). */
+function fmtStat(n) {
+  var t = function (x) { var f = x.toFixed(1); return f.slice(-2) === '.0' ? f.slice(0, -2) : f; };
+  if (n >= 1e9) return '$' + t(n / 1e9) + 'B';
+  if (n >= 1e6) return '$' + t(n / 1e6) + 'M';
+  if (n >= 1e3) return '$' + t(n / 1e3) + 'K';
+  return '$' + Math.round(n).toLocaleString('en-US');
+}
+function fmtDateLong(iso) {
+  try {
+    return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch (err) { return iso; }
+}
+function fmtMonthYear(iso) {
+  try {
+    return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+  } catch (err) { return iso; }
+}
+/* The real current device, parsed from the user agent. We cannot enumerate a
+   player's other sessions (identity is a stateless edge cookie, no server-side
+   session store), so the sessions list is honestly the current browser only. */
+function deviceLabel() {
+  var ua = (navigator && navigator.userAgent) || '';
+  var browser = /Edg\//.test(ua) ? 'Edge'
+    : /OPR\/|Opera/.test(ua) ? 'Opera'
+    : /Firefox\//.test(ua) ? 'Firefox'
+    : /Chrome\//.test(ua) ? 'Chrome'
+    : /Safari\//.test(ua) ? 'Safari'
+    : 'Browser';
+  var os = /Windows/.test(ua) ? 'Windows'
+    : /Android/.test(ua) ? 'Android'
+    : /(iPhone|iPad|iPod)/.test(ua) ? 'iOS'
+    : /Mac OS X|Macintosh/.test(ua) ? 'macOS'
+    : /Linux/.test(ua) ? 'Linux'
+    : '';
+  return os ? browser + ' on ' + os : browser;
+}
+
+/* Shared style strings. The PANEL keeps its 1px rim (window frame); chips are
+   borderless tinted fills at the shared radius. */
+var PANEL = 'position:relative;background:var(--cr-panel-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--cr-edge);border-radius:var(--cr-radius);box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), 0 18px 48px rgba(0,0,0,0.45)';
+var ROWLBL = 'font-size:13.5px;font-weight:700;color:var(--cr-muted)';
+var ROWVAL = 'font-family:var(--cr-mono);font-weight:600;font-size:13px;color:var(--cr-ink)';
+var CHIP_GREEN = 'font-family:var(--cr-mono);font-size:10px;font-weight:700;letter-spacing:1.2px;padding:4px 9px;border-radius:var(--cr-radius);background:var(--cr-green-bg);color:var(--cr-green)';
+var CHIP_GOLD = 'font-family:var(--cr-mono);font-size:10px;font-weight:700;letter-spacing:1.2px;padding:4px 9px;border-radius:var(--cr-radius);background:var(--cr-gold-bg);color:var(--cr-gold)';
+var CHIP_GREY = 'font-family:var(--cr-mono);font-size:10px;font-weight:700;letter-spacing:1.2px;padding:4px 9px;border-radius:var(--cr-radius);background:var(--cr-surface-2);color:var(--cr-muted)';
+var MONOLBL = 'font-family:var(--cr-mono);font-size:10px;letter-spacing:1.4px;color:var(--cr-label)';
+var GLOGO = 'font-family:var(--cr-display);font-size:16px;background:linear-gradient(95deg,#54d6a0,#a974f5);-webkit-background-clip:text;background-clip:text;color:transparent';
+
+/* player avatar presets (id -> gradient); shared by the account portal + purchase screen */
+var AVATARS = {
+  white: 'linear-gradient(135deg, #ffffff, #dfe4ea)',
+  crown: 'linear-gradient(135deg, #fef3c7, #fbbf24 45%, #d97706)',
+};
+var AVATAR_IDS = ['white'];
+function avatarGrad(id) { return AVATARS[id] || AVATARS.white; }
+/* Two initials, intelligently chosen: first letter of the first + last word, else
+   the first two letters of a single-word name (non-alphanumerics skipped). */
+function initials(name) {
+  var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  var pick = function (w) { var m = w.match(/[A-Za-z0-9]/); return m ? m[0] : (w.charAt(0) || ''); };
+  if (!parts.length) return '?';
+  if (parts.length === 1) {
+    var m = parts[0].match(/[A-Za-z0-9]/g);
+    if (m && m.length >= 2) return (m[0] + m[1]).toUpperCase();
+    if (m && m.length === 1) return m[0].toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return (pick(parts[0]) + pick(parts[parts.length - 1])).toUpperCase();
+}
+/* The ring is reserved for a net-worth tint (set in-game), so it stays neutral here
+   and is NOT user-selectable. The chosen skin colors the two-letter monogram text;
+   'crown' is the VIP-only gold skin (with a crown). */
+var SKIN_STOPS = {
+  white: [['0', '#ffffff'], ['1', '#dfe4ea']],
+  crown: [['0', '#fef3c7'], ['0.5', '#fbbf24'], ['1', '#d97706']],
+};
+/* Monogram is SVG <text> with a gradient fill (NOT background-clip:text, which
+   Chromium fails to re-clip when the gradient changes -> shows a solid box). The
+   crown accent is an SVG path, not an emoji. The ring stays neutral (net-worth). */
+function avatarNode(skinId, name, size, ring) {
+  var crown = skinId === 'crown';
+  var r = ring || 2;
+  var inner = size - 2 * r;
+  var stops = SKIN_STOPS[skinId] || SKIN_STOPS.white;
+  var gid = 'avsk-' + skinId + '-' + size;
+  var cid = 'avcr-' + size;
+  return e('div', { style: {
+    position: 'relative', width: size + 'px', height: size + 'px', borderRadius: '999px', flexShrink: 0,
+    boxSizing: 'border-box', background: 'var(--cr-surface-2)',
+    border: r + 'px solid var(--cr-edge-lit)', display: 'grid', placeItems: 'center',
+  } },
+    e('svg', { width: inner, height: inner, viewBox: '0 0 100 100', 'aria-hidden': 'true', style: { display: 'block' } },
+      e('defs', null,
+        e('linearGradient', { id: gid, x1: '0', y1: '0', x2: '1', y2: '1' },
+          stops.map(function (st, i) { return e('stop', { key: i, offset: st[0], stopColor: st[1] }); }))),
+      e('text', { x: '50', y: '50', textAnchor: 'middle', dominantBaseline: 'central', fill: 'url(#' + gid + ')',
+        style: { fontFamily: "'Lilita One', cursive", fontSize: '48px', letterSpacing: '1px' } }, initials(name))),
+    crown && size >= 52
+      ? e('svg', { width: Math.round(size * 0.34), height: Math.round(size * 0.34), viewBox: '0 0 24 24', 'aria-hidden': 'true',
+          style: { position: 'absolute', top: '-' + Math.round(size * 0.15) + 'px', left: '50%', transform: 'translateX(-50%)', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.55))' } },
+          e('defs', null, e('linearGradient', { id: cid, x1: '0', y1: '0', x2: '1', y2: '1' },
+            e('stop', { offset: '0', stopColor: '#fde68a' }), e('stop', { offset: '1', stopColor: '#d97706' }))),
+          e('path', { d: PERK_PATHS.crown, fill: 'url(#' + cid + ')' }))
+      : null);
+}
+
+function secHeader(title, sub) {
+  return e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+    e('div', { style: s('font-family:var(--cr-display);font-size:21px;color:var(--cr-bright)') }, title),
+    e('div', { style: s('font-size:13px;font-weight:600;color:var(--cr-muted)') }, sub));
+}
+function StatTile(props) {
+  return e('div', { style: s('display:flex;flex-direction:column;gap:5px;padding:13px 15px;background:var(--cr-surface);border-radius:var(--cr-radius);min-width:0') },
+    e('div', { style: s(MONOLBL) }, props.label),
+    e('div', { style: s('font-family:var(--cr-mono);font-weight:700;font-size:20px;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (props.color || 'var(--cr-bright)')) }, props.value),
+    props.sub ? e('div', { style: s('font-size:11px;font-weight:600;color:var(--cr-faint)') }, props.sub) : null);
+}
+/* ------------------------------------------------------------------ bits ---- */
+
+var PERK_PATHS = {
+  bolt: 'M13 2 L3 14 h7 v8 l10 -12 h-7 Z',
+  crown: 'M4 8 L8 12 L12 5 L16 12 L20 8 L18.5 18 L5.5 18 Z',
+  shield: 'M12 2 L20 5 V11 C20 16 16.5 19.5 12 22 C7.5 19.5 4 16 4 11 V5 Z',
+  lock: 'M6 10 h12 a2 2 0 0 1 2 2 v7 a2 2 0 0 1 -2 2 h-12 a2 2 0 0 1 -2 -2 v-7 a2 2 0 0 1 2 -2 Z M8 10 V8 a4 4 0 0 1 8 0 v2 h-2.5 V8 a1.5 1.5 0 0 0 -3 0 v2 Z',
+};
+/* Solid-silhouette reward icons with the brand green->purple gradient (replaces the
+   emoji glyphs on the purchase screen). Unique gradient id per instance. */
+function perkIcon(kind, uid) {
+  var gid = 'crpg-' + uid;
+  return e('svg', { width: 20, height: 20, viewBox: '0 0 24 24', 'aria-hidden': 'true', style: { display: 'block' } },
+    e('defs', null,
+      e('linearGradient', { id: gid, x1: '0', y1: '0', x2: '1', y2: '1' },
+        e('stop', { offset: '0', stopColor: '#54d6a0' }),
+        e('stop', { offset: '0.5', stopColor: '#6fe0b4' }),
+        e('stop', { offset: '1', stopColor: '#a974f5' }))),
+    e('path', { d: PERK_PATHS[kind] || '', fill: 'url(#' + gid + ')' }));
+}
+/* Checkout padlock. Sized for the 10px mono footer, so it inherits currentColor
+   instead of carrying its own fill: the emoji it replaced rendered in the system
+   emoji font (full-colour, its own metrics) and read as a sticker on a monochrome
+   steel row. PERK_PATHS.lock is the 20px brand-gradient variant and muds at this
+   size, hence the separate, better-proportioned geometry. Body is one evenodd path
+   so the keyhole is real negative space and stays clean over the blurred panel. */
+function lockIcon(size) {
+  var px = size || 12;
+  return e('svg', { width: px, height: px, viewBox: '0 0 24 24', 'aria-hidden': 'true',
+      style: { display: 'block', flexShrink: 0 } },
+    e('path', { d: 'M8.2 10V7.7a3.8 3.8 0 0 1 7.6 0V10', fill: 'none', stroke: 'currentColor',
+      strokeWidth: 2.2, strokeLinecap: 'round' }),
+    e('path', { fillRule: 'evenodd', clipRule: 'evenodd', fill: 'currentColor',
+      d: 'M4.5 12.2a2.2 2.2 0 0 1 2.2-2.2h10.6a2.2 2.2 0 0 1 2.2 2.2v6.6a2.2 2.2 0 0 1-2.2 2.2H6.7a2.2 2.2 0 0 1-2.2-2.2Z'
+       + 'M10.4 15.3a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0Z' }));
+}
+
+/* The ambient backdrop is an 18 MB clip, and it used to start downloading in the
+   same instant as /access/status and /access/me. On anything short of a fast
+   connection it wins the race for bandwidth and the identity call - the one
+   request that decides whether you are looking at a sign-in button or your
+   account - lands seconds late. Decoration must never outrank auth, so the
+   video is HELD until identity resolves (`ready`), and it is `preload: none`
+   so nothing is fetched before that. Everything else here (the gradients, the
+   liquid blobs) paints immediately, so the page still looks alive. */
+function Bg(props) {
+  var ready = !!(props && props.ready);
+  var videoRef = React.useCallback(function (el) {
+    if (!el || el._crWired) return;
+    el._crWired = true;
+    el.muted = true;
+    if (REDUCED_MOTION) return; /* leave the poster frame still */
+    var tryPlay = function () {
+      if (!el.isConnected || !el.paused) return;
+      var p = el.play();
+      if (p && p.catch) p.catch(function () {});
+    };
+    el.addEventListener('loadeddata', tryPlay);
+    el.addEventListener('canplay', tryPlay);
+    var onGesture = function () {
+      tryPlay();
+      if (!el.paused) {
+        window.removeEventListener('pointerdown', onGesture);
+        window.removeEventListener('keydown', onGesture);
+      }
+    };
+    window.addEventListener('pointerdown', onGesture);
+    window.addEventListener('keydown', onGesture);
+    var poll = setInterval(function () {
+      if (!el.isConnected) { clearInterval(poll); return; }
+      if (el.paused) tryPlay(); else clearInterval(poll);
+    }, 800);
+    tryPlay();
+  }, []);
+  return e('div', { style: s('position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0') },
+    ready ? e('video', {
+      src: '/0611.mp4', preload: 'none', autoPlay: !REDUCED_MOTION, muted: true, loop: true,
+      playsInline: true, ref: videoRef,
+      style: s('position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(0.3) brightness(0.35) contrast(1.05) blur(3px)'),
+    }) : null,
+    e('div', { style: s('position:absolute;inset:0;background:linear-gradient(100deg, oklch(0.15 0.012 175 / 0.78), oklch(0.15 0.014 300 / 0.8))') }),
+    e('div', { style: s('position:absolute;left:-14%;top:-16%;width:44vw;height:52vh;min-width:380px;min-height:300px;background:radial-gradient(circle, oklch(0.66 0.17 163 / 0.3) 0%, transparent 66%);filter:blur(44px);animation:crLiquidA 11s ease-in-out infinite alternate') }),
+    e('div', { style: s('position:absolute;left:-10%;bottom:-20%;width:40vw;height:55vh;min-width:340px;min-height:300px;background:radial-gradient(circle, oklch(0.6 0.16 170 / 0.27) 0%, transparent 66%);filter:blur(44px);animation:crLiquidB 13s ease-in-out infinite alternate') }),
+    e('div', { style: s('position:absolute;left:18%;top:30%;width:26vw;height:36vh;min-width:240px;min-height:200px;background:radial-gradient(circle, oklch(0.7 0.15 160 / 0.2) 0%, transparent 66%);filter:blur(44px);animation:crLiquidC 9s ease-in-out infinite alternate') }),
+    e('div', { style: s('position:absolute;right:-14%;top:-18%;width:44vw;height:54vh;min-width:380px;min-height:300px;background:radial-gradient(circle, oklch(0.58 0.19 302 / 0.3) 0%, transparent 66%);filter:blur(44px);animation:crLiquidB 12s ease-in-out infinite alternate') }),
+    e('div', { style: s('position:absolute;right:-10%;bottom:-18%;width:42vw;height:52vh;min-width:360px;min-height:300px;background:radial-gradient(circle, oklch(0.52 0.18 297 / 0.27) 0%, transparent 66%);filter:blur(44px);animation:crLiquidA 14s ease-in-out infinite alternate') }),
+    e('div', { style: s('position:absolute;right:16%;top:34%;width:26vw;height:34vh;min-width:240px;min-height:200px;background:radial-gradient(circle, oklch(0.62 0.17 305 / 0.2) 0%, transparent 66%);filter:blur(44px);animation:crLiquidC 10s ease-in-out infinite alternate') })
+  );
+}
+
+function Toggle(props) {
+  return e('div', { className: 'cr-tgl' + (props.on ? ' on' : ''), onClick: props.onClick },
+    e('div', { className: 'knob' }));
+}
+
+function Row(props) {
+  return e('div', { style: s('display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0' + (props.last ? '' : ';border-bottom:1px solid var(--cr-rule)')) },
+    e('span', { style: s(ROWLBL) }, props.label), props.children);
+}
+
+function Ticker(props) {
+  var st = props.status;
+  var full = !!(st && st.serversFull);
+  var online = st ? st.playersOnline : 0;
+  var cap = st ? st.maxPlayers : 15000;
+  var shown = full ? cap : Math.min(online, cap);
+  /* REAL live-world stats, computed server-side and shipped on /api/access/status
+     as status.world (nothing here is invented). Zero-valued stats are skipped
+     instead of shown as 0. The commodity board is the TOP MOVERS by units
+     traded over the trailing 24h (Nik 2026-07-19), with the exchange's live
+     price: Market.v3 pins every price to base and market_prices is never
+     written at runtime, so a percent-move column would read 0.00% forever and
+     volume is the only honest measure of movement. If world is missing (status
+     fallback), only Players Online shows. */
+  var w = st && st.world;
+  var items = [];
+  var stat = function (t) { items.push({ t: t, c: 'var(--cr-label)' }); };
+  /* Real counts are small (test/probe accounts are excluded server-side), so
+     singular forms matter: "1 Unit Leased", not "1 Units Leased". */
+  var cnt = function (v, one, many) { return v.toLocaleString('en-US') + ' ' + (v === 1 ? one : many); };
+  if (w) {
+    /* betaPlayers is a NEW field: an unreleased server omits it, so this stat
+       simply hides rather than mislabelling the old registered-account count. */
+    if (w.betaPlayers > 0) stat(cnt(w.betaPlayers, 'Beta Player', 'Beta Players'));
+    if (w.gdp24h > 0) stat('World GDP ' + fmtStat(w.gdp24h) + ' (24h)');
+    if (w.netWorth > 0) stat('Combined Net Worth ' + fmtStat(w.netWorth));
+    (w.quotes || []).forEach(function (qt) {
+      /* Volume is what "moving" means here, so show it when there is any. */
+      var vol = qt.units > 0 ? '  ' + Number(qt.units).toLocaleString('en-US') : '';
+      items.push({ t: qt.short + ' $' + Number(qt.price).toFixed(2) + vol, c: 'var(--cr-ink)' });
+    });
+  }
+  return e('div', { style: s('position:fixed;left:0;right:0;bottom:0;z-index:3;background:rgba(22,22,25,0.72);backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);border-top:1px solid var(--cr-rule);overflow:hidden;padding:13px 28px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:22px;font-family:var(--cr-mono);font-weight:600;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap') },
+    e('span', { style: s('flex-shrink:0;display:inline-flex;align-items:center;gap:7px') },
+      e('span', { style: {
+        display: 'inline-block', width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+        background: full ? 'var(--cr-red)' : 'var(--cr-green)',
+        boxShadow: '0 0 6px ' + (full ? 'rgba(248,113,113,0.8)' : 'rgba(52,211,153,0.8)'),
+        animation: 'crBlink 1.6s ease-in-out infinite',
+      } }),
+      e('span', { style: { color: full ? 'var(--cr-red)' : 'var(--cr-label)', flexShrink: 0 } },
+        shown.toLocaleString('en-US') + ' / ' + cap.toLocaleString('en-US') + ' Players Online')),
+    items.map(function (it, i) {
+      return e('span', { key: i, style: { color: it.c, flexShrink: 0 } }, it.t);
+    })
+  );
+}
+
+function Countdown(props) {
+  var totalS = Math.floor(Math.max(0, props.remainingMs) / 1000);
+  var segs = [];
+  var days = Math.floor(totalS / 86400);
+  if (days > 0) segs.push({ val: pad2(days), label: 'days' });
+  segs.push(
+    { val: pad2(Math.floor((totalS % 86400) / 3600)), label: 'hrs' },
+    { val: pad2(Math.floor((totalS % 3600) / 60)), label: 'min' },
+    { val: pad2(totalS % 60), label: 'sec' });
+  return e('div', { style: s('display:flex;flex-direction:column;align-items:center;gap:10px') },
+    e('div', { style: s('font-family:var(--cr-mono);font-size:11px;letter-spacing:2.2px;text-transform:uppercase;color:var(--cr-label)') },
+      props.comingSoon ? 'Capital Rift opens for beta' : 'Capital Rift opens for beta in'),
+    props.comingSoon
+      ? e('div', { style: s(PANEL + ';padding:8px 18px;font-family:var(--cr-display);font-size:20px;letter-spacing:2px;color:var(--cr-bright);background:var(--cr-surface)') }, 'COMING SOON')
+      : e('div', { style: s('display:flex;gap:8px') },
+          segs.map(function (seg, i) {
+            return e('div', { key: i, style: s('display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--cr-surface);border-radius:var(--cr-radius);padding:8px 12px;min-width:54px;box-sizing:border-box;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,0.05)') },
+              e('div', { style: s('font-family:var(--cr-mono);font-weight:700;font-size:21px;line-height:1;font-variant-numeric:tabular-nums;color:var(--cr-bright)') }, seg.val),
+              e('div', { style: s("font-family:'Nunito',sans-serif;font-weight:800;font-size:9.5px;letter-spacing:1.5px;color:var(--cr-label);text-transform:uppercase") }, seg.label));
+          }))
+  );
+}
+
+/* ------------------------------------------------------------------ root ---- */
+
+function Root() {
+  var q = new URLSearchParams(window.location.search);
+  var initialCheckout = q.get('checkout');
+  var initialSession = q.get('session_id');
+  var accessRequired = q.get('access') === 'required';
+  var initialVerified = q.get('verified') === '1';
+  var initialVerifyErr = q.get('verify_error') === '1';
+
+  var _st = React.useState(null); var status = _st[0], setStatus = _st[1];
+  var _me = React.useState(undefined); var me = _me[0], setMe = _me[1];
+  var _sc = React.useState(q.get('screen') === 'account' ? 'account' : null); var screenOverride = _sc[0], setScreenOverride = _sc[1];
+  var _jb = React.useState(null); var justBought = _jb[0], setJustBought = _jb[1];
+  var _po = React.useState(false); var payOpen = _po[0], setPayOpen = _po[1];
+  var _pb = React.useState(false); var payBusy = _pb[0], setPayBusy = _pb[1];
+  var _to = React.useState(''); var toast = _to[0], setToast = _to[1];
+  var _sec = React.useState(q.get('section') || 'overview'); var section = _sec[0], setSection = _sec[1];
+  var _rem = React.useState(0); var remainingMs = _rem[0], setRemainingMs = _rem[1];
+  var _da = React.useState(false); var deleteArmed = _da[0], setDeleteArmed = _da[1];
+  var _dt = React.useState(''); var deleteText = _dt[0], setDeleteText = _dt[1];
+  /* Withdrawal.v1: the EU/EEA/UK right of withdrawal, exercised from Purchases.
+     wdEea is the residence self-declaration (we hold no billing address and IP
+     geo lies about VPNs and travellers, so a tick is the honest mechanism).
+     wdDone survives the moment betaAccess flips false, which would otherwise
+     swap the whole section to the buy screen the instant it succeeded. */
+  var _wa = React.useState(false); var wdArmed = _wa[0], setWdArmed = _wa[1];
+  var _wt = React.useState(''); var wdText = _wt[0], setWdText = _wt[1];
+  var _we = React.useState(false); var wdEea = _we[0], setWdEea = _we[1];
+  var _wb = React.useState(false); var wdBusy = _wb[0], setWdBusy = _wb[1];
+  var _wd = React.useState(null); var wdDone = _wd[0], setWdDone = _wd[1];
+  var _pn = React.useState(''); var profileName = _pn[0], setProfileName = _pn[1];
+
+  var toastT = React.useRef(null);
+  var skewRef = React.useRef(0);
+  var doToast = React.useCallback(function (msg) {
+    clearTimeout(toastT.current);
+    setToast(msg);
+    toastT.current = setTimeout(function () { setToast(''); }, 2600);
+  }, []);
+
+  var refreshStatus = React.useCallback(function () {
+    return api('/access/status').then(function (r) {
+      if (r.ok && r.body) {
+        if (r.body.serverNow) skewRef.current = Date.parse(r.body.serverNow) - Date.now();
+        setStatus(r.body);
+      } else if (!status) {
+        /* Status unreachable (e.g. this file served at play./login/ behind auth):
+           fail OPEN so sign-in is never blocked by a status hiccup. */
+        setStatus({ mode: 'open', opensAt: null, serversFull: false, priceCents: 500, maxPlayers: 15000, playersOnline: 0, stripeReady: false });
+      }
+      return null;
+    });
+  }, [status]);
+
+  var refreshMe = React.useCallback(function () {
+    return api('/access/me').then(function (r) {
+      if (r.ok && r.body && r.body.playerId) {
+        setMe(r.body);
+        /* Remember locally that this browser has an account, so the next
+           signed-out visit greets a returning player (no identity pre-login). */
+        try { localStorage.setItem('cr_returning', '1'); } catch (err) {}
+        setProfileName(function (cur) { return cur || r.body.displayName || ''; });
+        return r.body;
+      }
+      setMe(null);
+      return null;
+    });
+  }, []);
+
+  /* boot */
+  React.useEffect(function () {
+    try { var refQ = q.get('ref'); if (refQ) localStorage.setItem('cr_ref', refQ); } catch (err) {}
+    refreshStatus();
+    var statusIv = setInterval(refreshStatus, 60000);
+    refreshMe().then(function (who) {
+      try {
+        var storedRef = localStorage.getItem('cr_ref');
+        if (who && storedRef) {
+          api('/access/referral', { method: 'POST', body: { code: storedRef } }).then(function () {
+            try { localStorage.removeItem('cr_ref'); } catch (e) {}
+          });
+        }
+      } catch (err) {}
+      if (initialCheckout === 'success' && initialSession && who) {
+        doToast('Confirming your payment with Stripe…');
+        api('/access/checkout/confirm', { method: 'POST', body: { sessionId: initialSession } }).then(function (r) {
+          if (r.ok && r.body && r.body.ok) {
+            setJustBought(Object.assign({}, r.body.purchase || {}, { founderNumber: r.body.founderNumber || null }));
+            refreshMe();
+          } else if (r.ok && r.body && r.body.pending) {
+            doToast('Payment processing. Access unlocks automatically when it clears.');
+            setScreenOverride('account'); setSection('purchases');
+          } else {
+            doToast('Could not confirm the payment. If you were charged, access lands via our Stripe sync shortly.');
+          }
+        });
+      } else if (initialCheckout === 'cancelled') {
+        doToast('Payment cancelled. Nothing was charged.');
+      } else if (initialVerified) {
+        /* Landed back from the email verify link (the server signed us in via the
+           cr_session cookie); refreshMe reflects the now-verified account. */
+        doToast('Email verified. You are signed in.');
+        refreshMe();
+      } else if (initialVerifyErr) {
+        doToast('That verification link expired or was already used. Log in to resend it.');
+      } else if (accessRequired) {
+        doToast('Beta access is required to enter the Rift.');
+      } else if (who && requestedRd() && (who.betaAccess || who.admin)) {
+        /* Bounced off play. mid-session and already entitled: go straight back. */
+        window.location.replace(requestedRd());
+      }
+      return null;
+    });
+    if (initialCheckout || accessRequired || initialVerified || initialVerifyErr) {
+      try { window.history.replaceState(null, '', window.location.pathname); } catch (err) {}
+    }
+    return function () { clearInterval(statusIv); };
+  }, []); /* eslint-disable-line */
+
+  /* countdown tick */
+  React.useEffect(function () {
+    if (!status || status.mode !== 'countdown' || !status.opensAt) { setRemainingMs(0); return undefined; }
+    var target = Date.parse(status.opensAt);
+    var tick = function () {
+      var rem = Math.max(0, target - (Date.now() + skewRef.current));
+      setRemainingMs(rem);
+      if (rem === 0) refreshStatus();
+    };
+    tick();
+    var iv = setInterval(tick, 250);
+    return function () { clearInterval(iv); };
+  }, [status]);
+
+  var mode = status ? status.mode : 'coming_soon';
+  var comingSoon = mode === 'coming_soon';
+  var closed = comingSoon || (mode === 'countdown' && remainingMs > 0);
+  var serversFull = !!(status && status.serversFull) && !closed;
+  var priceCents = status ? status.priceCents : 500;
+  var price = fmtMoneyShort(priceCents);
+  var priceFull = fmtMoney(priceCents);
+  var owns = !!(me && me.betaAccess);
+  var admin = !!(me && me.admin);
+  var canEnter = owns || admin;
+  var canBuy = !canEnter && (!closed || admin);
+
+  var screen;
+  if (me === null || me === undefined) screen = 'auth';
+  else if (justBought) screen = 'purchase';
+  else if (screenOverride) screen = screenOverride;
+  else screen = canEnter ? 'account' : 'purchase';
+
+  /* ---------------- actions ---------------- */
+
+  var openCheckout = function () {
+    if (!canBuy) { doToast('Purchases open when the beta does.'); return; }
+    setPayOpen(true);
+  };
+  var pay = function () {
+    if (payBusy) return;
+    setPayBusy(true);
+    api('/access/checkout', { method: 'POST' }).then(function (r) {
+      setPayBusy(false);
+      if (r.ok && r.body && r.body.url) { window.location.href = r.body.url; return; }
+      var code = r.body && r.body.error;
+      if (code === 'already_owned') { refreshMe(); setPayOpen(false); doToast('You already own beta access.'); }
+      else if (code === 'gate_closed') doToast('Purchases open when the beta does.');
+      else if (code === 'stripe_unconfigured') doToast('Payments are not switched on yet. Check back soon.');
+      else doToast('Checkout could not start. Try again in a moment.');
+    });
+  };
+  var saveProfile = function () {
+    var name = profileName.trim();
+    if (name.length < 2) { doToast('Player name needs at least 2 characters.'); return; }
+    api('/access/profile', { method: 'POST', body: { displayName: name } }).then(function (r) {
+      if (r.ok) { doToast('Profile saved'); refreshMe(); }
+      else doToast('Could not save profile.');
+    });
+  };
+  var pickAvatar = function (id) {
+    if (!me) return;
+    setMe(Object.assign({}, me, { avatar: id }));
+    api('/access/profile', { method: 'POST', body: { avatar: id } }).then(function (r) {
+      if (!r.ok) { doToast('Could not save avatar.'); refreshMe(); }
+    });
+  };
+  var inviteLink = function () { return me && me.referralCode ? GATE_ORIGIN + '/?ref=' + me.referralCode : GATE_ORIGIN + '/'; };
+  var copyInvite = function () {
+    var link = inviteLink();
+    try { navigator.clipboard.writeText(link).then(function () { doToast('Invite link copied'); }); }
+    catch (err) { doToast(link); }
+  };
+  var flipPref = function (key) {
+    if (!me) return;
+    var next = !me.prefs[key];
+    var body = {}; body[key] = next;
+    var optimistic = Object.assign({}, me, { prefs: Object.assign({}, me.prefs, body) });
+    setMe(optimistic);
+    api('/access/prefs', { method: 'POST', body: body }).then(function (r) {
+      if (!r.ok) { doToast('Could not save that toggle.'); refreshMe(); }
+    });
+  };
+  /* Art 21. Optimistic like flipPref, and it re-reads on failure so the switch
+     never lies about what the server actually stores. */
+  var flipTelemetry = function () {
+    if (!me) return;
+    var wantOn = !!me.telemetryOptOut; /* currently opted out, so the click turns it ON */
+    setMe(Object.assign({}, me, { telemetryOptOut: !wantOn }));
+    api('/access/privacy', { method: 'POST', body: { telemetry: wantOn } }).then(function (r) {
+      if (!r.ok) { doToast('Could not save that.'); refreshMe(); }
+      else doToast(wantOn ? 'Telemetry on. Thank you, it genuinely helps.' : 'Telemetry off on every device.');
+    });
+  };
+  /* Art 15 + Art 20. The response carries Content-Disposition: attachment, so an
+     anchor click downloads it and leaves the page where it is. */
+  var downloadMyData = function () {
+    doToast('Building your file...');
+    var a = document.createElement('a');
+    a.href = '/api/access/export';
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+  var confirmDelete = function () {
+    if (deleteText.trim().toUpperCase() !== 'DELETE') return;
+    api('/access/delete', { method: 'POST', body: { confirm: 'DELETE' } }).then(function (r) {
+      if (r.ok) signOut();
+      else doToast('Delete failed. Try again.');
+    });
+  };
+  var confirmWithdraw = function () {
+    if (wdBusy) return;
+    if (!wdEea) return;
+    if (wdText.trim().toUpperCase() !== 'WITHDRAW') return;
+    setWdBusy(true);
+    api('/access/withdraw', { method: 'POST', body: { confirm: 'WITHDRAW', residentEea: true } }).then(function (r) {
+      setWdBusy(false);
+      if (r.ok) {
+        setWdArmed(false); setWdText(''); setWdEea(false);
+        setWdDone(r.body && r.body.purchase ? r.body.purchase : true);
+        /* Access really is gone now, so say so rather than letting the next poll
+           surprise them. founderNumber goes back in the pool with it (Terms 4). */
+        setMe(Object.assign({}, me, {
+          betaAccess: false,
+          founderNumber: null,
+          purchase: (r.body && r.body.purchase) || me.purchase,
+        }));
+        doToast('Withdrawn. Your refund is on its way back to your card.');
+        return;
+      }
+      var code = r.body && r.body.error;
+      if (code === 'not_eligible') doToast('That withdrawal window has closed. Email support and we will look at it.');
+      else if (code === 'no_payment_intent') doToast('No card payment on file for this pass. Email support.');
+      else if (code === 'rate_limited') doToast('Too many tries. Give it a minute.');
+      else doToast('Could not complete that. Email support@capitalrift.com and we will do it by hand.');
+    });
+  };
+  var copyReceipt = function () {
+    var rc = me && me.purchase && me.purchase.receipt;
+    if (!rc) return;
+    try { navigator.clipboard.writeText(rc).then(function () { doToast('Receipt ID copied'); }); }
+    catch (err) { doToast(rc); }
+  };
+  var enterRift = function () { window.location.href = riftDest(); };
+  var goAccount = function (sec) {
+    setJustBought(null); setScreenOverride('account');
+    if (sec) setSection(sec);
+  };
+
+  /* ---------------- screens ---------------- */
+
+  var wordmark = function (sizeCss) {
+    return e('div', { className: 'cr-word', style: s(sizeCss) }, 'CAPITAL RIFT');
+  };
+
+  /* No badge when open (Nik removed the OPEN FOR BUSINESS sign, 2026-07-09); the
+     closed state keeps its CLOSED FOR TESTING flag. */
+  var badge = closed
+    ? e('div', { style: s('position:absolute;top:-16px;right:-14px;z-index:2;font-family:var(--cr-display);font-size:13px;letter-spacing:1.5px;color:var(--cr-red);padding:8px 14px;border-radius:var(--cr-radius);white-space:nowrap;background:rgba(30,20,21,0.9);box-shadow:0 8px 22px rgba(0,0,0,0.45);animation:crBob 3.4s ease-in-out infinite') }, 'CLOSED FOR TESTING')
+    : null;
+
+  // Google-only sign-in (Nik 2026-07-09): one CTA covers login AND registration.
+  // The email/password form is gone until the full release (the on-page note says
+  // so); the closed-state "Testing crew" escape hatch stays for admin sign-in.
+  function authScreen() {
+    /* Nik (2026-07-20): "I'll log in then it takes a while before it actually
+       logs in making it seem like it didnt work". THIS is why. `me` starts
+       undefined (identity not fetched yet) and null (definitively signed out),
+       and the screen selector collapsed both into 'auth', so every visit -
+       INCLUDING the bounce back from Google - painted the full signed-out
+       sign-in screen until /access/me resolved. You sign in, Google returns
+       you, and the first thing you see is the sign-in button again.
+       While identity is still in flight the CTA now says so instead of
+       inviting a second sign-in. */
+    var checking = me === undefined;
+    var ctaDead = checking || closed || serversFull;
+    var ctaLabel = checking
+      ? 'CHECKING YOUR SIGN-IN'
+      : (closed ? 'OPENS SOON' : (serversFull ? 'SERVERS FULL' : 'CONTINUE WITH GOOGLE'));
+    /* Greeting by history: this browser has signed into an account before
+       (cr_returning, set on any /access/me success) vs a brand-new visitor. */
+    var returning = false;
+    try { returning = localStorage.getItem('cr_returning') === '1'; } catch (err) {}
+
+    return e('div', { style: s('position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;min-height:100vh;box-sizing:border-box;padding:44px 24px 120px') },
+      e('div', { style: s('display:flex;flex-direction:column;align-items:center;gap:10px') },
+        wordmark('font-size:clamp(46px, 6.4vw, 72px)'),
+        e('div', { style: s('font-size:11.5px;font-weight:800;letter-spacing:2.6px;text-transform:uppercase;color:var(--cr-label);text-align:center') },
+          "The world's largest economy simulator game")),
+      closed ? e(Countdown, { comingSoon: comingSoon, remainingMs: remainingMs }) : null,
+      e('div', { style: s('position:relative;width:min(400px, calc(100vw - 40px))') },
+        badge,
+        e('div', { style: s(PANEL + ';padding:24px 26px 22px;display:flex;flex-direction:column;gap:14px') },
+          e('div', { style: s('font-family:var(--cr-display);font-size:25px;color:var(--cr-bright)') },
+            checking
+              ? (returning ? 'Welcome back...' : 'One moment...')
+              : (returning ? 'Back to business, player.' : 'Found something big.')),
+          e('button', {
+            className: 'cr-btn-metal' + (serversFull && !closed && !checking ? ' goldfull' : ''),
+            disabled: closed || checking,
+            style: s('display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;width:100%;padding:13px 0'
+              + (checking ? ';opacity:0.72' : '')),
+            onClick: checking
+              ? function () {}
+              : (serversFull ? function () { doToast('Servers are at capacity. Try again soon.'); } : googleStart),
+          }, ctaDead ? null : e('span', { style: s(GLOGO + ';font-size:17px') }, 'G'), ctaLabel),
+          e('div', { style: s('display:flex;align-items:flex-start;gap:9px') },
+            e('div', { style: s('width:20px;height:20px;flex-shrink:0;display:grid;place-items:center;margin-top:1px') }, perkIcon('shield', 'auth')),
+            e('div', { style: s('font-size:12px;font-weight:600;color:var(--cr-faint);line-height:1.5') },
+              'Sign-in is Google only during the closed beta, a security call while we harden the game. Email login and more ways to register join Google with the full release.')))),
+      closed ? e('div', { style: s('font-size:12px;font-weight:700;color:var(--cr-faint)') },
+        'Testing crew? ',
+        e('span', { className: 'cr-link', style: s('color:var(--cr-muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px'), onClick: googleStart }, 'Player sign-in')) : null,
+      /* Legal footer. The policies have to be reachable WITHOUT starting a checkout:
+         Stripe requires a public Terms URL before it will render the withdrawal-waiver
+         checkbox, and a privacy policy nobody can find is not a privacy policy. Sits
+         inside the container's 120px bottom gutter, above the live ticker. */
+      e('div', { style: s('display:flex;align-items:center;gap:9px;font-family:var(--cr-mono);font-size:10px;letter-spacing:0.7px;color:var(--cr-faint)') },
+        e('a', { href: '/privacy/', className: 'cr-legal' }, 'PRIVACY'),
+        e('span', { style: s('opacity:0.5') }, '·'),
+        e('a', { href: '/terms/', className: 'cr-legal' }, 'TERMS'),
+        e('span', { style: s('opacity:0.5') }, '·'),
+        e('a', { href: 'mailto:support@capitalrift.com', className: 'cr-legal' }, 'SUPPORT'))
+    );
+  }
+
+  function offerCard() {
+    var signedAs = me && me.displayName ? me.displayName : '';
+    var fno = me && me.founderNumber ? me.founderNumber.toLocaleString('en-US') : null;
+    var online = status ? status.playersOnline : 0;
+    var perks = [
+      { kind: 'bolt', t: 'Instant closed beta access', d: 'Play the live world the moment you pay.' },
+      { kind: 'crown', t: 'VIP rank at launch', d: 'Reserved now, applied automatically on release.' },
+      { kind: 'shield', t: 'Permanent player badge', d: 'Worn on your profile forever.' },
+      { kind: 'lock', t: 'Locked-in player number', d: fno ? 'You would be Player #' + fno + '.' : 'Your place in line, kept.' },
+    ];
+    return e('div', { style: s(PANEL + ';width:min(460px, calc(100vw - 32px));padding:0;overflow:hidden;display:flex;flex-direction:column') },
+      e('div', { style: s('padding:18px 24px 16px;background:linear-gradient(180deg, rgba(52,211,153,0.09), rgba(169,116,245,0.05));border-bottom:1px solid var(--cr-rule);display:flex;flex-direction:column;gap:9px') },
+        e('div', { style: s('display:flex;align-items:center;justify-content:space-between;gap:10px') },
+          e('span', { style: s(CHIP_GREEN + ';letter-spacing:1.2px') }, 'PLAYER PASS'),
+          e('span', { style: s('font-family:var(--cr-mono);font-size:10px;letter-spacing:1px;color:var(--cr-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px') }, signedAs ? 'SIGNED IN AS ' + signedAs.toUpperCase() : '')),
+        e('div', { style: s('font-family:var(--cr-display);font-size:27px;color:var(--cr-bright);line-height:1.12') }, fno ? 'Become Player #' + fno : 'Access the closed beta'),
+        e('div', { style: s('font-size:13.5px;font-weight:600;color:var(--cr-muted);line-height:1.5') }, 'One payment. Instant beta access and VIP for launch, locked to your account forever.')),
+      e('div', { style: s('padding:18px 24px 22px;display:flex;flex-direction:column;gap:15px') },
+        e('div', { style: s('display:flex;align-items:flex-end;gap:12px') },
+          e('span', { style: s('font-family:var(--cr-display);font-size:56px;line-height:0.9;background:var(--cr-metal);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 10px rgba(0,0,0,0.5))') }, price),
+          e('div', { style: s('display:flex;flex-direction:column;gap:2px;padding-bottom:6px') },
+            e('span', { style: s('font-family:var(--cr-mono);font-size:11px;letter-spacing:1.4px;color:var(--cr-label)') }, 'ONE TIME'),
+            e('span', { style: s('font-size:12px;font-weight:700;color:var(--cr-green)') }, 'Free to play at launch'))),
+        e('div', { style: s('display:flex;flex-direction:column;gap:11px') },
+          perks.map(function (pk, i) {
+            /* Icon methodology: NEVER box or border an icon. Bare glyph, sized wrapper
+               for alignment only. */
+            return e('div', { key: i, style: s('display:flex;align-items:center;gap:11px') },
+              e('div', { style: s('width:22px;height:22px;flex-shrink:0;display:grid;place-items:center') }, perkIcon(pk.kind, i)),
+              e('div', { style: s('display:flex;flex-direction:column;min-width:0') },
+                e('div', { style: s('font-size:13.5px;font-weight:800;color:var(--cr-ink)') }, pk.t),
+                e('div', { style: s('font-size:11.5px;font-weight:600;color:var(--cr-faint);line-height:1.3') }, pk.d)));
+          })),
+        /* Helper-text methodology: icon + text, no box around it. */
+        e('div', { style: s('display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--cr-gold);line-height:1.4') },
+          e('span', null, '▲'), 'The price climbs as the game grows. Today is the lowest it will ever be.'),
+        e('button', {
+          className: 'cr-btn-metal', style: s('font-size:18px;width:100%;padding:14px 0'),
+          disabled: !canBuy, onClick: openCheckout,
+        }, canBuy ? 'UNLOCK PLAYER PASS · ' + priceFull : 'OPENS SOON'),
+        e('div', { style: s('display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap') },
+          e('span', { style: s('display:flex;align-items:center;gap:6px;font-family:var(--cr-mono);font-size:10px;letter-spacing:0.6px;color:var(--cr-faint)') },
+            e('span', { style: { display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--cr-green)' } }),
+            online.toLocaleString('en-US') + ' PLAYERS ONLINE'),
+          e('span', { style: s('font-family:var(--cr-mono);font-size:10px;letter-spacing:0.6px;color:var(--cr-faint)') }, 'SECURE · STRIPE')),
+        e('div', { style: s('text-align:center') },
+          e('span', {
+            className: 'cr-link', style: s('font-size:12.5px;font-weight:700;color:var(--cr-faint);cursor:pointer;text-decoration:underline;text-underline-offset:3px'),
+            onClick: function () { goAccount('overview'); doToast('You can grab the Player Pass anytime from your account'); },
+          }, "No thanks, I'll wait for the free launch")))
+    );
+  }
+
+  function successCard() {
+    var p = justBought || (me && me.purchase) || {};
+    var fno = (justBought && justBought.founderNumber) || (me && me.founderNumber) || null;
+    return e('div', { style: s(PANEL + ';width:min(420px, calc(100vw - 32px));padding:28px 26px 24px;display:flex;flex-direction:column;gap:14px;align-items:center') },
+      e('div', { style: s('width:74px;height:74px;border-radius:999px;background:var(--cr-gold-bg);display:grid;place-items:center;font-family:var(--cr-display);font-size:22px;letter-spacing:1px;color:var(--cr-gold);box-shadow:0 0 34px rgba(251,191,36,0.18)') }, 'VIP'),
+      e('div', { style: s('display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center') },
+        e('div', { style: s('font-family:var(--cr-display);font-size:26px;letter-spacing:1px;color:var(--cr-bright)') }, "YOU'RE IN"),
+        e('div', { style: s('font-size:14px;font-weight:600;color:var(--cr-muted);line-height:1.5') }, 'Beta access is live on your account and VIP is locked in for launch.')),
+      e('div', { style: s('width:100%;display:flex;flex-direction:column') },
+        e(Row, { label: 'Beta access' }, e('span', { style: s(CHIP_GREEN) }, 'ACTIVE')),
+        e(Row, { label: 'VIP at launch' }, e('span', { style: s(CHIP_GOLD) }, 'INCLUDED')),
+        fno ? e(Row, { label: 'Player number' }, e('span', { style: s(ROWVAL) }, '#' + fno.toLocaleString('en-US'))) : null,
+        e(Row, { label: 'Receipt', last: true },
+          e('span', { style: s(ROWVAL) }, '#' + (p.receipt || 'CR-…') + ' · emailed'))),
+      e('button', { className: 'cr-btn-metal', style: s('font-size:18px;width:100%;padding:13px 0'), onClick: enterRift }, 'ENTER THE RIFT →'),
+      e('button', { className: 'cr-btn-ghost', style: s('width:100%;font-size:14px;padding:11px 0'), onClick: function () { goAccount('purchases'); } }, 'Manage account')
+    );
+  }
+
+  function purchaseScreen() {
+    return e('div', { style: s('position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;min-height:100vh;box-sizing:border-box;padding:44px 24px 120px') },
+      wordmark('font-size:38px;letter-spacing:1.5px;filter:drop-shadow(0 10px 26px rgba(0,0,0,0.55))'),
+      justBought ? successCard() : offerCard(),
+      e('div', { style: s('font-size:12.5px;font-weight:700;color:var(--cr-faint)') },
+        'Wrong account? ',
+        e('span', { className: 'cr-link', style: s('color:var(--cr-muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px'), onClick: signOut }, 'Log out'))
+    );
+  }
+
+  /* ---------------- account sections ---------------- */
+
+  function secProfile() {
+    return e('div', { style: s('display:flex;flex-direction:column;gap:16px') },
+      secHeader('Profile', 'How other players see you in the Rift.'),
+      e('div', { style: s('display:flex;align-items:center;gap:16px;flex-wrap:wrap') },
+        avatarNode(me.avatar, me.displayName, 68, 2.5),
+        e('div', { style: s('display:flex;flex-direction:column;gap:8px;min-width:0') },
+          e('div', { style: s(MONOLBL) }, 'AVATAR SKIN'),
+          e('div', { style: s('display:flex;gap:8px;flex-wrap:wrap') },
+            AVATAR_IDS.concat(['crown']).map(function (id) {
+              var on = (me.avatar || 'white') === id;
+              var locked = id === 'crown' && !owns && !admin;
+              return e('div', {
+                key: id, title: locked ? 'VIP players only' : id,
+                onClick: function () { if (locked) { doToast('Crown Gold is a VIP player skin. Unlock the Player Pass to wear it.'); } else { pickAvatar(id); } },
+                style: {
+                  position: 'relative', width: '27px', height: '27px', borderRadius: '999px', cursor: 'pointer', flexShrink: 0,
+                  background: avatarGrad(id),
+                  border: '2px solid transparent',
+                  /* A colour swatch cannot carry a tint (its fill IS the datum) and
+                     a ring is just an outline, so SELECTED reads as full strength
+                     and a slight lift, unselected as dimmed. */
+                  transform: on ? 'scale(1.14)' : 'none',
+                  opacity: locked ? 0.5 : on ? 1 : 0.45,
+                },
+              }, id === 'crown' ? e('svg', { width: 12, height: 12, viewBox: '0 0 24 24', 'aria-hidden': 'true', style: { position: 'absolute', top: '-8px', left: '50%', transform: 'translateX(-50%)' } }, e('path', { d: locked ? PERK_PATHS.lock : PERK_PATHS.crown, fill: '#241a0b' })) : null);
+            })),
+          e('div', { style: s('font-size:11px;font-weight:600;color:var(--cr-faint)') }, 'Your ring color tracks your net worth in the Rift.'))),
+      e('div', { style: s('display:grid;grid-template-columns:1fr 1fr;gap:12px') },
+        e('div', { style: s('display:flex;flex-direction:column;gap:6px') },
+          e('label', { style: s(MONOLBL) }, 'PLAYER NAME'),
+          e('input', { type: 'text', className: 'cr-input', style: s('font-size:14px;padding:10px 12px'), value: profileName, maxLength: 24,
+            onChange: function (ev) { setProfileName(ev.target.value); } })),
+        e('div', { style: s('display:flex;flex-direction:column;gap:6px') },
+          e('label', { style: s(MONOLBL) }, 'EMAIL'),
+          e('input', { type: 'email', className: 'cr-input', style: s('font-size:14px;padding:10px 12px'), value: me.email || '', disabled: true, title: 'Your email comes from your Google sign-in.' }))),
+      e('div', { style: s('display:flex;flex-direction:column') },
+        e(Row, { label: 'Player number' }, e('span', { style: s(ROWVAL) }, me.founderNumber ? '#' + me.founderNumber.toLocaleString('en-US') : '—')),
+        e(Row, { label: 'Member since' }, e('span', { style: s(ROWVAL) }, fmtMonthYear(me.memberSince))),
+        e(Row, { label: 'Player ID' }, e('span', { style: s(ROWVAL + ';font-size:11px;user-select:all;cursor:text;word-break:break-all;text-align:right'), title: 'Your unique account ID' }, me.playerId || '—')),
+        e(Row, { label: 'Linked sign-in', last: true },
+          e('span', { style: s('display:flex;align-items:center;gap:8px;' + ROWVAL) },
+            e('span', { style: s(GLOGO + ';font-size:14px') }, 'G'), 'Google connected'))),
+      e('div', { style: s('display:flex;justify-content:flex-end') },
+        e('button', { className: 'cr-btn-metal', style: s("font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;padding:10px 18px;letter-spacing:0"), onClick: saveProfile }, 'Save changes')));
+  }
+
+  function secSecurity() {
+    return e('div', { style: s('display:flex;flex-direction:column;gap:18px') },
+      e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+        e('div', { style: s('font-family:var(--cr-display);font-size:21px;color:var(--cr-bright)') }, 'Security'),
+        e('div', { style: s('font-size:13px;font-weight:600;color:var(--cr-muted)') }, 'Keep your empire yours.')),
+      e('div', { style: s('display:flex;flex-direction:column;gap:8px;padding:12px 14px;background:var(--cr-surface);border-radius:var(--cr-radius)') },
+        e('div', { style: s('display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--cr-ink)') },
+          'Sign-in security'),
+        e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-faint);line-height:1.5') },
+          'Sign-in runs through Google while Capital Rift is in closed beta, so there is no game password to phish or leak. Email login and more sign-in options join Google with the full release.')),
+      e('div', { style: s('display:flex;flex-direction:column;gap:8px') },
+        e('div', { style: s('font-family:var(--cr-mono);font-size:10px;letter-spacing:1.6px;color:var(--cr-label)') }, 'ACTIVE SESSIONS'),
+        e('div', { style: s('display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--cr-surface);border-radius:var(--cr-radius)') },
+          e('div', { style: s('display:flex;flex-direction:column;gap:1px;min-width:0') },
+            e('div', { style: s('font-size:13.5px;font-weight:800;color:var(--cr-ink)') }, deviceLabel()),
+            e('div', { style: s('font-family:var(--cr-mono);font-size:11px;color:var(--cr-faint)') }, 'active now')),
+          e('span', { style: s(CHIP_GREEN + ';font-size:9.5px;letter-spacing:1px;flex-shrink:0') }, 'THIS DEVICE')),
+        e('div', null,
+          e('button', { className: 'cr-btn-ghost dangersoft', style: s('font-size:13px;padding:9px 16px;font-weight:800') , onClick: signOut }, 'Log out on this device')))
+    );
+  }
+
+  /* Withdrawal.v1 (2026-08-22). The Art 6(1)(h) information duty is why most of
+     this is prose and not just a button: a consumer has to be told the
+     CONDITIONS, the TIME LIMIT and the PROCEDURE, and be able to use a plain
+     statement instead of our UI (Art 11(1)). Getting that wrong is what extended
+     the old window to 12 months in the first place, so the email route is named
+     every single time, including in the refusals.
+
+     The server decides eligibility and ships p.withdrawal; nothing here does date
+     maths. A legacy purchase (sold under the wording that denied the right) comes
+     back with extended = true and a deadline up to a year out, which is correct
+     and deliberately not hidden. */
+  function withdrawalBlock(p) {
+    var w = p && p.withdrawal;
+    if (!w) return null;
+    var TITLE = 'font-family:var(--cr-display);font-size:15px;color:var(--cr-bright)';
+    var BODY = 'font-size:12.5px;font-weight:600;color:var(--cr-muted);line-height:1.55';
+    var quiet = function (txt) {
+      return e('div', { style: s('padding:14px 16px;background:var(--cr-surface);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:6px') },
+        e('div', { style: s(TITLE) }, 'Right of withdrawal'),
+        e('div', { style: s(BODY) }, txt,
+          ' Write to ',
+          e('a', { href: 'mailto:support@capitalrift.com', style: s('color:var(--cr-muted);text-decoration:underline;text-underline-offset:2px') }, 'support@capitalrift.com'),
+          ' and a person will read it.'));
+    };
+
+    if (wdDone) {
+      return e('div', { style: s('padding:14px 16px;background:var(--cr-surface);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:6px') },
+        e('div', { style: s(TITLE) }, 'Withdrawal complete'),
+        e('div', { style: s(BODY) },
+          'Your Player Pass has been withdrawn and the refund is on its way back to the card you paid with. Stripe usually takes 5 to 10 days to post it. Beta access and your player number have gone back with it.'));
+    }
+    if (w.reason === 'already_refunded') return quiet('This purchase has already been refunded.');
+    if (w.reason === 'prior_withdrawal') {
+      return quiet('You have already withdrawn a Player Pass from this account, so the one-click route is closed here. That does not remove your right.');
+    }
+    if (w.reason === 'expired') {
+      return quiet('Your 14-day withdrawal window closed on ' + fmtDateLong(w.deadline) + '.');
+    }
+    if (!w.eligible) return null;
+
+    var ready = wdEea && wdText.trim().toUpperCase() === 'WITHDRAW';
+    return e('div', { style: s('padding:14px 16px;background:var(--cr-surface);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:10px') },
+      e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+        e('div', { style: s(TITLE) }, 'Right of withdrawal'),
+        e('div', { style: s(BODY) },
+          'If you live in the EU, the EEA or the UK you have 14 days to withdraw from this purchase without giving a reason. ',
+          'Your window runs until ', e('strong', { style: s('color:var(--cr-ink)') }, fmtDateLong(w.deadline)), '.')),
+      w.extended
+        ? e('div', { style: s(BODY) },
+            'Your window is longer than 14 days because the checkout you bought through did not tell you about this right. We have fixed that, and you keep the longer window.')
+        : null,
+      e('div', { style: s(BODY) },
+        'Withdrawing refunds you in full to the card you paid with, and ends beta access, your VIP claim and your player number. You can also withdraw by emailing ',
+        e('a', { href: 'mailto:support@capitalrift.com?subject=' + encodeURIComponent('Withdrawal from Player Pass'), style: s('color:var(--cr-muted);text-decoration:underline;text-underline-offset:2px') }, 'support@capitalrift.com'),
+        ', or with any clear statement that you are withdrawing. The button is a convenience, not the only way.'),
+      !wdArmed
+        ? e('div', null,
+            e('button', {
+              /* Deliberately NOT the dangersoft/reddanger skin the delete flow uses.
+                 Withdrawing is a statutory right, not a self-destruct: dressing it
+                 in warning red is the kind of discouragement the Digital Fairness
+                 Act is being written about, and this file's own compliance record
+                 claims we run no dark patterns. Neutral controls, plain language. */
+              className: 'cr-btn-ghost',
+              style: s('font-size:13px;padding:9px 16px;font-weight:800'),
+              onClick: function () { setWdArmed(true); setWdText(''); setWdEea(false); },
+            }, 'Withdraw and refund'))
+        : e('div', { style: s('display:flex;flex-direction:column;gap:9px') },
+            e('label', { style: s('display:flex;align-items:flex-start;gap:9px;cursor:pointer;font-size:12.5px;font-weight:700;color:var(--cr-ink);line-height:1.5') },
+              e('input', {
+                type: 'checkbox', checked: wdEea, style: s('margin-top:2px;flex-shrink:0;accent-color:var(--cr-green)'),
+                onChange: function (ev) { setWdEea(ev.target.checked); },
+              }),
+              e('span', null, 'I live in the EU, the EEA or the UK, and I am withdrawing from this contract.')),
+            e('div', { style: s('display:flex;gap:8px;flex-wrap:wrap;align-items:center') },
+              e('input', {
+                type: 'text', placeholder: 'type WITHDRAW to confirm', className: 'cr-input',
+                style: s('flex:1;min-width:200px;width:auto'), value: wdText,
+                onChange: function (ev) { setWdText(ev.target.value); },
+              }),
+              e('button', {
+                className: ready && !wdBusy ? 'cr-btn-confirm-live' : 'cr-btn-confirm-dead',
+                disabled: !ready || wdBusy,
+                style: s("font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;padding:9px 16px;border-radius:var(--cr-radius)"),
+                onClick: confirmWithdraw,
+              }, wdBusy ? 'Refunding…' : 'Confirm withdrawal'),
+              e('button', {
+                className: 'cr-btn-ghost', style: s('font-size:13px;padding:9px 14px;font-weight:700'),
+                onClick: function () { setWdArmed(false); setWdText(''); setWdEea(false); },
+              }, 'Cancel'))));
+  }
+
+  function secPurchases() {
+    var p = me.purchase;
+    var ownedBlock = e(React.Fragment, null,
+      e('div', { style: s('padding:14px 16px;background:var(--cr-surface);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:6px') },
+        e('div', { style: s('display:flex;align-items:center;justify-content:space-between;gap:10px') },
+          e('span', { style: s('font-family:var(--cr-display);font-size:16px;color:var(--cr-bright)') }, 'Capital Rift Beta'),
+          e('span', { style: s(p && p.status === 'refunded' ? CHIP_GREY : CHIP_GREEN) }, p && p.status === 'refunded' ? 'REFUNDED' : 'ACTIVE')),
+        e(Row, { label: 'Purchased' }, e('span', { style: s(ROWVAL + ';font-size:12.5px') }, p ? fmtDateLong(p.purchasedAt) : '—')),
+        e(Row, { label: 'Price paid, one time' }, e('span', { style: s('font-family:var(--cr-mono);font-weight:700;font-size:12.5px;color:var(--cr-green)') }, p ? fmtMoney(p.amountCents) : priceFull)),
+        e('div', { style: s('display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0') },
+          e('span', { style: s('font-size:13px;font-weight:700;color:var(--cr-muted)') }, 'Receipt #' + (p ? p.receipt : '…')),
+          e('button', { className: 'cr-btn-ghost', style: s('font-size:12px;padding:6px 11px;font-weight:700') , onClick: copyReceipt }, 'Copy'))),
+      e('div', { style: s('padding:14px 16px;background:var(--cr-gold-bg);border-radius:var(--cr-radius);display:flex;align-items:center;justify-content:space-between;gap:12px') },
+        e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+          e('span', { style: s('font-family:var(--cr-display);font-size:15px;color:var(--cr-gold)') }, 'VIP at launch'),
+          e('span', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-muted)') }, 'Free with your beta purchase. Applied automatically when Capital Rift launches.')),
+        e('span', { style: s(CHIP_GOLD + ';flex-shrink:0') }, 'INCLUDED')),
+      withdrawalBlock(p),
+      e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-faint)') },
+        'Payments run through Stripe; your card is never stored on Capital Rift servers.'));
+
+    var notOwnedBlock = e(React.Fragment, null,
+      e('div', { style: s('padding:16px;background:var(--cr-surface);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:10px') },
+        e('div', { style: s('display:flex;align-items:center;justify-content:space-between;gap:10px') },
+          e('span', { style: s('font-family:var(--cr-display);font-size:16px;color:var(--cr-bright)') }, 'Capital Rift Beta'),
+          e('span', { style: s(CHIP_GREY) }, 'NOT OWNED')),
+        e('div', { style: s('font-size:13px;font-weight:600;color:var(--cr-muted);line-height:1.5') },
+          'One time ' + priceFull + ' payment. Play the closed beta now and get VIP free at launch. The price rises as development progresses.'),
+        e('div', null,
+          e('button', {
+            className: 'cr-btn-metal', style: s('font-size:15px;letter-spacing:0.8px;padding:10px 20px'),
+            disabled: !canBuy,
+            onClick: function () { setJustBought(null); setScreenOverride('purchase'); },
+          }, canBuy ? 'GET BETA ACCESS · ' + priceFull : 'OPENS SOON'))),
+      e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-faint)') },
+        'Capital Rift will be free to play at launch. Beta players keep VIP forever.'));
+
+    // Admin / comped access: has entry without a purchase on file. Never show a buy CTA.
+    var accessBlock = e('div', { style: s('padding:14px 16px;background:var(--cr-surface);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:6px') },
+      e('div', { style: s('display:flex;align-items:center;justify-content:space-between;gap:10px') },
+        e('span', { style: s('font-family:var(--cr-display);font-size:16px;color:var(--cr-bright)') }, 'Capital Rift Beta'),
+        e('span', { style: s(CHIP_GREEN) }, 'ACTIVE')),
+      e('div', { style: s('font-size:13px;font-weight:600;color:var(--cr-muted);line-height:1.5') },
+        'Access is active on this account. No purchase is on file.'));
+
+    return e('div', { style: s('display:flex;flex-direction:column;gap:14px') },
+      e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+        e('div', { style: s('font-family:var(--cr-display);font-size:21px;color:var(--cr-bright)') }, 'Purchases'),
+        e('div', { style: s('font-size:13px;font-weight:600;color:var(--cr-muted)') }, 'Everything you own, in one place.')),
+      wdDone ? withdrawalBlock(me.purchase) : (owns ? ownedBlock : (canEnter ? accessBlock : notOwnedBlock)));
+  }
+
+  function secNotifs() {
+    var defs = [
+      { key: 'launch', title: 'Launch alert', sub: 'One email the moment Capital Rift goes free to play.' },
+      { key: 'patch', title: 'Patch notes', sub: 'Beta build changelogs, roughly weekly.' },
+      { key: 'digest', title: 'Market digest', sub: 'Weekly summary of the in-game economy.' },
+      { key: 'events', title: 'Beta events', sub: 'Stress tests, wipes, and community playtests.' },
+    ];
+    return e('div', { style: s('display:flex;flex-direction:column;gap:14px') },
+      e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+        e('div', { style: s('font-family:var(--cr-display);font-size:21px;color:var(--cr-bright)') }, 'Notifications'),
+        e('div', { style: s('font-size:13px;font-weight:600;color:var(--cr-muted)') }, "Emails from the Rift. No spam, player's honor.")),
+      defs.map(function (d) {
+        return e('div', { key: d.key, style: s('display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;background:var(--cr-surface);border-radius:var(--cr-radius)') },
+          e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+            e('div', { style: s('font-size:14px;font-weight:800;color:var(--cr-ink)') }, d.title),
+            e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-faint)') }, d.sub)),
+          e(Toggle, { on: !!me.prefs[d.key], onClick: function () { flipPref(d.key); } }));
+      }));
+  }
+
+  /* CAPABILITY PROBE, not a feature flag. nginx serves this file straight out of
+     the working tree (root -> login-gate/) while /api/ proxies to the RELEASED
+     server, so index.html is routinely NEWER than the backend it talks to. If
+     /access/me does not return telemetryOptOut, the Compliance.v1 routes are not
+     deployed yet and the tab must stay hidden: a Privacy tab whose toggle and
+     download button 404 is worse than no tab at all. It appears on its own the
+     moment Nik runs the Release, with no second edit here. */
+  function privacyReady() {
+    return !!me && typeof me.telemetryOptOut === 'boolean';
+  }
+  function acctItems() {
+    var items = [
+      { key: 'purchases', label: 'Purchases' },
+      { key: 'notifs', label: 'Notifications' },
+    ];
+    if (privacyReady()) items.push({ key: 'privacy', label: 'Privacy and data' });
+    items.push(
+      { key: 'security', label: 'Security' },
+      { key: 'support', label: 'Support' },
+      { key: 'danger', label: 'Danger zone' });
+    return items;
+  }
+
+  /* Compliance.v1: the rights surface. Art 21 objection (telemetry) and Art 15/20
+     access + portability (the export) both have to be things a normal person can
+     actually find and press. The privacy policy used to admit, in writing, that
+     the only telemetry control was a URL parameter. */
+  function secPrivacy() {
+    var telemetryOn = !me.telemetryOptOut;
+    return e('div', { style: s('display:flex;flex-direction:column;gap:14px') },
+      e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+        e('div', { style: s('font-family:var(--cr-display);font-size:21px;color:var(--cr-bright)') }, 'Privacy and data'),
+        e('div', { style: s('font-size:13px;font-weight:600;color:var(--cr-muted)') }, 'What we measure, and how to get a copy of everything.')),
+
+      e('div', { style: s('display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;background:var(--cr-surface);border-radius:var(--cr-radius)') },
+        e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+          e('div', { style: s('font-size:14px;font-weight:800;color:var(--cr-ink)') }, 'Performance telemetry'),
+          e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-faint);line-height:1.5') },
+            'Frame timings, your graphics card and screen size, so we can find stutters. No email, no player id, no IP address, and nobody outside us receives it. Turning this off applies on every device you play on.')),
+        e(Toggle, { on: telemetryOn, onClick: flipTelemetry })),
+
+      e('div', { style: s('padding:14px 16px;background:var(--cr-surface);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:10px') },
+        e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+          e('div', { style: s('font-size:14px;font-weight:800;color:var(--cr-ink)') }, 'Download your data'),
+          e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-faint);line-height:1.5') },
+            'Everything we hold about your account as a JSON file: your profile, purchases, save, money, property, the messages you wrote, and your world edits. Generated live when you press it.')),
+        e('div', null,
+          e('button', { className: 'cr-btn-ghost', style: s('font-size:13px;padding:9px 16px;font-weight:800'), onClick: downloadMyData }, 'Download my data'))),
+
+      e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-faint);line-height:1.6') },
+        'You can also ask us to correct or delete your data, or object to how we use it, at ',
+        e('a', { href: 'mailto:support@capitalrift.com', style: s('color:var(--cr-bright);text-decoration:underline') }, 'support@capitalrift.com'),
+        '. The full detail is in the ',
+        e('a', { href: '/privacy/', style: s('color:var(--cr-bright);text-decoration:underline') }, 'privacy policy'),
+        '. To delete the account itself, use the danger zone.'));
+  }
+
+  function secDanger() {
+    var ready = deleteText.trim().toUpperCase() === 'DELETE';
+    /* Deleting UNHOOKS the purchase (accessRoutes sets purchases.player_id =
+       NULL), so the self-serve withdraw button stops working even while the
+       window is open. The right itself survives, but it drops to an email. Say
+       so HERE, at the moment it costs something, not only in Terms section 8. */
+    var wOpen = me.purchase && me.purchase.withdrawal && me.purchase.withdrawal.eligible;
+    return e('div', { style: s('display:flex;flex-direction:column;gap:14px') },
+      e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+        e('div', { style: s('font-family:var(--cr-display);font-size:21px;color:var(--cr-bright)') }, 'Danger zone'),
+        e('div', { style: s('font-size:13px;font-weight:600;color:var(--cr-muted)') }, 'Irreversible actions live here. Tread carefully.')),
+      wOpen
+        ? e('div', { style: s('padding:12px 16px;background:var(--cr-gold-bg);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:5px') },
+            e('div', { style: s('font-family:var(--cr-display);font-size:14px;color:var(--cr-gold)') }, 'Withdraw first, then delete'),
+            e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-muted);line-height:1.55') },
+              'Your 14-day withdrawal window is still open. Deleting does not take that right away, but it does unhook the one-click refund, and you would have to email us instead. ',
+              e('button', {
+                className: 'cr-btn-ghost', style: s('font-size:12px;padding:5px 11px;font-weight:800;margin-top:6px'),
+                onClick: function () { setSection('purchases'); },
+              }, 'Go to Purchases')))
+        : null,
+      e('div', { style: s('padding:14px 16px;background:var(--cr-red-bg);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:10px') },
+        e('div', { style: s('display:flex;flex-direction:column;gap:2px') },
+          e('div', { style: s('font-family:var(--cr-display);font-size:15px;color:var(--cr-red)') }, 'Delete account'),
+          e('div', { style: s('font-size:13px;font-weight:600;color:var(--cr-muted);line-height:1.5') },
+            'Deletes your player, businesses, purchases, and VIP claim. This cannot be undone.')),
+        !deleteArmed
+          ? e('div', null, e('button', { className: 'cr-btn-ghost dangerarm', style: s('font-size:13px;padding:9px 16px;font-weight:800'), onClick: function () { setDeleteArmed(true); setDeleteText(''); } }, 'Delete account'))
+          : e('div', { style: s('display:flex;gap:8px;flex-wrap:wrap;align-items:center') },
+              e('input', {
+                type: 'text', placeholder: 'type DELETE to confirm', className: 'cr-input reddanger',
+                style: s('flex:1;min-width:200px;width:auto'), value: deleteText,
+                onChange: function (ev) { setDeleteText(ev.target.value); },
+              }),
+              e('button', {
+                className: ready ? 'cr-btn-confirm-live' : 'cr-btn-confirm-dead', disabled: !ready,
+                style: s("font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;padding:9px 16px;border-radius:var(--cr-radius)"),
+                onClick: confirmDelete,
+              }, 'Confirm delete'),
+              e('button', { className: 'cr-btn-ghost', style: s('font-size:13px;padding:9px 14px;font-weight:700'), onClick: function () { setDeleteArmed(false); setDeleteText(''); } }, 'Cancel'))));
+  }
+
+  function accountScreen() {
+    var navGroups = [
+      { label: 'PLAYER', items: [
+        { key: 'overview', label: 'Overview' },
+        { key: 'profile', label: 'Profile' },
+        { key: 'referrals', label: 'Referrals' },
+      ] },
+      { label: 'ACCOUNT', items: acctItems() },
+    ];
+    var routes = { overview: secOverview, profile: secProfile, referrals: secReferrals, purchases: secPurchases, notifs: secNotifs, security: secSecurity, support: secSupport, danger: secDanger };
+    if (privacyReady()) routes.privacy = secPrivacy;
+    var body = (routes[section] || secOverview)();
+
+    return e('div', { style: s('position:relative;z-index:1;box-sizing:border-box;min-height:100vh;padding:26px clamp(16px, 4vw, 44px) 110px;display:flex;flex-direction:column;align-items:center;gap:20px') },
+      e('div', { style: s('width:min(960px, 100%);display:flex;align-items:center;gap:14px;flex-wrap:wrap') },
+        wordmark('font-size:24px;letter-spacing:0.5px;filter:none'),
+        e('div', { style: s('margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap') },
+          canEnter
+            ? e('button', { className: 'cr-btn-metal', style: s('font-size:14px;letter-spacing:0.6px;padding:9px 18px'), onClick: enterRift }, 'ENTER THE RIFT →')
+            : e('button', { className: 'cr-btn-metal', style: s('font-size:14px;letter-spacing:0.6px;padding:9px 18px'), disabled: !canBuy, onClick: function () { setScreenOverride('purchase'); } }, 'GET BETA ACCESS · ' + priceFull),
+          e('button', { className: 'cr-btn-ghost dangersoft', style: s('font-family:var(--cr-display);font-size:14px;letter-spacing:0.6px;padding:9px 16px;font-weight:400;color:var(--cr-muted)'), onClick: signOut }, 'LOG OUT'))),
+      e('div', { style: s(PANEL + ';width:min(960px, 100%);overflow:hidden;padding:0') },
+        e('div', { style: s('display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 18px;border-bottom:1px solid var(--cr-rule);background:rgba(22,22,25,0.55)') },
+          e('span', { style: s('font-family:var(--cr-mono);font-size:11px;font-weight:700;letter-spacing:2px;color:var(--cr-label)') }, 'PLAYER ACCOUNT'),
+          e('span', { style: s('font-family:var(--cr-mono);font-size:11px;color:var(--cr-faint)') }, me.founderNumber ? 'PLAYER #' + me.founderNumber.toLocaleString('en-US') : 'PLAYER')),
+        e('div', { className: 'cr-acct-grid' },
+          e('div', { className: 'cr-acct-rail' },
+            e('div', { style: s('display:flex;align-items:center;gap:10px;padding:6px 8px 14px') },
+              avatarNode(me.avatar, me.displayName, 40, 2),
+              e('div', { style: s('display:flex;flex-direction:column;gap:1px;min-width:0') },
+                e('div', { style: s('font-family:var(--cr-display);font-size:14.5px;color:var(--cr-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis') }, me.displayName || 'Player'),
+                e('div', { style: s('font-family:var(--cr-mono);font-size:10px;letter-spacing:0.8px;color:var(--cr-faint)') }, owns ? 'PLAYER · BETA' : 'PLAYER'))),
+            navGroups.map(function (g, gi) {
+              return e('div', { key: gi, style: s('display:flex;flex-direction:column;gap:3px' + (gi > 0 ? ';margin-top:10px' : '')) },
+                e('div', { style: s('font-family:var(--cr-mono);font-size:9.5px;letter-spacing:1.6px;color:var(--cr-label);padding:2px 8px 4px') }, g.label),
+                g.items.map(function (d) {
+                  return e('button', {
+                    key: d.key,
+                    className: 'cr-nav' + (section === d.key ? ' on' : '') + (d.key === 'danger' && section !== d.key ? ' danger' : ''),
+                    onClick: function () { setSection(d.key); setDeleteArmed(false); setDeleteText(''); },
+                  }, d.label);
+                }));
+            })),
+          e('div', { style: s('padding:22px 26px 26px;min-width:0') }, body))));
+  }
+
+  function secOverview() {
+    var days = Math.max(1, Math.round((Date.now() - Date.parse(me.memberSince)) / 86400000));
+    var online = status ? status.playersOnline : 0;
+    return e('div', { style: s('display:flex;flex-direction:column;gap:16px') },
+      e('div', { style: s('display:flex;align-items:center;gap:15px;flex-wrap:wrap;padding:15px 16px;background:var(--cr-surface);border-radius:var(--cr-radius)') },
+        avatarNode(me.avatar, me.displayName, 60, 2.5),
+        e('div', { style: s('display:flex;flex-direction:column;gap:3px;min-width:0;flex:1') },
+          e('div', { style: s('font-family:var(--cr-display);font-size:22px;color:var(--cr-bright);line-height:1.1') }, me.displayName || 'Player'),
+          e('div', { style: s('display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:3px') },
+            me.founderNumber ? e('span', { style: s(CHIP_GREY) }, 'PLAYER #' + me.founderNumber.toLocaleString('en-US')) : null,
+            owns ? e('span', { style: s(CHIP_GOLD) }, 'VIP') : null,
+            e('span', { style: s(owns ? CHIP_GREEN : CHIP_GREY) }, owns ? 'BETA ACCESS' : 'FREE ACCOUNT'))),
+        canEnter
+          ? e('button', { className: 'cr-btn-metal', style: s('font-size:13px;padding:9px 15px'), onClick: enterRift }, 'ENTER THE RIFT →')
+          : e('button', { className: 'cr-btn-metal', style: s('font-size:13px;padding:9px 15px'), disabled: !canBuy, onClick: function () { setScreenOverride('purchase'); } }, 'GET BETA')),
+      e('div', { style: s('display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:10px') },
+        e(StatTile, { label: 'PLAYER #', value: me.founderNumber ? me.founderNumber.toLocaleString('en-US') : '—' }),
+        e(StatTile, { label: 'DAYS AS PLAYER', value: days.toLocaleString('en-US') }),
+        // Loyalty.v1: earned only from active play, never from money, and it
+        // survives every run reset. Lives here beside PLAYER # because it is
+        // account state, not run state.
+        e(StatTile, {
+          label: 'LOYALTY POINTS',
+          value: (me.loyaltyPoints || 0).toLocaleString('en-US'),
+          sub: me.loyaltyToday ? '+' + me.loyaltyToday.toLocaleString('en-US') + ' today' : null,
+        }),
+        e(StatTile, { label: 'PLAYERS REFERRED', value: (me.referralCount || 0).toLocaleString('en-US'), color: me.referralCount ? 'var(--cr-green)' : 'var(--cr-bright)' }),
+        e(StatTile, { label: 'STATUS', value: owns ? 'BETA' : 'FREE', color: owns ? 'var(--cr-green)' : 'var(--cr-muted)' })),
+      owns
+        ? e('div', { style: s('padding:14px 16px;background:var(--cr-gold-bg);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:8px') },
+            e('div', { style: s('display:flex;align-items:center;justify-content:space-between;gap:10px') },
+              e('span', { style: s('font-family:var(--cr-display);font-size:16px;color:var(--cr-gold)') }, 'Player perks are active'),
+              e('span', { style: s(CHIP_GOLD) }, 'VIP')),
+            e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-muted);line-height:1.5') }, 'Closed beta access, VIP rank at launch, a permanent player badge, and your player number are locked to this account.'))
+        : e('div', { style: s('padding:15px 16px;background:var(--cr-surface);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:10px') },
+            e('div', { style: s('font-family:var(--cr-display);font-size:17px;color:var(--cr-bright)') }, 'Lock in your player number'),
+            e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-muted);line-height:1.5') }, 'One ' + priceFull + ' payment unlocks the closed beta now and VIP at launch. Free to play on release; players keep the badge.'),
+            e('div', null, e('button', { className: 'cr-btn-metal', style: s('font-size:14px;padding:10px 18px'), disabled: !canBuy, onClick: function () { setScreenOverride('purchase'); } }, canBuy ? 'GET BETA ACCESS · ' + priceFull : 'OPENS SOON'))),
+      /* Helper-text methodology: dot + sentence, no box. */
+      e('div', { style: s('display:flex;align-items:center;gap:10px;padding:2px 2px;font-size:12.5px;font-weight:700;color:var(--cr-muted)') },
+        e('span', { style: { display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--cr-green)', boxShadow: '0 0 6px rgba(52,211,153,0.8)', flexShrink: 0 } }),
+        online.toLocaleString('en-US') + ' players building in the Rift right now'));
+  }
+
+  function secReferrals() {
+    var link = inviteLink();
+    return e('div', { style: s('display:flex;flex-direction:column;gap:16px') },
+      secHeader('Referrals', 'Bring other players into the Rift.'),
+      e('div', { style: s('display:flex;align-items:center;gap:14px;padding:15px 16px;background:var(--cr-surface);border-radius:var(--cr-radius)') },
+        e('div', { style: s('font-family:var(--cr-mono);font-weight:700;font-size:34px;line-height:1;font-variant-numeric:tabular-nums;color:' + (me.referralCount ? 'var(--cr-green)' : 'var(--cr-bright)')) }, (me.referralCount || 0).toLocaleString('en-US')),
+        e('div', { style: s('display:flex;flex-direction:column;gap:1px') },
+          e('div', { style: s('font-size:14px;font-weight:800;color:var(--cr-ink)') }, 'players joined through you'),
+          e('div', { style: s('font-size:12px;font-weight:600;color:var(--cr-faint)') }, 'Counted automatically when they sign in from your link.'))),
+      e('div', { style: s('display:flex;flex-direction:column;gap:8px') },
+        e('label', { style: s(MONOLBL) }, 'YOUR INVITE LINK'),
+        e('div', { style: s('display:flex;gap:8px;flex-wrap:wrap') },
+          e('input', { type: 'text', readOnly: true, className: 'cr-input mono', style: s('flex:1;min-width:220px;width:auto'), value: link, onFocus: function (ev) { ev.target.select(); } }),
+          e('button', { className: 'cr-btn-metal', style: s("font-family:'Nunito',sans-serif;font-weight:800;font-size:13px;padding:0 18px;letter-spacing:0"), onClick: copyInvite }, 'Copy'))),
+      e('div', { style: s('display:flex;gap:8px;flex-wrap:wrap') },
+        e('a', { href: 'https://twitter.com/intent/tweet?text=' + encodeURIComponent('Come build with me in Capital Rift, the largest economy simulator game. ' + link), target: '_blank', rel: 'noopener noreferrer', className: 'cr-btn-ghost', style: s('font-size:13px;font-weight:800;padding:9px 16px;text-decoration:none;text-align:center') }, 'Share on X'),
+        e('a', { href: 'mailto:?subject=' + encodeURIComponent('Come play Capital Rift') + '&body=' + encodeURIComponent('Build your empire with me: ' + link), className: 'cr-btn-ghost', style: s('font-size:13px;font-weight:800;padding:9px 16px;text-decoration:none;text-align:center') }, 'Email a player')),
+      /* Helper-text methodology: icon + text, no box. */
+      e('div', { style: s('display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--cr-gold);line-height:1.4') },
+        e('span', null, '★'), 'Player referral rewards land with launch. Your recruits are already being counted.'));
+  }
+
+  function secSupport() {
+    var faqs = [
+      ['Is Capital Rift free?', 'Yes, at launch. Right now it is a paid closed beta. Players who buy in keep VIP and the player badge forever.'],
+      ['What does beta access include?', 'Instant entry to the live closed beta, VIP rank reserved for launch, a permanent player badge, and your locked-in player number.'],
+      ['How do payments work?', 'Securely through Stripe. A one-time payment, no subscription. Your card details never touch Capital Rift servers.'],
+      ['Can I get a refund?', 'In the EU, EEA and UK you have 14 days from purchase to withdraw, no reason needed, and you can do it yourself under Purchases. Anywhere else, reply to your receipt email or contact support and we will sort it out. A refund releases beta access, your VIP claim and your player number.'],
+    ];
+    return e('div', { style: s('display:flex;flex-direction:column;gap:16px') },
+      secHeader('Support', 'Players get a direct line. We read every message.'),
+      e('div', { style: s('display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:10px') },
+        e('a', { href: 'mailto:support@capitalrift.com', className: 'cr-btn-ghost', style: s('display:flex;flex-direction:column;gap:3px;padding:13px 15px;text-decoration:none;text-align:left') },
+          e('span', { style: s('font-size:14px;font-weight:800;color:var(--cr-ink)') }, 'Email support'),
+          e('span', { style: s('font-size:12px;font-weight:600;color:var(--cr-faint)') }, 'support@capitalrift.com')),
+        e('a', { href: 'mailto:support@capitalrift.com?subject=' + encodeURIComponent(me.founderNumber ? 'Bug report (Player #' + me.founderNumber + ')' : 'Bug report'), className: 'cr-btn-ghost', style: s('display:flex;flex-direction:column;gap:3px;padding:13px 15px;text-decoration:none;text-align:left') },
+          e('span', { style: s('font-size:14px;font-weight:800;color:var(--cr-ink)') }, 'Report a bug'),
+          e('span', { style: s('font-size:12px;font-weight:600;color:var(--cr-faint)') }, 'Tell us what you were doing.'))),
+      e('div', { style: s('display:flex;flex-direction:column;gap:8px') },
+        e('div', { style: s(MONOLBL) }, 'FREQUENT QUESTIONS'),
+        faqs.map(function (f, i) {
+          return e('div', { key: i, style: s('padding:12px 14px;background:var(--cr-surface);border-radius:var(--cr-radius);display:flex;flex-direction:column;gap:4px') },
+            e('div', { style: s('font-size:13.5px;font-weight:800;color:var(--cr-ink)') }, f[0]),
+            e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-muted);line-height:1.5') }, f[1]));
+        })));
+  }
+
+  function checkoutModal() {
+    var fno = me && me.founderNumber ? me.founderNumber.toLocaleString('en-US') : null;
+    var items = [
+      ['Closed beta access', 'Instant', 'var(--cr-green)'],
+      ['VIP rank at launch', 'Included', 'var(--cr-gold)'],
+      ['Permanent player badge', 'Included', 'var(--cr-gold)'],
+      ['Player number', fno ? '#' + fno : 'Reserved', 'var(--cr-ink)'],
+    ];
+    return e('div', { style: s('position:fixed;inset:0;z-index:30;background:rgba(10,10,12,0.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box') },
+      e('div', { style: s(PANEL + ';width:min(410px, 100%);max-height:90vh;overflow:auto;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:0;display:flex;flex-direction:column') },
+        e('div', { style: s('position:relative;padding:20px 24px 14px;border-bottom:1px solid var(--cr-rule)') },
+          e('button', { className: 'cr-x', onClick: function () { setPayOpen(false); } }, '✕'),
+          e('span', { style: s(CHIP_GREEN + ';letter-spacing:1.2px') }, 'PLAYER PASS'),
+          e('div', { style: s('font-family:var(--cr-display);font-size:22px;color:var(--cr-bright);margin-top:9px') }, 'Confirm your order')),
+        e('div', { style: s('padding:16px 24px 20px;display:flex;flex-direction:column;gap:13px') },
+          e('div', { style: s('display:flex;flex-direction:column') },
+            items.map(function (li, i) {
+              return e('div', { key: i, style: s('display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--cr-rule)') },
+                e('span', { style: s('font-size:13px;font-weight:700;color:var(--cr-muted)') }, li[0]),
+                e('span', { style: s('font-family:var(--cr-mono);font-weight:600;font-size:11.5px;letter-spacing:0.4px;color:' + li[2]) }, li[1]));
+            })),
+          e('div', { style: s('display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0 2px') },
+            e('span', { style: s('font-size:14px;font-weight:800;color:var(--cr-bright)') }, 'Total due today'),
+            e('span', { style: s('font-family:var(--cr-mono);font-weight:700;font-size:18px;color:var(--cr-green)') }, priceFull)),
+          e('div', { style: s('font-size:12.5px;font-weight:600;color:var(--cr-muted);line-height:1.5') },
+            'One time, no subscription. You finish payment on Stripe, our payment partner: card, wallet, or bank. Your card details never touch Capital Rift servers.'),
+          e('button', { className: 'cr-btn-metal', style: s('font-size:17px;width:100%;padding:13px 0'), disabled: payBusy, onClick: pay },
+            payBusy ? 'OPENING STRIPE…' : 'PAY ' + priceFull + ' →'),
+          /* Withdrawal.v1 (2026-08-22): this used to say "non-refundable", which was
+             wrong after CJEU C-234/25 put a live shared world on the digital
+             SERVICE side of Art 16(1)(m). Art 6(1) wants the withdrawal position
+             stated BEFORE the consumer is bound, not first met on Stripe's page,
+             so the summary lives here and the conditions, time limit and procedure
+             live in Terms section 4, which this links. */
+          e('div', { style: s('font-size:11.5px;font-weight:600;color:var(--cr-faint);line-height:1.55;text-align:center') },
+            'Access unlocks the moment you pay. In the EU, EEA and UK you keep your 14-day right to withdraw, and you can do it yourself from your account page. Withdrawing ends beta access. ',
+            e('a', { href: '/terms/', target: '_blank', rel: 'noopener', style: s('color:var(--cr-muted);text-decoration:underline;text-underline-offset:2px') }, 'Terms'),
+            ' and ',
+            e('a', { href: '/privacy/', target: '_blank', rel: 'noopener', style: s('color:var(--cr-muted);text-decoration:underline;text-underline-offset:2px') }, 'Privacy Policy'),
+            '.'),
+          e('div', { style: s('display:flex;align-items:center;justify-content:center;gap:7px;font-family:var(--cr-mono);font-size:10px;letter-spacing:0.6px;color:var(--cr-faint)') },
+            lockIcon(12), 'SECURE CHECKOUT · POWERED BY STRIPE'))));
+  }
+
+  var body;
+  if (screen === 'account' && me) body = accountScreen();
+  else if (screen === 'purchase' && me) body = purchaseScreen();
+  else body = authScreen();
+
+  return e('div', { style: s("position:relative;min-height:100vh;box-sizing:border-box;overflow-x:hidden;font-family:'Nunito',sans-serif;background:var(--cr-bg);color:var(--cr-text)") },
+    /* ready = identity has resolved, so the backdrop clip stops competing with
+       /access/me for bandwidth on first paint (see Bg). */
+    e(Bg, { ready: me !== undefined }),
+    body,
+    payOpen && me ? checkoutModal() : null,
+    toast ? e('div', { style: s("position:fixed;left:50%;transform:translateX(-50%);bottom:62px;z-index:40;background:var(--cr-surface-2);border-radius:var(--cr-radius);padding:10px 16px;font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;color:var(--cr-bright);box-shadow:0 12px 32px rgba(0,0,0,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);white-space:nowrap") }, toast) : null,
+    e(Ticker, { status: status })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(e(Root, null));
+</script>
+</body>
+</html>
