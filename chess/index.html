@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chess</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico"/>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -50,6 +51,7 @@
       pointer-events: none;
       opacity: 1;
       transition: opacity 0.2s;
+      z-index: 5;
     }
     #overlay.hidden { opacity: 0; pointer-events: none; }
     #overlay p { margin: 6px 0; }
@@ -64,6 +66,112 @@
       font-size: 0.8rem;
       color: #666;
     }
+    /* Menu / Online UI */
+    #menu {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(26,26,26,0.97);
+      z-index: 10;
+      gap: 14px;
+      padding: 20px;
+    }
+    #menu.hidden { display: none; }
+    #menu h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #eee;
+    }
+    .menu-btn {
+      min-width: 200px;
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #3a3a3a;
+      color: #eee;
+      transition: background 0.15s;
+    }
+    .menu-btn:hover { background: #505050; }
+    .menu-btn.primary {
+      background: #c45c26;
+    }
+    .menu-btn.primary:hover { background: #d dig 96e3a; }
+    .menu-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #roomPanel {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 280px;
+    }
+    #roomPanel.visible { display: flex; }
+    #roomCodeDisplay {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      color: #f4a460;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: #2a2a2a;
+      padding: 10px 18px;
+      border-radius: 6px;
+    }
+    #roomInput {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      text-align: center;
+      text-transform: uppercase;
+      background: #2a2a2a;
+      border: 2px solid #555;
+      border-radius: 6px;
+      color: #f4a460;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      outline: none;
+    }
+    #roomInput:focus { border-color: #c45c26; }
+    #roomInput::placeholder {
+      color: #666;
+      letter-spacing: 0.15em;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    #connStatus {
+      font-size: 0.85rem;
+      color: #888;
+      min-height: 1.2em;
+      text-align: center;
+    }
+    #connStatus.error { color: #e55; }
+    #connStatus.ok { color: #6c6; }
+    .back-btn {
+      margin-top: 8px;
+      background: transparent;
+      border: 1px solid #555;
+      color: #aaa;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+    }
+    .back-btn:hover { background: #333; color: #eee; }
+    #onlineBadge {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: #888;
+      display: none;
+    }
+    #onlineBadge.visible { display: block; }
   </style>
 </head>
 <body>
@@ -74,16 +182,38 @@
       <p id="msg1">Hit Space to Start</p>
       <p id="msg2"></p>
     </div>
+    <div id="menu">
+      <h2>Play Chess</h2>
+      <button class="menu-btn primary" id="btnLocal">Local Game</button>
+      <button class="menu-btn" id="btnOnline">Online Game</button>
+      <div id="roomPanel">
+        <button class="menu-btn primary" id="btnCreate">Create Room</button>
+        <button class="menu-btn" id="btnJoinToggle">Join Room</button>
+        <div id="createArea" style="display:none; flex-direction:column; align-items:center; gap:10px; width:100%;">
+          <div style="font-size:0.85rem; color:#aaa;">Share this code with your opponent</div>
+          <div id="roomCodeDisplay">------</div>
+          <div id="connStatus">Waiting for opponent…</div>
+        </div>
+        <div id="joinArea" style="display:none; flex-direction:column; align-items:center; gap:10px; width:100%;">
+          <div style="font-size:0.85rem; color:#aaa;">Enter 6-letter room code</div>
+          <input id="roomInput" type="text" maxlength="6" placeholder="ABCDEF" autocomplete="off" spellcheck="false" />
+          <button class="menu-btn primary" id="btnJoin" disabled>Join</button>
+          <div id="joinStatus" class="connStatus"></div>
+        </div>
+        <button class="menu-btn back-btn" id="btnBack">← Back</button>
+      </div>
+    </div>
   </div>
-  <div id="status">Press Space to start a new game</div>
-  <div id="hint">Click a piece, then a destination square · Space = restart</div>
+  <div id="status">Choose a mode to start</div>
+  <div id="hint">Click a piece, then a destination square · Space = restart (local)</div>
+  <div id="onlineBadge"></div>
   <script>
 (function () {
   "use strict";
   const SIZE = 512;
   const SQ = 64;
   const CIRCLE_R = 8;
-  const ANIM_MS = 180; // fast animation duration
+  const ANIM_MS = 180;
   const BASE = "https://raw.githubusercontent.com/joolaoye/PyCHESS/main/assets/";
   const IMG = {
     bR: BASE + "images/bR.png",
@@ -109,6 +239,17 @@
   const msg1 = document.getElementById("msg1");
   const msg2 = document.getElementById("msg2");
   const statusEl = document.getElementById("status");
+  const menu = document.getElementById("menu");
+  const roomPanel = document.getElementById("roomPanel");
+  const roomCodeDisplay = document.getElementById("roomCodeDisplay");
+  const roomInput = document.getElementById("roomInput");
+  const connStatus = document.getElementById("connStatus");
+  const joinStatus = document.getElementById("joinStatus");
+  const onlineBadge = document.getElementById("onlineBadge");
+  const createArea = document.getElementById("createArea");
+  const joinArea = document.getElementById("joinArea");
+  const btnJoin = document.getElementById("btnJoin");
+
   // ---------- Sound ----------
   const moveSound = new Audio(BASE + "sounds/move-self.mp3");
   const captureSound = new Audio(BASE + "sounds/capture.mp3");
@@ -457,12 +598,18 @@
   let formerIndex = null;
   let enPassantPiece = null;
   let promotionMenu = null;
+  // Online state
+  let isOnline = false;
+  let isHost = false;
+  let myColor = null; // "white" | "black"
+  let peer = null;
+  let conn = null;
+  let roomCode = null;
   // Animation state
   let animating = false;
-  let animPieces = []; // [{ imageKey, fromCol, fromRow, toCol, toRow }]
+  let animPieces = [];
   let animStart = 0;
-  let animHideKeys = new Set(); // "r,c" squares to skip while drawing static pieces
-
+  let animHideKeys = new Set();
   function key(r, c) { return r + "," + c; }
   function has(set, r, c) { return set.has(key(r, c)); }
   function add(set, r, c) { set.add(key(r, c)); }
@@ -498,7 +645,6 @@
       }
     }
   }
-  // Ease-out cubic for snappy feel
   function easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
   }
@@ -526,12 +672,12 @@
     }
     requestAnimationFrame(frame);
   }
-  function movePiece(clicks) {
+  function movePiece(clicks, isRemote) {
     let captureAPiece = false;
     let castle = false;
     const [from, to] = clicks;
     const piece = gs.board[from[0]][from[1]];
-    // Collect animation targets *before* mutating board
+    if (!piece || piece === "--") return false;
     const animList = [{
       imageKey: piece.imageKey,
       fromCol: from[1],
@@ -539,7 +685,6 @@
       toCol: to[1],
       toRow: to[0],
     }];
-    // Expire previous en passant opportunity on any subsequent move
     if (enPassantPiece) {
       const epPawn = gs.board[enPassantPiece[0]][enPassantPiece[1]];
       if (epPawn instanceof Pawn) epPawn.en_passant = false;
@@ -555,7 +700,6 @@
       else gs.blackKing = to;
       piece.castling = false;
       if (Math.abs(to[1] - from[1]) === 2) {
-        // king-side
         if (gs.board[to[0]][to[1] + 1] instanceof Castle) {
           const rook = gs.board[to[0]][to[1] + 1];
           const rookFrom = [to[0], to[1] + 1];
@@ -574,7 +718,6 @@
           if (has(whiteLoc, prev[0], prev[1])) { rem(whiteLoc, prev[0], prev[1]); add(whiteLoc, neu[0], neu[1]); }
           else if (has(blackLoc, prev[0], prev[1])) { rem(blackLoc, prev[0], prev[1]); add(blackLoc, neu[0], neu[1]); }
         }
-        // queen-side
         else if (gs.board[to[0]][to[1] - 2] instanceof Castle) {
           const rook = gs.board[to[0]][to[1] - 2];
           const rookFrom = [to[0], to[1] - 2];
@@ -608,7 +751,6 @@
       } else {
         piece.en_passant = false;
       }
-      // promotion
       if (to[0] === 0 || to[0] === 7) {
         pawnPromotion = true;
         formerPiece = piece;
@@ -633,7 +775,6 @@
               ],
         };
       }
-      // en passant capture
       const dir = -piece.direction;
       const behind = [to[0] + dir, to[1]];
       if (behind[0] >= 0 && behind[0] < 8) {
@@ -665,7 +806,6 @@
     else if (castle) play(castleSound);
     else play(moveSound);
     validCircles = [];
-    // Kick off animation; board is already updated
     startAnimation(animList, null);
     return true;
   }
@@ -705,7 +845,7 @@
     if (!gs) return;
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
-        if (animating && animHideKeys.has(key(r, c))) continue; // skip destination(s)
+        if (animating && animHideKeys.has(key(r, c))) continue;
         const p = gs.board[r][c];
         if (p !== "--") {
           const img = images[p.imageKey];
@@ -715,7 +855,6 @@
         }
       }
     }
-    // Draw animated pieces on top
     if (animating && animPieces.length) {
       const t = progress !== undefined ? progress : 1;
       for (const a of animPieces) {
@@ -739,6 +878,8 @@
   }
   function drawPromotion() {
     if (!pawnPromotion || !promotionMenu || animating) return;
+    // Only show promotion UI if it's our turn to choose (online: only if myColor matches)
+    if (isOnline && promotionMenu.color !== myColor) return;
     const { x, y, pieces } = promotionMenu;
     const startY = y === 0 ? 0 : 512 - 4 * SQ;
     ctx.fillStyle = "#ffffff";
@@ -769,17 +910,224 @@
   function updateStatus() {
     if (!active) {
       statusEl.textContent = checkMate
-        ? `${turn} loses – press Space to restart`
+        ? `${turn} loses – ${isOnline ? "opponent" : "press Space"} to restart`
         : staleMate
-        ? "Stalemate – press Space to restart"
-        : "Press Space to start a new game";
+        ? "Stalemate – " + (isOnline ? "waiting…" : "press Space to restart")
+        : "Choose a mode to start";
       return;
     }
-    statusEl.textContent = turn === "white" ? "White to move" : "Black to move";
-    if (gs && gs.if_Check(turn)) statusEl.textContent += " · CHECK";
+    let t = turn === "white" ? "White to move" : "Black to move";
+    if (gs && gs.if_Check(turn)) t += " · CHECK";
+    if (isOnline) {
+      t += myColor === turn ? " (your turn)" : " (opponent)";
+    }
+    statusEl.textContent = t;
   }
-  // ---------- Input ----------
-  function startGame() {
+  // ---------- Online helpers ----------
+  function generateRoomCode() {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let code = "";
+    for (let i = 0; i < 6; i++) {
+      code += letters[Math.floor(Math.random() * 26)];
+    }
+    return code;
+  }
+  function destroyPeer() {
+    if (conn) {
+      try { conn.close(); } catch (_) {}
+      conn = null;
+    }
+    if (peer) {
+      try { peer.destroy(); } catch (_) {}
+      peer = null;
+    }
+  }
+  function sendMsg(obj) {
+    if (conn && conn.open) {
+      try { conn.send(obj); } catch (_) {}
+    }
+  }
+  function onData(data) {
+    if (!data || typeof data !== "object") return;
+    if (data.type === "move") {
+      // Apply opponent's move
+      if (turn !== myColor) {
+        // Should be opponent's turn
+        const from = data.from;
+        const to = data.to;
+        if (movePiece([from, to], true)) {
+          if (myColor === "white") {
+            rem(blackLoc, from[0], from[1]);
+            add(blackLoc, to[0], to[1]);
+          } else {
+            rem(whiteLoc, from[0], from[1]);
+            add(whiteLoc, to[0], to[1]);
+          }
+          if (!pawnPromotion) {
+            turn = myColor; // now my turn
+          }
+          // Wait for animation then checks
+          const finish = () => {
+            afterMoveChecks();
+            updateStatus();
+            draw();
+          };
+          if (animating) {
+            const checkDone = () => {
+              if (!animating) finish();
+              else requestAnimationFrame(checkDone);
+            };
+            requestAnimationFrame(checkDone);
+          } else {
+            finish();
+          }
+        }
+      }
+    } else if (data.type === "promote") {
+      // Opponent chose promotion piece
+      if (pawnPromotion && promotionMenu && formerIndex) {
+        const map = {
+          Q: promotionMenu.color === "white" ? new Queen("wQ", "white") : new Queen("bQ", "black"),
+          N: promotionMenu.color === "white" ? new Knight("wN", "white") : new Knight("bN", "black"),
+          R: promotionMenu.color === "white" ? new Castle("wR", "white") : new Castle("bR", "black"),
+          B: promotionMenu.color === "white" ? new Bishop("wB", "white") : new Bishop("bB", "black"),
+        };
+        const chosen = map[data.piece];
+        if (chosen) {
+          const old = gs.board[formerIndex[0]][formerIndex[1]];
+          if (old.color === "white") {
+            const i = gs.white_pieces.indexOf(old);
+            if (i >= 0) gs.white_pieces.splice(i, 1);
+            gs.white_pieces.push(chosen);
+          } else {
+            const i = gs.black_pieces.indexOf(old);
+            if (i >= 0) gs.black_pieces.splice(i, 1);
+            gs.black_pieces.push(chosen);
+          }
+          gs.board[formerIndex[0]][formerIndex[1]] = chosen;
+          pawnPromotion = false;
+          promotionMenu = null;
+          rebuildLocations();
+          turn = myColor; // after opponent promotes, it's my turn
+          afterMoveChecks();
+          draw();
+          updateStatus();
+        }
+      }
+    } else if (data.type === "restart") {
+      startGame(true);
+    } else if (data.type === "hello") {
+      // connection established, host starts the game
+      if (isHost) {
+        sendMsg({ type: "start" });
+        startGame(true);
+      }
+    } else if (data.type === "start") {
+      if (!isHost) startGame(true);
+    }
+  }
+  function setupConnection(c) {
+    conn = c;
+    conn.on("data", onData);
+    conn.on("open", () => {
+      if (isHost) {
+        connStatus.textContent = "Opponent connected!";
+        connStatus.className = "ok";
+      } else {
+        joinStatus.textContent = "Connected!";
+        joinStatus.className = "ok";
+      }
+      // Guest says hello so host knows to start
+      if (!isHost) {
+        sendMsg({ type: "hello" });
+      }
+    });
+    conn.on("close", () => {
+      if (active && isOnline) {
+        statusEl.textContent = "Opponent disconnected";
+        active = false;
+        showOverlay("Opponent left", "Return to menu");
+      }
+    });
+    conn.on("error", (err) => {
+      console.warn("Conn error", err);
+    });
+  }
+  function createRoom() {
+    destroyPeer();
+    isHost = true;
+    isOnline = true;
+    myColor = "white";
+    roomCode = generateRoomCode();
+    roomCodeDisplay.textContent = roomCode;
+    createArea.style.display = "flex";
+    joinArea.style.display = "none";
+    document.getElementById("btnCreate").style.display = "none";
+    document.getElementById("btnJoinToggle").style.display = "none";
+    connStatus.textContent = "Connecting…";
+    connStatus.className = "";
+    peer = new Peer(roomCode, {
+      debug: 1,
+      config: {
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" },
+        ],
+      },
+    });
+    peer.on("open", (id) => {
+      roomCode = id;
+      roomCodeDisplay.textContent = id;
+      connStatus.textContent = "Waiting for opponent…";
+    });
+    peer.on("connection", (c) => {
+      if (conn && conn.open) {
+        c.close();
+        return;
+      }
+      setupConnection(c);
+    });
+    peer.on("error", (err) => {
+      console.warn(err);
+      if (err.type === "unavailable-id") {
+        // retry with new code
+        destroyPeer();
+        createRoom();
+      } else {
+        connStatus.textContent = "Error: " + (err.message || err.type || "failed");
+        connStatus.className = "error";
+      }
+    });
+  }
+  function joinRoom(code) {
+    destroyPeer();
+    isHost = false;
+    isOnline = true;
+    myColor = "black";
+    roomCode = code;
+    joinStatus.textContent = "Connecting…";
+    joinStatus.className = "";
+    peer = new Peer({
+      debug: 1,
+      config: {
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" },
+        ],
+      },
+    });
+    peer.on("open", () => {
+      const c = peer.connect(code, { reliable: true });
+      setupConnection(c);
+    });
+    peer.on("error", (err) => {
+      console.warn(err);
+      joinStatus.textContent = "Could not connect. Check the code.";
+      joinStatus.className = "error";
+    });
+  }
+  // ---------- Input / UI ----------
+  function startGame(fromOnline) {
     gs = new GameState();
     updateAttrs();
     rebuildLocations();
@@ -799,11 +1147,93 @@
     animPieces = [];
     animHideKeys.clear();
     hideOverlay();
+    menu.classList.add("hidden");
+    if (isOnline) {
+      onlineBadge.textContent = `Online · Room ${roomCode} · You are ${myColor}`;
+      onlineBadge.classList.add("visible");
+    } else {
+      onlineBadge.classList.remove("visible");
+    }
     updateStatus();
     draw();
   }
+  function resetToMenu() {
+    active = false;
+    isOnline = false;
+    isHost = false;
+    myColor = null;
+    roomCode = null;
+    destroyPeer();
+    menu.classList.remove("hidden");
+    roomPanel.classList.remove("visible");
+    createArea.style.display = "none";
+    joinArea.style.display = "none";
+    document.getElementById("btnCreate").style.display = "";
+    document.getElementById("btnJoinToggle").style.display = "";
+    document.getElementById("btnLocal").style.display = "";
+    document.getElementById("btnOnline").style.display = "";
+    onlineBadge.classList.remove("visible");
+    hideOverlay();
+    statusEl.textContent = "Choose a mode to start";
+    roomInput.value = "";
+    btnJoin.disabled = true;
+  }
+  // Menu buttons
+  document.getElementById("btnLocal").addEventListener("click", () => {
+    isOnline = false;
+    myColor = null;
+    startGame(false);
+  });
+  document.getElementById("btnOnline").addEventListener("click", () => {
+    document.getElementById("btnLocal").style.display = "none";
+    document.getElementById("btnOnline").style.display = "none";
+    roomPanel.classList.add("visible");
+  });
+  document.getElementById("btnCreate").addEventListener("click", () => {
+    createRoom();
+  });
+  document.getElementById("btnJoinToggle").addEventListener("click", () => {
+    createArea.style.display = "none";
+    joinArea.style.display = "flex";
+    document.getElementById("btnCreate").style.display = "none";
+    document.getElementById("btnJoinToggle").style.display = "none";
+    roomInput.focus();
+  });
+  document.getElementById("btnBack").addEventListener("click", () => {
+    destroyPeer();
+    roomPanel.classList.remove("visible");
+    createArea.style.display = "none";
+    joinArea.style.display = "none";
+    document.getElementById("btnCreate").style.display = "";
+    document.getElementById("btnJoinToggle").style.display = "";
+    document.getElementById("btnLocal").style.display = "";
+    document.getElementById("btnOnline").style.display = "";
+    roomInput.value = "";
+    btnJoin.disabled = true;
+  });
+  // Room code input: force uppercase letters only, no numbers
+  roomInput.addEventListener("input", (e) => {
+    let v = e.target.value.toUpperCase().replace(/[^A-Z]/g, "");
+    if (v.length > 6) v = v.slice(0, 6);
+    e.target.value = v;
+    btnJoin.disabled = v.length !== 6;
+  });
+  roomInput.addEventListener("keydown", (e) => {
+    // Block numbers and non-letter keys (allow backspace, arrows, etc.)
+    if (e.key.length === 1 && !/[A-Za-z]/.test(e.key)) {
+      e.preventDefault();
+    }
+  });
+  btnJoin.addEventListener("click", () => {
+    const code = roomInput.value.trim().toUpperCase();
+    if (code.length === 6 && /^[A-Z]{6}$/.test(code)) {
+      joinRoom(code);
+    }
+  });
   canvas.addEventListener("click", (e) => {
     if (!active || animating) return;
+    // Online: only allow moves on our turn and our color
+    if (isOnline && turn !== myColor) return;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
@@ -814,6 +1244,7 @@
     if (row < 0 || row > 7 || col < 0 || col > 7) return;
     // Pawn promotion selection
     if (pawnPromotion && promotionMenu) {
+      if (isOnline && promotionMenu.color !== myColor) return;
       const { x, y, pieces } = promotionMenu;
       if (col === x) {
         let idx;
@@ -840,6 +1271,11 @@
           pawnPromotion = false;
           promotionMenu = null;
           rebuildLocations();
+          // Send promotion choice online
+          if (isOnline) {
+            const pieceLetter = chosen instanceof Queen ? "Q" : chosen instanceof Knight ? "N" : chosen instanceof Castle ? "R" : "B";
+            sendMsg({ type: "promote", piece: pieceLetter });
+          }
           afterMoveChecks();
           draw();
           updateStatus();
@@ -855,26 +1291,45 @@
       draw();
       return;
     }
+    const myLoc = isOnline ? (myColor === "white" ? whiteLoc : blackLoc) : null;
     if (playerClick.length === 0) {
-      if (turn === "white" && has(whiteLoc, row, col)) {
-        selected = [row, col];
-        playerClick = [[row, col]];
-      } else if (turn === "black" && has(blackLoc, row, col)) {
-        selected = [row, col];
-        playerClick = [[row, col]];
+      if (isOnline) {
+        if (has(myLoc, row, col)) {
+          selected = [row, col];
+          playerClick = [[row, col]];
+        }
+      } else {
+        if (turn === "white" && has(whiteLoc, row, col)) {
+          selected = [row, col];
+          playerClick = [[row, col]];
+        } else if (turn === "black" && has(blackLoc, row, col)) {
+          selected = [row, col];
+          playerClick = [[row, col]];
+        }
       }
     } else {
-      if (turn === "white" && has(whiteLoc, row, col)) {
-        selected = [row, col];
-        playerClick = [[row, col]];
-        validCircles = [];
-      } else if (turn === "black" && has(blackLoc, row, col)) {
-        selected = [row, col];
-        playerClick = [[row, col]];
-        validCircles = [];
+      if (isOnline) {
+        if (has(myLoc, row, col)) {
+          selected = [row, col];
+          playerClick = [[row, col]];
+          validCircles = [];
+        } else {
+          selected = [row, col];
+          playerClick.push([row, col]);
+        }
       } else {
-        selected = [row, col];
-        playerClick.push([row, col]);
+        if (turn === "white" && has(whiteLoc, row, col)) {
+          selected = [row, col];
+          playerClick = [[row, col]];
+          validCircles = [];
+        } else if (turn === "black" && has(blackLoc, row, col)) {
+          selected = [row, col];
+          playerClick = [[row, col]];
+          validCircles = [];
+        } else {
+          selected = [row, col];
+          playerClick.push([row, col]);
+        }
       }
     }
     if (playerClick.length === 1) {
@@ -887,18 +1342,33 @@
       const from = playerClick[0];
       const to = playerClick[1];
       let moved = false;
-      if (turn === "white" && has(whiteLoc, from[0], from[1])) {
-        if (movePiece(playerClick)) {
-          rem(whiteLoc, from[0], from[1]);
-          add(whiteLoc, to[0], to[1]);
-          if (!pawnPromotion) turn = "black";
-          moved = true;
-        }
-      } else if (turn === "black" && has(blackLoc, from[0], from[1])) {
-        if (movePiece(playerClick)) {
-          rem(blackLoc, from[0], from[1]);
-          add(blackLoc, to[0], to[1]);
-          if (!pawnPromotion) turn = "white";
+      const canMove = isOnline
+        ? (myColor === "white" ? has(whiteLoc, from[0], from[1]) : has(blackLoc, from[0], from[1]))
+        : (turn === "white" ? has(whiteLoc, from[0], from[1]) : has(blackLoc, from[0], from[1]));
+      if (canMove) {
+        if (movePiece(playerClick, false)) {
+          if (isOnline) {
+            if (myColor === "white") {
+              rem(whiteLoc, from[0], from[1]);
+              add(whiteLoc, to[0], to[1]);
+            } else {
+              rem(blackLoc, from[0], from[1]);
+              add(blackLoc, to[0], to[1]);
+            }
+            if (!pawnPromotion) turn = myColor === "white" ? "black" : "white";
+            // Send move to opponent
+            sendMsg({ type: "move", from, to });
+          } else {
+            if (turn === "white") {
+              rem(whiteLoc, from[0], from[1]);
+              add(whiteLoc, to[0], to[1]);
+              if (!pawnPromotion) turn = "black";
+            } else {
+              rem(blackLoc, from[0], from[1]);
+              add(blackLoc, to[0], to[1]);
+              if (!pawnPromotion) turn = "white";
+            }
+          }
           moved = true;
         }
       }
@@ -906,22 +1376,14 @@
       playerClick = [];
       validCircles = [];
       if (moved && !pawnPromotion) {
-        // Run checks after animation finishes so the board looks settled
-        const prevOnDone = null;
-        // Hook into the animation that movePiece already started
         const finishChecks = () => {
           afterMoveChecks();
           updateStatus();
         };
-        // If still animating, wait; otherwise run now
         if (animating) {
-          const origStart = animStart;
-          const checkDone = (now) => {
-            if (!animating) {
-              finishChecks();
-            } else {
-              requestAnimationFrame(checkDone);
-            }
+          const checkDone = () => {
+            if (!animating) finishChecks();
+            else requestAnimationFrame(checkDone);
           };
           requestAnimationFrame(checkDone);
         } else {
@@ -936,21 +1398,31 @@
     if (isCheckMate(turn)) {
       checkMate = true;
       active = false;
-      showOverlay(`${turn} lose`.replace(/^\w/, c => c.toUpperCase()), "Hit Space to Restart Game");
+      const loser = turn.charAt(0).toUpperCase() + turn.slice(1);
+      showOverlay(`${loser} loses`, isOnline ? "Opponent can restart" : "Hit Space to Restart Game");
     } else if (isStaleMate(turn)) {
       staleMate = true;
       active = false;
-      showOverlay("Stalemate", "Hit Space to Restart Game");
+      showOverlay("Stalemate", isOnline ? "Opponent can restart" : "Hit Space to Restart Game");
     }
   }
   document.addEventListener("keydown", (e) => {
     if (e.code === "Space") {
       e.preventDefault();
-      startGame();
+      if (isOnline) {
+        // Request restart
+        sendMsg({ type: "restart" });
+        startGame(true);
+      } else if (!menu.classList.contains("hidden")) {
+        // ignore
+      } else {
+        startGame(false);
+      }
     }
   });
   // Initial screen
-  showOverlay("Hit Space to Start", "");
+  showOverlay("", "");
+  overlay.classList.add("hidden");
   updateStatus();
   const checkImages = setInterval(() => {
     if (imagesReady >= imageKeys.length) {
