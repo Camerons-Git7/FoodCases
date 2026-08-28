@@ -16,4 +16,4 @@ Install:
 1. Rename this folder to Test-OS if you want it as your live Test-OS folder.
 2. Copy your existing firebase.js into this folder.
 3. Upload the folder to EmeraldOS/Test-OS on GitHub Pages.
-4. Open https://securly-plans.github.io/EmeraldOS/Test-OS/
+4. Open https://menist.free.nf/EmeraldOS/Test-OS/

@@ -99,7 +99,7 @@ const APPS = {
             openWindow(
                 "Chat",
                 `<iframe
-                    src="https://securly-plans.github.io/EmeraldOS/G/chat.html"
+                    src="https://menist.free.nf/EmeraldOS/G/chat.html"
                     style="width:100%;height:100%;border:none">
                  </iframe>`,
                 "chat"
@@ -114,7 +114,7 @@ const APPS = {
             openWindow(
                 "Mediaplayer",
                 `<iframe
-                    src="https://securly-plans.github.io/EmeraldOS/mediaplayer.html"
+                    src="https://menist.free.nf/EmeraldOS/mediaplayer.html"
                     style="width:100%;height:100%;border:none">
                  </iframe>`,
                 "Mediaplayer"
@@ -129,7 +129,7 @@ const APPS = {
             openWindow(
                 "Games",
                 `<iframe
-                    src="https://securly-plans.github.io/EmeraldOS/G/home.html"
+                    src="https://menist.free.nf/EmeraldOS/G/home.html"
                     style="width:100%;height:100%;border:none">
                  </iframe>`,
                 "games"

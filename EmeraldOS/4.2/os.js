@@ -277,7 +277,7 @@ const APPS = {
             openWindow(
                 "Chat",
                 `<iframe
-                    src="https://securly-plans.github.io/EmeraldOS/G/chat.html"
+                    src="https://menist.free.nf/EmeraldOS/G/chat.html"
                     style="width:100%;height:100%;border:none">
                  </iframe>`,
                 "chat"
@@ -293,7 +293,7 @@ const APPS = {
             openWindow(
                 "Media Player",
                 `<iframe
-                    src="https://securly-plans.github.io/EmeraldOS/mediaplayer.html"
+                    src="https://menist.free.nf/EmeraldOS/mediaplayer.html"
                     style="width:100%;height:100%;border:none">
                  </iframe>`,
                 "media"
@@ -372,7 +372,7 @@ const APPS = {
             openWindow(
                 "Games",
                 `<iframe
-                    src="https://securly-plans.github.io/EmeraldOS/G/home.html"
+                    src="https://menist.free.nf/EmeraldOS/G/home.html"
                     style="width:100%;height:100%;border:none">
                  </iframe>`,
                 "games"
@@ -6533,7 +6533,7 @@ function() {
     };
 
     window.openBookmarks41 = function () {
-        const saved = localStorage.getItem("40_bookmarks") || "https://securly-plans.github.io/EmeraldOS/";
+        const saved = localStorage.getItem("40_bookmarks") || "https://menist.free.nf/EmeraldOS/";
         simple41("Bookmarks", `
             <h3>Bookmarks</h3>
             <p>One URL per line.</p>
