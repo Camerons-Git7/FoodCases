@@ -1,49 +1,49 @@
-name: Sync EmeraldOS folder
+name: Replace domain in EmeraldOS
 
 on:
   # Run manually from the Actions tab
   workflow_dispatch:
 
-  # Optional: run automatically every day at 03:00 UTC
-  # schedule:
-  #   - cron: '0 3 * * *'
-
-  # Optional: also run when you push to main
+  # Optional: also run when files inside EmeraldOS change
   # push:
-  #   branches: [ main ]
+  #   paths:
+  #     - 'EmeraldOS/**'
 
 permissions:
-  contents: write   # needed so the workflow can commit & push
+  contents: write
 
 jobs:
-  sync:
+  replace:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout your repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Keep the full history so we can push cleanly
           fetch-depth: 0
 
-      - name: Checkout source repository (Securly-plans)
-        uses: actions/checkout@v4
-        with:
-          repository: Securly-plans/Securly-plans.github.io
-          path: source-repo
-          # Only need the EmeraldOS folder, but full checkout is fine for a public repo
-
-      - name: Copy EmeraldOS folder into your repo
+      - name: Replace "securly-plans.github.io" with "menist.free.nf" in EmeraldOS
         run: |
-          # Remove the old EmeraldOS folder if it exists
-          rm -rf EmeraldOS
+          echo "Searching and replacing inside EmeraldOS folder..."
 
-          # Copy the entire folder from the other repo
-          cp -r source-repo/EmeraldOS EmeraldOS
+          # Find all files under EmeraldOS and perform the replacement
+          find EmeraldOS -type f \( \
+            -name "*.html" -o \
+            -name "*.js" -o \
+            -name "*.css" -o \
+            -name "*.json" -o \
+            -name "*.md" -o \
+            -name "*.txt" -o \
+            -name "*.xml" -o \
+            -name "*.svg" \
+          \) -print0 | while IFS= read -r -d '' file; do
+            if grep -q "securly-plans.github.io" "$file"; then
+              echo "Updating: $file"
+              sed -i 's/securly-plans\.github\.io/menist.free.nf/g' "$file"
+            fi
+          done
 
-          # Show what was copied (optional, for logs)
-          echo "=== Contents of EmeraldOS after copy ==="
-          ls -la EmeraldOS
+          echo "Replacement finished."
 
       - name: Commit and push changes
         run: |
@@ -52,10 +52,10 @@ jobs:
 
           git add EmeraldOS
 
-          # Only commit if there are actual changes
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "No changes detected – nothing to commit."
           else
-            git commit -m "Sync EmeraldOS folder from Securly-plans/Securly-plans.github.io"
+            git commit -m "Replace securly-plans.github.io with menist.free.nf in EmeraldOS"
             git push
+            echo "Changes committed and pushed."
           fi
