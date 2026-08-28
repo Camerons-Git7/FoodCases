@@ -1,553 +1,696 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Seamless Chat</title>
-  <style>
-    :root {
-      --bg: #ffffff;
-      --header-bg: rgba(247, 247, 247, 0.92);
-      --border: #c6c6c8;
-      --grey-bubble: #e9e9eb;
-      --blue-bubble: #007aff;
-      --text: #000000;
-      --text-secondary: #8e8e93;
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --safe-top: env(safe-area-inset-top, 0px);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    html, body {
-      height: 100%;
-      height: 100dvh;
-      width: 100%;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      overflow: hidden;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-    }
-
-    #name-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.45);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-
-    #name-overlay.hidden {
-      display: none;
-    }
-
-    .name-card {
-      background: #fff;
-      border-radius: 18px;
-      padding: 28px 24px 22px;
-      width: min(320px, 90vw);
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-    }
-
-    .name-card img {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 14px;
-    }
-
-    .name-card h2 {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-
-    .name-card p {
-      font-size: 14px;
-      color: var(--text-secondary);
-      margin-bottom: 18px;
-    }
-
-    .name-card input {
-      width: 100%;
-      padding: 12px 14px;
-      font-size: 16px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      outline: none;
-      margin-bottom: 14px;
-      text-align: center;
-    }
-
-    .name-card input:focus {
-      border-color: var(--blue-bubble);
-    }
-
-    .name-card button {
-      width: 100%;
-      padding: 12px;
-      background: var(--blue-bubble);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    header {
-      flex-shrink: 0;
-      background: var(--header-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 0.5px solid var(--border);
-      padding: 8px 12px 10px;
-      padding-top: max(8px, var(--safe-top));
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .back-btn {
-      width: 36px;
-      height: 36px;
-      border: none;
-      background: transparent;
-      color: var(--blue-bubble);
-      font-size: 28px;
-      line-height: 1;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .header-center {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-width: 0;
-    }
-
-    .header-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 2px;
-    }
-
-    .header-name {
-      font-size: 13px;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 200px;
-    }
-
-    .header-right {
-      width: 36px;
-      flex-shrink: 0;
-      font-size: 11px;
-      color: var(--text-secondary);
-      text-align: right;
-    }
-
-    #messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 14px 12px;
-      display: flex;
-      flex-direction: column;
-      -webkit-overflow-scrolling: touch;
-      scroll-behavior: smooth;
-    }
-
-    .day-separator {
-      text-align: center;
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin: 12px 0 16px;
-      font-weight: 500;
-    }
-
-    .message-row {
-      display: flex;
-      align-items: flex-end;
-      gap: 8px;
-      max-width: 100%;
-      margin-bottom: 10px;
-    }
-
-    .message-row.same-sender {
-      margin-bottom: 3px;
-    }
-
-    .message-row.mine {
-      flex-direction: row-reverse;
-    }
-
-    .avatar {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      object-fit: cover;
-      flex-shrink: 0;
-    }
-
-    .message-row.mine .avatar {
-      display: none;
-    }
-
-    .message-row.same-sender .avatar {
-      visibility: hidden;
-    }
-
-    .bubble-wrap {
-      max-width: 78%;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .message-row.mine .bubble-wrap {
-      align-items: flex-end;
-    }
-
-    .sender-name {
-      font-size: 11px;
-      color: var(--text-secondary);
-      margin: 0 12px 3px;
-      font-weight: 500;
-    }
-
-    .message-row.mine .sender-name,
-    .message-row.same-sender .sender-name {
-      display: none;
-    }
-
-    .bubble {
-      padding: 9px 13px;
-      border-radius: 18px;
-      font-size: 16px;
-      line-height: 1.35;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    .bubble.theirs {
-      background: var(--grey-bubble);
-      color: #000;
-      border-bottom-left-radius: 5px;
-    }
-
-    .bubble.mine {
-      background: var(--blue-bubble);
-      color: #fff;
-      border-bottom-right-radius: 5px;
-    }
-
-    .message-row.same-sender .bubble.theirs {
-      border-top-left-radius: 5px;
-    }
-
-    .message-row.same-sender .bubble.mine {
-      border-top-right-radius: 5px;
-    }
-
-    .input-bar {
-      flex-shrink: 0;
-      display: flex;
-      align-items: flex-end;
-      gap: 8px;
-      padding: 10px 12px;
-      padding-bottom: max(10px, var(--safe-bottom));
-      background: var(--header-bg);
-      border-top: 0.5px solid var(--border);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-    }
-
-    .input-wrap {
-      flex: 1;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 22px;
-      padding: 9px 16px;
-      min-height: 40px;
-      max-height: 120px;
-      overflow-y: auto;
-    }
-
-    #message-input {
-      width: 100%;
-      border: none;
-      outline: none;
-      font-size: 16px;
-      font-family: inherit;
-      background: transparent;
-      resize: none;
-      line-height: 1.35;
-      max-height: 100px;
-    }
-
-    .send-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: var(--blue-bubble);
-      border: none;
-      color: #fff;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      flex-shrink: 0;
-      opacity: 0.35;
-      transition: opacity 0.15s;
-    }
-
-    .send-btn.active {
-      opacity: 1;
-    }
-
-    .status {
-      text-align: center;
-      font-size: 13px;
-      color: var(--text-secondary);
-      padding: 20px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Seamless Chat</title>
+<style>
+:root{
+  --bg:#000000;
+  --panel:#1c1c1e;
+  --header-bg:#1c1c1e;
+  --border:#2c2c2e;
+  --text:#ffffff;
+  --text-dim:#8e8e93;
+  --bubble-me:#0b84ff;
+  --bubble-other:#3a3a3c;
+  --input-bg:#2c2c2e;
+}
+*{
+  box-sizing:border-box;
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+}
+img.avatar{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  object-fit:cover;
+  flex-shrink:0;
+}
+/* ================= HEADER ================= */
+.header{
+  background:var(--header-bg);
+  border-bottom:1px solid var(--border);
+  padding:10px 16px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.header-title{
+  flex:1;
+}
+.header .chat-title{
+  font-size:17px;
+  font-weight:700;
+}
+.header .stats{
+  font-size:12px;
+  color:var(--text-dim);
+  margin-top:2px;
+}
+.header .stats b{
+  color:var(--text);
+}
+.header button{
+  background:transparent;
+  border:none;
+  color:var(--bubble-me);
+  font-size:14px;
+  cursor:pointer;
+  padding:4px 6px;
+  white-space:nowrap;
+}
+/* ================= LAYOUT ================= */
+.container{
+  display:flex;
+  flex-direction:column;
+  height:calc(100vh - 61px);
+}
+/* ================= MAIN CHAT ================= */
+.main{
+  display:flex;
+  flex-direction:column;
+  flex:1;
+  background:var(--bg);
+  min-height:0;
+}
+.messages{
+  flex:1;
+  overflow-y:auto;
+  padding:20px 16px;
+  background:var(--bg);
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.msg-row{
+  display:flex;
+  align-items:flex-end;
+  gap:10px;
+  max-width:100%;
+}
+.msg-row.me{
+  flex-direction:row-reverse;
+}
+.msg-row .avatar{
+  width:38px;
+  height:38px;
+}
+.bubble-col{
+  display:flex;
+  flex-direction:column;
+  max-width:78%;
+}
+.msg-row.me .bubble-col{
+  align-items:flex-end;
+}
+.msg-row.other .bubble-col{
+  align-items:flex-start;
+}
+.sender-name{
+  font-size:12px;
+  color:var(--text-dim);
+  margin:0 12px 3px;
+}
+.bubble{
+  padding:12px 18px;
+  border-radius:22px;
+  font-size:18px;
+  line-height:1.4;
+  word-wrap:break-word;
+  white-space:pre-wrap;
+}
+.msg-row.me .bubble{
+  background:var(--bubble-me);
+  color:#fff;
+  border-bottom-right-radius:6px;
+}
+.msg-row.other .bubble{
+  background:var(--bubble-other);
+  color:#fff;
+  border-bottom-left-radius:6px;
+}
+.bubble img, .bubble video{
+  max-width:320px;
+  border-radius:16px;
+  display:block;
+  margin-top:6px;
+}
+.bubble audio{
+  margin-top:6px;
+  max-width:320px;
+}
+.bubble a{
+  color:#cfe8ff;
+}
+.msg-time{
+  font-size:11px;
+  color:var(--text-dim);
+  margin:3px 12px 0;
+}
+.empty{
+  color:var(--text-dim);
+  font-style:italic;
+  text-align:center;
+  margin-top:20px;
+  font-size:14px;
+}
+/* ================= CHAT BOX ================= */
+.chat-box{
+  background:var(--header-bg);
+  border-top:1px solid var(--border);
+  padding:12px 14px;
+}
+.chat-controls{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+.plus-btn{
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  background:var(--input-bg);
+  color:var(--bubble-me);
+  border:none;
+  font-size:24px;
+  font-weight:600;
+  line-height:1;
+  cursor:pointer;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+}
+.plus-btn:active{
+  opacity:0.7;
+}
+.chat-controls input{
+  flex:1;
+  padding:11px 16px;
+  border:1px solid var(--border);
+  border-radius:22px;
+  background:var(--input-bg);
+  color:var(--text);
+  font-size:17px;
+  outline:none;
+}
+.chat-controls input::placeholder{
+  color:var(--text-dim);
+}
+.chat-controls button.primary{
+  background:var(--bubble-me);
+  color:#fff;
+  border:none;
+  border-radius:18px;
+  padding:10px 18px;
+  font-weight:600;
+  cursor:pointer;
+  font-size:15px;
+}
+.chat-controls button.primary:active{
+  opacity:0.7;
+}
+.file-name-preview{
+  color:var(--text-dim);
+  font-size:12px;
+  margin-top:6px;
+  padding-left:48px;
+}
+/* ================= AUTH SCREEN ================= */
+.auth-overlay{
+  position:fixed;
+  inset:0;
+  background:var(--bg);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
+.auth-box{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:24px;
+  width:280px;
+}
+.auth-box h2{
+  margin:0 0 16px 0;
+  font-size:17px;
+  text-align:center;
+  font-weight:600;
+}
+.auth-box input{
+  width:100%;
+  padding:10px 12px;
+  margin-bottom:10px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--input-bg);
+  color:var(--text);
+  font-size:14px;
+  outline:none;
+}
+.auth-box input::placeholder{
+  color:var(--text-dim);
+}
+.auth-tabs{
+  display:flex;
+  margin-bottom:14px;
+  background:var(--input-bg);
+  border-radius:10px;
+  padding:3px;
+}
+.auth-tab{
+  flex:1;
+  text-align:center;
+  padding:6px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+  font-size:13px;
+  color:var(--text-dim);
+}
+.auth-tab.active{
+  background:var(--bubble-me);
+  color:#fff;
+}
+.auth-error{
+  color:#ff453a;
+  font-size:12px;
+  margin-bottom:8px;
+  min-height:14px;
+  text-align:center;
+}
+.auth-box button{
+  width:100%;
+  background:var(--bubble-me);
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  padding:10px;
+  font-weight:600;
+  font-size:14px;
+  cursor:pointer;
+}
+.auth-box button:active{
+  opacity:0.7;
+}
+.auth-hidden{
+  display:none;
+}
+</style>
 </head>
 <body>
 
-  <div id="name-overlay">
-    <div class="name-card">
-      <img src="https://i.ibb.co/FGzH1jK/Seamless-Cloud.png" alt="Seamless Chat" />
-      <h2>Seamless Chat</h2>
-      <p>Enter your name to join the group</p>
-      <input type="text" id="name-input" placeholder="Your name" maxlength="24" autocomplete="off" />
-      <button id="join-btn">Join Chat</button>
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <h2>Seamless Chat</h2>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Log In</div>
+      <div class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Register</div>
+    </div>
+    <div class="auth-error" id="authError"></div>
+
+    <div id="loginForm">
+      <input type="text" id="loginUsername" placeholder="Username">
+      <input type="password" id="loginPassword" placeholder="Password">
+      <button class="primary" onclick="doLogin()">Log In</button>
+    </div>
+
+    <div id="registerForm" class="auth-hidden">
+      <input type="text" id="registerUsername" placeholder="Choose a username">
+      <input type="password" id="registerPassword" placeholder="Choose a password">
+      <input type="password" id="registerPassword2" placeholder="Confirm password">
+      <button class="primary" onclick="doRegister()">Create Account</button>
     </div>
   </div>
+</div>
 
-  <header>
-    <button class="back-btn" aria-label="Back">‹</button>
-    <div class="header-center">
-      <img class="header-avatar" src="https://i.ibb.co/FGzH1jK/Seamless-Cloud.png" alt="Group" />
-      <div class="header-name">Seamless Chat</div>
-    </div>
-    <div class="header-right" id="status-dot"></div>
-  </header>
-
-  <div id="messages"></div>
-
-  <div class="input-bar">
-    <div class="input-wrap">
-      <textarea id="message-input" rows="1" placeholder="iMessage" maxlength="1000"></textarea>
-    </div>
-    <button class="send-btn" id="send-btn" aria-label="Send">↑</button>
+<div class="header">
+  <img class="avatar" src="https://i.ibb.co/FGzH1jK/Seamless-Cloud.png" alt="">
+  <div class="header-title">
+    <div class="chat-title" id="chatTitle">Seamless Chat</div>
+    <div class="stats"><span id="msgCount">0</span> messages · You: <b id="meDisplay"></b></div>
   </div>
+  <button onclick="doLogout()">Log Out</button>
+</div>
 
-  <script>
-    // ========== CHANGE THIS LINE ==========
-    const WS_URL = "wss://seamless-chat.YOUR-SUBDOMAIN.workers.dev";
-    // ======================================
+<div class="container">
+  <div class="main">
+    <div class="messages" id="messages">
+      <div class="empty">Loading global chat...</div>
+    </div>
 
-    const AVATAR = "https://i.ibb.co/FGzH1jK/Seamless-Cloud.png";
-    const NAME_KEY = "seamlessChatName";
-    const ID_KEY = "seamlessChatUserId";
+    <div class="chat-box">
+      <div class="chat-controls">
+        <button class="plus-btn" onclick="document.getElementById('fileInput').click()">+</button>
+        <input type="text" id="msgInput" placeholder="iMessage">
+        <button class="primary" onclick="sendMsg()">Send</button>
+      </div>
+      <input type="file" id="fileInput" accept="image/*,video/*,audio/*,.pdf,.txt,.zip,.doc,.docx" style="display:none">
+      <div id="fileNamePreview" class="file-name-preview"></div>
+    </div>
+  </div>
+</div>
 
-    let myName = localStorage.getItem(NAME_KEY) || "";
-    let myId = localStorage.getItem(ID_KEY);
-    if (!myId) {
-      myId = crypto.randomUUID();
-      localStorage.setItem(ID_KEY, myId);
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  onSnapshot,
+  arrayUnion
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+/* ================= FIREBASE CONFIG =================
+   Replace this with YOUR project's config, found in:
+   Firebase Console → Project settings → General → Your apps → SDK setup and configuration
+   ==================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBLghWLth0syJhARDMWiJ7xNwyJAh7MWjQ",
+  authDomain: "securly-plans-main.firebaseapp.com",
+  projectId: "securly-plans-main",
+  storageBucket: "securly-plans-main.firebasestorage.app",
+  messagingSenderId: "613499545769",
+  appId: "1:613499545769:web:baa071714434c4814de1b8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+/* ================= DOMAIN LOCK ================= */
+const ALLOWED_HOST = "menist.free.nf";
+const isAllowedDomain = window.location.hostname === ALLOWED_HOST;
+
+function blockIfWrongDomain(){
+  if(!isAllowedDomain){
+    showError(`This chat only works when loaded from ${ALLOWED_HOST}. Current domain: ${window.location.hostname || "(local file)"}`);
+    return true;
+  }
+  return false;
+}
+
+/* ================= HELPERS ================= */
+function escapeHtml(str){
+  return String(str)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function showError(msg){
+  const box = document.getElementById("messages");
+  box.innerHTML = `<div class="empty" style="color:#a00;">⚠ ${escapeHtml(msg)}</div>`;
+  console.error(msg);
+}
+
+/* ================= AUTH HELPERS ================= */
+// Simple SHA-256 hash so we're not storing plaintext passwords.
+// Note: for a real production app, use Firebase Authentication instead —
+// this is a lightweight scheme suitable for a hobby/internal project.
+async function hashPassword(pw){
+  const enc = new TextEncoder().encode(pw);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf))
+    .map(b=>b.toString(16).padStart(2,"0"))
+    .join("");
+}
+
+function setAuthError(msg){
+  document.getElementById("authError").textContent = msg || "";
+}
+
+window.switchAuthTab = function(tab){
+  const isLogin = tab === "login";
+  document.getElementById("tabLogin").classList.toggle("active", isLogin);
+  document.getElementById("tabRegister").classList.toggle("active", !isLogin);
+  document.getElementById("loginForm").classList.toggle("auth-hidden", !isLogin);
+  document.getElementById("registerForm").classList.toggle("auth-hidden", isLogin);
+  setAuthError("");
+};
+
+window.doRegister = async function(){
+  setAuthError("");
+  const username = document.getElementById("registerUsername").value.trim();
+  const pw1 = document.getElementById("registerPassword").value;
+  const pw2 = document.getElementById("registerPassword2").value;
+
+  if(!username || !pw1){
+    setAuthError("Enter a username and password.");
+    return;
+  }
+  if(pw1 !== pw2){
+    setAuthError("Passwords do not match.");
+    return;
+  }
+  if(pw1.length < 4){
+    setAuthError("Password must be at least 4 characters.");
+    return;
+  }
+
+  try{
+    const userRef = doc(db,"users",username);
+    const snap = await getDoc(userRef);
+    if(snap.exists()){
+      setAuthError("That username is already taken.");
+      return;
     }
+    const passwordHash = await hashPassword(pw1);
+    await setDoc(userRef,{
+      username,
+      passwordHash,
+      created:Date.now()
+    });
+    completeLogin(username);
+  }catch(err){
+    setAuthError("Registration failed: " + err.message);
+  }
+};
 
-    let messages = [];
-    let socket = null;
-    let lastSender = null;
+window.doLogin = async function(){
+  setAuthError("");
+  const username = document.getElementById("loginUsername").value.trim();
+  const pw = document.getElementById("loginPassword").value;
 
-    const overlay = document.getElementById("name-overlay");
-    const nameInput = document.getElementById("name-input");
-    const joinBtn = document.getElementById("join-btn");
-    const messagesEl = document.getElementById("messages");
-    const input = document.getElementById("message-input");
-    const sendBtn = document.getElementById("send-btn");
-    const statusDot = document.getElementById("status-dot");
+  if(!username || !pw){
+    setAuthError("Enter your username and password.");
+    return;
+  }
 
-    function setStatus(text) {
-      statusDot.textContent = text;
+  try{
+    const userRef = doc(db,"users",username);
+    const snap = await getDoc(userRef);
+    if(!snap.exists()){
+      setAuthError("No account with that username. Try registering.");
+      return;
     }
-
-    function connect() {
-      if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
-
-      setStatus("…");
-      socket = new WebSocket(WS_URL);
-
-      socket.onopen = () => setStatus("•");
-      socket.onclose = () => {
-        setStatus("offline");
-        setTimeout(connect, 2000);
-      };
-      socket.onerror = () => setStatus("err");
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === "history") {
-            messages = data.messages || [];
-            renderMessages();
-          } else if (data.type === "message") {
-            messages.push(data.message);
-            appendMessage(data.message);
-          }
-        } catch {}
-      };
+    const passwordHash = await hashPassword(pw);
+    if(snap.data().passwordHash !== passwordHash){
+      setAuthError("Incorrect password.");
+      return;
     }
+    completeLogin(username);
+  }catch(err){
+    setAuthError("Login failed: " + err.message);
+  }
+};
 
-    function renderMessages() {
-      messagesEl.innerHTML = "";
-      if (messages.length === 0) {
-        messagesEl.innerHTML = `<div class="status">No messages yet.<br>Say hello!</div>`;
-        return;
-      }
+window.doLogout = function(){
+  localStorage.removeItem("username");
+  location.reload();
+};
 
-      const sep = document.createElement("div");
-      sep.className = "day-separator";
-      sep.textContent = "Today";
-      messagesEl.appendChild(sep);
+function completeLogin(username){
+  localStorage.setItem("username", username);
+  location.reload();
+}
 
-      lastSender = null;
-      messages.forEach(msg => appendMessage(msg, false));
-      scrollBottom();
-    }
+/* ================= STATE ================= */
+const currentChatId = "GLOBAL_CHAT";
 
-    function appendMessage(msg, doScroll = true) {
-      const isMine = msg.userId === myId;
-      const same = lastSender === msg.sender && !isMine === !(messages[messages.indexOf(msg) - 1]?.userId === myId);
+/* ================= USER ================= */
+const me = localStorage.getItem("username");
 
-      const row = document.createElement("div");
-      row.className = "message-row" + (isMine ? " mine" : "") + (same ? " same-sender" : "");
+if(!me){
+  // Show auth screen, chat stays hidden until login/register succeeds.
+  document.getElementById("authOverlay").style.display = "flex";
+} else {
+  document.getElementById("authOverlay").style.display = "none";
+  document.getElementById("meDisplay").textContent = me;
+  if(!blockIfWrongDomain()){
+    initGlobalChat();
+  }
+}
 
-      if (!isMine) {
-        const av = document.createElement("img");
-        av.className = "avatar";
-        av.src = AVATAR;
-        av.alt = msg.sender;
-        row.appendChild(av);
-      }
+async function markSeen(chatId){
+  try{
+    await setDoc(
+      doc(db,"chatSeen",chatId + "_" + me),
+      { chatId, user:me, lastSeen:Date.now() }
+    );
+  }catch(err){
+    console.warn("Could not update chatSeen:", err.message);
+  }
+}
 
-      const wrap = document.createElement("div");
-      wrap.className = "bubble-wrap";
-
-      if (!isMine && !same) {
-        const name = document.createElement("div");
-        name.className = "sender-name";
-        name.textContent = msg.sender;
-        wrap.appendChild(name);
-      }
-
-      const bubble = document.createElement("div");
-      bubble.className = "bubble " + (isMine ? "mine" : "theirs");
-      bubble.textContent = msg.text;
-      wrap.appendChild(bubble);
-
-      row.appendChild(wrap);
-      messagesEl.appendChild(row);
-
-      lastSender = msg.sender;
-      if (doScroll) scrollBottom();
-    }
-
-    function scrollBottom() {
-      requestAnimationFrame(() => {
-        messagesEl.scrollTop = messagesEl.scrollHeight;
+/* ================= INIT GLOBAL CHAT ================= */
+async function initGlobalChat(){
+  try{
+    const chatRef = doc(db,"chats",currentChatId);
+    const snap = await getDoc(chatRef);
+    if(!snap.exists()){
+      await setDoc(chatRef,{
+        type:"global",
+        participants:["GLOBAL"],
+        messages:[],
+        created:Date.now()
       });
     }
+    await markSeen(currentChatId);
 
-    function sendMessage() {
-      const text = input.value.trim();
-      if (!text || !myName || !socket || socket.readyState !== WebSocket.OPEN) return;
-
-      socket.send(JSON.stringify({
-        type: "chat",
-        sender: myName,
-        userId: myId,
-        text: text
-      }));
-
-      input.value = "";
-      input.style.height = "auto";
-      updateSendBtn();
-    }
-
-    function updateSendBtn() {
-      sendBtn.classList.toggle("active", !!input.value.trim());
-    }
-
-    input.addEventListener("input", () => {
-      input.style.height = "auto";
-      input.style.height = Math.min(input.scrollHeight, 100) + "px";
-      updateSendBtn();
+    /* Real-time listener instead of polling */
+    onSnapshot(chatRef, (snap)=>{
+      if(!snap.exists()) return;
+      renderMessages(snap.data().messages || []);
+    }, (err)=>{
+      showError("Realtime listener failed: " + err.message);
     });
 
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
+  }catch(err){
+    showError("Failed to open global chat: " + err.message);
+  }
+}
+
+/* ================= SEND ================= */
+window.sendMsg = async function(){
+  if(blockIfWrongDomain()) return;
+
+  const text = document.getElementById("msgInput").value.trim();
+  const file = document.getElementById("fileInput").files[0];
+
+  let mediaURL = null;
+  let mediaType = null;
+
+  try{
+    if(file){
+      const storageRef = ref(
+        storage,
+        `chatUploads/${currentChatId}/${Date.now()}_${file.name}`
+      );
+      await uploadBytes(storageRef, file);
+      mediaURL = await getDownloadURL(storageRef);
+      mediaType = file.type;
+    }
+
+    if(!text && !mediaURL){
+      return;
+    }
+
+    const chatRef = doc(db,"chats",currentChatId);
+    await updateDoc(chatRef,{
+      messages:arrayUnion({
+        from:me,
+        text:text || "",
+        media:mediaURL,
+        mediaType,
+        time:Date.now()
+      }),
+      updated:Date.now()
+    });
+
+    document.getElementById("msgInput").value = "";
+    document.getElementById("fileInput").value = "";
+    document.getElementById("fileNamePreview").textContent = "";
+  }catch(err){
+    showError("Failed to send message: " + err.message);
+  }
+};
+
+/* ================= RENDER ================= */
+const CONTACT_PHOTO = "https://i.ibb.co/FGzH1jK/Seamless-Cloud.png";
+
+function renderMessages(messages){
+  const box = document.getElementById("messages");
+  const wasNearBottom =
+    box.scrollHeight - box.scrollTop - box.clientHeight < 50;
+
+  box.innerHTML = "";
+  document.getElementById("msgCount").textContent = messages.length;
+
+  if(messages.length === 0){
+    box.innerHTML = `<div class="empty">No messages yet. Say hello!</div>`;
+    return;
+  }
+
+  messages.forEach(m=>{
+    const isMe = m.from === me;
+    const row = document.createElement("div");
+    row.className = "msg-row " + (isMe ? "me" : "other");
+
+    let mediaHTML = "";
+    if(m.media){
+      if(m.mediaType && m.mediaType.startsWith("image/")){
+        mediaHTML = `<img src="${m.media}">`;
+      }else if(m.mediaType && m.mediaType.startsWith("video/")){
+        mediaHTML = `<video controls><source src="${m.media}"></video>`;
+      }else if(m.mediaType && m.mediaType.startsWith("audio/")){
+        mediaHTML = `<audio controls><source src="${m.media}"></audio>`;
+      }else{
+        mediaHTML = `<a href="${m.media}" target="_blank">📎 Download File</a>`;
       }
-    });
-
-    sendBtn.addEventListener("click", sendMessage);
-
-    function showApp() {
-      overlay.classList.add("hidden");
-      connect();
-      input.focus();
     }
 
-    if (myName) {
-      showApp();
-    } else {
-      nameInput.focus();
-    }
+    const textHTML = m.text ? escapeHtml(m.text) : "";
 
-    joinBtn.addEventListener("click", () => {
-      const name = nameInput.value.trim();
-      if (!name) {
-        nameInput.focus();
-        return;
-      }
-      myName = name;
-      localStorage.setItem(NAME_KEY, myName);
-      showApp();
-    });
+    row.innerHTML = `
+      <img class="avatar" src="${CONTACT_PHOTO}" alt="">
+      <div class="bubble-col">
+        ${!isMe ? `<div class="sender-name">${escapeHtml(m.from)}</div>` : ""}
+        <div class="bubble">${textHTML}${mediaHTML}</div>
+        <div class="msg-time">${new Date(m.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+      </div>
+    `;
+    box.appendChild(row);
+  });
 
-    nameInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") joinBtn.click();
-    });
-  </script>
+  if(wasNearBottom){
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
+/* ================= ENTER KEY ================= */
+document.getElementById("msgInput").addEventListener("keypress", e=>{
+  if(e.key === "Enter"){
+    sendMsg();
+  }
+});
+
+/* ================= FILE PREVIEW ================= */
+document.getElementById("fileInput").addEventListener("change", ()=>{
+  const file = document.getElementById("fileInput").files[0];
+  const preview = document.getElementById("fileNamePreview");
+  preview.textContent = file ? `📎 ${file.name} (tap Send to attach)` : "";
+});
+
+</script>
 </body>
 </html>
