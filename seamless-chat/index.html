@@ -20,10 +20,21 @@
   box-sizing:border-box;
   font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
 }
+html{
+  height:100%;
+  overflow:hidden;
+}
 body{
   margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  height:100dvh;
+  overflow:hidden;
   background:var(--bg);
   color:var(--text);
+  display:flex;
+  flex-direction:column;
 }
 img.avatar{
   width:40px;
@@ -40,18 +51,27 @@ img.avatar{
   display:flex;
   align-items:center;
   gap:12px;
+  width:100%;
+  max-width:100%;
 }
 .header-title{
   flex:1;
+  min-width:0;
 }
 .header .chat-title{
-  font-size:17px;
+  font-size:clamp(15px,4vw,17px);
   font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 .header .stats{
-  font-size:12px;
+  font-size:clamp(10px,2.8vw,12px);
   color:var(--text-dim);
   margin-top:2px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 .header .stats b{
   color:var(--text);
@@ -64,12 +84,20 @@ img.avatar{
   cursor:pointer;
   padding:4px 6px;
   white-space:nowrap;
+  flex-shrink:0;
 }
 /* ================= LAYOUT ================= */
+.header{
+  flex-shrink:0;
+}
 .container{
   display:flex;
   flex-direction:column;
-  height:calc(100vh - 61px);
+  flex:1;
+  min-height:0;
+  width:100%;
+  max-width:100%;
+  overflow:hidden;
 }
 /* ================= MAIN CHAT ================= */
 .main{
@@ -78,33 +106,40 @@ img.avatar{
   flex:1;
   background:var(--bg);
   min-height:0;
+  width:100%;
+  max-width:100%;
 }
 .messages{
   flex:1;
   overflow-y:auto;
+  overflow-x:hidden;
   padding:20px 16px;
   background:var(--bg);
   display:flex;
   flex-direction:column;
   gap:14px;
+  width:100%;
+  max-width:100%;
 }
 .msg-row{
   display:flex;
   align-items:flex-end;
   gap:10px;
+  width:100%;
   max-width:100%;
 }
 .msg-row.me{
   flex-direction:row-reverse;
 }
 .msg-row .avatar{
-  width:38px;
-  height:38px;
+  width:42px;
+  height:42px;
 }
 .bubble-col{
   display:flex;
   flex-direction:column;
-  max-width:78%;
+  max-width:82%;
+  min-width:0;
 }
 .msg-row.me .bubble-col{
   align-items:flex-end;
@@ -113,17 +148,19 @@ img.avatar{
   align-items:flex-start;
 }
 .sender-name{
-  font-size:12px;
+  font-size:13px;
   color:var(--text-dim);
   margin:0 12px 3px;
 }
 .bubble{
-  padding:12px 18px;
-  border-radius:22px;
-  font-size:18px;
+  padding:14px 20px;
+  border-radius:24px;
+  font-size:clamp(16px,4.5vw,20px);
   line-height:1.4;
-  word-wrap:break-word;
+  overflow-wrap:break-word;
+  word-break:break-word;
   white-space:pre-wrap;
+  max-width:100%;
 }
 .msg-row.me .bubble{
   background:var(--bubble-me);
@@ -136,14 +173,16 @@ img.avatar{
   border-bottom-left-radius:6px;
 }
 .bubble img, .bubble video{
-  max-width:320px;
+  max-width:100%;
+  width:100%;
   border-radius:16px;
   display:block;
   margin-top:6px;
 }
 .bubble audio{
   margin-top:6px;
-  max-width:320px;
+  max-width:100%;
+  width:100%;
 }
 .bubble a{
   color:#cfe8ff;
@@ -165,15 +204,20 @@ img.avatar{
   background:var(--header-bg);
   border-top:1px solid var(--border);
   padding:12px 14px;
+  width:100%;
+  max-width:100%;
 }
 .chat-controls{
   display:flex;
   gap:10px;
   align-items:center;
+  width:100%;
+  max-width:100%;
 }
 .plus-btn{
   width:38px;
   height:38px;
+  min-width:38px;
   border-radius:50%;
   background:var(--input-bg);
   color:var(--bubble-me);
@@ -193,12 +237,13 @@ img.avatar{
 }
 .chat-controls input{
   flex:1;
+  min-width:0;
   padding:11px 16px;
   border:1px solid var(--border);
   border-radius:22px;
   background:var(--input-bg);
   color:var(--text);
-  font-size:17px;
+  font-size:clamp(14px,4vw,17px);
   outline:none;
 }
 .chat-controls input::placeholder{
@@ -209,10 +254,12 @@ img.avatar{
   color:#fff;
   border:none;
   border-radius:18px;
-  padding:10px 18px;
+  padding:10px 16px;
   font-weight:600;
   cursor:pointer;
-  font-size:15px;
+  font-size:clamp(13px,3.5vw,15px);
+  flex-shrink:0;
+  white-space:nowrap;
 }
 .chat-controls button.primary:active{
   opacity:0.7;
@@ -239,6 +286,7 @@ img.avatar{
   border-radius:16px;
   padding:24px;
   width:280px;
+  max-width:90vw;
 }
 .auth-box h2{
   margin:0 0 16px 0;
@@ -305,11 +353,30 @@ img.avatar{
 .auth-hidden{
   display:none;
 }
+/* ================= SMALL SCREEN SAFETY NET ================= */
+@media (max-width:380px){
+  .header{
+    padding:8px 10px;
+    gap:8px;
+  }
+  .messages{
+    padding:14px 10px;
+  }
+  .bubble-col{
+    max-width:85%;
+  }
+  .chat-box{
+    padding:10px;
+  }
+  .file-name-preview{
+    padding-left:0;
+  }
+}
 </style>
 </head>
 <body>
 
-<div class="auth-overlay" id="authOverlay">
+<div class="auth-overlay" id="authOverlay" style="display:none;">
   <div class="auth-box">
     <h2>Seamless Chat</h2>
     <div class="auth-tabs">
@@ -526,6 +593,16 @@ function completeLogin(username){
 
 /* ================= STATE ================= */
 const currentChatId = "GLOBAL_CHAT";
+const pageOpenTime = Date.now();
+
+// Premade greeting shown locally on every page load — not stored in Firestore.
+const PREMADE_MESSAGE = {
+  from: "Seamless Guy",
+  text: "Welcome to Seamless Chat!",
+  displayTime: "17:48",
+  media: null,
+  mediaType: null
+};
 
 /* ================= USER ================= */
 const me = localStorage.getItem("username");
@@ -567,10 +644,15 @@ async function initGlobalChat(){
     }
     await markSeen(currentChatId);
 
-    /* Real-time listener instead of polling */
+    // Render the premade welcome message immediately, before any real messages arrive.
+    renderMessages([]);
+
+    /* Real-time listener — only messages created after this page was opened are shown */
     onSnapshot(chatRef, (snap)=>{
       if(!snap.exists()) return;
-      renderMessages(snap.data().messages || []);
+      const all = snap.data().messages || [];
+      const newOnly = all.filter(m => m.time >= pageOpenTime);
+      renderMessages(newOnly);
     }, (err)=>{
       showError("Realtime listener failed: " + err.message);
     });
@@ -634,14 +716,11 @@ function renderMessages(messages){
     box.scrollHeight - box.scrollTop - box.clientHeight < 50;
 
   box.innerHTML = "";
-  document.getElementById("msgCount").textContent = messages.length;
 
-  if(messages.length === 0){
-    box.innerHTML = `<div class="empty">No messages yet. Say hello!</div>`;
-    return;
-  }
+  const allMessages = [PREMADE_MESSAGE, ...messages];
+  document.getElementById("msgCount").textContent = allMessages.length;
 
-  messages.forEach(m=>{
+  allMessages.forEach(m=>{
     const isMe = m.from === me;
     const row = document.createElement("div");
     row.className = "msg-row " + (isMe ? "me" : "other");
@@ -660,13 +739,16 @@ function renderMessages(messages){
     }
 
     const textHTML = m.text ? escapeHtml(m.text) : "";
+    const timeLabel = m.displayTime
+      ? m.displayTime
+      : new Date(m.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
     row.innerHTML = `
       <img class="avatar" src="${CONTACT_PHOTO}" alt="">
       <div class="bubble-col">
         ${!isMe ? `<div class="sender-name">${escapeHtml(m.from)}</div>` : ""}
         <div class="bubble">${textHTML}${mediaHTML}</div>
-        <div class="msg-time">${new Date(m.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+        <div class="msg-time">${timeLabel}</div>
       </div>
     `;
     box.appendChild(row);
