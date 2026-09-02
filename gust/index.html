@@ -2,34 +2,40 @@
 <html>
 <head>
     <title>Gust</title>
-    <!-- One-line global decoder script -->
     <script src="https://jsdelivr.net"></script>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        #frame {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
 </head>
 <body>
-
-    <!-- Just call launch() with the URL you want to open -->
-    <button onclick="launch('gust.html.br')">Open App</button>
-
-    <br><br>
-    <iframe id="frame" width="100%" height="600px" style="border:1px solid #ccc;"></iframe>
-
+    <iframe id="frame"></iframe>
     <script>
         async function launch(url) {
             try {
-                // 1. Fetch file byte stream
                 const res = await fetch(url);
                 const bytes = new Uint8Array(await res.arrayBuffer());
-
-                // 2. Decode the Brotli stream directly to an iframe Blob
                 const decoded = Brotli.decompress(bytes);
                 const html = new TextDecoder().decode(decoded);
-
                 document.getElementById('frame').src = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
             } catch (e) {
                 alert("Could not load " + url);
             }
         }
+        launch('./gust.html.br');
     </script>
-
 </body>
 </html>
