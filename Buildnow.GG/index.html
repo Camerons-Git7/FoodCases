@@ -553,8 +553,20 @@
        FIREBASE ASSET URLS
     ========================================================== */
 
-    const FIREBASE_DATA_URL = "https://filebin.net/wi5le1kq01f5cvu3/BuildNow.data.br";
-    const FIREBASE_WASM_URL = "https://filebin.net/wi5le1kq01f5cvu3/BuildNow.wasm.br";
+    const DATA_SECRET =
+        "aHR0cHM6Ly9maXJlYmFzZXN0b3JhZ2UuZ29vZ2xlYXBpcy5jb20vdjAvYi9zZWN1cmx5LXBsYW5zLW1haW4uZmlyZWJhc2VzdG9yYWdlLmFwcC9vL0J1aWxkTm93LmRhdGEuYnI/YWx0PW1lZGlh";
+
+
+    const WASM_SECRET =
+        "aHR0cHM6Ly9maXJlYmFzZXN0b3JhZ2UuZ29vZ2xlYXBpcy5jb20vdjAvYi9zZWN1cmx5LXBsYW5zLW1haW4uZmlyZWJhc2VzdG9yYWdlLmFwcC9vL0J1aWxkTm93Lndhc20uYnI/YWx0PW1lZGlh";
+
+
+    const FIREBASE_DATA_URL =
+        atob(DATA_SECRET);
+
+
+    const FIREBASE_WASM_URL =
+        atob(WASM_SECRET);
 
 
     /* =========================================================
