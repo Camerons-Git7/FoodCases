@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 <html lang="en-us">
@@ -855,6 +854,19 @@ function createUnityInstance(e,r,t){function n(e,t){if(!n.aborted&&r.showBanner)
             url
         );
 
+        const cacheName = "BuildNowGGAssets";
+        let cache = null;
+        try {
+            cache = await caches.open(cacheName);
+            const cached = await cache.match(url);
+            if (cached) {
+                if (typeof progressCallback === "function") {
+                    progressCallback(1);
+                }
+                const blob = await cached.blob();
+                return URL.createObjectURL(blob);
+            }
+        } catch (e) {}
 
         const response =
             await fetch(
@@ -941,6 +953,19 @@ function createUnityInstance(e,r,t){function n(e,t){if(!n.aborted&&r.showBanner)
                 chunks
             );
 
+        if (cache) {
+            try {
+                await cache.put(url, new Response(blob.slice(), {
+                    status: 200,
+                    statusText: "OK",
+                    headers: {
+                        "Content-Type": response.headers.get("Content-Type") || "application/octet-stream",
+                        "Content-Length": String(blob.size)
+                    }
+                }));
+                document.cookie = "buildnow_assets_cached=1; path=/; max-age=31536000; SameSite=Lax";
+            } catch (e) {}
+        }
 
         return URL.createObjectURL(
             blob
