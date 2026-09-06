@@ -85,25 +85,72 @@
                         const frameworkBlob = new Blob([window.__UNITY_FRAMEWORK_SOURCE__], {type: 'application/javascript'});
                         const frameworkUrl = URL.createObjectURL(frameworkBlob);
 
-                        createUnityInstance(
-                            CANVAS,
-                            {
-                                dataUrl: 'https://media.githubusercontent.com/media/Camerons-Git7/FoodCases/main/call-of-duty/Build/Build.data.br',
-                                frameworkUrl: frameworkUrl,
-                                codeUrl: 'https://media.githubusercontent.com/media/Camerons-Git7/FoodCases/main/call-of-duty/Build/Build.wasm.br',
-                                streamingAssetsUrl: 'StreamingAssets',
-                                companyName: 'HicKupu',
-                                productName: 'MFPSMilitary Combat',
-                                productVersion: '0.1',
-                            },
-                            onUnityLoadingProgressChanged)
-                            .then((unityInstance) => {
-                                window.unityInstance = unityInstance
-                                CANVAS.focus()
-                            })
-                            .catch((error) => {
-                                console.error(error)
-                            })
+                        // --- Persistent cache for the two large assets ---
+                        // Cookies cannot hold multi-MB files (limit ~4 KB). We use the Cache API
+                        // (and a tiny localStorage flag) so after the first download the .data.br
+                        // and .wasm.br load from the browser cache on subsequent visits.
+                        const DATA_URL = 'https://media.githubusercontent.com/media/Camerons-Git7/FoodCases/main/call-of-duty/Build/Build.data.br';
+                        const CODE_URL = 'https://media.githubusercontent.com/media/Camerons-Git7/FoodCases/main/call-of-duty/Build/Build.wasm.br';
+                        const CACHE_NAME = 'cod-unity-assets-v1';
+
+                        async function getCachedOrFetch(url) {
+                            try {
+                                if ('caches' in window) {
+                                    const cache = await caches.open(CACHE_NAME);
+                                    let response = await cache.match(url);
+                                    if (response) {
+                                        console.log('[COD-Cache] HIT', url);
+                                        // Return a blob: URL so Unity gets a same-origin response
+                                        const blob = await response.blob();
+                                        return URL.createObjectURL(blob);
+                                    }
+                                    console.log('[COD-Cache] MISS – fetching', url);
+                                    response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+                                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                                    // Clone before consuming so we can both cache and return
+                                    await cache.put(url, response.clone());
+                                    // Remember that we have cached assets (tiny flag – this is what fits in storage / "cookie-like" state)
+                                    try { localStorage.setItem('cod-assets-cached', '1'); } catch (_) {}
+                                    const blob = await response.blob();
+                                    return URL.createObjectURL(blob);
+                                }
+                            } catch (e) {
+                                console.warn('[COD-Cache] Cache API failed, falling back to direct URL', e);
+                            }
+                            // Fallback: let Unity fetch the remote URL itself
+                            return url;
+                        }
+
+                        (async () => {
+                            try {
+                                const [dataUrl, codeUrl] = await Promise.all([
+                                    getCachedOrFetch(DATA_URL),
+                                    getCachedOrFetch(CODE_URL)
+                                ]);
+
+                                createUnityInstance(
+                                    CANVAS,
+                                    {
+                                        dataUrl: dataUrl,
+                                        frameworkUrl: frameworkUrl,
+                                        codeUrl: codeUrl,
+                                        streamingAssetsUrl: 'StreamingAssets',
+                                        companyName: 'HicKupu',
+                                        productName: 'MFPSMilitary Combat',
+                                        productVersion: '0.1',
+                                    },
+                                    onUnityLoadingProgressChanged)
+                                    .then((unityInstance) => {
+                                        window.unityInstance = unityInstance;
+                                        CANVAS.focus();
+                                    })
+                                    .catch((error) => {
+                                        console.error(error);
+                                    });
+                            } catch (err) {
+                                console.error('Failed to prepare Unity assets', err);
+                            }
+                        })();
 
                     })
                     .catch(error => console.error(error))
