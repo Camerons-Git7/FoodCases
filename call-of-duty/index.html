@@ -88,31 +88,47 @@
                         const DATA_URL = 'https://media.githubusercontent.com/media/Camerons-Git7/FoodCases/main/call-of-duty/Build/Build.data.br';
                         const CODE_URL = 'https://media.githubusercontent.com/media/Camerons-Git7/FoodCases/main/call-of-duty/Build/Build.wasm.br';
                         const CACHE_NAME = 'cod-unity-assets-v1';
+                        const CACHED_ASSET_URLS = new Set([DATA_URL, CODE_URL]);
 
-                        async function prewarm(url) {
-                            try {
-                                if (!('caches' in window)) return;
-                                const cache = await caches.open(CACHE_NAME);
-                                const hit = await cache.match(url);
-                                if (hit) {
-                                    console.log('[COD-Cache] already cached', url);
-                                    return;
+                        // Intercept fetch so Unity's own downloads are served from Cache Storage
+                        // when available. Without this, caches.put() alone does nothing for page fetches.
+                        (function installAssetFetchInterceptor() {
+                            if (window.__codAssetFetchPatched) return;
+                            window.__codAssetFetchPatched = true;
+                            const origFetch = window.fetch.bind(window);
+                            window.fetch = async function(input, init) {
+                                const url = typeof input === 'string' ? input : (input && input.url) || '';
+                                if (CACHED_ASSET_URLS.has(url)) {
+                                    try {
+                                        if ('caches' in window) {
+                                            const cache = await caches.open(CACHE_NAME);
+                                            const hit = await cache.match(url);
+                                            if (hit) {
+                                                console.log('[COD-Cache] HIT (no network)', url);
+                                                return hit.clone();
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.warn('[COD-Cache] match failed', e);
+                                    }
+                                    // Miss → network, then store
+                                    console.log('[COD-Cache] MISS – network', url);
+                                    const res = await origFetch(input, init);
+                                    if (res && res.ok) {
+                                        try {
+                                            const cache = await caches.open(CACHE_NAME);
+                                            await cache.put(url, res.clone());
+                                            try { localStorage.setItem('cod-assets-cached', '1'); } catch (_) {}
+                                            console.log('[COD-Cache] stored', url);
+                                        } catch (e) {
+                                            console.warn('[COD-Cache] store failed', e);
+                                        }
+                                    }
+                                    return res;
                                 }
-                                console.log('[COD-Cache] pre-fetching', url);
-                                const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
-                                if (res.ok) {
-                                    await cache.put(url, res);
-                                    try { localStorage.setItem('cod-assets-cached', '1'); } catch (_) {}
-                                    console.log('[COD-Cache] stored', url);
-                                }
-                            } catch (e) {
-                                console.warn('[COD-Cache] prewarm failed', url, e);
-                            }
-                        }
-
-                        // Start Unity immediately with the real remote URLs (browser will use
-                        // HTTP cache / our Cache Storage when available). Pre-warm runs in parallel.
-                        Promise.all([prewarm(DATA_URL), prewarm(CODE_URL)]).catch(() => {});
+                                return origFetch(input, init);
+                            };
+                        })();
 
                         createUnityInstance(
                             CANVAS,
