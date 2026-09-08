@@ -1,61 +1,39 @@
-name: Replace domain in EmeraldOS
+name: Replace CoolDude2349 with Camerons-Git7
 
 on:
-  # Run manually from the Actions tab
-  workflow_dispatch:
-
-  # Optional: also run when files inside EmeraldOS change
-  # push:
-  #   paths:
-  #     - 'EmeraldOS/**'
-
-permissions:
-  contents: write
+  workflow_dispatch:   # Manual trigger only (recommended)
 
 jobs:
   replace:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # Needed to push the commit
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Replace "securly-plans.github.io" with "menist.free.nf" in EmeraldOS
+      - name: Replace all instances of CoolDude2349
         run: |
-          echo "Searching and replacing inside EmeraldOS folder..."
-
-          # Find all files under EmeraldOS and perform the replacement
-          find EmeraldOS -type f \( \
-            -name "*.html" -o \
-            -name "*.js" -o \
-            -name "*.css" -o \
-            -name "*.json" -o \
-            -name "*.md" -o \
-            -name "*.txt" -o \
-            -name "*.xml" -o \
-            -name "*.svg" \
-          \) -print0 | while IFS= read -r -d '' file; do
-            if grep -q "securly-plans.github.io" "$file"; then
-              echo "Updating: $file"
-              sed -i 's/securly-plans\.github\.io/menist.free.nf/g' "$file"
-            fi
-          done
-
-          echo "Replacement finished."
+          # Find all text files (excluding .git) and replace the string
+          find . -type f \
+            -not -path './.git/*' \
+            -not -path './.github/workflows/*' \
+            -exec grep -l 'CoolDude2349' {} \; | while read -r file; do
+              sed -i 's/CoolDude2349/Camerons-Git7/g' "$file"
+            done
 
       - name: Commit and push changes
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add EmeraldOS
-
-          if git diff --staged --quiet; then
-            echo "No changes detected – nothing to commit."
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          if git diff --quiet; then
+            echo "No changes to commit"
           else
-            git commit -m "Replace securly-plans.github.io with menist.free.nf in EmeraldOS"
+            git add -A
+            git commit -m "chore: replace CoolDude2349 with Camerons-Git7"
             git push
-            echo "Changes committed and pushed."
           fi
