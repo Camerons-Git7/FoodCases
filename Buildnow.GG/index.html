@@ -620,26 +620,15 @@ function createUnityInstance(e,r,t){function n(e,t){if(!n.aborted&&r.showBanner)
     let unityStarting = false;
     let unityStarted = false;
 
+/* =========================================================
+   ASSET URLS (GitHub Releases)
+========================================================== */
 
-    /* =========================================================
-       FIREBASE ASSET URLS
-    ========================================================== */
+const FIREBASE_DATA_URL =
+    "https://github.com/Camerons-Git7/FoodCases/releases/download/Build_Files/BuildNow.data.br";
 
-    const DATA_SECRET =
-        "aHR0cHM6Ly9maXJlYmFzZXN0b3JhZ2UuZ29vZ2xlYXBpcy5jb20vdjAvYi9zZWN1cmx5LXBsYW5zLW1haW4uZmlyZWJhc2VzdG9yYWdlLmFwcC9vL0J1aWxkTm93LmRhdGEuYnI/YWx0PW1lZGlh";
-
-
-    const WASM_SECRET =
-        "aHR0cHM6Ly9maXJlYmFzZXN0b3JhZ2UuZ29vZ2xlYXBpcy5jb20vdjAvYi9zZWN1cmx5LXBsYW5zLW1haW4uZmlyZWJhc2VzdG9yYWdlLmFwcC9vL0J1aWxkTm93Lndhc20uYnI/YWx0PW1lZGlh";
-
-
-    const FIREBASE_DATA_URL =
-        atob(DATA_SECRET);
-
-
-    const FIREBASE_WASM_URL =
-        atob(WASM_SECRET);
-
+const FIREBASE_WASM_URL =
+    "https://github.com/Camerons-Git7/FoodCases/releases/download/Build_Files/BuildNow.wasm.br";
 
     /* =========================================================
        LOADING UI
