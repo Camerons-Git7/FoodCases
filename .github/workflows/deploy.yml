@@ -1,5 +1,4 @@
 name: 🚀 Deploy to InfinityFree
-
 on:
   push:
     branches: [ main, master ]
@@ -13,7 +12,6 @@ on:
         options:
           - 'false'
           - 'true'
-
 jobs:
   web-deploy:
     name: Deploy to InfinityFree
@@ -31,7 +29,6 @@ jobs:
           echo "Force full sync requested - will delete local sync state if it exists"
           rm -f .ftp-sync-state-1.json .ftp-sync-state-2.json
           echo "Sync state cleared. All files will be re-uploaded."
-
       # ─── FIRST WEBSITE ─────────────────────────────
       - name: Replace .ico with .png in desktop/index.html for Site 1 deploy
         run: |
@@ -41,7 +38,6 @@ jobs:
           else
             echo "desktop/index.html not found, skipping replacement"
           fi
-
       - name: Deploy to InfinityFree Site 1
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -62,20 +58,20 @@ jobs:
             .ftp-sync-state-1.json
             .ftp-sync-state-2.json
           log-level: standard
-
       # ─── SECOND WEBSITE ────────────────────────────
       - name: Restore original code for Site 2
         run: git checkout .
-
-      - name: Replace "free.nf" with "free.je" for Site 2 deploy
+      - name: Replace "menist" with "seamless-os" and "free.nf" with "free.je" for Site 2 deploy
         run: |
           find . -type f \
             ! -path './.git/*' \
             ! -path './.github/*' \
             ! -name '.ftp-sync-state-1.json' \
             ! -name '.ftp-sync-state-2.json' \
-            -exec sed -i 's/free\.nf/free.je/g' {} +
-
+            -exec sed -i \
+              -e 's/menist/seamless-os/g' \
+              -e 's/free\.nf/free.je/g' \
+              {} +
       - name: Replace .ico with .png in desktop/index.html for Site 2 deploy
         run: |
           if [ -f "desktop/index.html" ]; then
@@ -84,7 +80,6 @@ jobs:
           else
             echo "desktop/index.html not found, skipping replacement"
           fi
-
       - name: Deploy to InfinityFree Site 2
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
