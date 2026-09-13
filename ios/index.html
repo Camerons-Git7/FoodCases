@@ -1,0 +1,548 @@
+Edit this code by adding the apps I send after this: <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Home">
+<meta name="theme-color" content="#1b0f33">
+<title>Home</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%237b3fa0'/%3E%3Ccircle cx='31' cy='31' r='11' fill='white' fill-opacity='.92'/%3E%3Ccircle cx='69' cy='31' r='11' fill='white' fill-opacity='.7'/%3E%3Ccircle cx='31' cy='69' r='11' fill='white' fill-opacity='.7'/%3E%3Ccircle cx='69' cy='69' r='11' fill='white' fill-opacity='.92'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --fakebar: 0px;
+    --glass-bg: rgba(255,255,255,0.16);
+    --glass-border: rgba(255,255,255,0.32);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+  html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:#0a0614;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",Segoe UI,Roboto,sans-serif;}
+  img{-webkit-user-drag:none;pointer-events:none;}
+  button,input{font-family:inherit;}
+
+  #wallpaper{
+    position:fixed;inset:0;z-index:0;
+    background:
+      radial-gradient(circle at 18% 14%, #ffb37a 0%, transparent 40%),
+      radial-gradient(circle at 85% 6%, #ff74c2 0%, transparent 44%),
+      radial-gradient(circle at 92% 82%, #5c86ff 0%, transparent 52%),
+      radial-gradient(circle at 6% 92%, #8b5cf6 0%, transparent 52%),
+      linear-gradient(165deg,#160b2e 0%,#31186a 42%,#7c3f9e 72%,#ff8c6b 100%);
+  }
+
+  /* fake status bar — only shown when previewing outside of standalone (added-to-home-screen) mode */
+  #status-bar{display:none;position:fixed;top:0;left:0;right:0;z-index:20;
+    align-items:center;justify-content:space-between;
+    padding:10px 24px 6px;color:#fff;font-weight:600;font-size:15px;pointer-events:none;}
+  body.show-fake-bar #status-bar{display:flex;}
+  #status-bar .icons{display:flex;align-items:center;gap:6px;}
+
+  #search-wrap{position:fixed;left:0;right:0;z-index:15;display:flex;justify-content:center;padding:0 18px;
+    top:calc(env(safe-area-inset-top,0px) + var(--fakebar) + 14px);}
+  .search-pill{width:100%;max-width:400px;background:var(--glass-bg);border:1px solid var(--glass-border);
+    backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);
+    border-radius:14px;padding:10px 14px;color:rgba(255,255,255,0.82);font-size:15px;
+    display:flex;align-items:center;gap:8px;cursor:pointer;}
+
+  #pages{position:fixed;left:0;right:0;z-index:5;display:flex;overflow-x:scroll;overflow-y:hidden;
+    scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    touch-action:pan-x;overscroll-behavior-x:contain;
+    top:calc(env(safe-area-inset-top,0px) + var(--fakebar) + 66px);
+    bottom:calc(env(safe-area-inset-bottom,0px) + 142px);}
+  .page{flex:0 0 100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;
+    display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:min-content;
+    row-gap:20px;column-gap:4px;padding:8px 22px 20px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    touch-action:pan-y;overscroll-behavior-y:contain;}
+
+  .app-icon-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
+  .app-icon{width:100%;aspect-ratio:1/1;max-width:60px;margin:0 auto;border-radius:22%;overflow:hidden;
+    background:linear-gradient(160deg,#8b5cf6,#5b7dff);box-shadow:0 3px 8px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.25);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:20px;position:relative;}
+  .app-icon img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;}
+  .app-label{color:#fff;font-size:11px;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.7);
+    max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  #dots{position:fixed;left:0;right:0;z-index:6;display:flex;justify-content:center;align-items:center;
+    gap:6px;flex-wrap:wrap;padding:0 40px;bottom:calc(env(safe-area-inset-bottom,0px) + 116px);}
+  .dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.35);transition:background .2s;}
+  .dot.active{background:rgba(255,255,255,.95);}
+
+  #dock{position:fixed;left:14px;right:14px;z-index:7;height:96px;border-radius:30px;
+    background:var(--glass-bg);border:1px solid var(--glass-border);
+    backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
+    display:flex;align-items:center;justify-content:space-evenly;padding:0 10px;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 10px);}
+  #dock .app-icon-wrap{flex:0 0 auto;width:70px;}
+  #dock .app-icon{width:64px;height:64px;max-width:64px;flex-shrink:0;}
+
+  #app-overlay{position:fixed;inset:0;background:#000;z-index:100;
+    transform:scale(.86);opacity:0;pointer-events:none;
+    transition:transform .38s cubic-bezier(.22,.9,.32,1), opacity .28s ease;}
+  #app-overlay.open{transform:scale(1);opacity:1;pointer-events:auto;}
+  #app-frame{width:100%;height:100%;border:none;background:#fff;display:block;}
+  #home-zone{position:absolute;left:0;right:0;bottom:0;height:36px;z-index:101;
+    display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;cursor:pointer;}
+  #home-indicator{width:135px;height:5px;border-radius:3px;background:rgba(255,255,255,.85);}
+
+  #search-panel{position:fixed;inset:0;background:rgba(8,6,18,.94);
+    backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);z-index:60;
+    display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .2s;
+    padding:calc(env(safe-area-inset-top,0px) + 16px) 18px 18px;}
+  #search-panel.open{opacity:1;pointer-events:auto;}
+  #search-bar-row{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  #search-input{flex:1;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+    border-radius:12px;padding:10px 12px;color:#fff;font-size:16px;outline:none;
+    -webkit-user-select:text;user-select:text;-webkit-touch-callout:default;}
+  #search-input::placeholder{color:rgba(255,255,255,.5);}
+  #search-cancel{color:#6fa8ff;font-size:15px;white-space:nowrap;background:none;border:none;padding:4px;cursor:pointer;}
+  #search-results{margin-top:16px;overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;}
+  .search-row{display:flex;align-items:center;gap:14px;padding:9px 4px;cursor:pointer;}
+  .search-row .app-icon{width:42px;height:42px;max-width:42px;flex-shrink:0;font-size:16px;}
+  .search-row .name{color:#fff;font-size:15px;}
+  #search-empty{color:rgba(255,255,255,.5);font-size:14px;text-align:center;margin-top:40px;}
+
+  @media (min-width:560px){
+    #search-wrap,#pages,#dots,#dock{left:50%;right:auto;transform:translateX(-50%);width:420px;}
+  }
+</style>
+</head>
+<body>
+  <div id="wallpaper"></div>
+
+  <div id="status-bar">
+    <span id="fake-clock">9:41</span>
+    <span class="icons">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="none"><rect x="0" y="6" width="3" height="5" rx="0.6" fill="#fff"/><rect x="4.5" y="4" width="3" height="7" rx="0.6" fill="#fff"/><rect x="9" y="2" width="3" height="9" rx="0.6" fill="#fff"/><rect x="13.5" y="0" width="3" height="11" rx="0.6" fill="#fff"/></svg>
+      <svg width="15" height="11" viewBox="0 0 15 11" fill="none"><path d="M7.5 9.6a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="#fff"/><path d="M4.3 6.2a4.6 4.6 0 016.4 0" stroke="#fff" stroke-width="1.3" stroke-linecap="round" fill="none"/><path d="M1.8 3.7a8.2 8.2 0 0111.4 0" stroke="#fff" stroke-width="1.3" stroke-linecap="round" fill="none"/></svg>
+      <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x="0.75" y="0.75" width="19.5" height="9.5" rx="2.4" stroke="#fff" stroke-opacity=".6"/><rect x="2.1" y="2.1" width="16.8" height="6.8" rx="1.1" fill="#fff"/><rect x="21" y="3.5" width="1.6" height="4" rx="0.8" fill="#fff" fill-opacity=".6"/></svg>
+    </span>
+  </div>
+
+  <div id="search-wrap">
+    <div class="search-pill" id="search-toggle" role="button" tabindex="0" aria-label="Search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="rgba(255,255,255,.8)" stroke-width="2"/><line x1="16.4" y1="16.4" x2="21" y2="21" stroke="rgba(255,255,255,.8)" stroke-width="2" stroke-linecap="round"/></svg>
+      Search
+    </div>
+  </div>
+
+  <div id="pages"></div>
+  <div id="dots"></div>
+  <div id="dock"></div>
+
+  <div id="search-panel">
+    <div id="search-bar-row">
+      <input id="search-input" placeholder="Search" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button id="search-cancel">Cancel</button>
+    </div>
+    <div id="search-results"></div>
+  </div>
+
+  <div id="app-overlay">
+    <iframe id="app-frame" src="about:blank" title="app" allow="autoplay; fullscreen; gamepad; accelerometer; gyroscope; encrypted-media" allowfullscreen></iframe>
+    <div id="home-zone" role="button" aria-label="Close app"><div id="home-indicator"></div></div>
+  </div>
+
+<script>
+var APPS = {
+
+'1on1soccer': {title: 'Soccer', path: 'https://menist.free.nf/core/1on1soccer/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-wDyrUDPQKy5G-nNTUNM0UzoRldrqqPXWvQ&s', pinned: false, openInNewTab: false},
+  '1on1tennis': {title: 'Tennis', path: 'https://menist.free.nf/core/1on1tennis/', icon: 'https://igre.games/wp-content/uploads/thumbs/custom/0-9/1-On-1-Tennis.jpg', pinned: false, openInNewTab: false},
+  '1v1lol': {title: '1v1.lol', path: 'https://menist.free.nf/big/1v1.lol/', icon: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://1v1lol.us.com/&size=256', pinned: false, openInNewTab: false},
+  '8ballclassic': {title: '8 Ball Pool', path: 'https://menist.free.nf/core/8ballclassic/', icon: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://8ballpool.com/&size=256', pinned: false, openInNewTab: false},
+  'ageofwar': {title: 'Age of War', path: 'https://menist.free.nf/core/ageofwar/', icon: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ageofwargame.io/&size=256', pinned: false, openInNewTab: false},
+  'ageofwar2': {title: 'Age of War 2', path: 'https://menist.free.nf/core/ageofwar2/', icon: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ageofwargame.io/&size=256', pinned: false, openInNewTab: false},
+  'agesofconflict': {title: 'Ages of Conflict', path: 'https://menist.free.nf/core/agesofconflict/', icon: 'https://static.wikitide.net/agesofconflictwiki/0/01/Ages_of_Conflict_IOS.png', pinned: false, openInNewTab: false},
+  'amongus': { title: 'Among Us', path: 'https://menist.free.nf/core/amongus/', icon: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://amongusfree.io/&size=256', pinned: false, openInNewTab: false },
+  'angrybirds': {title: 'Angry Birds', path: 'https://menist.free.nf/big/angry-birds/', icon: 'https://upload.wikimedia.org/wikipedia/en/2/2d/Angry_Birds_promo_art.png', pinned: false, openInNewTab: false},
+  'backrooms': {title: 'Backrooms', path: 'https://menist.free.nf/core/backrooms/', icon: 'https://i.ibb.co/XkM86cvy/backrooms-icon.png', pinned: false, openInNewTab: false},
+  'badicecream': {title: 'Bad Ice Cream', path: 'https://menist.free.nf/core/badicecream/', icon: 'https://i.ibb.co/nMQLkyKK/bad-ice-cream.webp', pinned: false, openInNewTab: false},
+  'badparenting': {title: 'Bad Parenting', path: 'https://menist.free.nf/core/badparenting/', icon: 'https://play-lh.googleusercontent.com/XBF1VnU6eOPWTuS1drE-JWWQK_Atv52nJr9OZEpvonL2nXiemQ-tQCScII__2I_9jHnt01P8VQVxk8J1SNEr', pinned: false, openInNewTab: false},
+  'badpiggies': {title: 'Bad Piggies', path: 'https://menist.free.nf/core/badpiggies/', icon: 'https://play-lh.googleusercontent.com/WUXuQ9MrEYeU-blZesAEqdIIQv03OknruPCrNQGOxXop1pFZai0BWT4kKUqaz_rcpRiB=w240-h480-rw', pinned: false, openInNewTab: false},
+  'baldisbasics': {title: 'Baldis Basics', path: 'https://menist.free.nf/core/baldisbasics/', icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple113/v4/cc/c4/73/ccc473fc-6e53-3f8d-f02d-1717c3f0df95/AppIcon-0-1x_U007emarketing-0-85-220-0-7.png/200x200ia-75.webp', pinned: false, openInNewTab: false},
+  'basketball': {title: 'Basketball Stars', path: 'https://menist.free.nf/big/basketball/', icon: 'https://m.media-amazon.com/images/I/81BL1Hx2KuL.png', pinned: false, openInNewTab: false},
+  'basketbros': {title: 'Basket Bros', path: 'https://menist.free.nf/core/basketbros/', icon: 'https://imgs.crazygames.com/basketbros_1x1/20251107022434/basketbros_1x1-cover?format=auto&quality=100&metadata=none&width=1200', pinned: false, openInNewTab: false},
+  'basketrandom': {title: 'Basket Random', path: 'https://menist.free.nf/big/volley-random/', icon: 'https://play-lh.googleusercontent.com/sq0SQaq1utgwfeqovNMo61DhsHzVioadbBhAAr6OXJMBrrNG-8ybkyawexKk0viVCTYxTIdkarcRfoDKdcqi6uI', pinned: false, openInNewTab: false},
+  'bitplanes': {title: 'Bit Planes', path: 'https://menist.free.nf/core/bitplanes/', icon: 'https://thumbnails.gamenora.com/Bit%20Planes.webp', pinned: false, openInNewTab: false},
+  'blackjack': {title: 'Black Jack', path: 'https://menist.free.nf/black-jack/', icon: 'https://i.ibb.co/JRCqTjrz/Blackjack.png', pinned: false, openInNewTab: false},
+  'blockblast': {title: 'Block Blast', path: 'https://menist.free.nf/peak/block-blast/', icon: 'https://play-lh.googleusercontent.com/5FLR-EBlfNvoV9ydZkOMDqRF10nV64XcKdZzW_oQzmz2e8Me9PS5Zncnvviki0J3XumjO2a_lg6_IdwOqwnV', pinned: false, openInNewTab: false},
+  'blockysnakes': {title: 'Blocky Snakes', path: 'https://menist.free.nf/core/blockysnakes/', icon: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://slither.io/Extended_BACK-NET_Website_List&size=256', pinned: false, openInNewTab: false},
+  'bloonstd5': {title: 'Bloons TD 5', path: 'https://menist.free.nf/big/bloonstd5/', icon: 'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/88/6f/65/886f652c-cbfa-fc19-c12c-5e8b47d8ea0e/Placeholder.mill/200x200bb-75.webp', pinned: false, openInNewTab: false},
+  'bloxorz': {title: 'Bloxorz', path: 'https://menist.free.nf/core/bloxorz/', icon: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://bloxorz.org/Extended_BACK-NET_Website_List&size=256', pinned: false, openInNewTab: false},
+  'blumgiracers': {title: 'Blumgi Racers', path: 'https://menist.free.nf/core/blumgiracers/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=1200,height=1200,fit=cover,f=png/dbeb9170182271f87ecd5626b68a73aa/blumgi-racers-logo.png', pinned: false, openInNewTab: false},
+  'blumgirocket': {title: 'Blumgi Rocket', path: 'https://menist.free.nf/core/blumgirocket/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=1200,height=1200,fit=cover,f=png/672fb98802b00740e3c885cb2b31fc51/blumgi-rocket-logo.png', pinned: false, openInNewTab: false},
+  'bobtherobber5': {title: 'Bob the Robber 5', path: 'https://menist.free.nf/core/bobtherobber5/', icon: 'https://kizicdn.com/system/static/thumbs/big_tile_thumb/5366/thumb300_2b89b70d201b443991360f2ba5622c17-512x512.jpg?1556203839', pinned: false, openInNewTab: false},
+  'bowmasters': {title: 'Bowmasters', path: 'https://menist.free.nf/big/bowmasters/', icon: 'https://play-lh.googleusercontent.com/rsQyCuie6S8Munc2Hv6IMpePP1g3c0okLkyKRXd1IimOryIBMZqymGKaOg7bZ6NMkhj3', pinned: false, openInNewTab: false},
+  'boxingrandom': {title: 'Boxing Random', path: 'https://menist.free.nf/core/boxingrandom/', icon: 'https://play-lh.googleusercontent.com/ZuMoNX6xiIBRwdtSL-FN0xCdXyahk8SRaPZ5_4HzkdQEp2Tm_GAsha9OcsRoSDgSw8Y', pinned: false, openInNewTab: false},
+  'bubbleshooter': {title: 'Bubble Shooter', path: 'https://menist.free.nf/core/bubbleshooter/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=1200,height=1200,fit=cover,f=png/2d5e417ea0fc1ef06d746b2cef691c07/bubble-shooter-lak-logo.png', pinned: false, openInNewTab: false},
+  'buildnowgg': {title: 'Buildnow.GG', path: 'https://menist.free.nf/Buildnow.GG/', icon: 'https://play-lh.googleusercontent.com/Jkx-IPLeRDk4uKeDyIMWKQ6jv9RquAC0WErGzWIMZQK7Z8FKzsqbUtC0J7vTm24xIqnme3TZR-6a8WAj6EXP_DA', pinned: false, openInNewTab: true},
+  'callofduty': {title: 'Call of Duty', path: 'https://menist.free.nf/call-of-duty/', icon: 'https://play-lh.googleusercontent.com/cKXlbU72_2wSXdjcD_zPWED3EVaaOQVqqHgiA9JoRQMprYen49arNUMTngcRc9UWLnv-ANT9gyQBDQpvAn61lg', pinned: false, openInNewTab: true},
+  'candycrush': {title: 'Candy Crush', path: 'https://menist.free.nf/big/candy-crush/', icon: 'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/90/df/c9/90dfc984-51c1-6764-be93-2d4bc12ace6d/Placeholder.mill/200x200bb-75.webp', pinned: false, openInNewTab: false},
+  'capyclicker': {title: 'Capy Clicker', path: 'https://menist.free.nf/core/capybaraclicker/', icon: 'https://play-lh.googleusercontent.com/MIFfA82vOfNj3--R7Bw7HUIHUGjNiNtNRR3QJn3qCrdM085YPonGcBq6QcpsA3MsMVZy', pinned: false, openInNewTab: false},
+  'cardrawing': {title: 'Car Drawing', path: 'https://menist.free.nf/core/cardrawing/', icon: 'https://play-lh.googleusercontent.com/1btzRy3IwWiPif85v6FbsDLuCW6XjMLXz8MOtucDHi0Yit0xbigmrEbKMDQEi0EI6_8', pinned: false, openInNewTab: false},
+  'carkingarena': {title: 'Car King Arena', path: 'https://menist.free.nf/core/carkingarena/', icon: 'https://igre.games/wp-content/uploads/thumbs/custom/C/Car-King-Arena.webp', pinned: false, openInNewTab: false},
+  'chess': {title: 'Chess', path: 'https://menist.free.nf/core/chess/', icon: 'https://downloadr2.apkmirror.com/wp-content/uploads/2023/03/32/64148b0cc8487.png', pinned: false, openInNewTab: false},
+  'choppyorc': {title: 'Choppy Orc', path: 'https://menist.free.nf/core/choppyorc/', icon: 'https://www.speedrun.com/static/game/j1ll8jv1/cover.png?v=dc5fcfb', pinned: false, openInNewTab: false},
+  'circloo': {title: 'CircloO', path: 'https://menist.free.nf/core/circloO/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=1200,height=1200,fit=cover,f=png/971353830f129fd3f1446398792e6997/circloo-logo.png', pinned: false, openInNewTab: false},
+  'circloo2': {title: 'CircloO 2', path: 'https://menist.free.nf/core/circloO2/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=1200,height=1200,fit=cover,f=png/971353830f129fd3f1446398792e6997/circloo-logo.png', pinned: false, openInNewTab: false},
+  'cleanupio': {title: 'Cleanup.io', path: 'https://menist.free.nf/core/cleanupio/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT0q491cJs4358-ulCPuAvlQy3KgKxB6WQy8A&s', pinned: false, openInNewTab: false},
+  'clusterrush': {title: 'Cluster Rush', path: 'https://menist.free.nf/core/clusterrush/', icon: 'https://nargames.com/storage/uploads/thumbs/cluster-rush.webp', pinned: false, openInNewTab: false},
+  'cooltanks': {title: 'Cool Tanks', path: 'https://menist.free.nf/big/awesome-tanks/', icon: 'https://www.coolmathgames.com/sites/default/files/awesome-tanks-2-icon.png', pinned: false, openInNewTab: false},
+  'crazycattle': {title: 'Crazy Cattle', path: 'https://menist.free.nf/big/crazy-cattle-3d/', icon: 'https://f4.bcbits.com/img/a3604041864_16.jpg', pinned: false, openInNewTab: false},
+  'crazycars': {title: 'Crazy Cars', path: 'https://menist.free.nf/core/crazycars/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=1200,height=1200,fit=cover,f=png/2bc8004fcbb4387908a636e2a9d9ab4a/crazy-cars-logo.png', pinned: false, openInNewTab: false},
+  'crazycrash': {title: 'Crazy Crash', path: 'https://menist.free.nf/core/crazycrashlanding/', icon: 'https://m.media-amazon.com/images/I/81m2YZvpC7L.png', pinned: false, openInNewTab: false},
+  'crazymotor': {title: 'Crazy Motor', path: 'https://menist.free.nf/core/crazymotorcycle/', icon: 'https://imgs.crazygames.com/crazy-motorcycle_1x1/20250711063031/crazy-motorcycle_1x1-cover?format=auto&quality=100&metadata=none&width=1200', pinned: false, openInNewTab: false},
+  'crossyroad': {title: 'Crossy Road', path: 'https://menist.free.nf/big/crossy-road/', icon: 'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/d4/1f/43/d41f4367-5cb8-7e6c-a39c-d71dd6ab3371/Placeholder.mill/400x400bb-75.webp', pinned: false, openInNewTab: false},
+  'csgoclicker': {title: 'CS:GO Clicker', path: 'https://menist.free.nf/peak/csgo-clicker/', icon: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://counter-strike.net&size=256', pinned: false, openInNewTab: false},
+  'cuttherope': {title: 'Cut the Rope', path: 'https://menist.free.nf/core/cuttherope/', icon: 'https://upload.wikimedia.org/wikipedia/en/6/66/Cut_the_Rope_%28App_icon%29.png', pinned: false, openInNewTab: false},
+  'deanwithers': {title: 'Dean Withers', path: 'https://menist.free.nf/dean-withers/autoplay/', icon: 'https://i.ibb.co/W4yDPTXS/ddb9532a24d47986ccafc8e9ec56d1f2-tplv-tiktokx-cropcenter-1080-1080.jpg', pinned: false, openInNewTab: false},
+  'deathchase': {title: 'Death Chase', path: 'https://menist.free.nf/core/deathchase/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTzSj_vyBQIYKf98BU4ILSwPP4PH8gQ3k9EuQ&s', pinned: false, openInNewTab: false},
+  'deathrun3d': {title: 'Death Run 3D', path: 'https://menist.free.nf/core/deathrun3D/', icon: 'https://i.ibb.co/chXgY5cG/Death-Run-3d.jpg', pinned: false, openInNewTab: false},
+  'demolitionderby': {title: 'Demolition Derby', path: 'https://menist.free.nf/core/demolitionderbycrashracing/', icon: 'https://play-lh.googleusercontent.com/_96MKqR7vQJfEunLKi4oJVuv2jWrB3VEoAr6Rg2jSYic1fIqliqAX2F9zO4fENgZUE4', pinned: false, openInNewTab: false},
+  'doodlejump': {title: 'Doodle Jump', path: 'https://menist.free.nf/core/doodlejump/', icon: 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Doodle_Jump.png', pinned: false, openInNewTab: false},
+  'drawclimber': {title: 'Draw Climber', path: 'https://menist.free.nf/core/drawclimber/', icon: 'https://play-lh.googleusercontent.com/70T7qV9LvT2RyB7WtE2Z88I6oZfS6Gq9Wd6mTUbFweoLUHkEjduBsc2rprDuxfa7lw', pinned: false, openInNewTab: false},
+  'dreadhead': {title: 'Dread Head', path: 'https://menist.free.nf/core/dreadheadparkour/', icon: 'https://play-lh.googleusercontent.com/5HX-jzTrtP-J8uu6TiX4FF0JWpJjae50a3QvswgfbKc3GiHEalWzm4b846GpiB4Hx22L', pinned: false, openInNewTab: false},
+  'driftboss': {title: 'Drift Boss', path: 'https://menist.free.nf/big/drift-boss/', icon: 'https://play-lh.googleusercontent.com/Zu0LoruCtIG45qs6iffZkWqGTuzEWflNoH8TNRtfMJ2NGgJxQGfw8kqSrxKtXGjPqeqFLNsnubW6EnPUJvOi8g=w240-h480-rw', pinned: false, openInNewTab: false},
+  'droppymerge': {title: 'Droppy Merge', path: 'https://menist.free.nf/droppy-merge/', icon: 'https://australianpaving.com/wp-content/uploads/2024/04/Old-Red-Sandstock-Bricks-225-x-106-600x600.jpg', pinned: false, openInNewTab: false},
+  'ducklife': {title: 'Duck Life', path: 'https://menist.free.nf/big/duck-life/', icon: 'https://play-lh.googleusercontent.com/vtJKdZwiBoQ0m0QVBvCj6oFBEVCehcPktS58KspbJeQdHOfcpAuGu4eWET97KQMH7M0UChLFxMoaErlpq4isSkE', pinned: false, openInNewTab: false},
+  'ducklingsio': {title: 'Ducklings.io', path: 'https://menist.free.nf/core/ducklingsio/', icon: 'https://play-lh.googleusercontent.com/bAPhkkHwbkODYsZ1sn9BZybFL6uNWWFOskvXCdK86HiLsqBHWyO8Nt0NephFBY1lQkV9', pinned: false, openInNewTab: false},
+  'eagleride': {title: 'Eagle Ride', path: 'https://menist.free.nf/core/eagleride/', icon: 'https://i.ibb.co/cqrp4Tr/eagle-ride.jpg', pinned: false, openInNewTab: false},
+  'earntodie': {title: 'Earn to Die', path: 'https://menist.free.nf/core/earntodie/', icon: 'https://m.media-amazon.com/images/I/81dUvAW1ADL.png', pinned: false, openInNewTab: false},
+  'eggycar': {title: 'Eggy Car', path: 'https://menist.free.nf/core/eggycar/', icon: 'https://eggycar76.io/data/image/game/eggy-car.png', pinned: false, openInNewTab: false},
+  'escapeprison': {title: 'Escape Prison', path: 'https://menist.free.nf/core/escapingtheprison/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=1200,height=1200,fit=cover,f=png/b0940b784e8eb55a3e40327e1afb42d5256045bf6601515f02c6fe45ab49e56c/escaping-the-prison-logo.png', pinned: false, openInNewTab: false},
+  'escaperoad': {title: 'Escape Road', path: 'https://menist.free.nf/core/escaperoad/', icon: 'https://hollowknight.io/data/image/game/escape-road/escape-road.png', pinned: false, openInNewTab: false},
+  'escaperoad2': {title: 'Escape Road 2', path: 'https://menist.free.nf/core/escaperoad2/', icon: 'https://i.ibb.co/0VZQV8HN/Escape-Road-City-2.png', pinned: false, openInNewTab: false},
+  'evilglitch': {title: 'Evil Glitch', path: 'https://menist.free.nf/core/evilglitch/', icon: 'https://kickthebuddy.lol/cache/data/image/game/evil-glitch.webp', pinned: false, openInNewTab: false},
+  'flappybird': {title: 'Flappy Bird', path: 'https://menist.free.nf/flappy-bird/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDSrnL5NqB3aNtfL3X6QdGGFeefxw0PCDatA&s', pinned: false, openInNewTab: false},
+  'floodrunner2': {title: 'Flood Runner 2', path: 'https://menist.free.nf/core/floodrunner2/', icon: 'https://i.ibb.co/5W43MTSv/IMG-4498.jpg', pinned: false, openInNewTab: false},
+  'fnaf': {title: 'FNAF', path: 'https://menist.free.nf/core/fnaf/', icon: 'https://i.ibb.co/PzzXXWLK/81-P6-YZOi-BL.png', pinned: false, openInNewTab: false},
+  'fnaf2': {title: 'FNAF 2', path: 'https://menist.free.nf/core/fnaf2/', icon: 'https://i.ibb.co/C3MqDCJc/81-HBp-Jd2h8-L.png', pinned: false, openInNewTab: false},
+  'fnaf3': {title: 'FNAF 3', path: 'https://menist.free.nf/core/fnaf3/', icon: 'https://i.ibb.co/DHJ3F2qL/81pax-GYlcq-L.png', pinned: false, openInNewTab: false},
+  'fnaf4': {title: 'FNAF 4', path: 'https://menist.free.nf/core/fnaf4/', icon: 'https://i.ibb.co/6QfRR0j/fnaf4.webp', pinned: false, openInNewTab: false},
+  'foodcases': {title: 'Food Cases', path: 'https://menist.free.nf/case-opener/', icon: 'https://i.ibb.co/rfXbRZfh/IMG-4499.jpg', pinned: false, openInNewTab: false},
+  'fruitninja': {title: 'Fruit Ninja', path: 'https://menist.free.nf/core/fruitninja/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2aydz3dAabZ7lsnbNLBGVVrH7itr-lkTZrQ&s', pinned: false, openInNewTab: false},
+  'funnybattle': {title: 'Funny Battle', path: 'https://menist.free.nf/core/funnybattle/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRRkwLsQJqdfuHFFFMaxRvph3s8uP37Vivgiw&s', pinned: false, openInNewTab: false},
+  'funnybattle2': {title: 'Funny Battle 2', path: 'https://menist.free.nf/core/funnybattle2/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRRkwLsQJqdfuHFFFMaxRvph3s8uP37Vivgiw&s', pinned: false, openInNewTab: false},
+  'funnyshooter2': {title: 'Funny Shooter 2', path: 'https://menist.free.nf/core/funnyshooter2/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSiaH_ivyc_xu8ZWMFUjF5-epxpHUC3EuvzSw&s', pinned: false, openInNewTab: false},
+  'geodash': {title: 'Geo Dash', path: 'https://menist.free.nf/big/geometrydash/', icon: 'https://geometrylitepc.com/assets/upload/geometry-dash.webp', pinned: false, openInNewTab: false},
+  'geometryvibes': {title: 'Geometry Vibes', path: 'https://menist.free.nf/core/geometryvibes/', icon: 'https://play-lh.googleusercontent.com/FRj1dX1U-hdtQVSZkEtjzyo1iRh-cVGidQwMo_Mcp_-HBvVw7ojiEhayL7wrsOQNLOk', pinned: false, openInNewTab: false},
+  'getontop': {title: 'Get on Top', path: 'https://menist.free.nf/core/getontop/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=1200,height=1200,fit=cover,f=png/3078616e30ecc5f326bd8e6cad728a03/get-on-top-logo.png', pinned: false, openInNewTab: false},
+  'gettingoverit': {title: 'Getting Over It', path: 'https://menist.free.nf/peak/getting-over-it/', icon: 'https://play-lh.googleusercontent.com/sTsE_AcnSnWtYU0H__k5IDJjupMd_sdKwmaThrJS5R2PJHWK02cAxyaOKNhU0_vbGbKrGhfWFCndsoDDkqmayw', pinned: false, openInNewTab: false},
+  'googleball': {title: 'Google Ball', path: 'https://menist.free.nf/core/googlebaseball/', icon: 'https://www.gstatic.com/marketing-cms/07/7a/53c7bbbd487bbbb2d2fbf1c7c495/7.png', pinned: false, openInNewTab: false},
+  'granny': {title: 'Granny', path: 'https://menist.free.nf/big/granny/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8X5JjpaXIFfsI2KKuU_kjCFDAGJZxktgz3g&s', pinned: false, openInNewTab: false},
+  'guessanswer': {title: 'Guess The Answer', path: 'https://menist.free.nf/core/guesstheiranswer/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ9alCsyldOea4B8Eo24bdFKa_d8l9psMX-Kw&s', pinned: false, openInNewTab: false},
+  'hanger2': {title: 'Hanger 2', path: 'https://menist.free.nf/core/hanger2/', icon: 'https://www.mathnook.com/img/addthis-fun-games/hanger-2-200x200.png', pinned: false, openInNewTab: false},
+  'hillclimbrace': {title: 'Hill Climb Racing', path: 'https://menist.free.nf/core/hillclimbracinglite/', icon: 'https://play-lh.googleusercontent.com/7YJtBKClRTrPRIO-vm-_GoqAEwob4kQ-wJd0qmUMLdbor5Jxj-IKpsXOj6MQejf2XYN9YE0q6IUgYnu-fcAGIg', pinned: false, openInNewTab: false},
+  'holeio': {title: 'Hole.io', path: 'https://menist.free.nf/big/hole-io/', icon: 'https://upload.wikimedia.org/wikipedia/en/c/ca/Hole.io_logo.jpg', pinned: false, openInNewTab: false},
+  'houseofhazards': {title: 'House of Hazards', path: 'https://menist.free.nf/big/house-of-hazards/', icon: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://houseofhazards.com&size=256', pinned: false, openInNewTab: false},
+  'hoverracer': {title: 'Hover Racer', path: 'https://menist.free.nf/core/hoverracerdrive/', icon: 'https://store-images.s-microsoft.com/image/apps.45264.14020183947105412.3fca8873-c649-48d4-b9f9-136a39ffcc74.119e5f11-8afe-428c-afa9-039881c92cd5', pinned: false, openInNewTab: false},
+  'idlebreakout': {title: 'Idle Breakout', path: 'https://menist.free.nf/core/idlebreakout/', icon: 'https://blockbreaker-game.com/wp-content/uploads/2026/05/Idle-Breakout.webp', pinned: false, openInNewTab: false},
+  'impossblequiz': {title: 'Impossible Quiz', path: 'https://menist.free.nf/core/theimpossiblequiz/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9byk0FzwWAmalfPmfOf3auFJaJdEk209CFg&s', pinned: false, openInNewTab: false},
+  'ironsnout': {title: 'Iron Snout', path: 'https://menist.free.nf/core/ironsnout/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGX3Kc85UaaHp_9FmEdZDZRPBSdd2Dmyp4Qw&s', pinned: false, openInNewTab: false},
+  'jetpackjoy': {title: 'Jetpack Joyride', path: 'https://menist.free.nf/big/jetpack-joyride/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRMp6a83tWwzGzLQdtI12IvUwzOThFf2nMMIA&s', pinned: false, openInNewTab: false},
+  'johnnytrigger': {title: 'Johnny Trigger', path: 'https://menist.free.nf/core/johnnytrigger/', icon: 'https://play-lh.googleusercontent.com/NR_Slq9e64fSySkgeunAHBt1P17pilcqR13FmJwEnD6NmuvhgR0XMu6JF6VD5QuFgUfArraBLVqF2p0xix43Zdc', pinned: false, openInNewTab: false},
+  'jumpingshell': {title: 'Jumping Shell', path: 'https://menist.free.nf/core/jumpingshell/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRgwqMzZaMBs9BRzbxupy_VYVIrz4YMnpvqqw&s', pinned: false, openInNewTab: false},
+  'kartbros': {title: 'Kart Bros', path: 'https://menist.free.nf/core/kartbros/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ7zEaQ6C_oilQeFWDgihTOBEdKqA6HiQi9Pg&s', pinned: false, openInNewTab: false},
+  'learntofly3': {title: 'Learn to Fly 3', path: 'https://menist.free.nf/core/learntofly3/', icon: 'https://i.ibb.co/Tx6P30gn/LTF3.png', pinned: false, openInNewTab: false},
+  'learntofly4': {title: 'Learn to Fly Idle', path: 'https://menist.free.nf/core/learntoflyidle/', icon: 'https://i.ibb.co/4ZcCvN8d/LTFI.webp', pinned: false, openInNewTab: false},
+  'leveldevil': {title: 'Level Devil', path: 'https://menist.free.nf/big/level-devil/', icon: 'https://play-lh.googleusercontent.com/0UCmyr2ZdfeC_aLzd8Npm6mGWW5wuEhZYeCieU-1ODLIW4JwyvqfoQdxnT8GHPCEITwm5bJCx-OSTrnWH0yS', pinned: false, openInNewTab: false},
+  'mariokart': {title: 'Mario Kart', path: 'https://menist.free.nf/big/mario-kart/', icon: 'https://i.ibb.co/99GTMQLh/mario-kart.png', pinned: false, openInNewTab: false},
+  'mario63': {title: 'Super Mario 63', path: 'https://menist.free.nf/core/sm63/', icon: 'https://i.ibb.co/99GTMQLh/mario-kart.png', pinned: false, openInNewTab: false},
+  'mario64': {title: 'Super Mario 64', path: 'https://menist.free.nf/core/sm64/', icon: 'https://i.ibb.co/99GTMQLh/mario-kart.png', pinned: false, openInNewTab: false},
+  'melonground': {title: 'Melon Playground', path: 'https://menist.free.nf/core/melonplayground/', icon: 'https://play-lh.googleusercontent.com/9KgS1cF6vWMF9Fl25S36bKr8zDh0ddkTOeN7WpBcQAE-pKfahG2DjUxbQ8sespNoe3KW3qbcaVD8H6DfNys6', pinned: false, openInNewTab: false},
+  'mergeracers': {title: 'Merge Racers', path: 'https://menist.free.nf/core/mergeroundracers/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3bOYEVjyV_CG8C7Fl3VVTeC8YFnqgVQHZyA&s', pinned: false, openInNewTab: false},
+  'minecraft': {title: 'Minecraft', path: 'https://menist.free.nf/big/minecraft/', icon: 'https://store-images.s-microsoft.com/image/apps.21661.14216416494490173.9772fa78-5a01-45ce-9b9e-6ec61a10f4e2.f787fea4-1e7a-4458-a112-c5ac10fec5c0', pinned: false, openInNewTab: false},
+  'minesweeper': {title: 'Minesweeper', path: 'https://menist.free.nf/core/minesweeper/', icon: 'https://m.media-amazon.com/images/I/71TKVp3UnRL.png', pinned: false, openInNewTab: false},
+  'monkeymart': {title: 'Monkey Mart', path: 'https://menist.free.nf/core/monkeymart/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=1200,height=1200,fit=cover,f=png/93142510b4eb8a5b81fc264e31c00b88/monkey-mart-logo.png', pinned: false, openInNewTab: false},
+  'monstertracks': {title: 'Monster Tracks', path: 'https://menist.free.nf/core/monstertracks/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=314,height=314,fit=cover,f=auto/41c7ae4db13e7d7596bb0528f40a4012/monster-tracks-logo.png', pinned: false, openInNewTab: false},
+  'motox3m': {title: 'Moto X3M', path: 'https://menist.free.nf/core/motox3m/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=314,height=314,fit=cover,f=auto/2c6d5a46cdbceada277c870ce1c389ee/moto-x3m-logo.jpg', pinned: false, openInNewTab: false},
+  'motox3m2': {title: 'Moto X3M 2', path: 'https://menist.free.nf/core/motox3m2/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=314,height=314,fit=cover,f=auto/2c6d5a46cdbceada277c870ce1c389ee/moto-x3m-logo.jpg', pinned: false, openInNewTab: false},
+  'motox3m3': {title: 'Moto X3M 3', path: 'https://menist.free.nf/core/motox3m3/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=314,height=314,fit=cover,f=auto/2c6d5a46cdbceada277c870ce1c389ee/moto-x3m-logo.jpg', pinned: false, openInNewTab: false},
+  'motox3mpool': {title: 'Moto X3M Pool', path: 'https://menist.free.nf/core/motox3mpoolparty/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=314,height=314,fit=cover,f=auto/2c6d5a46cdbceada277c870ce1c389ee/moto-x3m-logo.jpg', pinned: false, openInNewTab: false},
+  'motox3mspooky': {title: 'Moto X3M Spooky', path: 'https://menist.free.nf/core/motox3mspookyland/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=314,height=314,fit=cover,f=auto/2c6d5a46cdbceada277c870ce1c389ee/moto-x3m-logo.jpg', pinned: false, openInNewTab: false},
+  'motox3mwinter': {title: 'Moto X3M Winter', path: 'https://menist.free.nf/core/motox3mwinter/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=314,height=314,fit=cover,f=auto/2c6d5a46cdbceada277c870ce1c389ee/moto-x3m-logo.jpg', pinned: false, openInNewTab: false},
+  'noobminer': {title: 'Noob Miner', path: 'https://menist.free.nf/core/noobminer/', icon: 'https://play-lh.googleusercontent.com/yU2xBCEG4x9JJNXj041T8SGRdq2Qos7cgqSOKB1nNOqlx-dDxCpQlVDCuc_YSX-YmJU', pinned: false, openInNewTab: false},
+  'onlylevel': {title: 'This is the Only Level', path: 'https://menist.free.nf/core/thisistheonlylevel/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTA3aJBdsIXdy1PVXxfr8eCToS_zHmbEudl8g&s', pinned: false, openInNewTab: false},
+  'onlyleveltoo': {title: 'This is the Only Level Too', path: 'https://menist.free.nf/core/thisistheonlyleveltoo/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFPqcwQ5i4mMknbkMOKFImfGGwtdXjVCVwzw&s', pinned: false, openInNewTab: false},
+  'oppositeday': {title: 'Opposite Day', path: 'https://menist.free.nf/core/oppositeday/', icon: 'https://www.coolmathgames.com/sites/default/files/opposite-day-2-icon.png', pinned: false, openInNewTab: false},
+  'ovo': {title: 'OVO', path: 'https://menist.free.nf/core/ovo/', icon: 'https://play-lh.googleusercontent.com/v7KwGdPjJGjJjRXn46sck4DwDBdKSeRzGN44CjiXUtKV0jjOi51Bt4wcXud0m-SkXg', pinned: false, openInNewTab: false},
+  'ovo2': {title: 'OVO 2', path: 'https://menist.free.nf/core/ovo2/', icon: 'https://play-lh.googleusercontent.com/v7KwGdPjJGjJjRXn46sck4DwDBdKSeRzGN44CjiXUtKV0jjOi51Bt4wcXud0m-SkXg', pinned: false, openInNewTab: false},
+  'ovo3dimensions': {title: 'OVO 3 Dimensions', path: 'https://menist.free.nf/core/ovo3dimensions/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=314,height=314,fit=cover,f=auto/4f967f68314c35872eeab27c849d32c4/ovo-dimensions-logo.png', pinned: false, openInNewTab: false},
+  'pacman': {title: 'Pac-Man', path: 'https://menist.free.nf/core/pacman/', icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/d9/0f/32/d90f32cf-e841-e6f6-52ac-624e08f302ff/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/200x200ia-75.webp', pinned: false, openInNewTab: false},
+  'paperio2': {title: 'Paper.io 2', path: 'https://menist.free.nf/core/paperio2/', icon: 'https://tr.rbxcdn.com/180DAY-bb0f2e7d882678275f71f3d8b1d5ad35/768/432/Image/Webp/noFilter', pinned: false, openInNewTab: false},
+  'parkingfury': {title: 'Parking Fury', path: 'https://menist.free.nf/core/parkingfury/', icon: 'https://play-lh.googleusercontent.com/DgyqJCW3t0o7prr-6dajdhox4p7maqchfBAArxD5JRwbG-20AxXR7RJbgs6kW8cRjkm0', pinned: false, openInNewTab: false},
+  'parkingfury2': {title: 'Parking Fury 2', path: 'https://menist.free.nf/core/parkingfury2/', icon: 'https://play-lh.googleusercontent.com/DgyqJCW3t0o7prr-6dajdhox4p7maqchfBAArxD5JRwbG-20AxXR7RJbgs6kW8cRjkm0', pinned: false, openInNewTab: false},
+  'parkingfury3': {title: 'Parking Fury 3', path: 'https://menist.free.nf/core/parkingfury3/', icon: 'https://play-lh.googleusercontent.com/DgyqJCW3t0o7prr-6dajdhox4p7maqchfBAArxD5JRwbG-20AxXR7RJbgs6kW8cRjkm0', pinned: false, openInNewTab: false},
+  'peggle': {title: 'Peggle', path: 'https://menist.free.nf/peak/peggle/', icon: 'https://assets-prd.ignimgs.com/2022/03/18/peggle-1647580606683.jpg', pinned: false, openInNewTab: false},
+  'picosschool': {title: 'Pico\'s School', path: 'https://menist.free.nf/core/picosschool/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSMNaHY4qqu5FvAfUjVPxgHfg12kldTFS_8vA&s', pinned: false, openInNewTab: false},
+  'pingpongchaos': {title: 'Ping Pong Chaos', path: 'https://menist.free.nf/core/pingpongchaos/', icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple118/v4/09/d8/72/09d872a2-d9f6-a21a-4972-3ba6bab9a052/pr_source.png/320x320bb.jpg', pinned: false, openInNewTab: false},
+  'pixelspeedrun': {title: 'Pixel Speedrun', path: 'https://menist.free.nf/core/pixelspeedrun/', icon: 'https://i.ibb.co/Q7gtGCNp/pixel-speedrun.jpg', pinned: false, openInNewTab: false},
+  'planvszomb': {title: 'Plants vs. Zombies', path: 'https://menist.free.nf/big/plants-zombies/', icon: 'https://downloadr2.apkmirror.com/wp-content/uploads/2022/12/68/639ad89250b0a.png', pinned: false, openInNewTab: false},
+  'plonky': {title: 'Plonky', path: 'https://menist.free.nf/core/plonky/', icon: 'https://play-lh.googleusercontent.com/N3VuGaJKtkngL342XiZho_eWawRbROVBy1Kg1JyDe4hHvTWEm5yiHgeAS-4tlOu8F1TPyVqrYkRApoNDq1N5=w240-h480-rw', pinned: false, openInNewTab: false},
+  'polytrack': {title: 'Poly Track', path: 'https://menist.free.nf/core/polytrack/', icon: 'https://polytrackgame.cc/generate.php?path=/uploads/games/main/img_699e8ffc3fbc3.jpg&width=294&height=294', pinned: false, openInNewTab: false},
+  'poorbunny': {title: 'Poor Bunny', path: 'https://menist.free.nf/core/poorbunny/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT48Wsrfu0-RuB0gcyfx6E0yIGxYT2CioxdNwcpEC-5pQ&s', pinned: false, openInNewTab: false},
+  'pou': {title: 'Pou', path: 'https://menist.free.nf/core/pou/', icon: 'https://ih1.redbubble.net/image.5451949567.2518/st,small,507x507-pad,600x600,f8f8f8.jpg', pinned: false, openInNewTab: false},
+  'raft': {title: 'Raft', path: 'https://menist.free.nf/peak/raft/', icon: 'https://images.steamusercontent.com/ugc/1833541252454295286/49586C84366C361A585FA8CBAD7608DC67D71C97/?imw=512&imh=512&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true', pinned: false, openInNewTab: false},
+  'ragdollhit': {title: 'Ragdoll Hit', path: 'https://menist.free.nf/core/ragdollhit/', icon: 'https://img.poki-cdn.com/cdn-cgi/image/q=78,scq=50,width=314,height=314,fit=cover,f=auto/3c892779be9dabb3589586c83ad3eeed/ragdoll-hit-logo.png', pinned: false, openInNewTab: false},
+  'ragdollsoccer': {title: 'Ragdoll Soccer', path: 'https://menist.free.nf/core/ragdollsoccer/', icon: 'https://play-lh.googleusercontent.com/82qeWe3yd0ud5GhnY8_3H_ZZGV1R51lTGI_LH5z0E0iradCxvP3KC6dAvDh7coHCtk4', pinned: false, openInNewTab: false},
+  'ragdollarchers': {title: 'Ragdoll Archers', path: 'https://menist.free.nf/big/ragdoll-archers/', icon: 'https://i.ibb.co/LdpnQkVt/ragdoll-archers.png', pinned: false, openInNewTab: false},
+  'repo': {title: 'REPO', path: 'https://menist.free.nf/peak/repo/', icon: 'https://images.cults3d.com/Asf3MnfyGvJAja_R98G9bmn4CZo=/516x516/filters:no_upscale()/https://fbi.cults3d.com/uploaders/36009852/illustration-file/cc3d5043-387c-496a-bb64-d0135a6f2023/R.E.P.O-2.png', pinned: false, openInNewTab: false},
+  'retrobowl': {title: 'Retro Bowl', path: 'https://menist.free.nf/big/retro-bowl/', icon: 'https://play-lh.googleusercontent.com/DrvO8zMElYMrKfmdRtxwyH_kkvk6MJD87mBaC_38Bw1Pkq0DJB0h-SpfbK5SOAkoJQRJ2TpUU0QvW3bSdUe8', pinned: false, openInNewTab: false},
+  'retrobowlcol': {title: 'Retro Bowl College', path: 'https://menist.free.nf/core/retrobowlcollege/', icon: 'https://play-lh.googleusercontent.com/DrvO8zMElYMrKfmdRtxwyH_kkvk6MJD87mBaC_38Bw1Pkq0DJB0h-SpfbK5SOAkoJQRJ2TpUU0QvW3bSdUe8', pinned: false, openInNewTab: false},
+  'retrohighway': {title: 'Retro Highway', path: 'https://menist.free.nf/core/retrohighway/', icon: 'https://play-lh.googleusercontent.com/ntup46vvyYjIOiA-EhS-lmE3F2B6CK9c1GDq5ilNkFyaUVpa5OEII73AddKF1wfLs11X_2ZcXopTDFfCUCsAaA', pinned: false, openInNewTab: false},
+  'retropingpong': {title: 'Retro Ping Pong', path: 'https://menist.free.nf/core/retropingpong/', icon: 'https://play-lh.googleusercontent.com/FVh_dH6e2VCHHSF90oIBpk_S-Ti7F9xlM9THukSFuktSLhf6kIp73BpWWP14bsTbX_XV=w240-h480-rw', pinned: false, openInNewTab: false},
+  'riddleschool5': {title: 'Riddle School 5', path: 'https://menist.free.nf/core/riddleschool5/', icon: 'https://img.tapimg.net/market/images/12a2162a12c8e0ce1e5d387905ce452f.png/appicon?t=1', pinned: false, openInNewTab: false},
+  'riddletransfer': {title: 'Riddle Transfer', path: 'https://menist.free.nf/core/riddletransfer/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQjqar1bMjSckN7tvLKBuBM-v3u0cmam5JVNQ&s', pinned: false, openInNewTab: false},
+  'rocketleague': {title: 'Rocket League', path: 'https://menist.free.nf/peak/rocket-goal/', icon: 'https://ygo-assets-entities-us.yougov.net/87bb7a16-2b62-11e8-82b1-37bb0d207ced.jpg?zcw=518&zch=518&zct=10&zcl=0', pinned: false, openInNewTab: false},
+  'rocketsoccer': {title: 'Rocket Soccer', path: 'https://menist.free.nf/core/rocketsoccerderby/', icon: 'https://play-lh.googleusercontent.com/KpO2HOmyC3FKcV3515gLzYTVERaYkkllE4JVOjhY3w0VEMD7kMsNgTTRyr1bxCgw7H4aczEjFoVdoCYMzL3Rvv8', pinned: false, openInNewTab: false},
+  'rooftopsnipe': {title: 'Rooftop Snipers', path: 'https://menist.free.nf/core/rooftopsnipers/', icon: 'https://play-lh.googleusercontent.com/Ps7l48zNvW7bm9fxqItk-voX25soK0-B8pCUKCe7zx-sPKq-uuGCC3mDeoafq2QxHBlCujfUGu4BhxpPyVsihA=w240-h480-rw', pinned: false, openInNewTab: false},
+  'rooftopsnipe2': {title: 'Rooftop Snipers 2', path: 'https://menist.free.nf/core/rooftopsnipers2/', icon: 'https://play-lh.googleusercontent.com/Ps7l48zNvW7bm9fxqItk-voX25soK0-B8pCUKCe7zx-sPKq-uuGCC3mDeoafq2QxHBlCujfUGu4BhxpPyVsihA=w240-h480-rw', pinned: false, openInNewTab: false},
+  'run': {title: 'Run', path: 'https://menist.free.nf/core/run/', icon: 'https://play-lh.googleusercontent.com/pqBfDoXss1KXIA6qe-fRSt6xKwCodicAOapVxkIswE573qrr5F3mHqx_IbHPWnIb79fmz44-zy5WF7P_39B57bA', pinned: false, openInNewTab: false},
+  'run2': {title: 'Run 2', path: 'https://menist.free.nf/core/run2/', icon: 'https://play-lh.googleusercontent.com/pqBfDoXss1KXIA6qe-fRSt6xKwCodicAOapVxkIswE573qrr5F3mHqx_IbHPWnIb79fmz44-zy5WF7P_39B57bA', pinned: false, openInNewTab: false},
+  'run3': {title: 'Run 3', path: 'https://menist.free.nf/core/run3/', icon: 'https://play-lh.googleusercontent.com/pqBfDoXss1KXIA6qe-fRSt6xKwCodicAOapVxkIswE573qrr5F3mHqx_IbHPWnIb79fmz44-zy5WF7P_39B57bA', pinned: false, openInNewTab: false},
+  'sandgame': {title: 'Sand Game', path: 'https://menist.free.nf/core/sandgame/', icon: 'https://play-lh.googleusercontent.com/_PYtjNVw6RuhlnI8lUvOLnGHaE-7CNddeqs1xisFyhWbTJaIW2-tEM5E1iAe6tUk8K4', pinned: false, openInNewTab: false},
+  'seamlesscloud': {title: 'Seamless Cloud', path: 'https://menist.free.nf/seamless-cloud/index-260605.html', icon: 'https://i.ibb.co/sJ3BqHKT/Seamless-Cloud-Logo.png', pinned: true, openInNewTab: true},
+  'seamlessdesktop': {title: 'Seamless Desktop', path: 'https://menist.free.nf/seamless-desktop/index.html', icon: 'https://play-lh.googleusercontent.com/P24gYqdMsXgqEBuHJtgzaRYO-Xs9scZLxqK1dvQ6sgwihd_oGBr-m16fS_ntgo2NqM0', pinned: true, openInNewTab: true},
+  'seamlessgames': {title: 'Seamless Games', path: 'https://menist.free.nf/v1/', icon: 'https://i.ibb.co/M5QfsnBW/Playground-Image1.jpg', pinned: true, openInNewTab: false},
+  'seamlessplay': {title: 'Seamless Play', path: 'https://menist.free.nf/cine-os/script/Apps/Ps5/', icon: 'https://i.ibb.co/spRyK3Pz/Playstation.png', pinned: false, openInNewTab: false},
+  'seamlify': {title: 'Seamlify', path: 'https://menist.free.nf/cine-os/script/Apps/Spotify/', icon: 'https://i.ibb.co/Hp73qM6S/Spotify.png', pinned: true, openInNewTab: false},
+  'shootout': {title: 'Getaway Shootout', path: 'https://menist.free.nf/core/getawayshootout/', icon: 'https://img.tapimg.net/market/images/a06138e73540c5c83c8873b5f916c11f.png/appicon_m?t=1', pinned: false, openInNewTab: false},
+  'shortlife': {title: 'Short Life', path: 'https://menist.free.nf/core/shortlife/', icon: 'https://play-lh.googleusercontent.com/Z5rZj9NCC47YHDsEKvJ-qOxzxPLy1bBqsn1Ta1H0maa26cQB7_fwVqfTwJBGqt3MJbo', pinned: false, openInNewTab: false},
+  'slope': {title: 'Slope', path: 'https://menist.free.nf/big/slope/', icon: 'https://play-lh.googleusercontent.com/uJn2i9h7KxYQarC_c3K4qH6o7gLtflFnhD_dN14MNkzHJ1NeNFzCL69jpB5mT0vCoQs=w240-h480-rw', pinned: false, openInNewTab: false},
+  'slope2player': {title: 'Slope 2 Player', path: 'https://menist.free.nf/core/slope2player/', icon: 'https://play-lh.googleusercontent.com/uJn2i9h7KxYQarC_c3K4qH6o7gLtflFnhD_dN14MNkzHJ1NeNFzCL69jpB5mT0vCoQs', pinned: false, openInNewTab: false},
+  'slope3': {title: 'Slope 3', path: 'https://menist.free.nf/core/slope3/', icon: 'https://play-lh.googleusercontent.com/uJn2i9h7KxYQarC_c3K4qH6o7gLtflFnhD_dN14MNkzHJ1NeNFzCL69jpB5mT0vCoQs', pinned: false, openInNewTab: false},
+  'slowroads': {title: 'Slow Roads', path: 'https://menist.free.nf/core/slowroads/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%9B%A3%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'smashkarts': {title: 'Smash Karts', path: 'https://menist.free.nf/peak/smash-karts/', icon: 'https://play-lh.googleusercontent.com/Bo6DWfQ0pHwcNl-IvDvIpFRmZmf24Hho-DyjZnicm8vKumUyb0YA2GJs-EXxIjUdCpy8BKSuRUwN4mF6LdPpT0s', pinned: false, openInNewTab: false},
+  'snowballio': {title: 'Snowball.io', path: 'https://menist.free.nf/core/snowballio/', icon: 'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/25/e4/93/25e4937b-a3db-5f4b-23b6-13e232bbcab2/Placeholder.mill/200x200bb-75.webp', pinned: false, openInNewTab: false},
+  'snowrider': {title: 'Snow Rider', path: 'https://menist.free.nf/core/snowroad/', icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/a0/75/cb/a075cba3-225e-19f6-0af1-a7fce46c8222/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/200x200ia-75.webp', pinned: false, openInNewTab: false},
+  'soccerbros': {title: 'Soccer Bros', path: 'https://menist.free.nf/core/soccerbros/', icon: 'https://store-images.s-microsoft.com/image/apps.8059.13822227738619976.337c8af9-a1c3-48c9-839c-648831919539.ac927f95-3cb7-4ded-bbab-1c3d95bfe6fb?h=210', pinned: false, openInNewTab: false},
+  'soccerlegends': {title: 'Soccer Legends', path: 'https://menist.free.nf/core/footballlegends/', icon: 'https://i.ibb.co/DPDjT9HD/football-legends.jpg', pinned: false, openInNewTab: false},
+  'soccerrandom': {title: 'Soccer Random', path: 'https://menist.free.nf/core/soccerrandom/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRWYzEaA5zf9RL_eH2GwFVoCx4Qa0zfp-57w-yawXpGtf--bePhtTGjkI60&s=10', pinned: false, openInNewTab: false},
+  'spaceclicker': {title: 'Spacebar Clicker', path: 'https://menist.free.nf/core/spacebarclicker/', icon: 'https://i.ibb.co/MDsJtTFQ/spacebarclicker-300.png', pinned: false, openInNewTab: false},
+  'spaceiskey': {title: 'Space is Key', path: 'https://menist.free.nf/core/spaceiskey/', icon: 'https://i.ibb.co/M59mZyLP/31g64-DBSb2-L.png', pinned: false, openInNewTab: false},
+  'spaceiskey2': {title: 'Space is Key 2', path: 'https://menist.free.nf/core/spaceiskey2/', icon: 'https://i.ibb.co/DHNT0SrS/a0532328199-10.jpg', pinned: false, openInNewTab: false},
+  'spacewaves': {title: 'Space Waves', path: 'https://menist.free.nf/core/spacewaves/', icon: 'https://i.ibb.co/MxS7CZKR/images.jpg', pinned: false, openInNewTab: false},
+  'speedstars': {title: 'Speed Stars', path: 'https://menist.free.nf/core/speedstars/', icon: 'https://i.ibb.co/DP4R693p/images.jpg', pinned: false, openInNewTab: false},
+  'sprunki': {title: 'Sprunki', path: 'https://menist.free.nf/core/sprunki/', icon: 'https://i.ibb.co/wFb0BF0c/sprunki-logo.jpg', pinned: false, openInNewTab: false},
+    'stack': {title: 'Stack', path: 'https://menist.free.nf/core/stack/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%A7%B1%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'stacktris': {title: 'Stacktris', path: 'https://menist.free.nf/core/stacktris/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%A7%B1%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'stateio': {title: 'State.io', path: 'https://menist.free.nf/core/stateio/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%87%BA%F0%9F%87%B8%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'stickarchers': {title: 'Stick Archers', path: 'https://menist.free.nf/core/stickarchersbattle/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%8F%B9%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'stickfighter': {title: 'Stick Fighter', path: 'https://menist.free.nf/core/stickfighter/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%9A%94%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'stickmanhook': {title: 'Stickman Hook', path: 'https://menist.free.nf/core/stickmanhook/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%AA%9D%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'stickmerge': {title: 'Stick Merge', path: 'https://menist.free.nf/core/stickmerge/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%9E%95%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'subwaysurf': {title: 'Subway Surfers', path: 'https://menist.free.nf/big/subway-surfers/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%9A%87%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'superbike': {title: 'Superbike', path: 'https://menist.free.nf/core/superbikethechampion/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%9A%B2%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'supersoccer': {title: 'Super Soccer', path: 'https://menist.free.nf/core/superliquidsoccer/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%9A%BD%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'superstarcar': {title: 'Super Star Car', path: 'https://menist.free.nf/core/superstarcar/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%9A%97%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'supremeduelist': {title: 'Supreme Duelist', path: 'https://menist.free.nf/peak/supreme-duelist/chromebook.html', icon: 'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/75/8c/75/758c7595-9a8d-62b5-2668-fbeecde74dad/Placeholder.mill/256x256bb.png', pinned: false, openInNewTab: true},
+  'tag': {title: 'Tag', path: 'https://menist.free.nf/core/tag/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%8F%B7%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'taproad': {title: 'Tap Road', path: 'https://menist.free.nf/big/tap-road/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%9B%A3%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'templeofboom': {title: 'Temple of Boom', path: 'https://menist.free.nf/core/templeofboom/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%9B%95%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'templerun2': {title: 'Temple Run 2', path: 'https://menist.free.nf/core/templerun2/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%A6%8D%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'territorialio': {title: 'Territorial.io', path: 'https://menist.free.nf/core/territorialio/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%8C%8E%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'thereisnog': {title: 'There is No Game', path: 'https://menist.free.nf/core/thereisnog/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%97%A3%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'timeshooter2': {title: 'Time Shooter 2', path: 'https://menist.free.nf/core/timeshooter2/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%8F%B1%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'timeshooter3': {title: 'Time Shooter 3', path: 'https://menist.free.nf/core/timeshooter3/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%8F%B1%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'tinyfishing': {title: 'Tiny Fishing', path: 'https://menist.free.nf/core/tinyfishing/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%8E%A3%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'tombofthemask': {title: 'Tomb of the Mask', path: 'https://menist.free.nf/core/tombofthemask/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%8E%AD%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'trafficsim': {title: 'Highway Traffic', path: 'https://menist.free.nf/core/highwaytraffic/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%9A%A6%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'trapthecat': {title: 'Trap the Cat', path: 'https://menist.free.nf/core/trapthecat/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%90%88%E2%80%8D%E2%AC%9B%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'triviacrack': {title: 'Trivia Crack', path: 'https://menist.free.nf/core/triviacrack/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%9B%93%EF%B8%8F%E2%80%8D%F0%9F%92%A5%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'tubejumpers': {title: 'Tube Jumpers', path: 'https://menist.free.nf/core/tubejumpers/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%9A%A4%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'tunnelrush': {title: 'Tunnel Rush', path: 'https://menist.free.nf/big/tunnel-rush/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%91%BE%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'twoplayer': {title: 'Two Player Games', path: 'https://menist.free.nf/big/two-player/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%9A%94%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'unicyclehero': {title: 'Unicycle Hero', path: 'https://menist.free.nf/core/unicyclehero/', icon: 'https://i.ibb.co/wNkz8nQd/unicycle-hero-logo.png', pinned: false, openInNewTab: false},
+  'uno': {title: 'Uno', path: 'https://menist.free.nf/uno/', icon: 'https://i.ibb.co/8gsG31LP/200x200.jpg', pinned: false, openInNewTab: true},
+  'vex4': {title: 'Vex 4', path: 'https://menist.free.nf/core/vex4/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%91%BE%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'vex5': {title: 'Vex 5', path: 'https://menist.free.nf/core/vex5/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%91%BE%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'vex6': {title: 'Vex 6', path: 'https://menist.free.nf/core/vex6/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%91%BE%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'vex7': {title: 'Vex 7', path: 'https://menist.free.nf/core/vex7/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%91%BE%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'vex8': {title: 'Vex 8', path: 'https://menist.free.nf/core/vex8/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%91%BE%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'vikingclash': {title: 'Clash of Vikings', path: 'https://menist.free.nf/core/clashofvikings/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%9A%94%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'wartheknights': {title: 'War of the Knights', path: 'https://menist.free.nf/core/wartheknights/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%E2%9A%94%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'wheeliebike': {title: 'Wheelie Bike', path: 'https://menist.free.nf/core/wheeliebike/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%9A%B2%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'widgets': {title: 'Widgets', path: 'https://menist.free.nf/seamless-widgets/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%95%9E%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'wordbomb': {title: 'Word Bomb', path: 'https://menist.free.nf/word-bomb/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%92%A3%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'wordleunlimit': {title: 'Wordle Unlimited', path: 'https://menist.free.nf/core/wordleunlimited/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%A7%BE%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'wrestlebros': {title: 'Wrestle Bros', path: 'https://menist.free.nf/core/wrestlebros/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%A4%BC%F0%9F%8F%BB%E2%80%8D%E2%99%82%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
+  'youtube': {title: 'YouTube', path: 'https://menist.free.nf/youtube/', icon: 'https://i.ibb.co/vCfgHGFp/You-Tube.png', pinned: true, openInNewTab: false},
+  'zombierush': {title: 'Zombie Rush', path: 'https://menist.free.nf/core/zombierush/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%A7%9F%E2%80%8D%E2%99%82%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false}
+
+};
+
+(function(){
+  'use strict';
+
+  if (!window.navigator.standalone) {
+    document.documentElement.style.setProperty('--fakebar', '30px');
+    document.body.classList.add('show-fake-bar');
+  }
+
+  var keys = Object.keys(APPS);
+  var dockKeys = keys.filter(function(k){ return APPS[k].pinned; });
+  var gridKeys = keys.filter(function(k){ return !APPS[k].pinned; });
+  var PAGE_SIZE = 24;
+
+  function iconVisual(key){
+    var data = APPS[key];
+    var icon = document.createElement('div');
+    icon.className = 'app-icon';
+    icon.textContent = data.title.charAt(0).toUpperCase();
+    var img = document.createElement('img');
+    img.loading = 'lazy';
+    img.alt = '';
+    img.draggable = false;
+    img.onerror = function(){ img.remove(); };
+    img.src = data.icon;
+    icon.appendChild(img);
+    return icon;
+  }
+
+  function appIcon(key, withLabel){
+    var data = APPS[key];
+    var wrap = document.createElement('div');
+    wrap.className = 'app-icon-wrap';
+    wrap.setAttribute('role', 'button');
+    wrap.setAttribute('tabindex', '0');
+    wrap.setAttribute('aria-label', data.title);
+    wrap.appendChild(iconVisual(key));
+    if (withLabel) {
+      var label = document.createElement('div');
+      label.className = 'app-label';
+      label.textContent = data.title;
+      wrap.appendChild(label);
+    }
+    wrap.addEventListener('click', function(){ openApp(key); });
+    wrap.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openApp(key); }
+    });
+    return wrap;
+  }
+
+  function renderPages(){
+    var pages = document.getElementById('pages');
+    var dots = document.getElementById('dots');
+    pages.innerHTML = '';
+    dots.innerHTML = '';
+    var totalPages = Math.max(1, Math.ceil(gridKeys.length / PAGE_SIZE));
+    for (var p = 0; p < totalPages; p++) {
+      var pageEl = document.createElement('div');
+      pageEl.className = 'page';
+      gridKeys.slice(p * PAGE_SIZE, (p + 1) * PAGE_SIZE).forEach(function(k){
+        pageEl.appendChild(appIcon(k, true));
+      });
+      pages.appendChild(pageEl);
+      var dot = document.createElement('div');
+      dot.className = 'dot' + (p === 0 ? ' active' : '');
+      dots.appendChild(dot);
+    }
+    var dotEls = dots.children;
+    pages.addEventListener('scroll', function(){
+      var idx = Math.round(pages.scrollLeft / pages.clientWidth);
+      for (var i = 0; i < dotEls.length; i++) {
+        dotEls[i].classList.toggle('active', i === idx);
+      }
+    });
+  }
+
+  function renderDock(){
+    var dock = document.getElementById('dock');
+    dock.innerHTML = '';
+    dockKeys.forEach(function(k){ dock.appendChild(appIcon(k, false)); });
+  }
+
+  function openApp(key){
+    var data = APPS[key];
+    document.getElementById('app-frame').src = data.path;
+    document.getElementById('app-overlay').classList.add('open');
+    closeSearch();
+  }
+
+  function closeApp(){
+    var overlay = document.getElementById('app-overlay');
+    if (!overlay.classList.contains('open')) return;
+    overlay.classList.remove('open');
+    setTimeout(function(){ document.getElementById('app-frame').src = 'about:blank'; }, 400);
+  }
+
+  // swipe-up or tap on the home indicator to exit, like iOS
+  var homeZone = document.getElementById('home-zone');
+  var startY = null;
+  homeZone.addEventListener('touchstart', function(e){ startY = e.touches[0].clientY; }, {passive:true});
+  homeZone.addEventListener('touchmove', function(e){
+    if (startY === null) return;
+    if (startY - e.touches[0].clientY > 24) { closeApp(); startY = null; }
+  }, {passive:true});
+  homeZone.addEventListener('click', closeApp);
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeApp(); });
+
+  // search
+  var searchPanel = document.getElementById('search-panel');
+  var searchInput = document.getElementById('search-input');
+  var searchResults = document.getElementById('search-results');
+
+  function renderResults(q){
+    searchResults.innerHTML = '';
+    var query = q.trim().toLowerCase();
+    var matches = keys.filter(function(k){
+      return query === '' || APPS[k].title.toLowerCase().indexOf(query) !== -1;
+    });
+    if (matches.length === 0) {
+      var empty = document.createElement('div');
+      empty.id = 'search-empty';
+      empty.textContent = 'No apps found';
+      searchResults.appendChild(empty);
+      return;
+    }
+    matches.forEach(function(k){
+      var row = document.createElement('div');
+      row.className = 'search-row';
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
+      row.appendChild(iconVisual(k));
+      var name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = APPS[k].title;
+      row.appendChild(name);
+      row.addEventListener('click', function(){ closeSearch(); openApp(k); });
+      row.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeSearch(); openApp(k); }
+      });
+      searchResults.appendChild(row);
+    });
+  }
+
+  function openSearch(){
+    searchPanel.classList.add('open');
+    renderResults('');
+    setTimeout(function(){ searchInput.focus(); }, 60);
+  }
+  function closeSearch(){
+    searchPanel.classList.remove('open');
+    searchInput.value = '';
+  }
+
+  document.getElementById('search-toggle').addEventListener('click', openSearch);
+  document.getElementById('search-toggle').addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSearch(); }
+  });
+  document.getElementById('search-cancel').addEventListener('click', closeSearch);
+  searchInput.addEventListener('input', function(){ renderResults(searchInput.value); });
+
+  function updateClock(){
+    var now = new Date();
+    var h = now.getHours() % 12; if (h === 0) h = 12;
+    var m = ('0' + now.getMinutes()).slice(-2);
+    document.getElementById('fake-clock').textContent = h + ':' + m;
+  }
+  updateClock();
+  setInterval(updateClock, 15000);
+
+  renderPages();
+  renderDock();
+})();
+</script>
+</body>
+</html>
