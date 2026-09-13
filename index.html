@@ -929,6 +929,254 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
     cursor: none !important;
 }
 
+
+/* ─────────────────────────────────────────────────────────────
+   LIQUID GLASS WINDOW SYSTEM
+   The original window engine remains intact; these rules replace
+   the old full-screen presentation with a centered, polished UI.
+   ───────────────────────────────────────────────────────────── */
+
+.window {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: min(82vw, 1320px);
+    height: min(76vh, 820px);
+    min-width: 360px;
+    min-height: 260px;
+    inset: auto;
+    overflow: hidden;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.045) 35%, rgba(255,255,255,.025) 100%),
+        rgba(20, 20, 24, .48);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 18px;
+    box-shadow:
+        0 30px 90px rgba(0,0,0,.52),
+        0 8px 28px rgba(0,0,0,.28),
+        inset 0 1px 0 rgba(255,255,255,.24),
+        inset 0 -1px 0 rgba(255,255,255,.05);
+    -webkit-backdrop-filter: blur(34px) saturate(155%);
+    backdrop-filter: blur(34px) saturate(155%);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(.965);
+    transform-origin: center;
+    transition:
+        opacity .22s ease,
+        transform .28s cubic-bezier(.2,.8,.2,1),
+        box-shadow .25s ease;
+}
+
+.window::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+        radial-gradient(circle at 18% 0%, rgba(255,255,255,.20), transparent 30%),
+        linear-gradient(180deg, rgba(255,255,255,.08), transparent 24%);
+    opacity: .75;
+    z-index: 0;
+}
+
+.window.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.window.minimized {
+    transform: translate(-50%, calc(50vh + 120px)) scale(.72);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.window:focus-within,
+.window.active {
+    box-shadow:
+        0 34px 100px rgba(0,0,0,.56),
+        0 10px 34px rgba(0,0,0,.30),
+        inset 0 1px 0 rgba(255,255,255,.28),
+        inset 0 -1px 0 rgba(255,255,255,.06);
+}
+
+.win-header {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: 52px;
+    flex: 0 0 52px;
+    padding: 0 16px;
+    display: grid;
+    grid-template-columns: 110px 1fr 110px;
+    align-items: center;
+    justify-content: initial;
+    background: linear-gradient(180deg, rgba(255,255,255,.105), rgba(255,255,255,.035));
+    border-bottom: 1px solid rgba(255,255,255,.13);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    backdrop-filter: blur(24px) saturate(150%);
+    transform: none;
+    z-index: 10;
+    cursor: grab;
+}
+
+.win-header:active { cursor: grabbing; }
+
+.header-visible .win-header { transform: none; }
+
+.win-controls {
+    grid-column: 1;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.win-title {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+    max-width: 70%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(255,255,255,.86);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .15px;
+    text-transform: none;
+    text-align: center;
+    text-shadow: 0 1px 8px rgba(0,0,0,.25);
+}
+
+.win-header-spacer {
+    grid-column: 3;
+    width: 100%;
+    height: 100%;
+}
+
+.win-btn {
+    position: relative;
+    width: 13px;
+    height: 13px;
+    min-width: 13px;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    color: transparent;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.22);
+    transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+}
+
+.win-btn:hover {
+    transform: scale(1.08);
+    filter: brightness(1.08);
+}
+
+.win-btn:active { transform: scale(.94); }
+
+.btn-close {
+    order: 1;
+    background: #ff5f57;
+    border-color: transparent;
+    box-shadow: inset 0 0 0 1px rgba(120,0,0,.16), 0 1px 2px rgba(0,0,0,.22);
+}
+
+.btn-min {
+    order: 2;
+    background: #febc2e;
+    border-color: transparent;
+    box-shadow: inset 0 0 0 1px rgba(120,70,0,.14), 0 1px 2px rgba(0,0,0,.22);
+}
+
+.btn-max {
+    order: 3;
+    background: #28c840;
+    border-color: transparent;
+    font-size: 0;
+    box-shadow: inset 0 0 0 1px rgba(0,90,20,.14), 0 1px 2px rgba(0,0,0,.22);
+}
+
+.btn-close::before,
+.btn-close::after {
+    width: 6px;
+    height: 1px;
+    background: rgba(70,0,0,.62);
+}
+
+.btn-min::before {
+    width: 6px;
+    height: 1px;
+    background: rgba(70,40,0,.65);
+}
+
+.btn-max::before {
+    content: "";
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%,-50%);
+    border: 1px solid rgba(0,70,10,.58);
+    border-radius: 1px;
+}
+
+.win-body {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: calc(100% - 52px);
+    min-height: 0;
+    overflow: hidden;
+    background: rgba(7,7,10,.38);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
+
+.win-body iframe {
+    background: transparent;
+}
+
+@media (max-width: 700px) {
+    .window {
+        width: calc(100vw - 24px);
+        height: calc(100vh - 120px);
+        min-width: 0;
+        min-height: 220px;
+        border-radius: 16px;
+    }
+
+    .win-header {
+        height: 48px;
+        flex-basis: 48px;
+        grid-template-columns: 92px 1fr 92px;
+        padding: 0 14px;
+    }
+
+    .win-body {
+        height: calc(100% - 48px);
+    }
+
+    .win-title {
+        font-size: 12px;
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .window,
+    .win-header,
+    .win-body {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        background: rgba(20,20,24,.94);
+    }
+}
+
 </style>
 </head>
 
@@ -2185,7 +2433,7 @@ function openWindow(id) {
         
         let iframeStr = dat.internal ? '<iframe id="frame-' + id + '"></iframe>' : '<iframe id="frame-' + id + '" src="' + dat.path + '"></iframe>';
         
-        win.innerHTML = '<div class="win-header" onmousedown="DragSystem.startWinDrag(event, \'' + id + '\')"><div class="win-title">' + dat.title + '</div><div class="win-controls"><div class="win-btn btn-min" onclick="minimizeWindow(\'' + id + '\')"></div><div class="win-btn btn-max" onclick="toggleFullscreen(\'' + id + '\')">⛶</div><div class="win-btn btn-close" onclick="closeWindow(\'' + id + '\')"></div></div></div><div class="win-body">' + iframeStr + '</div>';
+        win.innerHTML = '<div class="win-header" onmousedown="DragSystem.startWinDrag(event, \'' + id + '\')"><div class="win-controls"><div class="win-btn btn-close" onclick="event.stopPropagation();closeWindow(\'' + id + '\')" aria-label="Close"></div><div class="win-btn btn-min" onclick="event.stopPropagation();minimizeWindow(\'' + id + '\')" aria-label="Minimize"></div><div class="win-btn btn-max" onclick="event.stopPropagation();toggleFullscreen(\'' + id + '\')" aria-label="Maximize"></div></div><div class="win-title">' + dat.title + '</div><div class="win-header-spacer"></div></div><div class="win-body">' + iframeStr + '</div>';
         
         layer.appendChild(win);
         
@@ -2545,9 +2793,19 @@ var DragSystem = {
     },
     
     startWinDrag: function(e, id) {
+        if(e.button !== undefined && e.button !== 0) return;
+        const win = document.getElementById('win-' + id);
+        if(!win || document.fullscreenElement === win) return;
+        const r = win.getBoundingClientRect();
         this.startPos = {x: e.clientX, y: e.clientY};
-        this.sourceType = 'window'; this.sourceEl = document.getElementById('win-' + id);
+        this.dragOffset = {x: e.clientX - r.left, y: e.clientY - r.top};
+        this.sourceType = 'window';
+        this.sourceEl = win;
         this.isDragMove = false;
+        this.dragging = false;
+        win.style.zIndex = ++highestZ;
+        activeWindowId = id;
+        win.classList.add('header-visible');
     },
     
     move: function(e) {
@@ -2557,6 +2815,16 @@ var DragSystem = {
         
         if(dx > 3 || dy > 3) {
             this.dragging = true; this.isDragMove = true;
+            if(this.sourceType === 'window') {
+                const win = this.sourceEl;
+                const x = Math.max(8, Math.min(window.innerWidth - win.offsetWidth - 8, e.clientX - this.dragOffset.x));
+                const y = Math.max(8, Math.min(window.innerHeight - win.offsetHeight - 8, e.clientY - this.dragOffset.y));
+                win.style.left = x + 'px';
+                win.style.top = y + 'px';
+                win.style.transform = 'none';
+                return;
+            }
+
             if(this.sourceType === 'desktop' || this.sourceType === 'drawer' || this.sourceType === 'dock') {
                 if(this.sourceType === 'drawer') toggleAppDrawer();
                 this.proxy.style.display = 'block';
