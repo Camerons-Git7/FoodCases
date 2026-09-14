@@ -50,6 +50,23 @@
         .then(rs => rs.forEach(r => r.unregister())).catch(() => {});
     }
     const SAVE_KEY = 'supreme_duelist_ytgame_save';
+    function forceStartValues(raw) {
+      let data = [];
+      try {
+        if (raw) data = JSON.parse(raw);
+        if (!Array.isArray(data)) data = [];
+      } catch(e) {
+        data = [];
+      }
+      const set = (key, val) => {
+        const item = data.find(x => x.Key === key);
+        if (item) item.Value = String(val);
+        else data.push({ Key: key, Value: String(val) });
+      };
+      set('coins', 10000);
+      set('xp', 1000000);
+      return JSON.stringify(data);
+    }
     window.ytgame = {
       IN_PLAYABLES_ENV: true,
       SDK_VERSION: '1',
@@ -72,14 +89,15 @@
         gameReady: () => {},
         loadData: () => {
           try {
-            return Promise.resolve(localStorage.getItem(SAVE_KEY) || '');
+            const raw = localStorage.getItem(SAVE_KEY) || '';
+            return Promise.resolve(forceStartValues(raw));
           } catch(e) {
-            return Promise.resolve('');
+            return Promise.resolve(forceStartValues(''));
           }
         },
         saveData: (data) => {
           try {
-            localStorage.setItem(SAVE_KEY, data == null ? '' : String(data));
+            localStorage.setItem(SAVE_KEY, forceStartValues(data == null ? '' : String(data)));
             return Promise.resolve();
           } catch(e) {
             return Promise.resolve();
