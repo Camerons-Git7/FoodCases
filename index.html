@@ -571,81 +571,199 @@ body {
 
 .window {
     position: fixed;
-    inset: 0;
-    background: #000;
-    border: none;
+    width: min(920px, 85vw);
+    height: min(620px, 75vh);
+    background: rgba(28, 28, 30, 0.92);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.55),
+        0 0 0 1px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
     z-index: var(--z-windows);
     opacity: 0;
     pointer-events: none;
-    transform: scale(0.95);
-    transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+    overflow: hidden;
+    transform-origin: center bottom;
+    transform: scale(0.15) translateY(30vh);
+    transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                width 0.3s ease, height 0.3s ease, border-radius 0.25s ease;
 }
 
-.window.active { opacity: 1; pointer-events: auto; transform: scale(1); z-index: var(--z-windows); }
-.window.minimized { transform: translateY(100%) scale(0.5); opacity: 0; pointer-events: none; }
+.window.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1) translateY(0);
+}
+
+/* Open / restore: same motion as minimize, reversed */
+.window.opening {
+    opacity: 0;
+    pointer-events: none;
+    transform-origin: center bottom;
+    transform: scale(0.15) translateY(30vh);
+}
+
+/* Minimize animation: shrink + slide toward dock, then fully hidden */
+.window.minimizing {
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform-origin: center bottom;
+    transform: scale(0.15) translateY(30vh) !important;
+}
+
+.window.minimized {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    display: none !important;
+}
+
+/* True fullscreen */
+.window.maximized {
+    width: 100vw !important;
+    height: 100vh !important;
+    top: 0 !important;
+    left: 0 !important;
+    border-radius: 0;
+    border: none;
+}
+
 .win-header {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
+    flex-shrink: 0;
     width: 100%;
-    height: 45px;
-    background: #111;
-    border-bottom: 1px solid #333;
+    height: 38px;
+    background: linear-gradient(180deg, rgba(55, 55, 58, 0.95) 0%, rgba(40, 40, 42, 0.95) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
+    padding: 0 14px;
     z-index: 100;
-    transform: translateY(-100%);
-    transition: transform 0.3s ease;
+    cursor: default;
+    user-select: none;
 }
 
-.header-visible .win-header { transform: translateY(0); }
-.win-title { font-family: var(--font-header); font-size: 13px; color: #aaa; letter-spacing: 2px; }
-.win-controls { display: flex; gap: 15px; align-items: center; }
+.win-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    z-index: 2;
+}
+
 .win-btn {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s ease;
     display: flex;
     justify-content: center;
     align-items: center;
-    color: transparent;
+    position: relative;
+    border: none;
+    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
 }
-.win-btn:hover { color: #fff; }
-.btn-max { 
-    background: #444; 
-    border: 1px solid #666; 
-    color: transparent; 
-    font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
-    font-size: 14px;
-    font-weight: 900;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
+
+/* macOS traffic lights */
+.btn-close {
+    background: #ff5f57;
 }
-.btn-max:hover { 
-    background: #888; 
-    transform: scale(1.15); 
-    color: #fff; 
+.btn-close:hover {
+    background: #ff3b30;
 }
-/* Minimize button - horizontal line */
-.btn-min { background: #444; border: 1px solid #666; }
-.btn-min:hover { background: #888; transform: scale(1.15); }
-.btn-min::before { content: ''; width: 8px; height: 2px; background: currentColor; border-radius: 2px; }
-.btn-close { background: #555; border: 1px solid #777; }
-.btn-close:hover { transform: scale(1.15); box-shadow: 0 0 8px #fff; background: #fff; color: #000; }
-.btn-close::before, .btn-close::after { content: ''; position: absolute; width: 8px; height: 2px; background: currentColor; border-radius: 2px; }
+.btn-close::before,
+.btn-close::after {
+    content: '';
+    position: absolute;
+    width: 7px;
+    height: 1.5px;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 0.12s;
+}
 .btn-close::before { transform: rotate(45deg); }
 .btn-close::after { transform: rotate(-45deg); }
-.win-body { width: 100%; height: 100%; overflow: hidden; position: relative; background: #000; }
-iframe { width: 100%; height: 100%; border: none; display: block; }
+.btn-close:hover::before,
+.btn-close:hover::after { opacity: 1; }
+
+.btn-min {
+    background: #febc2e;
+}
+.btn-min:hover {
+    background: #f5a623;
+}
+.btn-min::before {
+    content: '';
+    position: absolute;
+    width: 7px;
+    height: 1.5px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 0.12s;
+}
+.btn-min:hover::before { opacity: 1; }
+
+.btn-max {
+    background: #28c840;
+}
+.btn-max:hover {
+    background: #1aad2f;
+}
+.btn-max::before {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border: 1.5px solid rgba(0, 0, 0, 0.45);
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 0.12s;
+    box-sizing: border-box;
+}
+.btn-max:hover::before { opacity: 1; }
+
+.win-title {
+    position: absolute;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.2px;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 80px;
+}
+
+.win-body {
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    background: #000;
+    border-radius: 0 0 11px 11px;
+}
+iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+    background: #000;
+}
 
 #top-trigger { position: fixed; top: 0; left: 0; width: 100%; height: 20px; z-index: var(--z-triggers); }
 #bottom-trigger { position: fixed; bottom: 0; left: 0; width: 100%; height: 30px; z-index: var(--z-triggers); }
@@ -2139,18 +2257,25 @@ function toggleApp(id) {
     // Normal in-OS window behavior
     let w = document.getElementById('win-' + id);
     if(w) {
-        if(w.classList.contains('minimized')) {
-            w.classList.remove('minimized');
-            w.classList.add('active');
+        if(w.classList.contains('minimized') || w.style.display === 'none') {
+            // Restore with reverse minimize animation
+            w.style.display = '';
+            w.classList.remove('minimized', 'minimizing');
+            w.classList.add('opening');
             w.style.zIndex = ++highestZ;
+            // Force reflow so opening state is applied before active
+            void w.offsetWidth;
+            requestAnimationFrame(function() {
+                w.classList.remove('opening');
+                w.classList.add('active');
+            });
             activeWindowId = id;
-            startImmersiveMode(w);
+            updateDockForFullscreen();
         } else if(activeWindowId === id) {
             minimizeWindow(id);
         } else {
             w.style.zIndex = ++highestZ;
             activeWindowId = id;
-            startImmersiveMode(w);
         }
     } else {
         openWindow(id);
@@ -2180,14 +2305,48 @@ function openWindow(id) {
         let dat = app;
         win = document.createElement('div');
         win.id = 'win-' + id;
-        win.className = 'window active header-visible';
+        // Start in "opening" state (scaled down near dock), then animate to active
+        win.className = 'window opening';
         win.style.zIndex = ++highestZ;
+        
+        // Start perfectly centered on screen
+        const winW = Math.min(920, window.innerWidth * 0.85);
+        const winH = Math.min(620, window.innerHeight * 0.75);
+        const left = Math.max(0, (window.innerWidth - winW) / 2);
+        const top = Math.max(0, (window.innerHeight - winH) / 2);
+        win.style.width = winW + 'px';
+        win.style.height = winH + 'px';
+        win.style.left = left + 'px';
+        win.style.top = top + 'px';
         
         let iframeStr = dat.internal ? '<iframe id="frame-' + id + '"></iframe>' : '<iframe id="frame-' + id + '" src="' + dat.path + '"></iframe>';
         
-        win.innerHTML = '<div class="win-header" onmousedown="DragSystem.startWinDrag(event, \'' + id + '\')"><div class="win-title">' + dat.title + '</div><div class="win-controls"><div class="win-btn btn-min" onclick="minimizeWindow(\'' + id + '\')"></div><div class="win-btn btn-max" onclick="toggleFullscreen(\'' + id + '\')">⛶</div><div class="win-btn btn-close" onclick="closeWindow(\'' + id + '\')"></div></div></div><div class="win-body">' + iframeStr + '</div>';
+        // macOS-style header: traffic lights on the left, title centered
+        win.innerHTML =
+            '<div class="win-header" onmousedown="DragSystem.startWinDrag(event, \'' + id + '\')">' +
+                '<div class="win-controls">' +
+                    '<div class="win-btn btn-close" title="Close" onclick="event.stopPropagation(); closeWindow(\'' + id + '\')"></div>' +
+                    '<div class="win-btn btn-min" title="Minimize" onclick="event.stopPropagation(); minimizeWindow(\'' + id + '\')"></div>' +
+                    '<div class="win-btn btn-max" title="Maximize" onclick="event.stopPropagation(); toggleMaximize(\'' + id + '\')"></div>' +
+                '</div>' +
+                '<div class="win-title">' + dat.title + '</div>' +
+            '</div>' +
+            '<div class="win-body">' + iframeStr + '</div>';
+        
+        // Bring to front on click
+        win.addEventListener('mousedown', function() {
+            this.style.zIndex = ++highestZ;
+            activeWindowId = id;
+        });
         
         layer.appendChild(win);
+        
+        // Animate open: opening → active (scale up from dock)
+        void win.offsetWidth;
+        requestAnimationFrame(function() {
+            win.classList.remove('opening');
+            win.classList.add('active');
+        });
         
         if(dat.internal && id === 'settings') {
             let f = document.getElementById('frame-' + id);
@@ -2237,111 +2396,122 @@ function openWindow(id) {
             }
         }
     } else {
-        win.classList.remove('minimized');
-        win.classList.add('active');
+        // Existing window — restore with same open animation if it was minimized
+        const wasHidden = win.classList.contains('minimized') || win.style.display === 'none';
+        win.style.display = '';
+        win.classList.remove('minimized', 'minimizing');
         win.style.zIndex = ++highestZ;
+        if (wasHidden) {
+            win.classList.add('opening');
+            void win.offsetWidth;
+            requestAnimationFrame(function() {
+                win.classList.remove('opening');
+                win.classList.add('active');
+            });
+        } else {
+            win.classList.add('active');
+        }
     }
     
     activeWindowId = id;
-    startImmersiveMode(win);
+    updateDockForFullscreen();
 }
 
 function closeWindow(id) {
     let w = document.getElementById('win-' + id);
     if(w) w.remove();
     if(activeWindowId === id) activeWindowId = null;
-    endImmersiveMode();
+    updateDockForFullscreen();
+}
+
+function updateDockForFullscreen() {
+    const dock = document.getElementById('dock-container');
+    if (!dock) return;
+    const anyFullscreen = document.querySelector('.window.maximized:not(.minimized)');
+    if (anyFullscreen) {
+        dock.classList.add('dock-hidden');
+    } else {
+        dock.classList.remove('dock-hidden');
+    }
 }
 
 function minimizeWindow(id) {
     let w = document.getElementById('win-' + id);
-    if(w) {
-        w.classList.add('minimized');
-        w.classList.remove('active');
-        if(activeWindowId === id) activeWindowId = null;
+    if (!w || w.classList.contains('minimizing') || w.classList.contains('minimized')) return;
+
+    // If this window was fullscreen, show dock again once it minimizes
+    const wasMax = w.classList.contains('maximized');
+    if (wasMax) {
+        w.classList.remove('maximized');
+        if (w.dataset.prevTop) {
+            w.style.top = w.dataset.prevTop;
+            w.style.left = w.dataset.prevLeft;
+            w.style.width = w.dataset.prevWidth;
+            w.style.height = w.dataset.prevHeight;
+        }
     }
-    endImmersiveMode();
+
+    w.classList.remove('active');
+    w.classList.add('minimizing');
+    if (activeWindowId === id) activeWindowId = null;
+
+    // After animation, fully hide
+    setTimeout(function() {
+        w.classList.remove('minimizing');
+        w.classList.add('minimized');
+        w.style.display = 'none';
+        // Reset transform so restore looks clean
+        w.style.transform = '';
+        updateDockForFullscreen();
+    }, 400);
+
+    if (wasMax) updateDockForFullscreen();
 }
 
-function toggleFullscreen(id) {
+function toggleMaximize(id) {
     let w = document.getElementById('win-' + id);
     if (!w) return;
     
-    if (!document.fullscreenElement) {
-        w.requestFullscreen().catch(err => {
-            console.error(`Error attempting to enable fullscreen: ${err.message}`);
-        });
+    if (w.classList.contains('maximized')) {
+        w.classList.remove('maximized');
+        // Restore previous geometry
+        if (w.dataset.prevTop) {
+            w.style.top = w.dataset.prevTop;
+            w.style.left = w.dataset.prevLeft;
+            w.style.width = w.dataset.prevWidth;
+            w.style.height = w.dataset.prevHeight;
+        }
     } else {
-        document.exitFullscreen();
+        // Store current geometry before maximizing
+        const rect = w.getBoundingClientRect();
+        w.dataset.prevTop = rect.top + 'px';
+        w.dataset.prevLeft = rect.left + 'px';
+        w.dataset.prevWidth = rect.width + 'px';
+        w.dataset.prevHeight = rect.height + 'px';
+        w.classList.add('maximized');
+        // Let CSS .maximized rules control size/position
+        w.style.width = '';
+        w.style.height = '';
+        w.style.top = '';
+        w.style.left = '';
     }
+    w.style.zIndex = ++highestZ;
+    activeWindowId = id;
+    updateDockForFullscreen();
+}
+
+// Legacy alias so any remaining calls don't break
+function toggleFullscreen(id) {
+    toggleMaximize(id);
 }
 
 function startImmersiveMode(win) {
-    document.getElementById('dock-container').classList.add('dock-hidden');
-    win.classList.remove('header-visible');
-
-    // Disable desktop background while an app window is active
-    if (!sysConfig.optBg) {
-        let bV = document.getElementById('bg-video');
-        if (bV && bV.style.display !== 'none') {
-            bV.pause();
-        }
-    }
+    // No-op in windowed macOS mode — dock stays visible
 }
 
 function endImmersiveMode() {
-    let aw = document.querySelectorAll('.window.active:not(.minimized)');
-    if (aw.length === 0) {
-        document.getElementById('dock-container').classList.remove('dock-hidden');
-        activeWindowId = null;
-
-        // Re-enable desktop background when no apps are open
-        if (!sysConfig.optBg) {
-            let bV = document.getElementById('bg-video');
-            if (bV && bV.style.display !== 'none') {
-                bV.play().catch(function(e){});
-            }
-        }
-    } else {
-        let t = aw[aw.length - 1];
-        activeWindowId = t.id.replace('win-', '');
-        t.style.zIndex = ++highestZ;
-        startImmersiveMode(t);
-    }
+    // No-op
 }
-
-var dockTimer;
-var dEl = document.getElementById('dock-container');
-document.getElementById('bottom-trigger').addEventListener('mouseenter', function() {
-    dEl.classList.remove('dock-hidden');
-    clearTimeout(dockTimer);
-});
-dEl.addEventListener('mouseleave', function() {
-    let aw = document.querySelectorAll('.window.active:not(.minimized)');
-    if(aw.length > 0) {
-        dockTimer = setTimeout(function() { dEl.classList.add('dock-hidden'); }, 1000);
-    }
-});
-dEl.addEventListener('mouseenter', function() { clearTimeout(dockTimer); });
-
-document.getElementById('top-trigger').addEventListener('mouseenter', function() {
-    if(activeWindowId) {
-        let w = document.getElementById('win-' + activeWindowId);
-        if(w && !w.classList.contains('minimized')) w.classList.add('header-visible');
-    }
-});
-
-document.addEventListener('mouseover', function(e) {
-    if(e.target.closest('.win-header')) {
-        if(activeWindowId) {
-            let w = document.getElementById('win-' + activeWindowId);
-            if(w) w.classList.add('header-visible');
-        }
-    } else if(activeWindowId && !e.target.closest('#top-trigger')) {
-        let w = document.getElementById('win-' + activeWindowId);
-        if(w) w.classList.remove('header-visible');
-    }
-});
 
 var desktopLayout = JSON.parse(localStorage.getItem('cine_desktop_v2')) || [];
 
@@ -2545,9 +2715,23 @@ var DragSystem = {
     },
     
     startWinDrag: function(e, id) {
+        // Don't drag when clicking traffic-light buttons
+        if (e.target.closest('.win-btn')) return;
+        const win = document.getElementById('win-' + id);
+        if (!win || win.classList.contains('maximized')) return;
+        
         this.startPos = {x: e.clientX, y: e.clientY};
-        this.sourceType = 'window'; this.sourceEl = document.getElementById('win-' + id);
+        this.sourceType = 'window';
+        this.sourceEl = win;
         this.isDragMove = false;
+        
+        const rect = win.getBoundingClientRect();
+        this.winOffset = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+        win.style.zIndex = ++highestZ;
+        activeWindowId = id;
     },
     
     move: function(e) {
@@ -2557,6 +2741,18 @@ var DragSystem = {
         
         if(dx > 3 || dy > 3) {
             this.dragging = true; this.isDragMove = true;
+            
+            if (this.sourceType === 'window') {
+                const newLeft = e.clientX - this.winOffset.x;
+                const newTop = e.clientY - this.winOffset.y;
+                // Keep window mostly on-screen
+                const maxL = window.innerWidth - 80;
+                const maxT = window.innerHeight - 60;
+                this.sourceEl.style.left = Math.max(-this.sourceEl.offsetWidth + 100, Math.min(newLeft, maxL)) + 'px';
+                this.sourceEl.style.top = Math.max(0, Math.min(newTop, maxT)) + 'px';
+                return;
+            }
+            
             if(this.sourceType === 'desktop' || this.sourceType === 'drawer' || this.sourceType === 'dock') {
                 if(this.sourceType === 'drawer') toggleAppDrawer();
                 this.proxy.style.display = 'block';
@@ -2583,6 +2779,11 @@ var DragSystem = {
         if(!this.sourceEl) return;
         if(!this.isDragMove && this.sourceType === 'desktop') { this.reset(); return; }
         if(!this.dragging) { this.reset(); return; }
+        
+        if (this.sourceType === 'window') {
+            this.reset();
+            return;
+        }
         
         if(this.sourceType === 'desktop' || this.sourceType === 'drawer' || this.sourceType === 'dock') {
             let nx = Math.round((e.clientX - 40) / 90) * 90;
@@ -2632,6 +2833,7 @@ var DragSystem = {
         this.sourceEl = null;
         this.proxy.style.display = 'none';
         this.badge.style.display = 'none';
+        this.winOffset = null;
     }
 };
 DragSystem.init();
