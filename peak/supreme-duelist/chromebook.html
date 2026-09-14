@@ -26,9 +26,7 @@
       </div>
     </div>
   </div>
-
   <script>
-    // YouTube environment spoofs
     try {
       Object.defineProperty(window, 'parent', { get: () => window, configurable: true });
       Object.defineProperty(window, 'top', { get: () => window, configurable: true });
@@ -44,17 +42,14 @@
         configurable: true
       });
     } catch(e) {}
-
     try {
       location.hash = '#flags=%7B"enableServiceWorker"%3Afalse%7D&origin=https%3A%2F%2Fwww.youtube.com';
     } catch(e) {}
-
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations()
         .then(rs => rs.forEach(r => r.unregister())).catch(() => {});
     }
-
-    // Full ytgame stub required by the Unity build
+    const SAVE_KEY = 'supreme_duelist_ytgame_save';
     window.ytgame = {
       IN_PLAYABLES_ENV: true,
       SDK_VERSION: '1',
@@ -67,11 +62,29 @@
       },
       game: {
         onStart: (cb) => { setTimeout(cb, 30); return () => {}; },
-        onVisibilityChange: (cb) => { setTimeout(() => cb(true), 10); return () => {}; },
+        onVisibilityChange: (cb) => {
+          const handler = () => cb(document.visibilityState === 'visible');
+          document.addEventListener('visibilitychange', handler);
+          setTimeout(() => cb(true), 10);
+          return () => document.removeEventListener('visibilitychange', handler);
+        },
         firstFrameReady: () => {},
         gameReady: () => {},
-        loadData: () => Promise.resolve(''),
-        saveData: () => Promise.resolve()
+        loadData: () => {
+          try {
+            return Promise.resolve(localStorage.getItem(SAVE_KEY) || '');
+          } catch(e) {
+            return Promise.resolve('');
+          }
+        },
+        saveData: (data) => {
+          try {
+            localStorage.setItem(SAVE_KEY, data == null ? '' : String(data));
+            return Promise.resolve();
+          } catch(e) {
+            return Promise.resolve();
+          }
+        }
       },
       ads: {
         isAdBreakAvailable: () => false,
@@ -84,8 +97,6 @@
         logWarning: () => {}
       }
     };
-
-    // Audio keep-alive
     const _AC = window.AudioContext || window.webkitAudioContext;
     if (_AC) {
       const Orig = _AC;
@@ -102,7 +113,6 @@
       }, 700);
     }
   </script>
-
   <script>
     const MIRRORS = [
       'https://gcore.jsdelivr.net/gh/greeniYT/stickywicky@main/Build',
@@ -110,18 +120,15 @@
       'https://cdn.jsdelivr.net/gh/greeniYT/stickywicky@main/Build',
       'https://raw.githubusercontent.com/greeniYT/stickywicky/main/Build'
     ];
-
     const canvas = document.getElementById('unity-canvas');
     const loadingBar = document.getElementById('unity-loading-bar');
     const bar = document.getElementById('unity-progress-bar-full');
     const container = document.getElementById('unity-container');
-
     if (/CrOS|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
       container.className = canvas.className = 'unity-mobile';
     } else {
       canvas.style.width = canvas.style.height = '100%';
     }
-
     async function tryFetch(url, ms = 45000) {
       const c = new AbortController();
       const t = setTimeout(() => c.abort(), ms);
@@ -131,7 +138,6 @@
         return r;
       } finally { clearTimeout(t); }
     }
-
     async function pickMirror() {
       for (const base of MIRRORS) {
         try {
@@ -141,13 +147,10 @@
       }
       throw new Error('All mirrors blocked');
     }
-
-    // Detect gzip (magic 1f 8b) and decompress when needed
     async function loadAndMaybeGunzip(url, mime) {
       const resp = await tryFetch(url, 90000);
       const buf = await resp.arrayBuffer();
       const u8 = new Uint8Array(buf);
-
       if (u8[0] === 0x1f && u8[1] === 0x8b) {
         const ds = new DecompressionStream('gzip');
         const stream = new Response(buf).body.pipeThrough(ds);
@@ -156,7 +159,6 @@
       }
       return URL.createObjectURL(new Blob([buf], { type: mime }));
     }
-
     function loadScript(url) {
       return new Promise((res, rej) => {
         const s = document.createElement('script');
@@ -166,8 +168,6 @@
         document.body.appendChild(s);
       });
     }
-
-    // Emscripten FS safety net
     function patchFS() {
       if (typeof FS === 'undefined' || !FS.lookupNode) {
         setTimeout(patchFS, 40);
@@ -183,7 +183,6 @@
         try { return origRm(path); } catch(e) { return 0; }
       };
     }
-
     async function cleanupIDB() {
       try {
         if (!indexedDB.databases) return;
@@ -196,19 +195,16 @@
         }
       } catch(e) {}
     }
-
     async function run() {
       try {
         await cleanupIDB();
         const base = await pickMirror();
-
         const [dataUrl, codeUrl, frameworkUrl] = await Promise.all([
           loadAndMaybeGunzip(base + '/YTPlayables.data', 'application/octet-stream'),
           loadAndMaybeGunzip(base + '/YTPlayables.wasm', 'application/wasm'),
           loadAndMaybeGunzip(base + '/YTPlayables.framework.js.gzip', 'text/javascript')
             .catch(() => loadAndMaybeGunzip(base + '/YTPlayables.framework.js.gz', 'text/javascript'))
         ]);
-
         const config = {
           dataUrl,
           codeUrl,
@@ -220,7 +216,6 @@
           showBanner: () => {},
           autoSyncPersistentDataPath: false
         };
-
         try {
           await loadScript(base + '/YTPlayables.loader.js');
         } catch(e) {
@@ -230,26 +225,19 @@
           await loadScript(blobUrl);
           URL.revokeObjectURL(blobUrl);
         }
-
         patchFS();
         loadingBar.style.display = 'block';
-
         const instance = await createUnityInstance(canvas, config, p => {
           bar.style.width = (p * 100) + '%';
         });
-
         window.unityGameInstance = instance;
         window.unityInstance = instance;
-
         loadingBar.style.display = 'none';
-
         try { ytgame.system.notifyLoadComplete(); } catch(e) {}
         if (window._unityAudioContext) window._unityAudioContext.resume().catch(() => {});
       } catch (err) {
-        // Silent fail – nothing to show
       }
     }
-
     run();
   </script>
 </body>
