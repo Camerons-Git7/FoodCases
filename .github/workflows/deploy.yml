@@ -43,6 +43,8 @@ jobs:
           fi
 
       - name: Deploy to InfinityFree Site 1
+        id: deploy1
+        continue-on-error: true          # ← allow failure, continue to Site 2
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -88,6 +90,8 @@ jobs:
           fi
 
       - name: Deploy to InfinityFree Site 2
+        id: deploy2
+        continue-on-error: true          # ← also allow failure
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -107,3 +111,22 @@ jobs:
             .ftp-sync-state-1.json
             .ftp-sync-state-2.json
           log-level: standard
+
+      # ─── FINAL CHECK ───────────────────────────────
+      - name: Check deploy results
+        run: |
+          echo "Site 1 outcome: ${{ steps.deploy1.outcome }}"
+          echo "Site 2 outcome: ${{ steps.deploy2.outcome }}"
+
+          if [[ "${{ steps.deploy1.outcome }}" == "failure" && "${{ steps.deploy2.outcome }}" == "failure" ]]; then
+            echo "❌ Both Site 1 and Site 2 failed!"
+            exit 1
+          fi
+
+          if [[ "${{ steps.deploy1.outcome }}" == "failure" ]]; then
+            echo "⚠️ Site 1 failed, but Site 2 succeeded"
+          elif [[ "${{ steps.deploy2.outcome }}" == "failure" ]]; then
+            echo "⚠️ Site 2 failed, but Site 1 succeeded"
+          else
+            echo "✅ Both sites deployed successfully"
+          fi
