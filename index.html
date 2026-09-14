@@ -682,14 +682,14 @@ body {
 
 .win-controls {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     align-items: center;
     z-index: 2;
 }
 
 .win-btn {
-    width: 12px;
-    height: 12px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -712,8 +712,8 @@ body {
 .btn-close::after {
     content: '';
     position: absolute;
-    width: 7px;
-    height: 1.5px;
+    width: 9px;
+    height: 1.8px;
     background: rgba(0, 0, 0, 0.55);
     border-radius: 1px;
     opacity: 0;
@@ -733,8 +733,8 @@ body {
 .btn-min::before {
     content: '';
     position: absolute;
-    width: 7px;
-    height: 1.5px;
+    width: 9px;
+    height: 1.8px;
     background: rgba(0, 0, 0, 0.5);
     border-radius: 1px;
     opacity: 0;
@@ -749,17 +749,55 @@ body {
     background: #1aad2f;
 }
 .btn-max::before {
-    content: '';
+    content: "⛶";
     position: absolute;
-    width: 6px;
-    height: 6px;
-    border: 1.5px solid rgba(0, 0, 0, 0.45);
-    border-radius: 1px;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    line-height: 1;
+    color: rgba(0, 0, 0, 0.6);
+    font-weight: 1000;
     opacity: 0;
     transition: opacity 0.12s;
-    box-sizing: border-box;
 }
-.btn-max:hover::before { opacity: 1; }
+.btn-max:hover::before {
+    opacity: 1;
+}
+
+/* Refresh button (top-right of window header) */
+.win-refresh {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.55);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.win-refresh:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+}
+.win-refresh svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
 
 .win-title {
     position: absolute;
@@ -775,7 +813,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding: 0 80px;
+    padding: 0 100px;
 }
 
 .win-body {
@@ -2606,7 +2644,7 @@ function openWindow(id) {
         
         let iframeStr = dat.internal ? '<iframe id="frame-' + id + '"></iframe>' : '<iframe id="frame-' + id + '" src="' + dat.path + '"></iframe>';
         
-        // macOS-style header: traffic lights on the left, title centered
+        // macOS-style header: traffic lights on the left, title centered, refresh on the right
         win.innerHTML =
             '<div class="win-header" onmousedown="DragSystem.startWinDrag(event, \'' + id + '\')">' +
                 '<div class="win-controls">' +
@@ -2615,6 +2653,9 @@ function openWindow(id) {
                     '<div class="win-btn btn-max" title="Maximize" onclick="event.stopPropagation(); toggleMaximize(\'' + id + '\')"></div>' +
                 '</div>' +
                 '<div class="win-title">' + dat.title + '</div>' +
+                '<button class="win-refresh" title="Refresh" onclick="event.stopPropagation(); refreshWindow(\'' + id + '\')" aria-label="Refresh window">' +
+                    '<svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>' +
+                '</button>' +
             '</div>' +
             '<div class="win-body">' + iframeStr + '</div>';
         
@@ -2709,6 +2750,25 @@ function closeWindow(id) {
     if(activeWindowId === id) activeWindowId = null;
     updateDockForFullscreen();
     updateOpenAppsDock();
+}
+
+function refreshWindow(id) {
+    const frame = document.getElementById('frame-' + id);
+    if (!frame) return;
+    try {
+        // Prefer location.reload so same-origin iframes keep history clean
+        if (frame.contentWindow && frame.contentWindow.location) {
+            frame.contentWindow.location.reload();
+            return;
+        }
+    } catch (e) {
+        // Cross-origin: fall back to re-assigning src
+    }
+    const src = frame.src;
+    if (src) {
+        frame.src = '';
+        frame.src = src;
+    }
 }
 
 function updateDockForFullscreen() {
@@ -3004,8 +3064,8 @@ var DragSystem = {
     },
     
     startWinDrag: function(e, id) {
-        // Don't drag when clicking traffic-light buttons
-        if (e.target.closest('.win-btn')) return;
+        // Don't drag when clicking traffic-light buttons or refresh
+        if (e.target.closest('.win-btn') || e.target.closest('.win-refresh')) return;
         const win = document.getElementById('win-' + id);
         if (!win || win.classList.contains('maximized')) return;
         
@@ -3013,6 +3073,7 @@ var DragSystem = {
         this.sourceType = 'window';
         this.sourceEl = win;
         this.isDragMove = false;
+        this.draggingWinId = id;
         
         const rect = win.getBoundingClientRect();
         this.winOffset = {
@@ -3032,6 +3093,15 @@ var DragSystem = {
             this.dragging = true; this.isDragMove = true;
             
             if (this.sourceType === 'window') {
+                // Disable pointer events on the iframe so fast drags
+                // don't get captured when the cursor enters the iframe
+                if (!this._iframePointerDisabled) {
+                    const frame = this.sourceEl.querySelector('iframe');
+                    if (frame) {
+                        frame.style.pointerEvents = 'none';
+                        this._iframePointerDisabled = true;
+                    }
+                }
                 const newLeft = e.clientX - this.winOffset.x;
                 const newTop = e.clientY - this.winOffset.y;
                 // Keep window mostly on-screen
@@ -3070,6 +3140,12 @@ var DragSystem = {
         if(!this.dragging) { this.reset(); return; }
         
         if (this.sourceType === 'window') {
+            // Restore iframe pointer events after drag
+            if (this._iframePointerDisabled && this.sourceEl) {
+                const frame = this.sourceEl.querySelector('iframe');
+                if (frame) frame.style.pointerEvents = '';
+                this._iframePointerDisabled = false;
+            }
             this.reset();
             return;
         }
@@ -3117,12 +3193,19 @@ var DragSystem = {
     },
     
     reset: function() {
+        // Safety: restore iframe pointer-events if still disabled
+        if (this._iframePointerDisabled && this.sourceEl) {
+            const frame = this.sourceEl.querySelector('iframe');
+            if (frame) frame.style.pointerEvents = '';
+            this._iframePointerDisabled = false;
+        }
         this.dragging = false;
         if(this.sourceEl) this.sourceEl.style.opacity = '1';
         this.sourceEl = null;
         this.proxy.style.display = 'none';
         this.badge.style.display = 'none';
         this.winOffset = null;
+        this.draggingWinId = null;
     }
 };
 DragSystem.init();
