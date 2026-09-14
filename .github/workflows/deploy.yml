@@ -1,4 +1,5 @@
 name: 🚀 Deploy to InfinityFree
+
 on:
   push:
     branches: [ main, master ]
@@ -12,23 +13,25 @@ on:
         options:
           - 'false'
           - 'true'
+
 jobs:
   web-deploy:
     name: Deploy to InfinityFree
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Get latest code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-       
+
       - name: Clear sync state (Force Full Sync)
         if: github.event.inputs.force_full_sync == 'true'
         run: |
           echo "Force full sync requested - will delete local sync state if it exists"
           rm -f .ftp-sync-state-1.json .ftp-sync-state-2.json
           echo "Sync state cleared. All files will be re-uploaded."
+
       # ─── FIRST WEBSITE ─────────────────────────────
       - name: Replace .ico with .png in desktop/index.html for Site 1 deploy
         run: |
@@ -38,8 +41,9 @@ jobs:
           else
             echo "desktop/index.html not found, skipping replacement"
           fi
+
       - name: Deploy to InfinityFree Site 1
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
@@ -58,9 +62,11 @@ jobs:
             .ftp-sync-state-1.json
             .ftp-sync-state-2.json
           log-level: standard
+
       # ─── SECOND WEBSITE ────────────────────────────
       - name: Restore original code for Site 2
         run: git checkout .
+
       - name: Replace "free.nf" with "site.je" for Site 2 deploy
         run: |
           find . -type f \
@@ -71,6 +77,7 @@ jobs:
             -exec sed -i \
               -e 's/free\.nf/site.je/g' \
               {} +
+
       - name: Replace .ico with .png in desktop/index.html for Site 2 deploy
         run: |
           if [ -f "desktop/index.html" ]; then
@@ -79,8 +86,9 @@ jobs:
           else
             echo "desktop/index.html not found, skipping replacement"
           fi
+
       - name: Deploy to InfinityFree Site 2
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME_2 }}
