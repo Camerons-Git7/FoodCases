@@ -371,7 +371,36 @@ body {
 
 .dock-item:hover { background: rgba(255,255,255,0.1); transform: translateY(-5px); }
 .dock-item img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
-.dock-sep { width: 1px; height: 24px; background: #555; margin: 0 4px; }
+.dock-sep { width: 1px; height: 24px; background: #555; margin: 0 8px; flex-shrink: 0; }
+
+/* Running / open app indicator (line under icon) */
+.dock-item.running::after,
+.dock-item.open-app::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px;
+    height: 2px;
+    border-radius: 2px;
+    background: #fff;
+    box-shadow: 0 0 6px rgba(255,255,255,0.5);
+    pointer-events: none;
+}
+.dock-item.minimized-app::after {
+    background: #888;
+    box-shadow: none;
+    width: 10px;
+}
+
+/* Group open apps on the left of pinned */
+#dock-open-apps,
+#dock-pinned-apps {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
 
 .desktop-app {
     position: absolute;
@@ -1185,6 +1214,15 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
     <li class="ctx-item" id="ctx-copylink-dock" role="menuitem" tabindex="0"><i class="fas fa-link fa-fw" aria-hidden="true"></i> Copy Link</li>
 </menu>
 
+<!-- Context menu for open (running) apps on the dock -->
+<menu id="dock-open-ctx-menu" class="os-context-menu" role="menu">
+    <li class="ctx-item" id="ctx-dock-open-restore" role="menuitem" tabindex="0" style="display:none;"><i class="fas fa-window-restore fa-fw" aria-hidden="true"></i> Open</li>
+    <li class="ctx-item" id="ctx-dock-open-minimize" role="menuitem" tabindex="0" style="display:none;"><i class="fas fa-window-minimize fa-fw" aria-hidden="true"></i> Minimize</li>
+    <li class="ctx-item" id="ctx-dock-open-close" role="menuitem" tabindex="0"><i class="fas fa-times fa-fw" style="color:#aaa;" aria-hidden="true"></i> Close</li>
+    <li class="ctx-separator" id="ctx-dock-open-sep" role="separator" style="display:none;"></li>
+    <li class="ctx-item" id="ctx-dock-open-unpin" role="menuitem" tabindex="0" style="display:none;"><i class="fas fa-unlink fa-fw" aria-hidden="true"></i> Unpin from Taskbar</li>
+</menu>
+
 <menu id="desktop-context-menu" class="os-context-menu" role="menu">
   <li class="ctx-item" role="menuitem" tabindex="0" onclick="openWallpaperMenu(); document.getElementById('desktop-context-menu').style.display='none';"><i class="fas fa-image fa-fw"></i> Change Wallpaper</li>
   <li class="ctx-separator" role="separator"></li>
@@ -1892,24 +1930,48 @@ document.addEventListener("DOMContentLoaded", function() {
     updateSidebarData();
 });
 
+function getOpenWindowIds() {
+    const ids = [];
+    const wins = document.querySelectorAll('#windows-layer .window');
+    for (let i = 0; i < wins.length; i++) {
+        const id = wins[i].id.replace(/^win-/, '');
+        if (id && APPS[id]) ids.push(id);
+    }
+    return ids;
+}
+
+function isWindowMinimized(id) {
+    const w = document.getElementById('win-' + id);
+    if (!w) return false;
+    return w.classList.contains('minimized') || w.classList.contains('minimizing') || w.style.display === 'none';
+}
+
 function renderUI() {
     let dock = document.getElementById('dock-container');
     
+    // Order: Start → App Drawer → Pinned → Open → Time
     let dHTML = 
         '<div class="dock-item" onclick="toggleStartMenu()"><img src="https://missionsupport.archden.org/wp-content/uploads/2022/02/windows11-icon.png"></div>' +
         '<div class="dock-sep"></div>' +
-        // App Drawer
+        // App Drawer (waffle grid)
         '<div class="dock-item" onclick="toggleAppDrawer()" style="display:flex; align-items:center; justify-content:center;">' +
         '<svg width="26" height="26" viewBox="0 0 24 24" fill="#ddd"><path d="M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z"/></svg>' +
         '</div>' +
-        '<div class="dock-sep"></div>';
+        '<div class="dock-sep"></div>' +
+        // Pinned apps
+        '<div id="dock-pinned-apps">';
     
-    // Pinned apps
     for(let id in APPS) {
         if(APPS[id].pinned) {
-            dHTML += '<div class="dock-item" data-id="'+id+'" onmousedown="DragSystem.start(event,this,\'dock\',\''+id+'\')" onclick="toggleApp(\''+id+'\')" oncontextmenu="openDockCtx(event, \''+id+'\')"><img src="'+APPS[id].icon+'"></div>';
+            dHTML += '<div class="dock-item" data-id="'+id+'" data-dock-type="pinned" onmousedown="DragSystem.start(event,this,\'dock\',\''+id+'\')" onclick="toggleApp(\''+id+'\')" oncontextmenu="openDockCtx(event, \''+id+'\')"><img src="'+APPS[id].icon+'"></div>';
         }
     }
+    
+    dHTML += '</div>' +
+        // Separator between pinned and open (shown when there are open apps)
+        '<div id="dock-open-sep" class="dock-sep" style="display:none;"></div>' +
+        // Open apps (right of pinned) — filled by updateOpenAppsDock
+        '<div id="dock-open-apps"></div>';
     
     // Fancy Time + Date on the right
     dHTML += `
@@ -1932,7 +1994,42 @@ function renderUI() {
     pGrid.innerHTML = pHTML;
     
     populateDrawer();
-    updateDockTime();   // Initial call
+    updateDockTime();
+    updateOpenAppsDock();
+}
+
+/** Refresh the open-apps section (left of pinned).
+ *  Every open window gets its own icon here (with the under-icon line),
+ *  including apps that are also pinned — pinned icons stay without the line. */
+function updateOpenAppsDock() {
+    const openWrap = document.getElementById('dock-open-apps');
+    const openSep = document.getElementById('dock-open-sep');
+    if (!openWrap) return;
+
+    const openIds = getOpenWindowIds();
+
+    let html = '';
+    openIds.forEach(function(id) {
+        const app = APPS[id];
+        if (!app) return;
+        const minimized = isWindowMinimized(id);
+        const cls = 'dock-item open-app' + (minimized ? ' minimized-app' : ' running');
+        html += '<div class="' + cls + '" data-id="' + id + '" data-dock-type="open" onclick="toggleApp(\'' + id + '\')" oncontextmenu="openDockOpenCtx(event, \'' + id + '\')"><img src="' + app.icon + '"></div>';
+    });
+    openWrap.innerHTML = html;
+
+    if (openSep) {
+        openSep.style.display = openIds.length > 0 ? '' : 'none';
+    }
+
+    // Ensure pinned icons never show the running line
+    const pinnedWrap = document.getElementById('dock-pinned-apps');
+    if (pinnedWrap) {
+        const pinnedItems = pinnedWrap.querySelectorAll('.dock-item[data-dock-type="pinned"]');
+        for (let i = 0; i < pinnedItems.length; i++) {
+            pinnedItems[i].classList.remove('running', 'minimized-app', 'open-app');
+        }
+    }
 }
 
 function openDockCtx(e, id) {
@@ -1940,10 +2037,35 @@ function openDockCtx(e, id) {
     e.stopPropagation();
     hideAllCtx();
     activeCtxId = id;
+    // Pinned icon always uses pin/unpin menu (open copy is separate in open-apps section)
     let m = document.getElementById('dock-ctx-menu');
     if(m) {
         positionContextMenu(m, e);
     }
+}
+
+function openDockOpenCtx(e, id) {
+    e.preventDefault();
+    e.stopPropagation();
+    hideAllCtx();
+    activeCtxId = id;
+    const m = document.getElementById('dock-open-ctx-menu');
+    if (!m) return;
+
+    const minimized = isWindowMinimized(id);
+    const restoreItem = document.getElementById('ctx-dock-open-restore');
+    const minItem = document.getElementById('ctx-dock-open-minimize');
+    if (restoreItem) restoreItem.style.display = minimized ? '' : 'none';
+    if (minItem) minItem.style.display = minimized ? 'none' : '';
+
+    // Show unpin only when this app is pinned
+    const isPinned = APPS[id] && APPS[id].pinned;
+    const sep = document.getElementById('ctx-dock-open-sep');
+    const unpin = document.getElementById('ctx-dock-open-unpin');
+    if (sep) sep.style.display = isPinned ? '' : 'none';
+    if (unpin) unpin.style.display = isPinned ? '' : 'none';
+
+    positionContextMenu(m, e);
 }
 
 function openDrawerCtx(e, id) {
@@ -1974,6 +2096,28 @@ document.getElementById('ctx-unpin-app').onclick = function() {
     }
     hideAllCtx();
 }
+
+// Open-app dock context menu actions
+document.getElementById('ctx-dock-open-restore').onclick = function() {
+    if (activeCtxId) toggleApp(activeCtxId);
+    hideAllCtx();
+};
+document.getElementById('ctx-dock-open-minimize').onclick = function() {
+    if (activeCtxId) minimizeWindow(activeCtxId);
+    hideAllCtx();
+};
+document.getElementById('ctx-dock-open-close').onclick = function() {
+    if (activeCtxId) closeWindow(activeCtxId);
+    hideAllCtx();
+};
+document.getElementById('ctx-dock-open-unpin').onclick = function() {
+    if (activeCtxId && APPS[activeCtxId]) {
+        APPS[activeCtxId].pinned = false;
+        syncPins();
+        renderUI();
+    }
+    hideAllCtx();
+};
 
 // New Tab Handlers
 document.getElementById('ctx-open-newtab-drawer').onclick = function() {
@@ -2029,7 +2173,7 @@ document.getElementById('ctx-copylink-dock').onclick = function() {
 };
 
 function hideAllCtx() {
-    let menus = ['app-context-menu','desktop-context-menu','drawer-ctx-menu','dock-ctx-menu'];
+    let menus = ['app-context-menu','desktop-context-menu','drawer-ctx-menu','dock-ctx-menu','dock-open-ctx-menu'];
     for(let i=0; i<menus.length; i++) {
         let m = document.getElementById(menus[i]);
         if(m) m.style.display = 'none';
@@ -2410,11 +2554,13 @@ function toggleApp(id) {
             });
             activeWindowId = id;
             updateDockForFullscreen();
+            updateOpenAppsDock();
         } else if(activeWindowId === id) {
             minimizeWindow(id);
         } else {
             w.style.zIndex = ++highestZ;
             activeWindowId = id;
+            updateOpenAppsDock();
         }
     } else {
         openWindow(id);
@@ -2554,6 +2700,7 @@ function openWindow(id) {
     
     activeWindowId = id;
     updateDockForFullscreen();
+    updateOpenAppsDock();
 }
 
 function closeWindow(id) {
@@ -2561,6 +2708,7 @@ function closeWindow(id) {
     if(w) w.remove();
     if(activeWindowId === id) activeWindowId = null;
     updateDockForFullscreen();
+    updateOpenAppsDock();
 }
 
 function updateDockForFullscreen() {
@@ -2602,9 +2750,11 @@ function minimizeWindow(id) {
         // Reset transform so restore looks clean
         w.style.transform = '';
         updateDockForFullscreen();
+        updateOpenAppsDock();
     }, 400);
 
     if (wasMax) updateDockForFullscreen();
+    updateOpenAppsDock();
 }
 
 function toggleMaximize(id) {
