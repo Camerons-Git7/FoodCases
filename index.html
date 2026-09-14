@@ -1397,6 +1397,124 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 var _SYSTEM_PATHS = ["C:/Windows/System32/kernel32.dll", "/var/www/html/cine-os/", "https://cine-os.local/api/v1/auth"];
 var _devBuildVer = "3.0.1";
 
+/* ============================================================
+   SEAMLESS-OS RESOURCE CACHE (Service Worker)
+   Caches EVERYTHING loaded outside of iframes:
+   - Wallpaper videos / images
+   - Icons, fonts, CSS, JS libraries
+   - Boot / lock / home media
+   - Any other static asset the main page requests
+   Strategy: Cache-first + background update
+   ============================================================ */
+(function registerSeamlessCache() {
+  if (!('serviceWorker' in navigator) || !('caches' in window)) return;
+
+  const CACHE_NAME = 'seamless-os-cache-v3.0.1';
+
+  const swSource = `
+    const CACHE_NAME = '${CACHE_NAME}';
+
+    self.addEventListener('install', event => {
+      self.skipWaiting();
+      event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => {
+          return cache.addAll([
+            './',
+            'favicon.ico'
+          ]).catch(() => {});
+        })
+      );
+    });
+
+    self.addEventListener('activate', event => {
+      event.waitUntil(
+        caches.keys().then(keys =>
+          Promise.all(
+            keys.filter(k => k.startsWith('seamless-os-cache-') && k !== CACHE_NAME)
+                .map(k => caches.delete(k))
+          )
+        ).then(() => self.clients.claim())
+      );
+    });
+
+    self.addEventListener('fetch', event => {
+      const req = event.request;
+      if (req.method !== 'GET') return;
+      const url = new URL(req.url);
+      if (url.protocol === 'chrome-extension:' || url.protocol === 'data:' || url.protocol === 'blob:') return;
+
+      // Skip iframe game hosts – only cache main-page assets
+      const path = url.pathname.toLowerCase();
+      if (
+        path.includes('/core/') ||
+        path.includes('/big/')  ||
+        path.includes('/peak/') ||
+        path.includes('/seamless-') ||
+        path.includes('/word-bomb') ||
+        path.includes('/uno/') ||
+        path.includes('/youtube/') ||
+        path.includes('/call-of-duty') ||
+        path.includes('/black-jack') ||
+        path.includes('/buildnow') ||
+        path.includes('/dean-withers')
+      ) {
+        return;
+      }
+
+      event.respondWith(
+        caches.open(CACHE_NAME).then(async cache => {
+          const cached = await cache.match(req, { ignoreSearch: false });
+          if (cached) {
+            // Stale-while-revalidate
+            fetch(req).then(networkRes => {
+              if (networkRes && networkRes.ok) {
+                cache.put(req, networkRes.clone());
+              }
+            }).catch(() => {});
+            return cached;
+          }
+
+          try {
+            const networkRes = await fetch(req);
+            if (networkRes && (networkRes.ok || networkRes.type === 'opaque')) {
+              const ct = networkRes.headers.get('content-type') || '';
+              if (!ct.includes('text/html') || url.origin === self.location.origin) {
+                cache.put(req, networkRes.clone()).catch(() => {});
+              }
+            }
+            return networkRes;
+          } catch (err) {
+            const fallback = await cache.match(req);
+            return fallback || new Response('Offline', { status: 503, statusText: 'Offline' });
+          }
+        })
+      );
+    });
+  `;
+
+  const blob = new Blob([swSource], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+
+  navigator.serviceWorker.register(swUrl, { scope: './' })
+    .then(reg => {
+      console.log('[Seamless Cache] Service Worker registered, scope:', reg.scope);
+      reg.update();
+    })
+    .catch(err => {
+      console.warn('[Seamless Cache] SW registration failed (normal on file://):', err);
+    });
+
+  // Helper so the main page can force-cache any URL it discovers
+  window.seamlessCacheAdd = function(url) {
+    if (!url || typeof url !== 'string') return;
+    caches.open(CACHE_NAME).then(cache => {
+      fetch(url, { mode: 'no-cors' }).then(res => {
+        if (res) cache.put(url, res).catch(() => {});
+      }).catch(() => {});
+    }).catch(() => {});
+  };
+})();
+
 var APPS = {
   '1on1soccer': {title: 'Soccer', path: 'https://menist.free.nf/core/1on1soccer/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-wDyrUDPQKy5G-nNTUNM0UzoRldrqqPXWvQ&s', pinned: false, openInNewTab: false},
   '1on1tennis': {title: 'Tennis', path: 'https://menist.free.nf/core/1on1tennis/', icon: 'https://igre.games/wp-content/uploads/thumbs/custom/0-9/1-On-1-Tennis.jpg', pinned: false, openInNewTab: false},
@@ -1997,6 +2115,12 @@ function startBootSequence() {
     // === START HIDING CURSOR HERE ===
     bootLayer.classList.add('boot-animation');
     
+    // Cache the boot videos so the next launch is instant
+    if (typeof window.seamlessCacheAdd === 'function') {
+        window.seamlessCacheAdd("cine-os/Videos/Boot.mp4");
+        window.seamlessCacheAdd("cine-os/Videos/QuickBoot.mp4");
+    }
+    
     if(sysConfig.shortBoot) {
         bv.src = "cine-os/Videos/QuickBoot.mp4";
         bv.load();
@@ -2086,6 +2210,10 @@ window.unlockSystem = function() {
 
 function applyMediaToElements(url, vidEl, imgEl, isBg) {
     if(!url) return;
+    // Push every wallpaper / media asset into the persistent cache
+    if (typeof window.seamlessCacheAdd === 'function') {
+        window.seamlessCacheAdd(url);
+    }
     let isImg = url.match(/\.(png|jpg|jpeg|gif)$/i);
     if(isImg) {
         vidEl.style.display = 'none';
@@ -2120,6 +2248,17 @@ function initWallpapers() {
     updateWallpaperLoop();
     let wChk = document.getElementById('wp-loop-chk');
     if(wChk) wChk.checked = sysConfig.wpLoop;
+
+    // Background-cache every wallpaper so switching later is instant
+    if (typeof window.seamlessCacheAdd === 'function') {
+        setTimeout(function() {
+            for (let key in wallpaperRegistry) {
+                if (wallpaperRegistry[key] && wallpaperRegistry[key].url) {
+                    window.seamlessCacheAdd(wallpaperRegistry[key].url);
+                }
+            }
+        }, 4000);
+    }
 }
 
 function updateWallpaperLoop() {
