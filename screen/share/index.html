@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>iPhone Share</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico ">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <style>
         * {
             margin: 0;
@@ -77,6 +77,13 @@
             background: #FF3B30;
             color: white;
         }
+
+        .btn-secondary {
+            background: #333;
+            color: #fff;
+            font-size: 15px;
+            padding: 12px 18px;
+        }
         
         .info-box {
             background: #1a1a1a;
@@ -115,6 +122,15 @@
             padding: 10px;
             border-radius: 8px;
         }
+
+        .camera-switch {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .camera-switch button {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -134,7 +150,7 @@
             </div>
         </div>
         
-        <div class="info-box" style="font-size: 13px; color: #aaa;">
+        <div class="info-box" id="instructions">
             <strong>Instructions:</strong><br>
             1. Tap "Start Screen Share"<br>
             2. Select "Screen" when prompted<br>
@@ -145,7 +161,7 @@
         <div class="log" id="log"></div>
     </div>
 
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js "></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script>
         const statusEl = document.getElementById('status');
         const localVideo = document.getElementById('localVideo');
@@ -154,12 +170,19 @@
         const roomIdEl = document.getElementById('roomId');
         const roomBox = document.getElementById('roomBox');
         const logEl = document.getElementById('log');
+        const instructionsEl = document.getElementById('instructions');
         
         let peer = null;
         let stream = null;
         let activeCalls = new Map();
         let activeConnections = new Map();
-        
+        let currentFacingMode = 'environment'; // back camera by default on mobile
+        let isScreenSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+
+        // Detect iOS / mobile for better UX messaging
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
         function log(msg) {
             console.log(msg);
             const div = document.createElement('div');
@@ -190,12 +213,9 @@
         
         function broadcastOrientation() {
             const orientation = getOrientation();
-            activeConnections.forEach((conn, peerId) => {
+            activeConnections.forEach((conn) => {
                 if (conn.open) {
-                    conn.send({
-                        type: 'orientation',
-                        orientation: orientation
-                    });
+                    conn.send({ type: 'orientation', orientation });
                 }
             });
         }
@@ -210,6 +230,30 @@
             window.addEventListener('resize', broadcastOrientation);
             broadcastOrientation();
         }
+
+        // Update UI based on whether screen share is available
+        function updateUIForCapability() {
+            if (!isScreenSupported) {
+                startBtn.textContent = 'Start Camera Share';
+                instructionsEl.innerHTML = `
+                    <strong>iPhone note:</strong><br>
+                    Screen sharing is <em>not supported</em> in Safari on iPhone/iPad.<br><br>
+                    This page will share your <strong>camera</strong> instead (works great over PeerJS).<br><br>
+                    1. Tap "Start Camera Share"<br>
+                    2. Allow camera access<br>
+                    3. Enter the Room ID on your Chromebook
+                `;
+            } else {
+                startBtn.textContent = 'Start Screen Share';
+                instructionsEl.innerHTML = `
+                    <strong>Instructions:</strong><br>
+                    1. Tap "Start Screen Share"<br>
+                    2. Select "Screen" when prompted<br>
+                    3. Start Broadcast<br>
+                    4. Enter the Room ID on your Chromebook
+                `;
+            }
+        }
         
         function initPeer() {
             const id = generateId();
@@ -221,7 +265,7 @@
                 host: '0.peerjs.com',
                 port: 443,
                 secure: true,
-                debug: 3,
+                debug: 2,
                 config: {
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -254,13 +298,8 @@
                     }
                 });
                 
-                conn.on('close', () => {
-                    activeConnections.delete(conn.peer);
-                });
-                
-                conn.on('error', () => {
-                    activeConnections.delete(conn.peer);
-                });
+                conn.on('close', () => activeConnections.delete(conn.peer));
+                conn.on('error', () => activeConnections.delete(conn.peer));
                 
                 conn.on('open', () => {
                     conn.send({
@@ -277,10 +316,6 @@
                     activeCalls.set(call.peer, call);
                     updateStatus('Viewer connected!', 'connected');
                     
-                    call.on('stream', (remoteStream) => {
-                        log('Received remote stream (unexpected)');
-                    });
-                    
                     call.on('close', () => {
                         log('Call closed: ' + call.peer);
                         activeCalls.delete(call.peer);
@@ -290,7 +325,7 @@
                     });
                     
                     call.on('error', (err) => {
-                        log('Call error: ' + err.message);
+                        log('Call error: ' + (err.message || err));
                     });
                 } else {
                     log('No stream available, rejecting call');
@@ -309,35 +344,125 @@
             });
         }
         
-        async function startScreenShare() {
+        async function startShare() {
             try {
-                updateStatus('Requesting screen capture...', 'connecting');
-                log('Requesting getDisplayMedia...');
+                updateStatus(isScreenSupported ? 'Requesting screen capture...' : 'Requesting camera...', 'connecting');
                 
-                stream = await navigator.mediaDevices.getDisplayMedia({
-                    video: {
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 },
-                        frameRate: { ideal: 30 }
-                    },
-                    audio: false
-                });
+                if (isScreenSupported) {
+                    // Desktop / supported browsers
+                    stream = await navigator.mediaDevices.getDisplayMedia({
+                        video: {
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 },
+                            frameRate: { ideal: 30 }
+                        },
+                        audio: false
+                    });
+                } else {
+                    // iPhone / unsupported → camera fallback
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: { ideal: currentFacingMode },
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            frameRate: { ideal: 30 }
+                        },
+                        audio: false
+                    });
+                }
                 
                 localVideo.srcObject = stream;
+                // Critical for iOS
+                localVideo.setAttribute('playsinline', true);
+                localVideo.muted = true;
+                await localVideo.play().catch(() => {}); // silence autoplay promise rejection
+                
                 log('Stream obtained successfully');
                 
-                stream.getVideoTracks()[0].onended = () => {
-                    log('Screen share stopped by user');
-                    stopScreenShare();
-                };
+                // When user stops the share from the browser UI
+                const videoTrack = stream.getVideoTracks()[0];
+                if (videoTrack) {
+                    videoTrack.onended = () => {
+                        log('Share stopped by user');
+                        stopShare();
+                    };
+                }
                 
                 startBtn.classList.add('hidden');
                 stopBtn.classList.remove('hidden');
-                updateStatus('Screen captured! Waiting for viewer...', 'connected');
+                updateStatus(
+                    isScreenSupported ? 'Screen captured! Waiting for viewer...' : 'Camera live! Waiting for viewer...',
+                    'connected'
+                );
+
+                // Optional: add front/back switcher when using camera
+                if (!isScreenSupported) {
+                    addCameraSwitcher();
+                }
                 
             } catch (err) {
-                log('Error getting display media: ' + err.message);
-                updateStatus('Failed: ' + err.message, 'error');
+                console.error(err);
+                log('Error getting media: ' + err.name + ' – ' + err.message);
+                
+                let friendly = err.message;
+                if (err.name === 'NotAllowedError') {
+                    friendly = 'Permission denied. Please allow camera/screen access.';
+                } else if (err.name === 'NotFoundError') {
+                    friendly = 'No camera found.';
+                } else if (err.name === 'NotSupportedError' || !navigator.mediaDevices) {
+                    friendly = 'Media capture not supported in this browser.';
+                }
+                
+                updateStatus('Failed: ' + friendly, 'error');
+            }
+        }
+
+        function addCameraSwitcher() {
+            // Avoid duplicates
+            if (document.getElementById('camSwitch')) return;
+            
+            const box = document.createElement('div');
+            box.id = 'camSwitch';
+            box.className = 'camera-switch';
+            box.innerHTML = `
+                <button class="btn btn-secondary" id="frontCam">Front Camera</button>
+                <button class="btn btn-secondary" id="backCam">Back Camera</button>
+            `;
+            stopBtn.after(box);
+            
+            document.getElementById('frontCam').onclick = () => switchCamera('user');
+            document.getElementById('backCam').onclick = () => switchCamera('environment');
+        }
+
+        async function switchCamera(facingMode) {
+            if (!stream) return;
+            currentFacingMode = facingMode;
+            
+            // Stop old tracks
+            stream.getTracks().forEach(t => t.stop());
+            
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: facingMode },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+                localVideo.srcObject = stream;
+                await localVideo.play().catch(() => {});
+                
+                // Re-send the new stream to all current viewers
+                activeCalls.forEach((call, peerId) => {
+                    call.close();
+                    startStreamingTo(peerId);
+                });
+                
+                log('Switched to ' + (facingMode === 'user' ? 'front' : 'back') + ' camera');
+            } catch (err) {
+                log('Camera switch failed: ' + err.message);
+                updateStatus('Camera switch failed', 'error');
             }
         }
         
@@ -347,15 +472,12 @@
             const call = peer.call(peerId, stream);
             activeCalls.set(peerId, call);
             
-            call.on('close', () => {
-                activeCalls.delete(peerId);
-            });
+            call.on('close', () => activeCalls.delete(peerId));
+            call.on('error', (err) => log('Stream call error: ' + (err.message || err)));
         }
         
-        function stopScreenShare() {
-            activeCalls.forEach((call, peerId) => {
-                call.close();
-            });
+        function stopShare() {
+            activeCalls.forEach(call => call.close());
             activeCalls.clear();
             
             if (stream) {
@@ -366,12 +488,22 @@
             localVideo.srcObject = null;
             startBtn.classList.remove('hidden');
             stopBtn.classList.add('hidden');
-            updateStatus('Screen sharing stopped', '');
+            
+            const camSwitch = document.getElementById('camSwitch');
+            if (camSwitch) camSwitch.remove();
+            
+            updateStatus('Sharing stopped', '');
         }
         
-        startBtn.addEventListener('click', startScreenShare);
-        stopBtn.addEventListener('click', stopScreenShare);
+        startBtn.addEventListener('click', startShare);
+        stopBtn.addEventListener('click', stopShare);
         
+        // Init
+        updateUIForCapability();
+        if (!window.isSecureContext) {
+            updateStatus('Warning: Must be served over HTTPS', 'error');
+            log('Not a secure context – getUserMedia / getDisplayMedia will fail');
+        }
         initPeer();
     </script>
 </body>
