@@ -2775,10 +2775,17 @@ function updateDockForFullscreen() {
     const dock = document.getElementById('dock-container');
     if (!dock) return;
     const anyFullscreen = document.querySelector('.window.maximized:not(.minimized)');
+    const topTrig = document.getElementById('top-trigger');
+    const botTrig = document.getElementById('bottom-trigger');
+
     if (anyFullscreen) {
         dock.classList.add('dock-hidden');
+        if (topTrig) topTrig.style.pointerEvents = 'none';
+        if (botTrig) botTrig.style.pointerEvents = 'none';
     } else {
         dock.classList.remove('dock-hidden');
+        if (topTrig) topTrig.style.pointerEvents = '';
+        if (botTrig) botTrig.style.pointerEvents = '';
     }
 }
 
