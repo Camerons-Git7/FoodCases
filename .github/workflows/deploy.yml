@@ -1,4 +1,3 @@
-```yaml
 name: 🚀 Deploy to InfinityFree
 
 on:
@@ -230,4 +229,3 @@ jobs:
             echo "✅ All three sites deployed successfully."
 
           fi
-```
