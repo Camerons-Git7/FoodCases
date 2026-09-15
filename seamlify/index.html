@@ -28963,6 +28963,38 @@ Please change the parent <Route path="${e}"> to <Route path="${e===`/`?`*`:`${e}
     return promise;
   }
 
+  function toProxyImageUrl(value) {
+    if (!value) return value;
+
+    try {
+      const u = new URL(value, window.location.origin);
+
+      // Ripple returns artwork as /ripple/api/image?p=/images/...
+      // Keep image traffic on the local PHP proxy.
+      if (u.pathname === "/ripple/api/image" && u.searchParams.has("p")) {
+        const proxy = new URL(API, window.location.origin);
+        proxy.searchParams.set("path", "/api/image");
+        proxy.searchParams.set("p", u.searchParams.get("p"));
+        return proxy.href;
+      }
+
+      return value;
+    } catch {
+      return value;
+    }
+  }
+
+  function rewriteLiveRippleImages(root) {
+    const images = root.querySelectorAll?.("img[src*='/ripple/api/image']") || [];
+    for (const img of images) {
+      const rewritten = toProxyImageUrl(img.currentSrc || img.src);
+      if (rewritten && rewritten !== img.src) {
+        img.src = rewritten;
+        img.removeAttribute("srcset");
+      }
+    }
+  }
+
   async function loadArtwork(img) {
     const type = img.dataset.seamlifyArtworkType;
     const id = img.dataset.seamlifyArtworkId;
@@ -28973,7 +29005,7 @@ Please change the parent <Route path="${e}"> to <Route path="${e===`/`?`*`:`${e}
     try {
       const artwork = await getArtwork(type, id);
       if (artwork) {
-        img.src = artwork;
+        img.src = toProxyImageUrl(artwork);
         img.removeAttribute("srcset");
       }
     } catch (error) {
@@ -28985,6 +29017,7 @@ Please change the parent <Route path="${e}"> to <Route path="${e===`/`?`*`:`${e}
   function scan(root) {
     root.querySelectorAll?.("img[data-seamlify-artwork-type][data-seamlify-artwork-id]")
       .forEach(loadArtwork);
+    rewriteLiveRippleImages(root);
   }
 
   function start() {
