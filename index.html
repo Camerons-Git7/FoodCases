@@ -1862,7 +1862,8 @@ var wallpaperRegistry = {
     "Rainy-Lambo": { id: "RainyLambo", name: "Rainy Lambo", url: "cine-os/Videos/Rainy-Lambo.mp4", locked: false },
     "Backrooms": { id: "Backrooms", name: "Backrooms", url: "cine-os/Videos/Backrooms.mp4", locked: false },
     "Home": { id: "Home", name: "Default Home Screen", url: "cine-os/Videos/Rog-Home-Screen.png", locked: false },
-    "Lock": { id: "Lock", name: "Default Lock Screen", url: "cine-os/Videos/Rog-Lockscreen.png", locked: false }
+    "Lock": { id: "Lock", name: "Default Lock Screen", url: "cine-os/Videos/Rog-Lockscreen.png", locked: false },
+    "Windows": { id: "Windows", name: "Windows", url: "cine-os/Videos/wallpaper.png", locked: false }
 };
 
 var sysConfig = JSON.parse(localStorage.getItem('cine_sys_config')) || {};
@@ -1872,8 +1873,8 @@ if(sysConfig.wpLoop === undefined) sysConfig.wpLoop = false;
 if(sysConfig.idleLock === undefined) sysConfig.idleLock = false; 
 if(sysConfig.redirectConfirm === undefined) sysConfig.redirectConfirm = false; 
 if(!sysConfig.panicKey) sysConfig.panicKey = '`';
-if(!sysConfig.homeWallpaper) sysConfig.homeWallpaper = 'MacOS';
-if(!sysConfig.lockWallpaper) sysConfig.lockWallpaper = 'Lock';
+if(!sysConfig.homeWallpaper) sysConfig.homeWallpaper = 'Windows';
+if(!sysConfig.lockWallpaper) sysConfig.lockWallpaper = 'MacOS';
 if(!sysConfig.cloak) sysConfig.cloak = 'none';
 
 window.updateSysSetting = function(key, value) {
