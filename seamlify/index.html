@@ -29517,7 +29517,7 @@ Please change the parent <Route path="${e}"> to <Route path="${e===`/`?`*`:`${e}
       const u = new URL(value, window.location.origin);
 
       // Ripple returns artwork as /ripple/api/image?p=/images/...
-      if (u.pathname === "/seamlify/api/image" && u.searchParams.has("p")) {
+      if (u.pathname === "/ripple/api/image" && u.searchParams.has("p")) {
         const proxy = new URL(API, window.location.origin);
         proxy.searchParams.set("path", "/api/image");
         proxy.searchParams.set("p", u.searchParams.get("p"));
@@ -29591,7 +29591,7 @@ Please change the parent <Route path="${e}"> to <Route path="${e===`/`?`*`:`${e}
 
   function rewriteLiveRippleImages(root) {
     const images =
-      root.querySelectorAll?.("img[src*='/seamlify/api/image']") || [];
+      root.querySelectorAll?.("img[src*='/ripple/api/image']") || [];
 
     for (const img of images) {
       const current = img.currentSrc || img.src;
