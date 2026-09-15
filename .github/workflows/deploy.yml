@@ -3,6 +3,7 @@ name: 🚀 Deploy to InfinityFree
 on:
   push:
     branches: [ main, master ]
+
   workflow_dispatch:
     inputs:
       force_full_sync:
@@ -20,26 +21,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ──────────────────────────────────────────────
+      # GET SOURCE
+      # ──────────────────────────────────────────────
       - name: Get latest code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # ──────────────────────────────────────────────
+      # CLEAR FTP SYNC STATE IF REQUESTED
+      # ──────────────────────────────────────────────
       - name: Clear sync state (Force Full Sync)
-        if: github.event.inputs.force_full_sync == 'true'
+        if: inputs.force_full_sync == 'true'
         run: |
-          echo "Force full sync requested - will delete local sync state if it exists"
-          rm -f .ftp-sync-state-1.json .ftp-sync-state-2.json .ftp-sync-state-3.json
-          echo "Sync state cleared. All files will be re-uploaded."
+          echo "Force full sync requested."
+          rm -f \
+            .ftp-sync-state-1.json \
+            .ftp-sync-state-2.json \
+            .ftp-sync-state-3.json
+          echo "FTP sync state cleared."
 
-      # ─── FIRST WEBSITE ─────────────────────────────
-      - name: Replace .ico with .png in desktop/index.html for Site 1 deploy
+      # ══════════════════════════════════════════════
+      # SITE 1
+      # ══════════════════════════════════════════════
+
+      - name: Prepare Site 1
         run: |
           if [ -f "desktop/index.html" ]; then
-            sed -i 's/\.ico/\.png/g' desktop/index.html || true
-            echo "Replacement completed for Site 1 (or skipped if no changes)"
+            sed -i 's/\.ico/\.png/g' desktop/index.html
+            echo "Site 1: .ico → .png replacement completed."
           else
-            echo "desktop/index.html not found, skipping replacement"
+            echo "Site 1: desktop/index.html not found; skipping."
           fi
 
       - name: Deploy to InfinityFree Site 1
@@ -55,6 +68,7 @@ jobs:
           server-dir: htdocs/
           local-dir: ./
           state-name: .ftp-sync-state-1.json
+
           exclude: |
             **/.git*
             **/.git*/**
@@ -64,31 +78,42 @@ jobs:
             .ftp-sync-state-1.json
             .ftp-sync-state-2.json
             .ftp-sync-state-3.json
+
           log-level: standard
 
-      # ─── SECOND WEBSITE ────────────────────────────
-      - name: Restore original code for Site 2
-        run: git checkout .
+      # ──────────────────────────────────────────────
+      # RESET BEFORE SITE 2
+      # ──────────────────────────────────────────────
 
-      - name: Replace "free.nf" with "site.je" for Site 2 deploy
+      - name: Reset repository before Site 2
+        run: |
+          git reset --hard HEAD
+
+      # ══════════════════════════════════════════════
+      # SITE 2
+      # ══════════════════════════════════════════════
+
+      - name: Prepare Site 2 domain
         run: |
           find . -type f \
+            \( -name '*.html' -o \
+               -name '*.js' -o \
+               -name '*.css' -o \
+               -name '*.php' -o \
+               -name '*.json' \) \
             ! -path './.git/*' \
             ! -path './.github/*' \
-            ! -name '.ftp-sync-state-1.json' \
-            ! -name '.ftp-sync-state-2.json' \
-            ! -name '.ftp-sync-state-3.json' \
-            -exec sed -i \
-              -e 's/free\.nf/site.je/g' \
-              {} +
+            -exec sed -i 's/free\.nf/site.je/g' {} +
 
-      - name: Replace .ico with .png in desktop/index.html for Site 2 deploy
+          echo "Site 2: free.nf → site.je replacement completed."
+
+      - name: Prepare Site 2 icons
         run: |
           if [ -f "desktop/index.html" ]; then
-            sed -i 's/\.ico/\.png/g' desktop/index.html || true
-            echo "Replacement completed for Site 2 (or skipped if no changes)"
+            sed -i 's/\.ico/\.png/g' desktop/index.html
+            echo "Site 2: .ico → .png replacement completed."
           else
-            echo "desktop/index.html not found, skipping replacement"
+            echo "Site 2: desktop/index.html not found; skipping."
           fi
 
       - name: Deploy to InfinityFree Site 2
@@ -104,6 +129,7 @@ jobs:
           server-dir: htdocs/
           local-dir: ./
           state-name: .ftp-sync-state-2.json
+
           exclude: |
             **/.git*
             **/.git*/**
@@ -113,21 +139,34 @@ jobs:
             .ftp-sync-state-1.json
             .ftp-sync-state-2.json
             .ftp-sync-state-3.json
+
           log-level: standard
 
-      # ─── THIRD WEBSITE ─────────────────────────────
-      - name: Restore original code for Site 3
-        run: git checkout .
+      # ──────────────────────────────────────────────
+      # RESET BEFORE SITE 3
+      # ──────────────────────────────────────────────
 
-      - name: Replace "menist" with "seamless" for Site 3 deploy
+      - name: Reset repository before Site 3
+        run: |
+          git reset --hard HEAD
+
+      # ══════════════════════════════════════════════
+      # SITE 3
+      # ══════════════════════════════════════════════
+
+      - name: Prepare Site 3 domain
         run: |
           find . -type f \
+            \( -name '*.html' -o \
+               -name '*.js' -o \
+               -name '*.css' -o \
+               -name '*.php' -o \
+               -name '*.json' \) \
             ! -path './.git/*' \
             ! -path './.github/*' \
-            ! -name '.ftp-sync-state-1.json' \
-            ! -name '.ftp-sync-state-2.json' \
-            ! -name '.ftp-sync-state-3.json' \
             -exec sed -i 's/menist/seamless/g' {} +
+
+          echo "Site 3: menist → seamless replacement completed."
 
       - name: Deploy to InfinityFree Site 3
         id: deploy3
@@ -142,6 +181,7 @@ jobs:
           server-dir: htdocs/
           local-dir: ./
           state-name: .ftp-sync-state-3.json
+
           exclude: |
             **/.git*
             **/.git*/**
@@ -151,36 +191,41 @@ jobs:
             .ftp-sync-state-1.json
             .ftp-sync-state-2.json
             .ftp-sync-state-3.json
+
           log-level: standard
 
-      # ─── FINAL CHECK ───────────────────────────────
+      # ══════════════════════════════════════════════
+      # FINAL STATUS
+      # ══════════════════════════════════════════════
+
       - name: Check deploy results
         run: |
-          echo "Site 1 outcome: ${{ steps.deploy1.outcome }}"
-          echo "Site 2 outcome: ${{ steps.deploy2.outcome }}"
-          echo "Site 3 outcome: ${{ steps.deploy3.outcome }}"
+          echo "======================================"
+          echo "Deployment Results"
+          echo "======================================"
+
+          echo "Site 1: ${{ steps.deploy1.outcome }}"
+          echo "Site 2: ${{ steps.deploy2.outcome }}"
+          echo "Site 3: ${{ steps.deploy3.outcome }}"
+
+          echo "======================================"
 
           if [[ "${{ steps.deploy1.outcome }}" == "failure" && \
                 "${{ steps.deploy2.outcome }}" == "failure" && \
                 "${{ steps.deploy3.outcome }}" == "failure" ]]; then
-            echo "❌ All three sites failed!"
+
+            echo "❌ All three sites failed."
             exit 1
-          fi
 
-          if [[ "${{ steps.deploy1.outcome }}" == "failure" ]]; then
-            echo "⚠️ Site 1 failed"
-          else
-            echo "✅ Site 1 deployed successfully"
-          fi
+          elif [[ "${{ steps.deploy1.outcome }}" == "failure" || \
+                  "${{ steps.deploy2.outcome }}" == "failure" || \
+                  "${{ steps.deploy3.outcome }}" == "failure" ]]; then
 
-          if [[ "${{ steps.deploy2.outcome }}" == "failure" ]]; then
-            echo "⚠️ Site 2 failed"
-          else
-            echo "✅ Site 2 deployed successfully"
-          fi
+            echo "⚠️ One or more sites failed."
+            echo "The successful sites were still deployed."
 
-          if [[ "${{ steps.deploy3.outcome }}" == "failure" ]]; then
-            echo "⚠️ Site 3 failed"
           else
-            echo "✅ Site 3 deployed successfully"
+
+            echo "✅ All three sites deployed successfully."
+
           fi
