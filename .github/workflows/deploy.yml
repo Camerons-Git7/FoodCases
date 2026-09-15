@@ -29,7 +29,7 @@ jobs:
         if: github.event.inputs.force_full_sync == 'true'
         run: |
           echo "Force full sync requested - will delete local sync state if it exists"
-          rm -f .ftp-sync-state-1.json .ftp-sync-state-2.json
+          rm -f .ftp-sync-state-1.json .ftp-sync-state-2.json .ftp-sync-state-3.json
           echo "Sync state cleared. All files will be re-uploaded."
 
       # ─── FIRST WEBSITE ─────────────────────────────
@@ -44,7 +44,7 @@ jobs:
 
       - name: Deploy to InfinityFree Site 1
         id: deploy1
-        continue-on-error: true          # ← allow failure, continue to Site 2
+        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -63,6 +63,7 @@ jobs:
             .gitignore
             .ftp-sync-state-1.json
             .ftp-sync-state-2.json
+            .ftp-sync-state-3.json
           log-level: standard
 
       # ─── SECOND WEBSITE ────────────────────────────
@@ -76,6 +77,7 @@ jobs:
             ! -path './.github/*' \
             ! -name '.ftp-sync-state-1.json' \
             ! -name '.ftp-sync-state-2.json' \
+            ! -name '.ftp-sync-state-3.json' \
             -exec sed -i \
               -e 's/free\.nf/site.je/g' \
               {} +
@@ -91,7 +93,7 @@ jobs:
 
       - name: Deploy to InfinityFree Site 2
         id: deploy2
-        continue-on-error: true          # ← also allow failure
+        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -110,6 +112,45 @@ jobs:
             .gitignore
             .ftp-sync-state-1.json
             .ftp-sync-state-2.json
+            .ftp-sync-state-3.json
+          log-level: standard
+
+      # ─── THIRD WEBSITE ─────────────────────────────
+      - name: Restore original code for Site 3
+        run: git checkout .
+
+      - name: Replace "menist" with "seamless" for Site 3 deploy
+        run: |
+          find . -type f \
+            ! -path './.git/*' \
+            ! -path './.github/*' \
+            ! -name '.ftp-sync-state-1.json' \
+            ! -name '.ftp-sync-state-2.json' \
+            ! -name '.ftp-sync-state-3.json' \
+            -exec sed -i 's/menist/seamless/g' {} +
+
+      - name: Deploy to InfinityFree Site 3
+        id: deploy3
+        continue-on-error: true
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME_3 }}
+          password: ${{ secrets.FTP_PASSWORD_3 }}
+          protocol: ftp
+          port: 21
+          server-dir: htdocs/
+          local-dir: ./
+          state-name: .ftp-sync-state-3.json
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            README.md
+            .gitignore
+            .ftp-sync-state-1.json
+            .ftp-sync-state-2.json
+            .ftp-sync-state-3.json
           log-level: standard
 
       # ─── FINAL CHECK ───────────────────────────────
@@ -117,16 +158,29 @@ jobs:
         run: |
           echo "Site 1 outcome: ${{ steps.deploy1.outcome }}"
           echo "Site 2 outcome: ${{ steps.deploy2.outcome }}"
+          echo "Site 3 outcome: ${{ steps.deploy3.outcome }}"
 
-          if [[ "${{ steps.deploy1.outcome }}" == "failure" && "${{ steps.deploy2.outcome }}" == "failure" ]]; then
-            echo "❌ Both Site 1 and Site 2 failed!"
+          if [[ "${{ steps.deploy1.outcome }}" == "failure" && \
+                "${{ steps.deploy2.outcome }}" == "failure" && \
+                "${{ steps.deploy3.outcome }}" == "failure" ]]; then
+            echo "❌ All three sites failed!"
             exit 1
           fi
 
           if [[ "${{ steps.deploy1.outcome }}" == "failure" ]]; then
-            echo "⚠️ Site 1 failed, but Site 2 succeeded"
-          elif [[ "${{ steps.deploy2.outcome }}" == "failure" ]]; then
-            echo "⚠️ Site 2 failed, but Site 1 succeeded"
+            echo "⚠️ Site 1 failed"
           else
-            echo "✅ Both sites deployed successfully"
+            echo "✅ Site 1 deployed successfully"
+          fi
+
+          if [[ "${{ steps.deploy2.outcome }}" == "failure" ]]; then
+            echo "⚠️ Site 2 failed"
+          else
+            echo "✅ Site 2 deployed successfully"
+          fi
+
+          if [[ "${{ steps.deploy3.outcome }}" == "failure" ]]; then
+            echo "⚠️ Site 3 failed"
+          else
+            echo "✅ Site 3 deployed successfully"
           fi
