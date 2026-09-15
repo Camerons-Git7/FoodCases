@@ -28974,6 +28974,18 @@ zeus-ad {
     }
   }
 
+  async function deleteRecord(key) {
+    try {
+      const db = await openDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const req = tx.objectStore(STORE).delete(key);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    } catch {}
+  }
+
   async function putRecord(record) {
     try {
       const db = await openDB();
@@ -29316,8 +29328,46 @@ zeus-ad {
    */
   window.__seamlifyMediaCache = {
     async cachedJSON(url, init) {
-      const response = await cachedGET(url, init);
-      return response.json();
+      const absolute = normalizeURL(url);
+      const response = await cachedGET(absolute, init);
+      const contentType = (response.headers.get("content-type") || "").toLowerCase();
+      const text = await response.text();
+      const looksLikeHTML = /^\s*<(?:!doctype\b|html\b|head\b|body\b)/i.test(text);
+      const looksLikeJSON = text.trim().startsWith("{") || text.trim().startsWith("[");
+
+      if (looksLikeHTML || (!contentType.includes("json") && !looksLikeJSON)) {
+        // A server/proxy must never turn an HTML error page into a persistent
+        // metadata cache entry. Remove a bad cached response and retry once.
+        await deleteRecord(await keyFor("metadata", absolute));
+
+        const retry = await ORIGINAL_FETCH(absolute, init);
+        const retryText = await retry.text();
+        const retryType = (retry.headers.get("content-type") || "").toLowerCase();
+        const retryLooksHTML = /^\s*<(?:!doctype\b|html\b|head\b|body\b)/i.test(retryText);
+        const retryLooksJSON = retryText.trim().startsWith("{") || retryText.trim().startsWith("[");
+
+        if (retryLooksHTML || (!retryType.includes("json") && !retryLooksJSON)) {
+          throw new Error("API returned HTML instead of JSON (HTTP " + retry.status + ")");
+        }
+
+        try {
+          const parsed = JSON.parse(retryText);
+          saveResponse(absolute, new Response(retryText, {
+            status: retry.status,
+            statusText: retry.statusText,
+            headers: retry.headers
+          }), "metadata").catch(() => {});
+          return parsed;
+        } catch {
+          throw new Error("API returned invalid JSON (HTTP " + retry.status + ")");
+        }
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error("API returned invalid JSON (HTTP " + response.status + ")");
+      }
     },
 
     async artworkBlob(url) {
