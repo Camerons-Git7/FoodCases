@@ -238,102 +238,6 @@ body {
 
 .hud-day { font-family: 'Azonix', sans-serif; font-size: 3rem; color: rgba(255,255,255,0.7); letter-spacing: 10px; text-transform: uppercase; }
 
-#right-sidebar {
-    position: fixed;
-    right: 25px;
-    top: 8%;
-    width: 300px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    z-index: 50;
-}
-
-.sidebar__section {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.sidebar__title {
-    font-size: 12px;
-    font-weight: 800;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    text-shadow: 0 2px 5px rgba(0,0,0,0.8);
-}
-
-.sidebar__card {
-    background: rgba(15, 15, 15, 0.75);
-    backdrop-filter: blur(15px);
-    border: 1px solid #333;
-    border-radius: 14px;
-    padding: 14px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-
-.sidebar__card:hover {
-    background: rgba(30, 30, 30, 0.9);
-    border-color: #fff;
-    transform: translateX(-5px) scale(1.02);
-}
-
-.sidebar__info {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.sidebar__info strong {
-    font-size: 14px;
-    font-weight: 700;
-    color: #fff;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.sidebar__info small {
-    font-size: 11px;
-    color: #aaa;
-    font-weight: 600;
-}
-
-#last-game-icon, #spotify-album-art {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    object-fit: cover;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-}
-
-.play-overlay {
-    position: absolute;
-    right: 15px;
-    color: #fff;
-    font-size: 16px;
-    opacity: 0;
-    transition: 0.3s;
-}
-
-.sidebar__card:hover .play-overlay {
-    opacity: 1;
-    transform: scale(1.2);
-}
-
-.txt-highlight { font-weight: bold; color: #fff; }
-.sidebar__chevron { color: #888; }
-
 #fps-counter { position: fixed; bottom: 24px; left: 24px; background: #111; border: 1px solid #333; padding: 6px 12px; border-radius: 8px; font-family: var(--font-main); font-size: 12px; font-weight: bold; color: #fff; z-index: 99999; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.9); }
 
 #dock-container {
@@ -1037,80 +941,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 .toast-title { font-family: var(--font-main); font-weight: bold; font-size: 15px; margin-bottom: 4px; letter-spacing: 0.5px; }
 .toast-body { font-family: var(--font-main); font-size: 13px; color: #ccc; line-height: 1.4; }
 
-.faq-box {
-  background: #111; border: 1px solid #333; border-radius: 16px; padding: 30px;
-  width: 500px; max-width: 90%; font-family: var(--font-main); color: #fff;
-}
-.faq-header {
-  display: flex; justify-content: space-between; align-items: center;
-  border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px;
-}
-.faq-header h2 { font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
-.faq-item { margin-bottom: 20px; }
-.faq-item h3 { font-size: 16px; color: #fff; margin-bottom: 5px; }
-.faq-item p { font-size: 13px; color: #aaa; line-height: 1.5; }
-
-.config__main-header {
-  color: #fff; border-bottom: 2px solid #333; padding-bottom: 10px; font-weight: 700; font-family: 'Orbitron', sans-serif; letter-spacing: 1px;
-}
-.config__category {
-  color: #fff; font-weight: bold; margin-top: 25px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
-}
-.config__card {
-  background: #111; border: 1px solid #333; padding: 15px; border-radius: 10px; margin-bottom: 12px;
-  display: flex; justify-content: space-between; align-items: center; transition: 0.2s;
-}
-.config__card--clickable { cursor: pointer; }
-.config__card--clickable:hover { background: #1a1a1a; border-color: #555; transform: translateX(5px); }
-.config__info { display: flex; gap: 15px; align-items: center; }
-.config__icon { color: #888; font-size: 1.5rem; width: 30px; text-align: center; }
-.config__text { display: flex; flex-direction: column; }
-.config__text strong { color: #fff; font-size: 15px; }
-.config__text small { color: #888; font-size: 13px; }
-.config__select {
-  background: #222; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 6px; outline: none; font-family: inherit;
-}
-.config__input-sm {
-  width: 40px; height: 30px; color: #fff; background: #222; border: 1px solid #555; text-align: center;
-  font-size: 1.2rem; font-weight: bold; outline: none; border-radius: 4px;
-}
-.config__input-sm:focus, .config__select:focus { border-color: #888; }
-
-/* Custom scrollbar for app drawer and start menu */
-#app-drawer::-webkit-scrollbar,
-.os-menu::-webkit-scrollbar,
-.pinned-grid::-webkit-scrollbar {
-    width: 6px;
-}
-
-#app-drawer::-webkit-scrollbar-track,
-.os-menu::-webkit-scrollbar-track,
-.pinned-grid::-webkit-scrollbar-track {
-    background: rgba(20, 20, 20, 0.5);
-    border-radius: 3px;
-}
-
-#app-drawer::-webkit-scrollbar-thumb,
-.os-menu::-webkit-scrollbar-thumb,
-.pinned-grid::-webkit-scrollbar-thumb {
-    background: #444;
-    border-radius: 3px;
-}
-
-#app-drawer::-webkit-scrollbar-thumb:hover,
-.os-menu::-webkit-scrollbar-thumb:hover,
-.pinned-grid::-webkit-scrollbar-thumb:hover {
-    background: #666;
-}
-
-/* Firefox scrollbar support */
-#app-drawer,
-.os-menu,
-.pinned-grid {
-    scrollbar-width: thin;
-    scrollbar-color: #444 rgba(20, 20, 20, 0.5);
-}
-
 #boot-layer.boot-animation {
     cursor: none !important;
 }
@@ -1367,112 +1197,16 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   <article class="modal__content">
     <h2 class="modal__header">UPDATE LOG v3.0</h2>
     <ul class="modal__list">
-      <li>Added Right Sidebar for quick game & music access.</li>
-      <li>Dynamic image-based lock screen days.</li>
+      <li>Dynamic lock screen day / date / time.</li>
       <li>Smooth slide-out lock screen animations.</li>
       <li>Fixed desktop folder expansion physics.</li>
-      <li>Wallpaper engine now fully supports PNG, MOV, and MP4.</li>
-      <li>Added Taskbar Pin/Unpin capability for all apps.</li>
+      <li>Wallpaper engine supports PNG, MOV, and MP4.</li>
+      <li>Taskbar pin / unpin for all apps.</li>
+      <li>Cleaned system settings & removed unused features.</li>
     </ul>
     <button class="modal__btn" onclick="document.getElementById('update-modal').style.display='none'">Dismiss</button>
   </article>
 </dialog>
-
-<!-- Settings Iframe Template (Inline styles stripped out) -->
-<template id="code-settings">
-  <dialog id="faq-modal" class="modal__backdrop">
-    <div class="faq-box">
-      <header class="faq-header">
-        <h2>SYSTEM FAQ</h2>
-        <i class="fas fa-times faq-close" role="button" tabindex="0" onclick="toggleFaq()"></i>
-      </header>
-      <article class="faq-item">
-        <h3>MOVIE NOT WORKING!</h3>
-        <p>If the movies do not work for you, open the Browser app, click on Ultraviolet, and search for anything. This will fix the issue. Go back to Movies and they should play!</p>
-      </article>
-      <article class="faq-item">
-        <h3>TOO MANY GAMES</h3>
-        <p>If you downloaded too many games and want to start fresh, open a new tab in your normal browser, press Ctrl + H, and clear your cache. This resets your saved data so you can start over.</p>
-      </article>
-    </div>
-  </dialog>
-  
-  <h2 class="config__main-header">SYSTEM SETTINGS</h2>
-  
-  <section class="config__category"><i class="fas fa-microchip"></i> PERFORMANCE</section>
-  
-  <div class="config__card">
-    <div class="config__info">
-      <i class="fas fa-film config__icon"></i>
-      <div class="config__text"><strong>Optimized Background</strong><small>Disables video background to save resources</small></div>
-    </div>
-    <label class="switch"><input type="checkbox" id="chk-bg" onchange="window.parent.updateSysSetting('optBg',this.checked)"><span class="slider"></span></label>
-  </div>
-  
-  <div class="config__card">
-    <div class="config__info">
-      <i class="fas fa-bolt config__icon"></i>
-      <div class="config__text"><strong>Fast Boot</strong><small>Skips the startup sequence</small></div>
-    </div>
-    <label class="switch"><input type="checkbox" id="chk-boot" onchange="window.parent.updateSysSetting('shortBoot',this.checked)"><span class="slider"></span></label>
-  </div>
-  
-  <div class="config__card">
-    <div class="config__info">
-      <i class="fas fa-lock config__icon"></i>
-      <div class="config__text"><strong>Idle Lock Screen</strong><small>Locks system when away for 3 minutes</small></div>
-    </div>
-    <label class="switch"><input type="checkbox" id="chk-idle" onchange="window.parent.updateSysSetting('idleLock',this.checked)"><span class="slider"></span></label>
-  </div>
-  
-  <div class="config__card">
-    <div class="config__info">
-      <i class="fas fa-shield-alt config__icon"></i>
-      <div class="config__text"><strong>Redirect Confirmation</strong><small>Helps protect against GoGuardian</small></div>
-    </div>
-    <label class="switch"><input type="checkbox" id="chk-redir" onchange="window.parent.updateSysSetting('redirectConfirm',this.checked)"><span class="slider"></span></label>
-  </div>
-
-  <section class="config__category"><i class="fas fa-user-secret"></i> CLOAKING & STEALTH</section>
-  
-  <div class="config__card">
-    <div class="config__info">
-      <i class="fas fa-mask config__icon"></i>
-      <div class="config__text"><strong>Tab Cloak</strong><small>Disguises the OS tab name and icon</small></div>
-    </div>
-    <select class="config__select" id="cloak-select" onchange="window.parent.updateCloak(this.value)">
-      <option value="none">None (Seamless-OS)</option>
-      <option value="google">Google</option>
-      <option value="drive">Google Drive</option>
-      <option value="canvas">Canvas</option>
-      <option value="classroom">Google Classroom</option>
-    </select>
-  </div>
-
-  <section class="config__category"><i class="fas fa-keyboard"></i> SHORTCUTS & LINKS</section>
-  
-  <div class="config__card">
-    <div class="config__info">
-      <i class="fas fa-exclamation-triangle config__icon"></i>
-      <div class="config__text"><strong>Panic Key</strong><small>Quick close tab key</small></div>
-    </div>
-    <input type="text" id="panic-input" class="config__input-sm" maxlength="1" onkeyup="window.parent.updateSysSetting('panicKey',this.value)">
-  </div>
-  
-  <div class="config__card config__card--clickable" onclick="window.open('https://discord.gg/bQCRJgtC74','_blank')" role="button" tabindex="0">
-    <div class="config__info">
-      <i class="fab fa-discord config__icon"></i>
-      <div class="config__text"><strong>Join Discord</strong><small>Official Community Hub</small></div>
-    </div>
-  </div>
-  
-  <div class="config__card config__card--clickable" onclick="toggleFaq()" role="button" tabindex="0">
-    <div class="config__info">
-      <i class="fas fa-question-circle config__icon"></i>
-      <div class="config__text"><strong>System FAQ</strong><small>Troubleshooting & Help</small></div>
-    </div>
-  </div>
-</template>
 
 <script>
 var _SYSTEM_PATHS = ["C:/Windows/System32/kernel32.dll", "/var/www/html/cine-os/", "https://cine-os.local/api/v1/auth"];
@@ -1876,55 +1610,24 @@ if(sysConfig.optBg === undefined) sysConfig.optBg = false;
 if(sysConfig.shortBoot === undefined) sysConfig.shortBoot = false;
 if(sysConfig.wpLoop === undefined) sysConfig.wpLoop = false;
 if(sysConfig.idleLock === undefined) sysConfig.idleLock = false; 
-if(sysConfig.redirectConfirm === undefined) sysConfig.redirectConfirm = false; 
-if(!sysConfig.panicKey) sysConfig.panicKey = '`';
 if(!sysConfig.homeWallpaper) sysConfig.homeWallpaper = 'Windows';
 if(!sysConfig.lockWallpaper) sysConfig.lockWallpaper = 'MacOS';
-if(!sysConfig.cloak) sysConfig.cloak = 'none';
 
 window.updateSysSetting = function(key, value) {
     sysConfig[key] = value;
     localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
-    if(key === 'optBg') applySystemSettings();
-    if(key === 'wpLoop') updateWallpaperLoop();
-};
-
-var cloaks = {
-    none: {title: "Seamless-OS", icon: ""},
-    google: {title: "Google", icon: "https://www.google.comfavicon.ico"},
-    drive: {title: "My Drive - Google Drive", icon: "https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png"},
-    canvas: {title: "Dashboard", icon: "https://du11hjcvx0uqb.cloudfront.net/br/dist/images/favicon-e10d657a73.ico"},
-    classroom: {title: "Classes", icon: "https://ssl.gstatic.com/classroom/favicon.png"}
-};
-
-window.updateCloak = function(key) {
-    sysConfig.cloak = key;
-    localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
-    applyCloak();
-};
-
-function applyCloak() {
-    var k = sysConfig.cloak || 'none';
-    var sel = cloaks[k];
-    var icons = document.querySelectorAll("link[rel*='icon']");
-    for(var i=0; i<icons.length; i++) icons[i].remove();
-   
-    if(sel && k !== 'none') {
-        document.title = sel.title;
-        let n = document.createElement('link');
-        n.type = 'image/x-icon';
-        n.rel = 'shortcut icon';
-        n.href = sel.icon;
-        document.getElementsByTagName('head')[0].appendChild(n);
-    } else {
-        document.title = "𝐒𝐄𝐀𝐌𝐋𝐄𝐒𝐒-𝐎𝐒";
-        let n = document.createElement('link');
-        n.type = 'image/x-icon';
-        n.rel = 'icon';
-        n.href = 'favicon.ico';
-        document.getElementsByTagName('head')[0].appendChild(n);
+    if (key === 'optBg') {
+        const bv = document.getElementById('bg-video');
+        const lv = document.getElementById('lock-video');
+        if (value) {
+            if (bv) bv.pause();
+            if (lv) lv.pause();
+        } else if (isDesktopActive && bv && bv.style.display !== 'none') {
+            bv.play().catch(function(){});
+        }
     }
-}
+    if (key === 'wpLoop') updateWallpaperLoop();
+};
 
 var isDesktopActive = false;
 var bootActive = true;
@@ -1958,20 +1661,10 @@ async function loadDynamicResources() {
     setupAppContextMenu();
 }
 
-window.onbeforeunload = function(e) {
-    if(sysConfig.redirectConfirm) {
-        let msg = "Are you sure you want to leave? This helps block GoGuardian redirects.";
-        e.returnValue = msg;
-        return msg;
-    }
-};
-
 document.addEventListener("DOMContentLoaded", function() {
-    applyCloak();
     loadDynamicResources();
     document.getElementById('boot-layer').style.display = 'block';
     loadDesktop();
-    updateSidebarData();
 });
 
 function getOpenWindowIds() {
@@ -2231,15 +1924,12 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Boot skip (Double Enter) + Panic key
+// Boot skip (Double Enter)
 document.addEventListener('keydown', function(e) {
     if(bootActive && e.key === 'Enter' && document.getElementById('boot-layer').style.display !== 'none') {
         enterCount++;
         if(enterCount >= 2) skipBootSequence();
         setTimeout(function(){ enterCount = 0; }, 500);
-    }
-    if(e.key && sysConfig.panicKey && e.key.toLowerCase() === sysConfig.panicKey.toLowerCase()) {
-        window.location.href = "https://google.com";
     }
 });
 
@@ -2690,37 +2380,50 @@ function openWindow(id) {
                     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
                     <style>
-                        body { background: #000; color: #fff; font-family: 'Rajdhani', sans-serif; padding: 25px; margin: 0; outline: none; }
+                        body { background: #000; color: #fff; font-family: 'Rajdhani', sans-serif; padding: 25px; margin: 0; }
                         * { outline: none; -webkit-tap-highlight-color: transparent; }
-                        h2 { border-bottom: 2px solid #333; padding-bottom: 10px; font-weight: 700; letter-spacing: 1px; }
-                        .setting-card { background: #111; border: 1px solid #333; padding: 15px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-                        .setting-text { display: flex; flex-direction: column; }
-                        .setting-text b { color: #fff; font-size: 15px; }
-                        .setting-text small { color: #888; font-size: 13px; }
+                        h2 { border-bottom: 2px solid #333; padding-bottom: 10px; font-weight: 700; letter-spacing: 1px; font-family: 'Orbitron', sans-serif; }
+                        .cat { color: #fff; font-weight: bold; margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; }
+                        .card { background: #111; border: 1px solid #333; padding: 15px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+                        .card.clickable { cursor: pointer; }
+                        .card.clickable:hover { background: #1a1a1a; border-color: #555; }
+                        .info { display: flex; gap: 14px; align-items: center; }
+                        .info i { color: #888; font-size: 1.4rem; width: 28px; text-align: center; }
+                        .txt { display: flex; flex-direction: column; }
+                        .txt b { color: #fff; font-size: 15px; }
+                        .txt small { color: #888; font-size: 13px; }
                         .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
                         .switch input { opacity: 0; width: 0; height: 0; }
-                        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #444; transition: .3s; border-radius: 34px; }
-                        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: #fff; transition: .3s; border-radius: 50%; }
-                        input:checked + .slider { background-color: #fff; }
-                        input:checked + .slider:before { transform: translateX(20px); background-color: #000; }
-                        input[type="text"], select { background: #222; color: #fff; border: 1px solid #444; padding: 6px; border-radius: 6px; }
-                        input:focus, select:focus { border-color: #888; }
+                        .slider { position: absolute; cursor: pointer; inset: 0; background: #444; transition: .3s; border-radius: 34px; }
+                        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background: #fff; transition: .3s; border-radius: 50%; }
+                        input:checked + .slider { background: #fff; }
+                        input:checked + .slider:before { transform: translateX(20px); background: #000; }
                     </style>
                 </head>
                 <body>
                     <h2>SYSTEM SETTINGS</h2>
-                    <div class="setting-card">
-                        <div class="setting-text"><b>Fast Boot</b><small>Skips the startup sequence</small></div>
+                    <div class="cat"><i class="fas fa-microchip"></i> PERFORMANCE</div>
+                    <div class="card">
+                        <div class="info"><i class="fas fa-film"></i><div class="txt"><b>Optimized Background</b><small>Disables video background to save resources</small></div></div>
+                        <label class="switch"><input type="checkbox" id="chk-bg" onchange="window.parent.updateSysSetting('optBg',this.checked)"><span class="slider"></span></label>
+                    </div>
+                    <div class="card">
+                        <div class="info"><i class="fas fa-bolt"></i><div class="txt"><b>Fast Boot</b><small>Skips the startup sequence</small></div></div>
                         <label class="switch"><input type="checkbox" id="chk-boot" onchange="window.parent.updateSysSetting('shortBoot',this.checked)"><span class="slider"></span></label>
+                    </div>
+                    <div class="card">
+                        <div class="info"><i class="fas fa-lock"></i><div class="txt"><b>Idle Lock Screen</b><small>Locks system after 3 minutes of inactivity</small></div></div>
+                        <label class="switch"><input type="checkbox" id="chk-idle" onchange="window.parent.updateSysSetting('idleLock',this.checked)"><span class="slider"></span></label>
+                    </div>
+                    <div class="cat"><i class="fas fa-link"></i> LINKS</div>
+                    <div class="card clickable" onclick="window.open('https://discord.gg/bQCRJgtC74','_blank')">
+                        <div class="info"><i class="fab fa-discord"></i><div class="txt"><b>Join Discord</b><small>Official Community Hub</small></div></div>
                     </div>
                     <script>
                         var prefs = window.parent.sysConfig;
-                        document.getElementById('chk-bg').checked = prefs.optBg;
-                        document.getElementById('chk-boot').checked = prefs.shortBoot;
-                        document.getElementById('chk-idle').checked = prefs.idleLock;
-                        document.getElementById('chk-redir').checked = prefs.redirectConfirm;
-                        document.getElementById('cloak-select').value = prefs.cloak;
-                        document.getElementById('panic-input').value = prefs.panicKey;
+                        document.getElementById('chk-bg').checked = !!prefs.optBg;
+                        document.getElementById('chk-boot').checked = !!prefs.shortBoot;
+                        document.getElementById('chk-idle').checked = !!prefs.idleLock;
                     <\/script>
                 </body>
                 </html>`;
@@ -3048,8 +2751,8 @@ function setupAppContextMenu() {
 }
 
 document.addEventListener('contextmenu', function(e) {
-    let ids = ['desktop-area', 'windows-layer', 'bg-video', 'bg-img', 'snow-fx', 'right-sidebar'];
-    if(ids.includes(e.target.id) || e.target.tagName === 'BODY' || e.target.closest('#right-sidebar')) {
+    let ids = ['desktop-area', 'windows-layer', 'bg-video', 'bg-img', 'snow-fx'];
+    if(ids.includes(e.target.id) || e.target.tagName === 'BODY') {
         e.preventDefault();
         hideAllCtx();
         let m = document.getElementById('desktop-context-menu');
