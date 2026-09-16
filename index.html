@@ -2645,11 +2645,11 @@ function openWindow(id) {
   // Quality tiers: highest usable quality with minimal delay
   // scale 1 = full res, higher = lower res; bitrate in bps
   const QUALITY_TIERS = [
-    { name: 'Ultra',  scale: 1,   maxBitrate: 10000000, maxFramerate: 30 },
-    { name: 'High',   scale: 1,   maxBitrate: 6000000,  maxFramerate: 30 },
-    { name: 'Medium', scale: 1.5, maxBitrate: 3500000,  maxFramerate: 24 },
-    { name: 'Low',    scale: 2,   maxBitrate: 1800000,  maxFramerate: 20 },
-    { name: 'Min',    scale: 3,   maxBitrate: 800000,   maxFramerate: 15 }
+    { name: 'Ultra',  scale: 1.25, maxBitrate: 5000000, maxFramerate: 24 },
+    { name: 'High',   scale: 1.5,  maxBitrate: 3500000, maxFramerate: 24 },
+    { name: 'Medium', scale: 2,    maxBitrate: 2000000, maxFramerate: 20 },
+    { name: 'Low',    scale: 2.5,  maxBitrate: 1200000, maxFramerate: 18 },
+    { name: 'Min',    scale: 3,    maxBitrate: 700000,  maxFramerate: 15 }
   ];
   let qualityIdx = 1; // start High — good balance
   let qualityTimer = null;
