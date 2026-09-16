@@ -1554,6 +1554,7 @@ var APPS = {
   'youtube': {title: 'YouTube', path: 'https://menist.free.nf/youtube/', icon: 'https://i.ibb.co/vCfgHGFp/You-Tube.png', pinned: true, openInNewTab: false},
   'zombierush': {title: 'Zombie Rush', path: 'https://menist.free.nf/core/zombierush/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%A7%9F%E2%80%8D%E2%99%82%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
   'settings': {title: 'Settings', internal: true, icon: 'https://cdn.iconscout.com/icon/free/png-256/free-apple-settings-icon-svg-download-png-493162.png', pinned: true, openInNewTab: false},
+  'remotedesktop': {title: 'Remote Desktop', internal: true, icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2236%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%96%A5%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
 };
 
 
@@ -2423,6 +2424,777 @@ function openWindow(id) {
                     <\/script>
                 </body>
                 </html>`;
+                f.srcdoc = html;
+            }
+        }
+        if(dat.internal && id === 'remotedesktop') {
+            let f = document.getElementById('frame-' + id);
+            if(f) {
+                let html = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\/script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+  body { background: #0a0a0a; color: #fff; font-family: 'Rajdhani', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  .hdr { padding: 16px 20px; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; background: #111; flex-shrink: 0; }
+  .hdr h1 { font-family: 'Orbitron', sans-serif; font-size: 15px; letter-spacing: 2px; font-weight: 700; }
+  .status { font-size: 12px; font-weight: 600; color: #888; display: flex; align-items: center; gap: 6px; }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+  .status.live .dot { background: #28c840; box-shadow: 0 0 8px #28c840; }
+  .status.wait .dot { background: #febc2e; }
+  .status.err .dot { background: #ff5f57; }
+  .main { flex: 1; display: flex; overflow: hidden; }
+  .panel { width: 280px; background: #0f0f0f; border-right: 1px solid #222; padding: 18px; display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; overflow-y: auto; }
+  .panel h3 { font-size: 11px; letter-spacing: 1.5px; color: #666; font-weight: 700; text-transform: uppercase; }
+  .btn { width: 100%; padding: 12px 14px; border: 1px solid #333; background: #1a1a1a; color: #fff; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.15s; }
+  .btn:hover { background: #222; border-color: #555; }
+  .btn.primary { background: #fff; color: #000; border-color: #fff; }
+  .btn.primary:hover { background: #ddd; }
+  .btn.danger { border-color: #553; color: #f88; }
+  .btn.danger:hover { background: #311; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  input[type=text] { width: 100%; padding: 12px 14px; background: #1a1a1a; border: 1px solid #333; border-radius: 10px; color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; letter-spacing: 2px; text-align: center; text-transform: uppercase; }
+  input[type=text]:focus { border-color: #666; }
+  .room-code { font-family: 'Orbitron', sans-serif; font-size: 22px; letter-spacing: 4px; text-align: center; padding: 14px; background: #111; border: 1px dashed #333; border-radius: 10px; color: #fff; user-select: all; }
+  .hint { font-size: 12px; color: #666; line-height: 1.45; }
+  .stage {
+    flex: 1;
+    background: #050505;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 14px;
+  }
+  .viewport-wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    border: 2px solid #fff;
+    overflow: hidden;
+    background: #000;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.12),
+      0 16px 48px rgba(0,0,0,0.55),
+      inset 0 0 0 1px rgba(255,255,255,0.06);
+  }
+  #remoteVideo {
+    max-width: 100%;
+    max-height: 100%;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    cursor: default;
+    display: none;
+    border-radius: 14px;
+  }
+  .placeholder { text-align: center; color: #444; padding: 40px; position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+  .placeholder i { font-size: 48px; margin-bottom: 16px; display: block; }
+  .placeholder p { font-size: 14px; font-weight: 600; }
+  .toast { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); background: #1a1a1a; border: 1px solid #333; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; opacity: 0; transition: 0.25s; pointer-events: none; z-index: 10; }
+  .toast.show { opacity: 1; }
+  .section { display: none; flex-direction: column; gap: 14px; }
+  .section.active { display: flex; }
+  .ctrl-bar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 8px;
+    z-index: 6;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .viewport-wrap:hover .ctrl-bar,
+  .ctrl-bar:focus-within { opacity: 1; }
+  .ctrl-bar .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: 0.15s;
+  }
+  .ctrl-bar .icon-btn:hover { background: rgba(255,255,255,0.15); border-color: #fff; }
+  .stage.fs {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    padding: 0;
+    background: #000;
+  }
+  .stage.fs .viewport-wrap {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    width: 100%;
+    height: 100%;
+  }
+  .stage.fs #remoteVideo { border-radius: 0; }
+  .stage.fs .ctrl-bar { opacity: 1; top: 16px; right: 16px; }
+</style>
+</head>
+<body>
+  <div class="hdr">
+    <h1><i class="fas fa-desktop"></i> REMOTE DESKTOP</h1>
+    <div class="status" id="connStatus"><span class="dot"></span><span id="statusText">Disconnected</span></div>
+  </div>
+  <div class="main">
+    <div class="panel">
+      <div class="section active" id="sec-home">
+        <h3>Start a session</h3>
+        <button class="btn primary" id="btnHost"><i class="fas fa-broadcast-tower"></i> Host Room</button>
+        <p class="hint">Share this Seamless-OS tab with someone. They can view and control it (this site only).</p>
+        <h3 style="margin-top:8px">Or join</h3>
+        <input type="text" id="joinCode" placeholder="ROOM CODE" maxlength="8" autocomplete="off">
+        <button class="btn" id="btnJoin"><i class="fas fa-sign-in-alt"></i> Join Room</button>
+        <p class="hint">Browser screen share + WebRTC. Full OS desktop control is not possible from a webpage — only this tab/window.</p>
+      </div>
+      <div class="section" id="sec-host">
+        <h3>Your room</h3>
+        <div class="room-code" id="roomCode">------</div>
+        <button class="btn" id="btnCopy"><i class="fas fa-copy"></i> Copy Code</button>
+        <p class="hint" id="hostHint">Waiting for peer… When prompted, share <b>this tab</b> (or window) for best results.</p>
+        <button class="btn danger" id="btnStopHost"><i class="fas fa-stop"></i> End Session</button>
+      </div>
+      <div class="section" id="sec-guest">
+        <h3>Connected</h3>
+        <p class="hint">You are viewing the remote session. Click / move / type on the video to send input (site-only control).</p>
+        <button class="btn danger" id="btnLeave"><i class="fas fa-sign-out-alt"></i> Leave</button>
+      </div>
+    </div>
+    <div class="stage" id="stage">
+      <div class="viewport-wrap" id="viewportWrap">
+        <div class="placeholder" id="placeholder"><i class="fas fa-display"></i><p>No stream yet</p></div>
+        <video id="remoteVideo" autoplay playsinline muted></video>
+        <div class="ctrl-bar" id="ctrlBar">
+          <button type="button" class="icon-btn" id="btnFs" title="Fullscreen" aria-label="Fullscreen"><i class="fas fa-expand" id="fsIcon"></i></button>
+        </div>
+        <div class="toast" id="toast"></div>
+      </div>
+    </div>
+  </div>
+<script>
+(function() {
+  // Low-latency WebRTC config
+  const PEER_OPTS = {
+    debug: 0,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+      ],
+      sdpSemantics: 'unified-plan',
+      iceCandidatePoolSize: 4
+    }
+  };
+  let peer = null, conn = null, call = null, localStream = null, role = null, roomId = null;
+  const video = document.getElementById('remoteVideo');
+  const placeholder = document.getElementById('placeholder');
+  const stage = document.getElementById('stage');
+  const statusEl = document.getElementById('connStatus');
+  const statusText = document.getElementById('statusText');
+  video.playsInline = true;
+  video.muted = true;
+  try { video.disablePictureInPicture = true; } catch (e) {}
+
+  // Prefer lowest latency on the playout side
+  function tuneReceiver(pc) {
+    if (!pc) return;
+    try {
+      pc.getReceivers().forEach(function(r) {
+        if (r.track && r.track.kind === 'video') {
+          try { r.track.contentHint = 'detail'; } catch (e) {}
+        }
+        if (typeof r.playoutDelayHint === 'number') r.playoutDelayHint = 0;
+        if (typeof r.jitterBufferTarget === 'number') r.jitterBufferTarget = 0;
+      });
+    } catch (e) {}
+  }
+
+  function tuneSender(pc) {
+    if (!pc) return;
+    try {
+      pc.getSenders().forEach(function(sender) {
+        if (!sender.track || sender.track.kind !== 'video') return;
+        try { sender.track.contentHint = 'detail'; } catch (e) {}
+        const params = sender.getParameters();
+        if (!params.encodings || !params.encodings.length) params.encodings = [{}];
+        // Keep resolution high so UI text stays readable
+        params.degradationPreference = 'maintain-resolution';
+        params.encodings.forEach(function(enc) {
+          if (enc.scaleResolutionDownBy != null) enc.scaleResolutionDownBy = 1;
+          enc.maxFramerate = 30;
+          // ~8 Mbps — avoids the "144p mush" look on screen share
+          enc.maxBitrate = 8000000;
+          if (enc.priority != null) enc.priority = 'high';
+          if (enc.networkPriority != null) enc.networkPriority = 'high';
+        });
+        sender.setParameters(params).catch(function() {});
+      });
+    } catch (e) {}
+  }
+
+  function toggleFullscreen() {
+    const on = stage.classList.toggle('fs');
+    const icon = document.getElementById('fsIcon');
+    if (icon) {
+      icon.className = on ? 'fas fa-compress' : 'fas fa-expand';
+    }
+    document.getElementById('btnFs').title = on ? 'Exit fullscreen' : 'Fullscreen';
+  }
+  document.getElementById('btnFs').onclick = function(e) {
+    e.stopPropagation();
+    toggleFullscreen();
+  };
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && stage.classList.contains('fs')) toggleFullscreen();
+  });
+
+  function setStatus(mode, text) {
+    statusEl.className = 'status ' + (mode || '');
+    statusText.textContent = text;
+  }
+  function showSec(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById('sec-' + name).classList.add('active');
+  }
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+  function genCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = '';
+    for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+  }
+  function cleanup() {
+    try { if (call) call.close(); } catch(e){}
+    try { if (conn) conn.close(); } catch(e){}
+    try { if (peer) peer.destroy(); } catch(e){}
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    peer = conn = call = null; role = roomId = null;
+    video.srcObject = null; video.style.display = 'none';
+    placeholder.style.display = '';
+    placeholder.innerHTML = '<i class="fas fa-display"></i><p>No stream yet</p>';
+    if (stage.classList.contains('fs')) {
+      stage.classList.remove('fs');
+      const icon = document.getElementById('fsIcon');
+      if (icon) icon.className = 'fas fa-expand';
+    }
+    setStatus('', 'Disconnected');
+    showSec('home');
+  }
+
+  // Map normalized 0–1 (of captured frame) → host viewport CSS pixels
+  function hostPoint(nx, ny) {
+    const p = window.parent;
+    const x = Math.max(0, Math.min(1, nx)) * p.innerWidth;
+    const y = Math.max(0, Math.min(1, ny)) * p.innerHeight;
+    return { x: x, y: y };
+  }
+
+  function mouseOpts(pt, data) {
+    const btn = (data && typeof data.b === 'number') ? data.b : 0;
+    // button: 0 left, 1 middle, 2 right
+    const buttonsMap = { 0: 1, 1: 4, 2: 2 };
+    return {
+      bubbles: true,
+      cancelable: true,
+      view: window.parent,
+      clientX: pt.x,
+      clientY: pt.y,
+      screenX: pt.x,
+      screenY: pt.y,
+      button: btn,
+      buttons: buttonsMap[btn] != null ? buttonsMap[btn] : 1,
+      detail: (data && data.detail) || 1,
+      ctrlKey: !!(data && data.ctrl),
+      shiftKey: !!(data && data.shift),
+      altKey: !!(data && data.alt),
+      metaKey: !!(data && data.meta)
+    };
+  }
+
+  // ——— HOST: apply remote input on parent page (this website only) ———
+  function applyRemoteEvent(data) {
+    try {
+      const p = window.parent;
+      if (!p || !data) return;
+      const type = data.t;
+      const doc = p.document;
+
+      if (type === 'mm') {
+        const pt = hostPoint(data.x, data.y);
+        const el = doc.elementFromPoint(pt.x, pt.y) || doc.body;
+        el.dispatchEvent(new MouseEvent('mousemove', mouseOpts(pt, data)));
+      } else if (type === 'md') {
+        const pt = hostPoint(data.x, data.y);
+        const el = doc.elementFromPoint(pt.x, pt.y) || doc.body;
+        el.dispatchEvent(new MouseEvent('mousedown', mouseOpts(pt, data)));
+        // focus clickable / editable targets on press
+        try { if (el.focus) el.focus(); } catch (e) {}
+      } else if (type === 'mu') {
+        const pt = hostPoint(data.x, data.y);
+        const el = doc.elementFromPoint(pt.x, pt.y) || doc.body;
+        el.dispatchEvent(new MouseEvent('mouseup', mouseOpts(pt, data)));
+        // right button → contextmenu (OS-style right click)
+        if (data.b === 2) {
+          el.dispatchEvent(new MouseEvent('contextmenu', mouseOpts(pt, data)));
+        }
+      } else if (type === 'click') {
+        const pt = hostPoint(data.x, data.y);
+        const el = doc.elementFromPoint(pt.x, pt.y) || doc.body;
+        // only left-click fires click; right is handled via contextmenu on mouseup
+        if ((data.b || 0) === 0) {
+          el.dispatchEvent(new MouseEvent('click', mouseOpts(pt, data)));
+          try { if (el.focus) el.focus(); } catch (e) {}
+        } else if (data.b === 2) {
+          el.dispatchEvent(new MouseEvent('contextmenu', mouseOpts(pt, data)));
+        } else if (data.b === 1) {
+          el.dispatchEvent(new MouseEvent('auxclick', mouseOpts(pt, data)));
+        }
+      } else if (type === 'ctx') {
+        const pt = hostPoint(data.x, data.y);
+        const el = doc.elementFromPoint(pt.x, pt.y) || doc.body;
+        el.dispatchEvent(new MouseEvent('contextmenu', mouseOpts(pt, Object.assign({}, data, { b: 2 }))));
+      } else if (type === 'wd') {
+        const pt = hostPoint(data.x, data.y);
+        const el = doc.elementFromPoint(pt.x, pt.y) || doc.body;
+        const wopts = {
+          bubbles: true,
+          cancelable: true,
+          view: p,
+          clientX: pt.x,
+          clientY: pt.y,
+          deltaX: data.dx || 0,
+          deltaY: data.dy || 0,
+          deltaZ: data.dz || 0,
+          deltaMode: typeof data.dm === 'number' ? data.dm : 0,
+          ctrlKey: !!data.ctrl,
+          shiftKey: !!data.shift,
+          altKey: !!data.alt,
+          metaKey: !!data.meta
+        };
+        // Dispatch on the element under the cursor so nested scroll areas work
+        const scrolled = !el.dispatchEvent(new WheelEvent('wheel', wopts));
+        if (!scrolled) {
+          // fallback: try scrolling nearest scrollable ancestor
+          let node = el;
+          while (node && node !== doc.body && node !== doc.documentElement) {
+            const st = p.getComputedStyle(node);
+            const oy = st.overflowY;
+            const canY = (oy === 'auto' || oy === 'scroll' || oy === 'overlay') && node.scrollHeight > node.clientHeight;
+            const ox = st.overflowX;
+            const canX = (ox === 'auto' || ox === 'scroll' || ox === 'overlay') && node.scrollWidth > node.clientWidth;
+            if (canY || canX) {
+              node.scrollLeft += (data.dx || 0);
+              node.scrollTop += (data.dy || 0);
+              break;
+            }
+            node = node.parentElement;
+          }
+          // page-level fallback
+          if (!node || node === doc.body) {
+            p.scrollBy(data.dx || 0, data.dy || 0);
+          }
+        }
+      } else if (type === 'kd' || type === 'ku') {
+        const map = { kd: 'keydown', ku: 'keyup' };
+        const target = doc.activeElement && doc.activeElement !== doc.body ? doc.activeElement : doc;
+        const kopts = {
+          bubbles: true,
+          cancelable: true,
+          view: p,
+          key: data.k,
+          code: data.c,
+          keyCode: data.kc,
+          which: data.kc,
+          ctrlKey: !!data.ctrl,
+          shiftKey: !!data.shift,
+          altKey: !!data.alt,
+          metaKey: !!data.meta,
+          repeat: !!data.rep
+        };
+        target.dispatchEvent(new KeyboardEvent(map[type], kopts));
+        // special keys that synthetic KeyboardEvent often does not apply
+        if (type === 'kd') {
+          const active = doc.activeElement;
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+            if (data.k === 'Backspace') {
+              const s = active.selectionStart || 0;
+              const e = active.selectionEnd || 0;
+              if (s === e && s > 0) {
+                active.value = active.value.slice(0, s - 1) + active.value.slice(e);
+                active.selectionStart = active.selectionEnd = s - 1;
+              } else if (s !== e) {
+                active.value = active.value.slice(0, s) + active.value.slice(e);
+                active.selectionStart = active.selectionEnd = s;
+              }
+              active.dispatchEvent(new Event('input', { bubbles: true }));
+            } else if (data.k === 'Delete') {
+              const s = active.selectionStart || 0;
+              const e = active.selectionEnd || 0;
+              if (s === e) {
+                active.value = active.value.slice(0, s) + active.value.slice(e + 1);
+              } else {
+                active.value = active.value.slice(0, s) + active.value.slice(e);
+              }
+              active.selectionStart = active.selectionEnd = s;
+              active.dispatchEvent(new Event('input', { bubbles: true }));
+            } else if (data.k === 'Enter' && active.tagName === 'INPUT') {
+              active.dispatchEvent(new Event('change', { bubbles: true }));
+              if (active.form) {
+                try { active.form.requestSubmit(); } catch (e) { active.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
+              }
+            }
+          }
+        }
+      } else if (type === 'key') {
+        const active = doc.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+          if (typeof active.value === 'string' && data.k && data.k.length === 1 && !data.ctrl && !data.meta) {
+            const start = active.selectionStart != null ? active.selectionStart : active.value.length;
+            const end = active.selectionEnd != null ? active.selectionEnd : start;
+            active.value = active.value.slice(0, start) + data.k + active.value.slice(end);
+            active.selectionStart = active.selectionEnd = start + 1;
+            active.dispatchEvent(new Event('input', { bubbles: true }));
+          } else if (active.isContentEditable && data.k && data.k.length === 1 && !data.ctrl && !data.meta) {
+            doc.execCommand('insertText', false, data.k);
+          }
+        }
+      }
+    } catch (err) { /* cross-origin or blocked */ }
+  }
+
+  function wireData(c) {
+    conn = c;
+    conn.on('data', function(data) {
+      if (role === 'host') applyRemoteEvent(data);
+    });
+    conn.on('close', function() { toast('Peer disconnected'); if (role === 'host') setStatus('wait', 'Waiting…'); else cleanup(); });
+    conn.on('error', function() { toast('Data channel error'); });
+  }
+
+  // ——— HOST flow ———
+  document.getElementById('btnHost').onclick = async function() {
+    role = 'host';
+    roomId = genCode();
+    document.getElementById('roomCode').textContent = roomId;
+    showSec('host');
+    setStatus('wait', 'Creating room…');
+    peer = new Peer('sos-' + roomId, PEER_OPTS);
+    peer.on('open', function() {
+      setStatus('wait', 'Waiting for peer');
+      toast('Room ready — share the code');
+    });
+    peer.on('error', function(e) {
+      setStatus('err', 'Error');
+      toast(e.type === 'unavailable-id' ? 'Code taken, try again' : (e.message || 'Peer error'));
+      cleanup();
+    });
+    peer.on('connection', function(c) {
+      wireData(c);
+      setStatus('live', 'Peer connected');
+      toast('Viewer joined — start share when prompted');
+      startHostShare();
+    });
+    peer.on('call', function(incoming) {
+      // guest shouldn't call host; ignore
+      incoming.close();
+    });
+  };
+
+  async function startHostShare() {
+    try {
+      // Capture at native tab resolution — do NOT downscale at source
+      localStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: 'browser',
+          frameRate: { ideal: 30, max: 60 }
+        },
+        audio: false,
+        preferCurrentTab: true,
+        selfBrowserSurface: 'include'
+      });
+    } catch (e) {
+      toast('Screen share cancelled');
+      setStatus('wait', 'Share cancelled — waiting');
+      return;
+    }
+    const track = localStream.getVideoTracks()[0];
+    track.onended = function() { toast('Share ended'); cleanup(); };
+    // detail = sharp text/UI (better than motion for a desktop)
+    try { track.contentHint = 'detail'; } catch (e) {}
+    // Only nudge framerate — leave width/height at capture native size
+    try {
+      await track.applyConstraints({ frameRate: { ideal: 30, max: 60 } });
+    } catch (e) {}
+
+    // Host does NOT show own stream — only status
+    video.srcObject = null;
+    video.style.display = 'none';
+    placeholder.style.display = '';
+    placeholder.innerHTML = '<i class="fas fa-broadcast-tower"></i><p>Sharing — viewer can see your screen</p>';
+    setStatus('live', 'Sharing');
+    if (conn && conn.peer) {
+      call = peer.call(conn.peer, localStream);
+      call.on('stream', function() {});
+      call.on('close', function() {});
+      // Re-apply high-quality sender params (PC may not be ready instantly)
+      const tryTune = function() {
+        if (call && call.peerConnection) tuneSender(call.peerConnection);
+      };
+      tryTune();
+      setTimeout(tryTune, 150);
+      setTimeout(tryTune, 500);
+      setTimeout(tryTune, 1500);
+      try {
+        conn.send({ t: 'meta', w: window.parent.innerWidth, h: window.parent.innerHeight });
+      } catch (e) {}
+    }
+  }
+
+  // When data connection opens from guest, guest will also open a connection TO host; host already handles peer.on('connection')
+  // Guest side will call host after connecting.
+
+  document.getElementById('btnCopy').onclick = function() {
+    const code = document.getElementById('roomCode').textContent;
+    navigator.clipboard.writeText(code).then(() => toast('Copied')).catch(() => toast(code));
+  };
+  document.getElementById('btnStopHost').onclick = cleanup;
+
+  // ——— GUEST flow ———
+  document.getElementById('btnJoin').onclick = function() {
+    const code = (document.getElementById('joinCode').value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length < 4) { toast('Enter a valid room code'); return; }
+    roomId = code;
+    role = 'guest';
+    showSec('guest');
+    setStatus('wait', 'Connecting…');
+    peer = new Peer(PEER_OPTS);
+    peer.on('open', function() {
+      // Data channel to host
+      const c = peer.connect('sos-' + roomId, { reliable: true });
+      c.on('open', function() {
+        wireData(c);
+        setStatus('live', 'Connected');
+        toast('Connected — waiting for stream');
+      });
+      c.on('error', function() { toast('Could not reach host'); cleanup(); });
+    });
+    peer.on('call', function(incoming) {
+      call = incoming;
+      incoming.answer();
+      const tryTuneRx = function() {
+        if (call && call.peerConnection) tuneReceiver(call.peerConnection);
+      };
+      tryTuneRx();
+      setTimeout(tryTuneRx, 200);
+      setTimeout(tryTuneRx, 800);
+      incoming.on('stream', function(stream) {
+        // Attach ASAP; play without waiting for full buffer
+        video.srcObject = stream;
+        video.muted = true;
+        video.playsInline = true;
+        video.style.display = 'block';
+        placeholder.style.display = 'none';
+        const p = video.play();
+        if (p && p.catch) p.catch(function() {});
+        setStatus('live', 'Streaming');
+        enableInputCapture();
+        tryTuneRx();
+      });
+      incoming.on('close', function() { toast('Stream ended'); cleanup(); });
+    });
+    peer.on('error', function(e) {
+      setStatus('err', 'Error');
+      toast(e.message || 'Connection failed');
+      cleanup();
+    });
+  };
+  document.getElementById('btnLeave').onclick = cleanup;
+
+  // Actual painted frame rect inside the <video> (object-fit: contain letterboxing)
+  function videoContentRect(el) {
+    const r = el.getBoundingClientRect();
+    const vw = el.videoWidth || 0;
+    const vh = el.videoHeight || 0;
+    if (!vw || !vh || !r.width || !r.height) {
+      return { left: r.left, top: r.top, width: r.width, height: r.height };
+    }
+    const scale = Math.min(r.width / vw, r.height / vh);
+    const dw = vw * scale;
+    const dh = vh * scale;
+    return {
+      left: r.left + (r.width - dw) / 2,
+      top: r.top + (r.height - dh) / 2,
+      width: dw,
+      height: dh
+    };
+  }
+
+  // Click position → normalized 0–1 over the real frame (ignores black bars)
+  function normFromEvent(e) {
+    const c = videoContentRect(video);
+    if (!c.width || !c.height) return null;
+    let x = (e.clientX - c.left) / c.width;
+    let y = (e.clientY - c.top) / c.height;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return null; // click on letterbox
+    return { x: x, y: y };
+  }
+
+  // Guest sends normalized input over data channel
+  function enableInputCapture() {
+    const send = (obj) => { if (conn && conn.open) try { conn.send(obj); } catch(e){} };
+    video.style.cursor = 'default';
+    video.tabIndex = 0; // allow focus for keyboard without stealing forever
+    try { video.focus({ preventScroll: true }); } catch (e) { try { video.focus(); } catch (e2) {} }
+
+    function mods(e) {
+      return { ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey };
+    }
+
+    // ~60hz pointer samples via rAF for smoother remote cursor
+    let pendingMove = null;
+    let moveRaf = 0;
+    video.addEventListener('mousemove', function(e) {
+      pendingMove = e;
+      if (moveRaf) return;
+      moveRaf = requestAnimationFrame(function() {
+        moveRaf = 0;
+        const ev = pendingMove;
+        pendingMove = null;
+        if (!ev) return;
+        const n = normFromEvent(ev);
+        if (!n) return;
+        send(Object.assign({ t: 'mm', x: n.x, y: n.y }, mods(ev)));
+      });
+    });
+
+    video.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      try { video.focus({ preventScroll: true }); } catch (err) {}
+      const n = normFromEvent(e);
+      if (!n) return;
+      send(Object.assign({ t: 'md', x: n.x, y: n.y, b: e.button, detail: e.detail }, mods(e)));
+    });
+
+    video.addEventListener('mouseup', function(e) {
+      e.preventDefault();
+      const n = normFromEvent(e);
+      if (!n) return;
+      send(Object.assign({ t: 'mu', x: n.x, y: n.y, b: e.button, detail: e.detail }, mods(e)));
+    });
+
+    video.addEventListener('click', function(e) {
+      e.preventDefault();
+      const n = normFromEvent(e);
+      if (!n) return;
+      // left click only as 'click'; right handled via contextmenu / mouseup
+      if (e.button === 0) {
+        send(Object.assign({ t: 'click', x: n.x, y: n.y, b: 0, detail: e.detail }, mods(e)));
+      }
+    });
+
+    video.addEventListener('auxclick', function(e) {
+      e.preventDefault();
+      const n = normFromEvent(e);
+      if (!n) return;
+      send(Object.assign({ t: 'click', x: n.x, y: n.y, b: e.button, detail: e.detail }, mods(e)));
+    });
+
+    // Right-click / context menu — send explicit ctx so host opens menus
+    video.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const n = normFromEvent(e);
+      if (!n) return;
+      send(Object.assign({ t: 'ctx', x: n.x, y: n.y, b: 2, detail: 1 }, mods(e)));
+    });
+
+    // Scroll / trackpad
+    video.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      const n = normFromEvent(e);
+      if (!n) return;
+      send(Object.assign({
+        t: 'wd',
+        x: n.x,
+        y: n.y,
+        dx: e.deltaX,
+        dy: e.deltaY,
+        dz: e.deltaZ || 0,
+        dm: e.deltaMode
+      }, mods(e)));
+    }, { passive: false });
+
+    // Keyboard — capture while guest is in the remote window
+    function onKeyDown(e) {
+      if (role !== 'guest') return;
+      // always forward; prevent local browser shortcuts from eating keys when focused on video
+      if (document.activeElement === video || document.activeElement === document.body) {
+        e.preventDefault();
+      }
+      send({
+        t: 'kd',
+        k: e.key,
+        c: e.code,
+        kc: e.keyCode || e.which,
+        ctrl: e.ctrlKey,
+        shift: e.shiftKey,
+        alt: e.altKey,
+        meta: e.metaKey,
+        rep: e.repeat
+      });
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        send({ t: 'key', k: e.key, ctrl: false, meta: false });
+      }
+    }
+    function onKeyUp(e) {
+      if (role !== 'guest') return;
+      send({
+        t: 'ku',
+        k: e.key,
+        c: e.code,
+        kc: e.keyCode || e.which,
+        ctrl: e.ctrlKey,
+        shift: e.shiftKey,
+        alt: e.altKey,
+        meta: e.metaKey
+      });
+    }
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('keyup', onKeyUp, true);
+  }
+
+  })();
+<\/script>
+</body>
+</html>`;
                 f.srcdoc = html;
             }
         }
