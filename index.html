@@ -2415,10 +2415,6 @@ function openWindow(id) {
                         <div class="info"><i class="fas fa-lock"></i><div class="txt"><b>Idle Lock Screen</b><small>Locks system after 3 minutes of inactivity</small></div></div>
                         <label class="switch"><input type="checkbox" id="chk-idle" onchange="window.parent.updateSysSetting('idleLock',this.checked)"><span class="slider"></span></label>
                     </div>
-                    <div class="cat"><i class="fas fa-link"></i> LINKS</div>
-                    <div class="card clickable" onclick="window.open('https://discord.gg/bQCRJgtC74','_blank')">
-                        <div class="info"><i class="fab fa-discord"></i><div class="txt"><b>Join Discord</b><small>Official Community Hub</small></div></div>
-                    </div>
                     <script>
                         var prefs = window.parent.sysConfig;
                         document.getElementById('chk-bg').checked = !!prefs.optBg;
