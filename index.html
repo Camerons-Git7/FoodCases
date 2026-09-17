@@ -1490,6 +1490,7 @@ var APPS = {
   'seamlessdesktop': {title: 'Seamless Desktop', path: 'https://menist.free.nf/seamless-desktop/index.html', icon: 'https://play-lh.googleusercontent.com/P24gYqdMsXgqEBuHJtgzaRYO-Xs9scZLxqK1dvQ6sgwihd_oGBr-m16fS_ntgo2NqM0', pinned: true, openInNewTab: true},
   'seamlessgames': {title: 'Seamless Games', path: 'https://menist.free.nf/v1/', icon: 'https://i.ibb.co/M5QfsnBW/Playground-Image1.jpg', pinned: true, openInNewTab: false},
   'seamlessplay': {title: 'Seamless Play', path: 'https://menist.free.nf/cine-os/script/Apps/Ps5/', icon: 'https://i.ibb.co/spRyK3Pz/Playstation.png', pinned: false, openInNewTab: false},
+  'seamlessremote': {title: 'Seamless Remote', internal: true, icon: 'https://i.ibb.co/RT5Z7hrk/seamless-desktop.png', pinned: true, openInNewTab: false},
   'seamlify': {title: 'Seamlify', path: 'https://menist.free.nf/seamlify/', icon: 'https://i.ibb.co/Hp73qM6S/Spotify.png', pinned: true, openInNewTab: false},
   'shootout': {title: 'Getaway Shootout', path: 'https://menist.free.nf/core/getawayshootout/', icon: 'https://img.tapimg.net/market/images/a06138e73540c5c83c8873b5f916c11f.png/appicon_m?t=1', pinned: false, openInNewTab: false},
   'shortlife': {title: 'Short Life', path: 'https://menist.free.nf/core/shortlife/', icon: 'https://play-lh.googleusercontent.com/Z5rZj9NCC47YHDsEKvJ-qOxzxPLy1bBqsn1Ta1H0maa26cQB7_fwVqfTwJBGqt3MJbo', pinned: false, openInNewTab: false},
@@ -1554,7 +1555,6 @@ var APPS = {
   'youtube': {title: 'YouTube', path: 'https://menist.free.nf/youtube/', icon: 'https://i.ibb.co/vCfgHGFp/You-Tube.png', pinned: true, openInNewTab: false},
   'zombierush': {title: 'Zombie Rush', path: 'https://menist.free.nf/core/zombierush/', icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2242%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%A7%9F%E2%80%8D%E2%99%82%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
   'settings': {title: 'Settings', internal: true, icon: 'https://cdn.iconscout.com/icon/free/png-256/free-apple-settings-icon-svg-download-png-493162.png', pinned: true, openInNewTab: false},
-  'remotedesktop': {title: 'Remote Desktop', internal: true, icon: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%3E%0A%20%20%20%20%20%20%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2212%22%20fill%3D%22%231a1a1a%22%2F%3E%0A%20%20%20%20%20%20%20%20%3Ctext%20x%3D%2250%25%22%20y%3D%2250%25%22%20dominant-baseline%3D%22central%22%20text-anchor%3D%22middle%22%20font-size%3D%2236%22%20font-family%3D%22Apple%20Color%20Emoji%2C%20Segoe%20UI%20Emoji%2C%20Noto%20Color%20Emoji%2C%20sans-serif%22%3E%F0%9F%96%A5%EF%B8%8F%3C%2Ftext%3E%0A%20%20%20%20%3C%2Fsvg%3E', pinned: false, openInNewTab: false},
 };
 
 
@@ -2463,6 +2463,23 @@ function openWindow(id) {
   input[type=text]:focus { border-color: #666; }
   .room-code { font-family: 'Orbitron', sans-serif; font-size: 22px; letter-spacing: 4px; text-align: center; padding: 14px; background: #111; border: 1px dashed #333; border-radius: 10px; color: #fff; user-select: all; }
   .hint { font-size: 12px; color: #666; line-height: 1.45; }
+  .lan-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 10px 12px;
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ccc;
+    user-select: none;
+  }
+  .lan-row input { width: 16px; height: 16px; accent-color: #fff; cursor: pointer; }
+  .lan-row:hover { border-color: #444; color: #fff; }
   .stage {
     flex: 1;
     background: #050505;
@@ -2591,7 +2608,11 @@ function openWindow(id) {
         <h3 style="margin-top:8px">Or join</h3>
         <input type="text" id="joinCode" placeholder="ROOM CODE" maxlength="8" autocomplete="off">
         <button class="btn" id="btnJoin"><i class="fas fa-sign-in-alt"></i> Join Room</button>
-        <p class="hint">Browser screen share + WebRTC. Full OS desktop control is not possible from a webpage — only this tab/window.</p>
+        <label class="lan-row" title="Uses local network ICE only — connects much faster on the same Wi‑Fi. Turn off if connecting over the internet.">
+          <input type="checkbox" id="chkLan" checked>
+          <span>Same Wi‑Fi — faster connect</span>
+        </label>
+        <p class="hint">Both devices must use the same setting. Same Wi‑Fi skips STUN so ICE finishes in ms on your LAN.</p>
       </div>
       <div class="section" id="sec-host">
         <h3>Your room</h3>
@@ -2619,8 +2640,8 @@ function openWindow(id) {
   </div>
 <script>
 (function() {
-  // Low-latency WebRTC config
-  const PEER_OPTS = {
+  // WAN: STUN so peers behind NATs can find each other (slower ICE)
+  const PEER_OPTS_WAN = {
     debug: 0,
     config: {
       iceServers: [
@@ -2629,10 +2650,31 @@ function openWindow(id) {
         { urls: 'stun:stun2.l.google.com:19302' }
       ],
       sdpSemantics: 'unified-plan',
-      iceCandidatePoolSize: 4
+      iceCandidatePoolSize: 8,
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require'
     }
   };
+  // Same Wi‑Fi / LAN: host candidates only — no STUN wait → much faster connect
+  const PEER_OPTS_LAN = {
+    debug: 0,
+    config: {
+      iceServers: [],
+      sdpSemantics: 'unified-plan',
+      iceCandidatePoolSize: 10,
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require'
+    }
+  };
+  function useLanMode() {
+    const el = document.getElementById('chkLan');
+    return !!(el && el.checked);
+  }
+  function getPeerOpts() {
+    return useLanMode() ? PEER_OPTS_LAN : PEER_OPTS_WAN;
+  }
   let peer = null, conn = null, call = null, localStream = null, role = null, roomId = null;
+  let connectWatchdog = null;
   const video = document.getElementById('remoteVideo');
   const placeholder = document.getElementById('placeholder');
   const stage = document.getElementById('stage');
@@ -2644,17 +2686,31 @@ function openWindow(id) {
 
   // Quality tiers: highest usable quality with minimal delay
   // scale 1 = full res, higher = lower res; bitrate in bps
+  // WAN-oriented tiers (internet / higher RTT)
   const QUALITY_TIERS = [
-    { name: 'Ultra',  scale: 1.25, maxBitrate: 5000000, maxFramerate: 24 },
-    { name: 'High',   scale: 1.5,  maxBitrate: 3500000, maxFramerate: 24 },
-    { name: 'Medium', scale: 2,    maxBitrate: 2000000, maxFramerate: 20 },
-    { name: 'Low',    scale: 2.5,  maxBitrate: 1200000, maxFramerate: 18 },
-    { name: 'Min',    scale: 3,    maxBitrate: 700000,  maxFramerate: 15 }
+    { name: 'Ultra',  scale: 1,   maxBitrate: 10000000, maxFramerate: 30 },
+    { name: 'High',   scale: 1,   maxBitrate: 6000000,  maxFramerate: 30 },
+    { name: 'Medium', scale: 1.5, maxBitrate: 3500000,  maxFramerate: 24 },
+    { name: 'Low',    scale: 2,   maxBitrate: 1800000,  maxFramerate: 20 },
+    { name: 'Min',    scale: 3,   maxBitrate: 800000,   maxFramerate: 15 }
+  ];
+  // Same Wi‑Fi / LAN: prioritize low delay over max pixels
+  const LAN_QUALITY_TIERS = [
+    { name: 'LAN Ultra',  scale: 1,    maxBitrate: 12000000, maxFramerate: 60 },
+    { name: 'LAN High',   scale: 1,    maxBitrate: 8000000,  maxFramerate: 45 },
+    { name: 'LAN Medium', scale: 1.25, maxBitrate: 4500000,  maxFramerate: 30 },
+    { name: 'LAN Low',    scale: 1.75, maxBitrate: 2500000,  maxFramerate: 24 },
+    { name: 'LAN Min',    scale: 2.5,  maxBitrate: 1200000,  maxFramerate: 20 }
   ];
   let qualityIdx = 1; // start High — good balance
   let qualityTimer = null;
   let lastStats = null;
   let qualityStableUntil = 0;
+  let isLanPath = false;
+  let inputCaptureBound = false;
+  let lastClickAt = 0;
+  let lastClickKey = '';
+  let lastClickEl = null;
 
   // Prefer lowest latency on the playout side
   function tuneReceiver(pc) {
@@ -2670,17 +2726,22 @@ function openWindow(id) {
     } catch (e) {}
   }
 
+  function currentTiers() {
+    return isLanPath ? LAN_QUALITY_TIERS : QUALITY_TIERS;
+  }
+
   function applyQualityTier(pc, idx) {
     if (!pc) return;
-    const tier = QUALITY_TIERS[Math.max(0, Math.min(QUALITY_TIERS.length - 1, idx))];
+    const tiers = currentTiers();
+    const tier = tiers[Math.max(0, Math.min(tiers.length - 1, idx))];
     try {
       pc.getSenders().forEach(function(sender) {
         if (!sender.track || sender.track.kind !== 'video') return;
-        try { sender.track.contentHint = 'detail'; } catch (e) {}
+        // detail = sharp UI; motion = lower latency bias on LAN
+        try { sender.track.contentHint = isLanPath ? 'motion' : 'detail'; } catch (e) {}
         const params = sender.getParameters();
         if (!params.encodings || !params.encodings.length) params.encodings = [{}];
-        // Prefer resolution when we can afford it; browser still adapts under load
-        params.degradationPreference = tier.scale <= 1.25 ? 'maintain-resolution' : 'balanced';
+        params.degradationPreference = isLanPath ? 'maintain-framerate' : (tier.scale <= 1.25 ? 'maintain-resolution' : 'balanced');
         params.encodings.forEach(function(enc) {
           enc.scaleResolutionDownBy = tier.scale;
           enc.maxFramerate = tier.maxFramerate;
@@ -2709,9 +2770,10 @@ function openWindow(id) {
   function startAutoQuality(pc) {
     stopAutoQuality();
     if (!pc) return;
+    isLanPath = false;
     qualityIdx = 1;
     applyQualityTier(pc, qualityIdx);
-    qualityStableUntil = Date.now() + 2500;
+    qualityStableUntil = Date.now() + 2000;
 
     qualityTimer = setInterval(async function() {
       if (!pc || pc.connectionState === 'closed' || pc.connectionState === 'failed') {
@@ -2720,37 +2782,40 @@ function openWindow(id) {
       }
       try {
         const report = await pc.getStats();
-        let rtt = null, loss = 0, packets = 0, framesSent = 0, framesEncoded = 0, bitrate = 0;
+        let rtt = null, loss = 0;
         let outbound = null, remoteInbound = null;
+        let hostPair = false;
         report.forEach(function(s) {
           if (s.type === 'outbound-rtp' && s.kind === 'video' && !s.remoteId) outbound = s;
           if (s.type === 'remote-inbound-rtp' && (s.kind === 'video' || s.mediaType === 'video')) remoteInbound = s;
+          if (s.type === 'candidate-pair' && s.state === 'succeeded') {
+            if (typeof s.currentRoundTripTime === 'number') {
+              const ms = s.currentRoundTripTime * 1000;
+              if (rtt == null || ms < rtt) rtt = ms;
+            }
+            // local/host candidate ≈ same LAN / Wi‑Fi
+            if (s.localCandidateId) {
+              const local = report.get(s.localCandidateId);
+              if (local && (local.candidateType === 'host' || local.candidateType === 'local')) hostPair = true;
+            }
+          }
         });
         if (remoteInbound) {
-          if (typeof remoteInbound.roundTripTime === 'number') rtt = remoteInbound.roundTripTime * 1000;
+          if (typeof remoteInbound.roundTripTime === 'number') {
+            const ms = remoteInbound.roundTripTime * 1000;
+            if (rtt == null || ms < rtt) rtt = ms;
+          }
           if (typeof remoteInbound.packetsLost === 'number') loss = remoteInbound.packetsLost;
-          if (typeof remoteInbound.jitter === 'number' && rtt == null) {
-            // jitter alone is useful as pressure signal
-          }
         }
-        if (outbound) {
-          packets = outbound.packetsSent || 0;
-          framesSent = outbound.framesSent || 0;
-          framesEncoded = outbound.framesEncoded || 0;
-          if (lastStats && lastStats.outbound && lastStats.t) {
-            const dt = (Date.now() - lastStats.t) / 1000;
-            if (dt > 0 && outbound.bytesSent != null && lastStats.outbound.bytesSent != null) {
-              bitrate = ((outbound.bytesSent - lastStats.outbound.bytesSent) * 8) / dt;
-            }
-          }
-        }
-        // Candidate-pair RTT fallback
-        if (rtt == null) {
-          report.forEach(function(s) {
-            if (s.type === 'candidate-pair' && s.state === 'succeeded' && typeof s.currentRoundTripTime === 'number') {
-              rtt = s.currentRoundTripTime * 1000;
-            }
-          });
+
+        // Detect same Wi‑Fi / LAN: host candidate or very low RTT
+        const lanNow = hostPair || (rtt != null && rtt < 25);
+        if (lanNow !== isLanPath) {
+          isLanPath = lanNow;
+          qualityIdx = isLanPath ? 1 : 1;
+          const tier = applyQualityTier(pc, qualityIdx);
+          qualityStableUntil = Date.now() + 1500;
+          if (role === 'host') setStatus('live', 'Sharing · ' + (isLanPath ? 'LAN ' : 'Auto ') + tier.name.replace(/^LAN /, ''));
         }
 
         const now = Date.now();
@@ -2760,19 +2825,20 @@ function openWindow(id) {
 
         if (now < qualityStableUntil) return;
 
-        // Decide: drop quality if network is struggling, raise if healthy
+        const tiers = currentTiers();
         let next = qualityIdx;
-        const highRtt = rtt != null && rtt > 120;
-        const veryHighRtt = rtt != null && rtt > 220;
-        const packetLoss = lossDelta >= 4;
-        const heavyLoss = lossDelta >= 12;
+        // Tighter thresholds on LAN (expect low delay); looser on WAN
+        const highRtt = rtt != null && rtt > (isLanPath ? 40 : 120);
+        const veryHighRtt = rtt != null && rtt > (isLanPath ? 80 : 220);
+        const packetLoss = lossDelta >= (isLanPath ? 2 : 4);
+        const heavyLoss = lossDelta >= (isLanPath ? 6 : 12);
+        const healthyRtt = rtt == null || rtt < (isLanPath ? 20 : 70);
 
         if (heavyLoss || veryHighRtt) {
-          next = Math.min(QUALITY_TIERS.length - 1, qualityIdx + 1);
+          next = Math.min(tiers.length - 1, qualityIdx + 1);
         } else if (packetLoss || highRtt) {
-          next = Math.min(QUALITY_TIERS.length - 1, qualityIdx + 1);
-        } else if ((rtt == null || rtt < 70) && lossDelta === 0 && qualityIdx > 0) {
-          // path looks clean — try a higher tier
+          next = Math.min(tiers.length - 1, qualityIdx + 1);
+        } else if (healthyRtt && lossDelta === 0 && qualityIdx > 0) {
           next = qualityIdx - 1;
         }
 
@@ -2780,14 +2846,13 @@ function openWindow(id) {
           const dropping = next > qualityIdx;
           qualityIdx = next;
           const tier = applyQualityTier(pc, qualityIdx);
-          // Drop faster, climb slower so quality does not flap
-          qualityStableUntil = now + (dropping ? 2000 : 4500);
+          qualityStableUntil = now + (dropping ? 1500 : (isLanPath ? 3000 : 4500));
           if (role === 'host') {
             setStatus('live', 'Sharing · Auto ' + tier.name);
           }
         }
       } catch (e) {}
-    }, 1500);
+    }, isLanPath ? 1000 : 1500);
   }
 
   function updateFsIcon(isFs) {
@@ -2858,6 +2923,12 @@ function openWindow(id) {
     if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
     peer = conn = call = null; role = roomId = null;
     stopAutoQuality();
+    if (connectWatchdog) { clearTimeout(connectWatchdog); connectWatchdog = null; }
+    inputCaptureBound = false;
+    lastClickAt = 0;
+    lastClickKey = '';
+    lastClickEl = null;
+    isLanPath = false;
     video.srcObject = null; video.style.display = 'none';
     placeholder.style.display = '';
     placeholder.innerHTML = '<i class="fas fa-display"></i><p>No stream yet</p>';
@@ -2956,6 +3027,50 @@ function openWindow(id) {
     return t;
   }
 
+  // Single left-click handler: debounce + dblclick + desktop icon open
+  function handleRemoteClick(data) {
+    const p = window.parent;
+    const now = Date.now();
+    const key = (Math.round(data.x * 100) + ',' + Math.round(data.y * 100));
+    // Ignore duplicate click packets within 80ms (double-send glitch)
+    if (now - lastClickAt < 80 && key === lastClickKey) return;
+
+    const isDouble = (now - lastClickAt < 350 && key === lastClickKey);
+    lastClickAt = now;
+    lastClickKey = key;
+
+    const detail = isDouble ? 2 : 1;
+    const payload = Object.assign({}, data, { b: 0, detail: detail });
+    const t = fireMouse('click', payload);
+    try { if (t.el && t.el.focus) t.el.focus(); } catch (e) {}
+
+    if (isDouble) {
+      fireMouse('dblclick', payload);
+    }
+
+    // Desktop icons only open on dblclick in this OS — make remote single-click work too
+    try {
+      let node = t.el;
+      while (node && node !== p.document.body) {
+        if (node.classList && node.classList.contains('desktop-app') && !node.classList.contains('expanded-folder')) {
+          const idx = node.getAttribute('data-idx');
+          let appId = null;
+          if (idx != null && p.desktopLayout && p.desktopLayout[idx] && p.desktopLayout[idx].type !== 'folder') {
+            appId = p.desktopLayout[idx].id;
+          }
+          if (appId && typeof p.toggleApp === 'function') {
+            // Single remote click opens (normal desktop needs double-click)
+            if (!isDouble) p.toggleApp(appId);
+          }
+          break;
+        }
+        node = node.parentElement;
+      }
+    } catch (e) {}
+
+    lastClickEl = t.el;
+  }
+
   // ——— HOST: apply remote input on parent page (this website only) ———
   function applyRemoteEvent(data) {
     try {
@@ -2966,20 +3081,21 @@ function openWindow(id) {
       if (type === 'mm') {
         fireMouse('mousemove', data);
       } else if (type === 'md') {
+        // Only mousedown — do not open apps here (avoids drag/double-toggle glitches)
         const t = fireMouse('mousedown', data);
         try { if (t.el && t.el.focus) t.el.focus(); } catch (e) {}
       } else if (type === 'mu') {
         fireMouse('mouseup', data);
         if (data.b === 2) fireMouse('contextmenu', data);
-      } else if (type === 'click') {
+        // Synthesize ONE click on mouseup (guest no longer also sends click)
         if ((data.b || 0) === 0) {
-          const t = fireMouse('click', data);
-          try { if (t.el && t.el.focus) t.el.focus(); } catch (e) {}
-        } else if (data.b === 2) {
-          fireMouse('contextmenu', data);
-        } else if (data.b === 1) {
-          fireMouse('auxclick', data);
+          handleRemoteClick(data);
         }
+      } else if (type === 'click') {
+        // Back-compat if an older guest still sends click — debounce against mu
+        if ((data.b || 0) === 0) handleRemoteClick(data);
+        else if (data.b === 2) fireMouse('contextmenu', data);
+        else if (data.b === 1) fireMouse('auxclick', data);
       } else if (type === 'ctx') {
         fireMouse('contextmenu', Object.assign({}, data, { b: 2 }));
       } else if (type === 'wd') {
@@ -3150,10 +3266,17 @@ function openWindow(id) {
     document.getElementById('roomCode').textContent = roomId;
     showSec('host');
     setStatus('wait', 'Creating room…');
-    peer = new Peer('sos-' + roomId, PEER_OPTS);
+    const lan = useLanMode();
+    peer = new Peer('sos-' + roomId, getPeerOpts());
     peer.on('open', function() {
-      setStatus('wait', 'Waiting for peer');
-      toast('Room ready — share the code');
+      setStatus('wait', lan ? 'Waiting (LAN / same Wi‑Fi)' : 'Waiting for peer');
+      toast(lan ? 'Room ready (fast LAN mode)' : 'Room ready — share the code');
+      const hint = document.getElementById('hostHint');
+      if (hint) {
+        hint.innerHTML = lan
+          ? 'LAN mode on — guest must also check <b>Same Wi‑Fi</b>. Share <b>this tab</b> when they join.'
+          : 'Waiting for peer… When prompted, share <b>this tab</b> (or window) for best results.';
+      }
     });
     peer.on('error', function(e) {
       setStatus('err', 'Error');
@@ -3161,13 +3284,13 @@ function openWindow(id) {
       cleanup();
     });
     peer.on('connection', function(c) {
+      if (connectWatchdog) { clearTimeout(connectWatchdog); connectWatchdog = null; }
       wireData(c);
       setStatus('live', 'Peer connected');
       toast('Viewer joined — start share when prompted');
       startHostShare();
     });
     peer.on('call', function(incoming) {
-      // guest shouldn't call host; ignore
       incoming.close();
     });
   };
@@ -3241,17 +3364,30 @@ function openWindow(id) {
     roomId = code;
     role = 'guest';
     showSec('guest');
-    setStatus('wait', 'Connecting…');
-    peer = new Peer(PEER_OPTS);
+    const lan = useLanMode();
+    setStatus('wait', lan ? 'Connecting (LAN)…' : 'Connecting…');
+    peer = new Peer(getPeerOpts());
     peer.on('open', function() {
-      // Data channel to host
-      const c = peer.connect('sos-' + roomId, { reliable: true });
+      // Data channel to host — serialization binary is slightly leaner
+      const c = peer.connect('sos-' + roomId, { reliable: true, serialization: 'binary' });
       c.on('open', function() {
+        if (connectWatchdog) { clearTimeout(connectWatchdog); connectWatchdog = null; }
         wireData(c);
         setStatus('live', 'Connected');
-        toast('Connected — waiting for stream');
+        toast(lan ? 'Connected on LAN — waiting for stream' : 'Connected — waiting for stream');
       });
-      c.on('error', function() { toast('Could not reach host'); cleanup(); });
+      c.on('error', function() {
+        toast(lan ? 'LAN connect failed — uncheck Same Wi‑Fi if not on this network' : 'Could not reach host');
+        cleanup();
+      });
+      // If LAN ICE can't pair (different networks), nudge user quickly
+      if (lan) {
+        connectWatchdog = setTimeout(function() {
+          if (!conn || !conn.open) {
+            toast('Still connecting… If this hangs, turn off Same Wi‑Fi and retry');
+          }
+        }, 4000);
+      }
     });
     peer.on('call', function(incoming) {
       call = incoming;
@@ -3306,9 +3442,13 @@ function openWindow(id) {
 
   // Guest sends normalized input over data channel
   function enableInputCapture() {
+    // Prevent double-binding if stream event fires more than once (was causing open/close)
+    if (inputCaptureBound) return;
+    inputCaptureBound = true;
+
     const send = (obj) => { if (conn && conn.open) try { conn.send(obj); } catch(e){} };
     video.style.cursor = 'default';
-    video.tabIndex = 0; // allow focus for keyboard without stealing forever
+    video.tabIndex = 0;
     try { video.focus({ preventScroll: true }); } catch (e) { try { video.focus(); } catch (e2) {} }
 
     function mods(e) {
@@ -3334,6 +3474,7 @@ function openWindow(id) {
 
     video.addEventListener('mousedown', function(e) {
       e.preventDefault();
+      e.stopPropagation();
       try { video.focus({ preventScroll: true }); } catch (err) {}
       const n = normFromEvent(e);
       if (!n) return;
@@ -3342,29 +3483,27 @@ function openWindow(id) {
 
     video.addEventListener('mouseup', function(e) {
       e.preventDefault();
+      e.stopPropagation();
       const n = normFromEvent(e);
       if (!n) return;
+      // Host synthesizes the single click from mouseup — do NOT also send 'click'
       send(Object.assign({ t: 'mu', x: n.x, y: n.y, b: e.button, detail: e.detail }, mods(e)));
     });
 
+    // Swallow local click so it never double-fires with mouseup path
     video.addEventListener('click', function(e) {
       e.preventDefault();
-      const n = normFromEvent(e);
-      if (!n) return;
-      // left click only as 'click'; right handled via contextmenu / mouseup
-      if (e.button === 0) {
-        send(Object.assign({ t: 'click', x: n.x, y: n.y, b: 0, detail: e.detail }, mods(e)));
-      }
+      e.stopPropagation();
     });
 
     video.addEventListener('auxclick', function(e) {
       e.preventDefault();
+      e.stopPropagation();
       const n = normFromEvent(e);
       if (!n) return;
       send(Object.assign({ t: 'click', x: n.x, y: n.y, b: e.button, detail: e.detail }, mods(e)));
     });
 
-    // Right-click / context menu — send explicit ctx so host opens menus
     video.addEventListener('contextmenu', function(e) {
       e.preventDefault();
       e.stopPropagation();
@@ -3373,7 +3512,6 @@ function openWindow(id) {
       send(Object.assign({ t: 'ctx', x: n.x, y: n.y, b: 2, detail: 1 }, mods(e)));
     });
 
-    // Scroll / trackpad
     video.addEventListener('wheel', function(e) {
       e.preventDefault();
       const n = normFromEvent(e);
@@ -3389,10 +3527,8 @@ function openWindow(id) {
       }, mods(e)));
     }, { passive: false });
 
-    // Keyboard — capture while guest is in the remote window
     function onKeyDown(e) {
       if (role !== 'guest') return;
-      // always forward; prevent local browser shortcuts from eating keys when focused on video
       if (document.activeElement === video || document.activeElement === document.body) {
         e.preventDefault();
       }
