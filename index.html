@@ -2516,7 +2516,7 @@ function openWindow(id) {
   #remoteVideo {
     width: 100%;
     height: 100%;
-    object-fit: contain; /* non-fs: preserve aspect; mapping uses content rect */
+    object-fit: contain; /* contain + content-rect mapping works for any host/viewer aspect */
     background: #000;
     cursor: default;
     display: none;
@@ -2583,7 +2583,7 @@ function openWindow(id) {
     border-radius: 0;
     width: 100%;
     height: 100%;
-    object-fit: contain; /* never stretch — keeps stream sharp */
+    object-fit: contain;
   }
   .stage.fs .ctrl-bar,
   .viewport-wrap:fullscreen .ctrl-bar,
@@ -3139,7 +3139,6 @@ function openWindow(id) {
         }
       } else if (type === 'kd' || type === 'ku') {
         const map = { kd: 'keydown', ku: 'keyup' };
-        // Prefer focused element inside the deepest same-origin frame
         let targetWin = p;
         let targetDoc = p.document;
         let active = targetDoc.activeElement;
@@ -3169,12 +3168,11 @@ function openWindow(id) {
           metaKey: !!data.meta,
           repeat: !!data.rep
         };
-        // Always deliver the KeyboardEvent so Ctrl+A / Ctrl+Z / Ctrl+M / etc. reach the app
+        // Always deliver KeyboardEvent so Ctrl+A / Ctrl+Z / Ctrl+M / etc. reach the app
         target.dispatchEvent(new KeyboardEvent(map[type], kopts));
 
         if (type === 'kd') {
           const hasMod = !!(data.ctrl || data.meta || data.alt);
-          // Manual text mutation for inputs (synthetic KeyboardEvents do not insert text)
           if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
             if (data.k === 'Backspace') {
               const s = active.selectionStart || 0;
@@ -3205,7 +3203,7 @@ function openWindow(id) {
                 }
               }
             } else if (!hasMod && data.k && data.k.length === 1) {
-              // Printable character — insert once (no separate 'key' event any more)
+              // Printable character — insert once (no separate 'key' event)
               const start = active.selectionStart != null ? active.selectionStart : active.value.length;
               const end = active.selectionEnd != null ? active.selectionEnd : start;
               active.value = active.value.slice(0, start) + data.k + active.value.slice(end);
@@ -3217,7 +3215,7 @@ function openWindow(id) {
           }
         }
       } else if (type === 'clipboard-req') {
-        // Viewer pressed Ctrl+C — return the current selection so guest can put it on *their* clipboard
+        // Viewer pressed Ctrl+C — return selection so guest can put it on their clipboard
         let text = '';
         try {
           let targetDoc = p.document;
@@ -3245,7 +3243,7 @@ function openWindow(id) {
           if (conn && conn.open) conn.send({ t: 'clipboard', text: text || '' });
         } catch (e) {}
       } else if (type === 'paste') {
-        // Viewer pressed Ctrl+V — insert the text they sent from *their* clipboard
+        // Viewer pressed Ctrl+V — insert text from their clipboard
         const pasteText = (data.text != null) ? String(data.text) : '';
         try {
           let targetDoc = p.document;
@@ -3281,23 +3279,7 @@ function openWindow(id) {
     const vw = video.videoWidth;
     const vh = video.videoHeight;
     if (!vw || !vh) return;
-
-    // Always preserve aspect (contain) — never stretch. Stretching a reduced stream looks soft/144p-like.
-    video.style.objectFit = 'contain';
-
-    const isFs = stage.classList.contains('fs') ||
-      !!(document.fullscreenElement || document.webkitFullscreenElement);
-
-    if (isFs) {
-      // Fullscreen: let CSS 100vw/100vh + contain handle it (letterbox/pillarbox if needed)
-      wrap.style.width = '';
-      wrap.style.height = '';
-      wrap.classList.add('has-stream');
-      return;
-    }
-
-    // Windowed: size the border box tightly to stream aspect
-    const pad = 28;
+    const pad = stage.classList.contains('fs') ? 0 : 28;
     const maxW = Math.max(120, stage.clientWidth - pad);
     const maxH = Math.max(90, stage.clientHeight - pad);
     const scale = Math.min(maxW / vw, maxH / vh);
@@ -3315,13 +3297,11 @@ function openWindow(id) {
       if (role === 'host') {
         applyRemoteEvent(data);
       } else if (role === 'guest') {
-        // Host → guest messages (e.g. clipboard content after Ctrl+C)
         if (data.t === 'clipboard' && typeof data.text === 'string') {
           try {
             navigator.clipboard.writeText(data.text).then(function() {
               toast('Copied to clipboard');
             }).catch(function() {
-              // Fallback for older browsers / insecure context
               try {
                 const ta = document.createElement('textarea');
                 ta.value = data.text;
@@ -3513,8 +3493,8 @@ function openWindow(id) {
   };
   document.getElementById('btnLeave').onclick = cleanup;
 
-  // Map pointer to actual video content (handles letterbox when object-fit:contain;
-  // with object-fit:fill the content rect == full element so stretch still maps 1:1 proportionally)
+  // Map pointer coords to the actual video *content* (handles letterbox/pillarbox
+  // from object-fit: contain when host/viewer aspect ratios or viewport sizes differ)
   function getVideoContentRect(videoEl) {
     const rect = videoEl.getBoundingClientRect();
     const vw = videoEl.videoWidth;
@@ -3522,22 +3502,17 @@ function openWindow(id) {
     if (!vw || !vh || !rect.width || !rect.height) {
       return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
     }
-    // When object-fit is fill (fullscreen stretch), treat entire element as content
-    try {
-      const fit = (window.getComputedStyle(videoEl).objectFit || '').toLowerCase();
-      if (fit === 'fill' || fit === 'cover') {
-        return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-      }
-    } catch (e) {}
     const videoRatio = vw / vh;
     const elementRatio = rect.width / rect.height;
     let contentWidth, contentHeight, offsetX, offsetY;
     if (elementRatio > videoRatio) {
+      // Pillarbox: black bars on left/right
       contentHeight = rect.height;
       contentWidth = contentHeight * videoRatio;
       offsetX = (rect.width - contentWidth) / 2;
       offsetY = 0;
     } else {
+      // Letterbox: black bars on top/bottom
       contentWidth = rect.width;
       contentHeight = contentWidth / videoRatio;
       offsetX = 0;
@@ -3649,7 +3624,6 @@ function openWindow(id) {
 
     function onKeyDown(e) {
       if (role !== 'guest') return;
-      // Keep focus on the video so we receive keys; prevent browser from acting on them locally
       if (document.activeElement === video || document.activeElement === document.body || document.activeElement === document.documentElement) {
         e.preventDefault();
       }
@@ -3657,11 +3631,10 @@ function openWindow(id) {
       const isCtrl = e.ctrlKey || e.metaKey;
       const key = e.key;
 
-      // Ctrl+C / Cmd+C → ask host for selection text, then put it on *viewer's* clipboard
+      // Ctrl+C / Cmd+C → ask host for selection, put it on viewer's clipboard
       if (isCtrl && (key === 'c' || key === 'C') && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         send({ t: 'clipboard-req' });
-        // still send the key event so host apps that listen for it can react
         send({
           t: 'kd', k: key, c: e.code, kc: e.keyCode || e.which,
           ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey, rep: e.repeat
@@ -3669,14 +3642,13 @@ function openWindow(id) {
         return;
       }
 
-      // Ctrl+V / Cmd+V → read viewer's clipboard and send text to host for insertion
+      // Ctrl+V / Cmd+V → read viewer's clipboard and send text to host
       if (isCtrl && (key === 'v' || key === 'V') && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         (async function() {
           let text = '';
           try { text = await navigator.clipboard.readText(); } catch (err) {}
           send({ t: 'paste', text: text || '' });
-          // also send the key event
           send({
             t: 'kd', k: key, c: e.code, kc: e.keyCode || e.which,
             ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey, rep: e.repeat
@@ -3685,7 +3657,7 @@ function openWindow(id) {
         return;
       }
 
-      // Normal key (including other Ctrl shortcuts like Ctrl+A, Ctrl+Z, Ctrl+M, etc.)
+      // Normal keys + other Ctrl shortcuts (Ctrl+A, Ctrl+Z, Ctrl+M, etc.)
       send({
         t: 'kd',
         k: key,
@@ -3697,7 +3669,7 @@ function openWindow(id) {
         meta: e.metaKey,
         rep: e.repeat
       });
-      // Do NOT also send a separate {t:'key'} printable event — that caused double typing.
+      // Do NOT also send a separate {t:'key'} — that caused double typing.
       // Host inserts printable characters from the keydown itself.
     }
     function onKeyUp(e) {
