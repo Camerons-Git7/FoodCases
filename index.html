@@ -2516,7 +2516,7 @@ function openWindow(id) {
   #remoteVideo {
     width: 100%;
     height: 100%;
-    object-fit: contain; /* contain + content-rect mapping works for any host/viewer aspect */
+    object-fit: contain; /* non-fs: preserve aspect; mapping uses content rect */
     background: #000;
     cursor: default;
     display: none;
@@ -2583,7 +2583,7 @@ function openWindow(id) {
     border-radius: 0;
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: fill; /* fullscreen: stretch to cover viewer screen; clicks stay proportionally correct */
   }
   .stage.fs .ctrl-bar,
   .viewport-wrap:fullscreen .ctrl-bar,
@@ -3143,7 +3143,6 @@ function openWindow(id) {
         let targetWin = p;
         let targetDoc = p.document;
         let active = targetDoc.activeElement;
-        // If focus is an iframe, dive in
         try {
           for (let i = 0; i < 8 && active; i++) {
             const tag = (active.tagName || '').toLowerCase();
@@ -3170,8 +3169,12 @@ function openWindow(id) {
           metaKey: !!data.meta,
           repeat: !!data.rep
         };
+        // Always deliver the KeyboardEvent so Ctrl+A / Ctrl+Z / Ctrl+M / etc. reach the app
         target.dispatchEvent(new KeyboardEvent(map[type], kopts));
+
         if (type === 'kd') {
+          const hasMod = !!(data.ctrl || data.meta || data.alt);
+          // Manual text mutation for inputs (synthetic KeyboardEvents do not insert text)
           if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
             if (data.k === 'Backspace') {
               const s = active.selectionStart || 0;
@@ -3201,33 +3204,72 @@ function openWindow(id) {
                   active.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
                 }
               }
+            } else if (!hasMod && data.k && data.k.length === 1) {
+              // Printable character — insert once (no separate 'key' event any more)
+              const start = active.selectionStart != null ? active.selectionStart : active.value.length;
+              const end = active.selectionEnd != null ? active.selectionEnd : start;
+              active.value = active.value.slice(0, start) + data.k + active.value.slice(end);
+              active.selectionStart = active.selectionEnd = start + 1;
+              active.dispatchEvent(new Event('input', { bubbles: true }));
             }
-          }
-        }
-      } else if (type === 'key') {
-        let targetDoc = p.document;
-        let active = targetDoc.activeElement;
-        try {
-          for (let i = 0; i < 8 && active; i++) {
-            const tag = (active.tagName || '').toLowerCase();
-            if (tag !== 'iframe' && tag !== 'frame') break;
-            const cd = active.contentDocument;
-            if (!cd) break;
-            targetDoc = cd;
-            active = cd.activeElement;
-          }
-        } catch (e) {}
-        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
-          if (typeof active.value === 'string' && data.k && data.k.length === 1 && !data.ctrl && !data.meta) {
-            const start = active.selectionStart != null ? active.selectionStart : active.value.length;
-            const end = active.selectionEnd != null ? active.selectionEnd : start;
-            active.value = active.value.slice(0, start) + data.k + active.value.slice(end);
-            active.selectionStart = active.selectionEnd = start + 1;
-            active.dispatchEvent(new Event('input', { bubbles: true }));
-          } else if (active.isContentEditable && data.k && data.k.length === 1 && !data.ctrl && !data.meta) {
+          } else if (active && active.isContentEditable && !hasMod && data.k && data.k.length === 1) {
             try { targetDoc.execCommand('insertText', false, data.k); } catch (e) {}
           }
         }
+      } else if (type === 'clipboard-req') {
+        // Viewer pressed Ctrl+C — return the current selection so guest can put it on *their* clipboard
+        let text = '';
+        try {
+          let targetDoc = p.document;
+          let active = targetDoc.activeElement;
+          try {
+            for (let i = 0; i < 8 && active; i++) {
+              const tag = (active.tagName || '').toLowerCase();
+              if (tag !== 'iframe' && tag !== 'frame') break;
+              const cd = active.contentDocument;
+              if (!cd) break;
+              targetDoc = cd;
+              active = cd.activeElement;
+            }
+          } catch (e) {}
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && typeof active.value === 'string') {
+            const s = active.selectionStart != null ? active.selectionStart : 0;
+            const e2 = active.selectionEnd != null ? active.selectionEnd : 0;
+            text = active.value.slice(s, e2);
+          } else {
+            const sel = (targetDoc.defaultView || targetDoc.parentWindow || p).getSelection();
+            if (sel) text = sel.toString();
+          }
+        } catch (e) {}
+        try {
+          if (conn && conn.open) conn.send({ t: 'clipboard', text: text || '' });
+        } catch (e) {}
+      } else if (type === 'paste') {
+        // Viewer pressed Ctrl+V — insert the text they sent from *their* clipboard
+        const pasteText = (data.text != null) ? String(data.text) : '';
+        try {
+          let targetDoc = p.document;
+          let active = targetDoc.activeElement;
+          try {
+            for (let i = 0; i < 8 && active; i++) {
+              const tag = (active.tagName || '').toLowerCase();
+              if (tag !== 'iframe' && tag !== 'frame') break;
+              const cd = active.contentDocument;
+              if (!cd) break;
+              targetDoc = cd;
+              active = cd.activeElement;
+            }
+          } catch (e) {}
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && typeof active.value === 'string') {
+            const start = active.selectionStart != null ? active.selectionStart : active.value.length;
+            const end = active.selectionEnd != null ? active.selectionEnd : start;
+            active.value = active.value.slice(0, start) + pasteText + active.value.slice(end);
+            active.selectionStart = active.selectionEnd = start + pasteText.length;
+            active.dispatchEvent(new Event('input', { bubbles: true }));
+          } else if (active && active.isContentEditable) {
+            try { targetDoc.execCommand('insertText', false, pasteText); } catch (e) {}
+          }
+        } catch (e) {}
       }
     } catch (err) { /* cross-origin or blocked */ }
   }
@@ -3253,7 +3295,32 @@ function openWindow(id) {
   function wireData(c) {
     conn = c;
     conn.on('data', function(data) {
-      if (role === 'host') applyRemoteEvent(data);
+      if (!data || !data.t) return;
+      if (role === 'host') {
+        applyRemoteEvent(data);
+      } else if (role === 'guest') {
+        // Host → guest messages (e.g. clipboard content after Ctrl+C)
+        if (data.t === 'clipboard' && typeof data.text === 'string') {
+          try {
+            navigator.clipboard.writeText(data.text).then(function() {
+              toast('Copied to clipboard');
+            }).catch(function() {
+              // Fallback for older browsers / insecure context
+              try {
+                const ta = document.createElement('textarea');
+                ta.value = data.text;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                toast('Copied to clipboard');
+              } catch (e) {}
+            });
+          } catch (e) {}
+        }
+      }
     });
     conn.on('close', function() { toast('Peer disconnected'); if (role === 'host') setStatus('wait', 'Waiting…'); else cleanup(); });
     conn.on('error', function() { toast('Data channel error'); });
@@ -3430,8 +3497,8 @@ function openWindow(id) {
   };
   document.getElementById('btnLeave').onclick = cleanup;
 
-  // Map pointer coords to the actual video *content* (handles letterbox/pillarbox
-  // from object-fit: contain when host/viewer aspect ratios or viewport sizes differ)
+  // Map pointer to actual video content (handles letterbox when object-fit:contain;
+  // with object-fit:fill the content rect == full element so stretch still maps 1:1 proportionally)
   function getVideoContentRect(videoEl) {
     const rect = videoEl.getBoundingClientRect();
     const vw = videoEl.videoWidth;
@@ -3439,17 +3506,22 @@ function openWindow(id) {
     if (!vw || !vh || !rect.width || !rect.height) {
       return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
     }
+    // When object-fit is fill (fullscreen stretch), treat entire element as content
+    try {
+      const fit = (window.getComputedStyle(videoEl).objectFit || '').toLowerCase();
+      if (fit === 'fill' || fit === 'cover') {
+        return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+      }
+    } catch (e) {}
     const videoRatio = vw / vh;
     const elementRatio = rect.width / rect.height;
     let contentWidth, contentHeight, offsetX, offsetY;
     if (elementRatio > videoRatio) {
-      // Pillarbox: black bars on left/right
       contentHeight = rect.height;
       contentWidth = contentHeight * videoRatio;
       offsetX = (rect.width - contentWidth) / 2;
       offsetY = 0;
     } else {
-      // Letterbox: black bars on top/bottom
       contentWidth = rect.width;
       contentHeight = contentWidth / videoRatio;
       offsetX = 0;
@@ -3561,12 +3633,46 @@ function openWindow(id) {
 
     function onKeyDown(e) {
       if (role !== 'guest') return;
-      if (document.activeElement === video || document.activeElement === document.body) {
+      // Keep focus on the video so we receive keys; prevent browser from acting on them locally
+      if (document.activeElement === video || document.activeElement === document.body || document.activeElement === document.documentElement) {
         e.preventDefault();
       }
+
+      const isCtrl = e.ctrlKey || e.metaKey;
+      const key = e.key;
+
+      // Ctrl+C / Cmd+C → ask host for selection text, then put it on *viewer's* clipboard
+      if (isCtrl && (key === 'c' || key === 'C') && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        send({ t: 'clipboard-req' });
+        // still send the key event so host apps that listen for it can react
+        send({
+          t: 'kd', k: key, c: e.code, kc: e.keyCode || e.which,
+          ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey, rep: e.repeat
+        });
+        return;
+      }
+
+      // Ctrl+V / Cmd+V → read viewer's clipboard and send text to host for insertion
+      if (isCtrl && (key === 'v' || key === 'V') && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        (async function() {
+          let text = '';
+          try { text = await navigator.clipboard.readText(); } catch (err) {}
+          send({ t: 'paste', text: text || '' });
+          // also send the key event
+          send({
+            t: 'kd', k: key, c: e.code, kc: e.keyCode || e.which,
+            ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey, rep: e.repeat
+          });
+        })();
+        return;
+      }
+
+      // Normal key (including other Ctrl shortcuts like Ctrl+A, Ctrl+Z, Ctrl+M, etc.)
       send({
         t: 'kd',
-        k: e.key,
+        k: key,
         c: e.code,
         kc: e.keyCode || e.which,
         ctrl: e.ctrlKey,
@@ -3575,9 +3681,8 @@ function openWindow(id) {
         meta: e.metaKey,
         rep: e.repeat
       });
-      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        send({ t: 'key', k: e.key, ctrl: false, meta: false });
-      }
+      // Do NOT also send a separate {t:'key'} printable event — that caused double typing.
+      // Host inserts printable characters from the keydown itself.
     }
     function onKeyUp(e) {
       if (role !== 'guest') return;
