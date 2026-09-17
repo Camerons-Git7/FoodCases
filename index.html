@@ -2516,7 +2516,7 @@ function openWindow(id) {
   #remoteVideo {
     width: 100%;
     height: 100%;
-    object-fit: fill;
+    object-fit: contain; /* contain + content-rect mapping works for any host/viewer aspect */
     background: #000;
     cursor: default;
     display: none;
@@ -3430,12 +3430,44 @@ function openWindow(id) {
   };
   document.getElementById('btnLeave').onclick = cleanup;
 
-  // Video fills the border box (object-fit: fill) — map directly
+  // Map pointer coords to the actual video *content* (handles letterbox/pillarbox
+  // from object-fit: contain when host/viewer aspect ratios or viewport sizes differ)
+  function getVideoContentRect(videoEl) {
+    const rect = videoEl.getBoundingClientRect();
+    const vw = videoEl.videoWidth;
+    const vh = videoEl.videoHeight;
+    if (!vw || !vh || !rect.width || !rect.height) {
+      return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    }
+    const videoRatio = vw / vh;
+    const elementRatio = rect.width / rect.height;
+    let contentWidth, contentHeight, offsetX, offsetY;
+    if (elementRatio > videoRatio) {
+      // Pillarbox: black bars on left/right
+      contentHeight = rect.height;
+      contentWidth = contentHeight * videoRatio;
+      offsetX = (rect.width - contentWidth) / 2;
+      offsetY = 0;
+    } else {
+      // Letterbox: black bars on top/bottom
+      contentWidth = rect.width;
+      contentHeight = contentWidth / videoRatio;
+      offsetX = 0;
+      offsetY = (rect.height - contentHeight) / 2;
+    }
+    return {
+      left: rect.left + offsetX,
+      top: rect.top + offsetY,
+      width: contentWidth,
+      height: contentHeight
+    };
+  }
+
   function normFromEvent(e) {
-    const r = video.getBoundingClientRect();
-    if (!r.width || !r.height) return null;
-    let x = (e.clientX - r.left) / r.width;
-    let y = (e.clientY - r.top) / r.height;
+    const content = getVideoContentRect(video);
+    if (!content.width || !content.height) return null;
+    let x = (e.clientX - content.left) / content.width;
+    let y = (e.clientY - content.top) / content.height;
     if (x < 0 || x > 1 || y < 0 || y > 1) return null;
     return { x: x, y: y };
   }
