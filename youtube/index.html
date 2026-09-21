@@ -10,127 +10,349 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; font-family: "Inter", "Segoe UI", system-ui, sans-serif; background: #0f0f0f; color: #e8eaed; overflow: hidden; }
+    html, body {
+      height: 100%;
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      background: #202124;
+      color: #e8eaed;
+      overflow: hidden;
+    }
 
     /* ════════════════════════════════════════
-       CHROME BROWSER SHELL
+       CHROME-LIKE SHELL
        ════════════════════════════════════════ */
 
     /* Title Bar */
     #chrome-titlebar {
-      height: 38px; background: #1a1a1a; display: flex; align-items: center;
-      padding: 0 0 0 8px; gap: 4px; user-select: none;
-      border-bottom: 1px solid #333; overflow-x: auto; flex-shrink: 0;
+      height: 36px;
+      background: #202124;
+      display: flex;
+      align-items: flex-end;
+      padding: 0 0 0 8px;
+      gap: 0;
+      user-select: none;
+      border-bottom: 1px solid #3c4043;
+      overflow-x: auto;
+      flex-shrink: 0;
     }
     #chrome-titlebar::-webkit-scrollbar { height: 0; }
+
     .chrome-tab {
-      display: flex; align-items: center; gap: 8px;
-      padding: 0 12px; height: 30px; background: #2d2d2d;
-      border-radius: 8px 8px 0 0; font-size: 12px; color: #e8eaed;
-      max-width: 200px; min-width: 100px; cursor: pointer;
-      border: 1px solid #444; border-bottom: none;
-      transition: background 0.15s;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px 0 14px;
+      height: 32px;
+      background: transparent;
+      border-radius: 8px 8px 0 0;
+      font-size: 12.5px;
+      color: #9aa0a6;
+      max-width: 220px;
+      min-width: 120px;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+      margin-right: 1px;
     }
-    .chrome-tab.active { background: #0f0f0f; border-color: #555; }
-    .chrome-tab:hover:not(.active) { background: #353535; }
-    .chrome-tab img { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
-    .chrome-tab span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chrome-tab:hover:not(.active) {
+      background: #2d2e30;
+      color: #e8eaed;
+    }
+    .chrome-tab.active {
+      background: #292a2d;
+      color: #e8eaed;
+      z-index: 2;
+    }
+    .chrome-tab.active::before,
+    .chrome-tab.active::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      width: 8px;
+      height: 8px;
+      background: transparent;
+    }
+    .chrome-tab.active::before {
+      left: -8px;
+      border-bottom-right-radius: 8px;
+      box-shadow: 4px 4px 0 0 #292a2d;
+    }
+    .chrome-tab.active::after {
+      right: -8px;
+      border-bottom-left-radius: 8px;
+      box-shadow: -4px 4px 0 0 #292a2d;
+    }
+    .chrome-tab img,
+    .chrome-tab .tab-favicon {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      color: #ff0000;
+      font-size: 11px;
+      display: grid;
+      place-items: center;
+    }
+    .chrome-tab span {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+    }
     .chrome-tab .tab-close {
-      width: 16px; height: 16px; border-radius: 50%; border: none;
-      background: transparent; color: #999; font-size: 14px; line-height: 1;
-      cursor: pointer; display: grid; place-items: center; opacity: 0; flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #9aa0a6;
+      font-size: 15px;
+      line-height: 1;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      flex-shrink: 0;
+      transition: background 0.12s, color 0.12s, opacity 0.12s;
     }
-    .chrome-tab:hover .tab-close { opacity: 1; }
-    .chrome-tab .tab-close:hover { background: #ff4444; color: white; }
+    .chrome-tab:hover .tab-close,
+    .chrome-tab.active .tab-close {
+      opacity: 1;
+    }
+    .chrome-tab .tab-close:hover {
+      background: #5f6368;
+      color: #fff;
+    }
+
     .chrome-newtab {
-      width: 26px; height: 26px; border-radius: 50%; border: none;
-      background: transparent; color: #aaa; font-size: 18px; cursor: pointer;
-      display: grid; place-items: center; flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #9aa0a6;
+      font-size: 18px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      margin: 0 6px 2px 4px;
+      transition: background 0.12s, color 0.12s;
     }
-    .chrome-newtab:hover { background: #4a4a4a; color: #fff; }
+    .chrome-newtab:hover {
+      background: #3c4043;
+      color: #e8eaed;
+    }
+
     .chrome-window-btns {
-      margin-left: auto; display: flex; align-items: center; height: 100%; flex-shrink: 0;
+      margin-left: auto;
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+      flex-shrink: 0;
     }
     .chrome-window-btns button {
-      width: 46px; height: 38px; border: none; background: transparent;
-      color: #ccc; font-size: 14px; cursor: pointer; display: grid; place-items: center;
+      width: 46px;
+      height: 100%;
+      border: none;
+      background: transparent;
+      color: #9aa0a6;
+      font-size: 14px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.12s, color 0.12s;
     }
-    .chrome-window-btns button:hover { background: #4a4a4a; }
-    .chrome-window-btns .chrome-close:hover { background: #e81123; color: white; }
+    .chrome-window-btns button:hover {
+      background: #3c4043;
+      color: #e8eaed;
+    }
+    .chrome-window-btns .chrome-close:hover {
+      background: #e81123;
+      color: #fff;
+    }
 
-    /* Toolbar / Address Bar */
+    /* Toolbar */
     #chrome-toolbar {
-      height: 42px; background: #0f0f0f; display: flex; align-items: center;
-      padding: 0 8px; gap: 6px; border-bottom: 1px solid #333; flex-shrink: 0;
+      height: 40px;
+      background: #292a2d;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 4px;
+      border-bottom: 1px solid #3c4043;
+      flex-shrink: 0;
     }
     .chrome-nav-btn {
-      width: 28px; height: 28px; border-radius: 50%; border: none;
-      background: transparent; color: #aaa; font-size: 16px; cursor: pointer;
-      display: grid; place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #9aa0a6;
+      font-size: 16px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.12s, color 0.12s;
     }
-    .chrome-nav-btn:hover:not(:disabled) { background: #3c3c3c; color: #fff; }
-    .chrome-nav-btn:disabled { opacity: 0.3; cursor: default; }
+    .chrome-nav-btn:hover:not(:disabled) {
+      background: #3c4043;
+      color: #e8eaed;
+    }
+    .chrome-nav-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
     #chrome-omnibox {
-      flex: 1; display: flex; align-items: center; gap: 6px;
-      background: #1f1f1f; border-radius: 20px; padding: 0 12px;
-      height: 32px; border: 1px solid #333; transition: border-color 0.2s;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #202124;
+      border-radius: 24px;
+      padding: 0 14px;
+      height: 34px;
+      border: 1px solid transparent;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      margin: 0 6px;
     }
-    #chrome-omnibox:focus-within { border-color: #ff0000; background: #1a1a1a; }
-    #chrome-omnibox .omni-icon { color: #888; font-size: 13px; }
+    #chrome-omnibox:hover {
+      background: #303134;
+    }
+    #chrome-omnibox:focus-within {
+      border-color: #8ab4f8;
+      background: #202124;
+      box-shadow: 0 0 0 1px #8ab4f8;
+    }
+    #chrome-omnibox .omni-icon {
+      color: #9aa0a6;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
     #chrome-omnibox input {
-      flex: 1; background: transparent; border: none; outline: none;
-      color: #e8eaed; font-size: 13px; font-family: inherit;
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #e8eaed;
+      font-size: 13.5px;
+      font-family: inherit;
     }
-    #chrome-omnibox input::placeholder { color: #888; }
+    #chrome-omnibox input::placeholder {
+      color: #9aa0a6;
+    }
     #chrome-omnibox .omni-star {
-      width: 24px; height: 24px; border-radius: 50%; border: none;
-      background: transparent; color: #888; font-size: 14px; cursor: pointer;
-      display: grid; place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #9aa0a6;
+      font-size: 15px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.12s, color 0.12s;
     }
-    #chrome-omnibox .omni-star:hover { background: #4a4a4a; }
-    #chrome-omnibox .omni-star.bookmarked { color: #fbbc04; }
+    #chrome-omnibox .omni-star:hover {
+      background: #3c4043;
+    }
+    #chrome-omnibox .omni-star.bookmarked {
+      color: #fbbc04;
+    }
 
     /* Bookmarks Bar */
     #chrome-bookmarks {
-      min-height: 36px; background: #1a1a1a; display: flex; align-items: center;
-      padding: 4px 12px; gap: 8px; border-bottom: 2px solid #ff0000; overflow-x: auto; flex-shrink: 0;
+      min-height: 34px;
+      background: #292a2d;
+      display: flex;
+      align-items: center;
+      padding: 3px 12px;
+      gap: 2px;
+      border-bottom: 1px solid #3c4043;
+      overflow-x: auto;
+      flex-shrink: 0;
     }
     #chrome-bookmarks::-webkit-scrollbar { height: 0; }
-    .bm-bar-item {
-      display: flex; align-items: center; gap: 6px;
-      padding: 4px 12px; border-radius: 6px; cursor: pointer;
-      font-size: 13px; color: #e8eaed; white-space: nowrap;
-      transition: background 0.15s; font-weight: 500;
-      border: 1px solid transparent;
-    }
-    .bm-bar-item:hover { background: #2a2a2a; border-color: #444; }
-    .bm-bar-item .bm-favicon {
-      width: 14px; height: 14px; border-radius: 2px;
-      display: grid; place-items: center; flex-shrink: 0;
-    }
 
-    .bm-bar-item .bm-del {
-      opacity: 0; width: 14px; height: 14px; border-radius: 3px; border: none;
-      background: transparent; color: #888; cursor: pointer; font-size: 11px;
-      display: grid; place-items: center; flex-shrink: 0;
+    .bm-bar-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 12.5px;
+      color: #e8eaed;
+      white-space: nowrap;
+      transition: background 0.12s;
+      font-weight: 500;
     }
-    .bm-bar-item:hover .bm-del { opacity: 1; }
-    .bm-bar-item .bm-del:hover { background: #ff4444; color: white; }
+    .bm-bar-item:hover {
+      background: #3c4043;
+    }
+    .bm-bar-item .bm-favicon {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      color: #ff0000;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .bm-bar-item .bm-del {
+      opacity: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: #9aa0a6;
+      cursor: pointer;
+      font-size: 12px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      transition: opacity 0.12s, background 0.12s;
+    }
+    .bm-bar-item:hover .bm-del {
+      opacity: 1;
+    }
+    .bm-bar-item .bm-del:hover {
+      background: #5f6368;
+      color: #fff;
+    }
 
     /* ════════════════════════════════════════
        CONTENT AREA
        ════════════════════════════════════════ */
     #chrome-content {
-      flex: 1; overflow: hidden; position: relative; background: #0f0f0f;
-      display: flex; flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      background: #0f0f0f;
+      display: flex;
+      flex-direction: column;
     }
     .tab-content {
-      position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; display: none;
-      flex-direction: column; background: #0f0f0f;
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: none;
+      flex-direction: column;
+      background: #0f0f0f;
     }
-    .tab-content.active { display: flex; }
+    .tab-content.active {
+      display: flex;
+    }
 
-    /* Home / New Tab - PERFECTLY CENTERED */
+    /* Home / New Tab */
     .home-screen {
       flex: 1;
       display: flex;
@@ -139,51 +361,92 @@
       justify-content: center;
       text-align: center;
       padding: 2rem;
-      background: radial-gradient(circle at 50% 30%, #1a1a1a 0%, #000 70%);
+      background: radial-gradient(circle at 50% 28%, #1a1a1a 0%, #0f0f0f 65%);
       min-height: 100%;
       width: 100%;
     }
     .home-screen .home-logo {
-      display: flex; align-items: center; justify-content: center; gap: 12px;
-      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 1.4rem;
     }
     .home-screen .home-logo .logo-icon {
-      width: 56px; height: 56px; border-radius: 14px;
-      background: #ff0000; display: grid; place-items: center;
-      box-shadow: 0 4px 20px rgba(255,0,0,0.3);
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: #ff0000;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 4px 18px rgba(255,0,0,0.28);
     }
-    .home-screen .home-logo .logo-icon svg { width: 28px; height: 28px; fill: white; }
+    .home-screen .home-logo .logo-icon svg {
+      width: 26px;
+      height: 26px;
+      fill: white;
+    }
     .home-screen .home-logo .logo-text {
-      font-size: 2.8rem; font-weight: 800; letter-spacing: -0.03em; color: #fff;
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #fff;
     }
     .home-screen .home-subtitle {
-      font-size: 1.1rem; color: #a1a1aa; margin-bottom: 2.5rem; max-width: 480px;
+      font-size: 1.05rem;
+      color: #9aa0a6;
+      margin-bottom: 2.2rem;
+      max-width: 460px;
+      line-height: 1.45;
     }
     .home-screen .home-search-box {
-      display: flex; align-items: center; gap: 8px;
-      background: #1f1f1f; border: 1px solid #333; border-radius: 12px;
-      padding: 0 16px; width: 100%; max-width: 560px; height: 52px;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #1f1f1f;
+      border: 1px solid #3c4043;
+      border-radius: 28px;
+      padding: 0 8px 0 18px;
+      width: 100%;
+      max-width: 560px;
+      height: 50px;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
     .home-screen .home-search-box:focus-within {
-      border-color: #ff0000; box-shadow: 0 0 0 3px rgba(255,0,0,0.12);
+      border-color: #ff0000;
+      box-shadow: 0 0 0 3px rgba(255,0,0,0.12);
     }
     .home-screen .home-search-box input {
-      flex: 1; background: transparent; border: none; outline: none;
-      color: #e5e5e5; font-size: 1rem; font-family: inherit;
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #e8eaed;
+      font-size: 1rem;
+      font-family: inherit;
     }
-    .home-screen .home-search-box input::placeholder { color: #888; }
+    .home-screen .home-search-box input::placeholder {
+      color: #9aa0a6;
+    }
     .home-screen .home-search-box button {
-      background: #ff0000; color: white; border: none; border-radius: 8px;
-      padding: 6px 18px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
-      transition: background 0.2s;
+      background: #ff0000;
+      color: white;
+      border: none;
+      border-radius: 22px;
+      padding: 8px 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
       white-space: nowrap;
     }
-    .home-screen .home-search-box button:hover { background: #cc0000; }
+    .home-screen .home-search-box button:hover {
+      background: #cc0000;
+    }
 
     /* Browse */
-    .browse-screen { 
-      padding-bottom: 2rem; 
+    .browse-screen {
+      padding-bottom: 2rem;
       flex: 1;
       overflow-y: auto;
       overflow-x: hidden;
@@ -194,121 +457,215 @@
       align-items: center;
       justify-content: center;
     }
-    .browse-content { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; width: 100%; }
-    .channel-section { margin-bottom: 2rem; display: none; }
-    .channel-section.loaded { display: block; }
+    .browse-content {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem;
+      width: 100%;
+    }
+    .channel-section {
+      margin-bottom: 2.2rem;
+      display: none;
+    }
+    .channel-section.loaded {
+      display: block;
+    }
     .channel-title {
-      font-size: 1.3rem; font-weight: 700; color: #ff0000;
-      border-bottom: 2px solid #ff0000; padding-bottom: 0.4rem; margin-bottom: 1rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #ff0000;
+      border-bottom: 2px solid #ff0000;
+      padding-bottom: 0.45rem;
+      margin-bottom: 1.1rem;
     }
     .video-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 1.1rem;
     }
     .video-card {
-      background: #1f1f1f; border-radius: 12px; overflow: hidden; cursor: pointer;
-      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-      border: 1px solid #333; display: flex; flex-direction: column;
+      background: #1f1f1f;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+      border: 1px solid #333;
+      display: flex;
+      flex-direction: column;
     }
-    .video-card:hover { transform: translateY(-4px); border-color: #ff0000; box-shadow: 0 8px 24px rgba(255,0,0,0.08); }
-    .video-thumb { width: 100%; padding-bottom: 56.25%; position: relative; background: #000; overflow: hidden; }
-    .video-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
-    .video-info { padding: 0.75rem 1rem; color: white; font-size: 0.9rem; font-weight: 600; line-height: 1.35; }
+    .video-card:hover {
+      transform: translateY(-3px);
+      border-color: #ff0000;
+      box-shadow: 0 8px 22px rgba(255,0,0,0.1);
+    }
+    .video-thumb {
+      width: 100%;
+      padding-bottom: 56.25%;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+    }
+    .video-thumb img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .video-info {
+      padding: 0.7rem 0.9rem;
+      color: #e8eaed;
+      font-size: 0.9rem;
+      font-weight: 600;
+      line-height: 1.35;
+    }
 
     /* Video Player */
-    .video-screen { 
-      background: #000; 
-      padding: 0; 
+    .video-screen {
+      background: #000;
+      padding: 0;
       flex: 1;
       display: flex;
       flex-direction: column;
     }
     .video-container {
-      position: relative; width: 100%; flex: 1;
-      max-width: 100%; overflow: hidden; background: #000;
+      position: relative;
+      width: 100%;
+      flex: 1;
+      max-width: 100%;
+      overflow: hidden;
+      background: #000;
     }
-    .video-container iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+    .video-container iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
 
     /* Loading & Errors */
-    .loading-wrap { 
+    .loading-wrap {
       display: none;
-      flex-direction: column; 
-      align-items: center; 
-      justify-content: center; 
-      gap: 1rem; 
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
       padding: 4rem 2rem;
       min-height: 300px;
     }
-    .loading-wrap.active { display: flex; }
-    .red-spinner { width: 44px; height: 44px; border: 4px solid rgba(255,0,0,0.2); border-top: 4px solid #ff0000; border-radius: 50%; animation: spin 1s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .error-msg { color: #ff4444; padding: 2rem; text-align: center; font-weight: 600; }
+    .loading-wrap.active {
+      display: flex;
+    }
+    .red-spinner {
+      width: 42px;
+      height: 42px;
+      border: 4px solid rgba(255,0,0,0.2);
+      border-top: 4px solid #ff0000;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .error-msg {
+      color: #ff4444;
+      padding: 2rem;
+      text-align: center;
+      font-weight: 600;
+    }
 
     /* Toast */
     #toast {
-      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
-      background: #323232; color: #fff; padding: 0.7rem 1.4rem; border-radius: 8px;
-      border: 1px solid #444; font-size: 0.85rem; font-weight: 500; z-index: 9999;
-      transition: opacity 0.3s ease; white-space: nowrap;
-      opacity: 0; pointer-events: none; display: none;
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #323232;
+      color: #fff;
+      padding: 0.7rem 1.4rem;
+      border-radius: 8px;
+      border: 1px solid #444;
+      font-size: 0.85rem;
+      font-weight: 500;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      display: none;
     }
-    #toast.show { opacity: 1; pointer-events: auto; display: block; }
-
+    #toast.show {
+      opacity: 1;
+      pointer-events: auto;
+      display: block;
+    }
 
     /* Scrollbars */
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: #0f0f0f; }
-    ::-webkit-scrollbar-thumb { background: #5f6368; border-radius: 5px; border: 2px solid #0f0f0f; }
+    ::-webkit-scrollbar-thumb {
+      background: #5f6368;
+      border-radius: 5px;
+      border: 2px solid #0f0f0f;
+    }
     ::-webkit-scrollbar-thumb:hover { background: #80868b; }
     ::-webkit-scrollbar-corner { background: transparent; }
 
     /* Context Menu */
     #context-menu {
       position: fixed;
-      background: #2d2d2d;
-      border: 1px solid #444;
+      background: #2d2e30;
+      border: 1px solid #3c4043;
       border-radius: 8px;
-      padding: 4px 0;
-      min-width: 180px;
+      padding: 6px 0;
+      min-width: 190px;
       z-index: 100000;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.55);
       font-size: 13px;
       user-select: none;
       display: none;
     }
     .ctx-item {
-      padding: 10px 18px;
+      padding: 9px 18px;
       color: #e8eaed;
       cursor: pointer;
-      transition: background 0.12s;
+      transition: background 0.1s;
       font-weight: 500;
     }
-    .ctx-item:hover { background: #ff0000; color: #fff; }
-    .ctx-item.hidden { display: none !important; }
+    .ctx-item:hover {
+      background: #ff0000;
+      color: #fff;
+    }
+    .ctx-item.hidden {
+      display: none !important;
+    }
+
     @media (max-width: 640px) {
       #chrome-titlebar { height: auto; flex-wrap: wrap; padding: 4px; }
       .chrome-tab { max-width: 140px; min-width: 80px; }
-      #chrome-toolbar { padding: 0 4px; }
+      #chrome-toolbar { padding: 0 6px; }
       .video-grid { grid-template-columns: 1fr; }
       .home-screen .home-logo .logo-text { font-size: 2rem; }
       .home-screen .home-search-box { max-width: 100%; }
     }
   </style>
-<base target="_blank">
-<base target="_blank">
-<base target="_blank">
 </head>
 <body style="display:flex;flex-direction:column;height:100vh;">
 
   <!-- ═══════ CHROME TITLE BAR WITH TABS ═══════ -->
   <div id="chrome-titlebar">
     <div class="chrome-tab active" id="tab-0" onclick="switchTab(0)">
-      <span style="color:#ff0000;font-size:10px;">▶</span>
+      <span class="tab-favicon">▶</span>
       <span>New Tab</span>
       <button class="tab-close" onclick="event.stopPropagation(); closeTab(0)">×</button>
     </div>
     <button class="chrome-newtab" onclick="newTab()" title="New Tab">+</button>
     <div class="chrome-window-btns">
-      <button title="Toggle Fullscreen" onclick="toggleFullscreen()">⛶</button>
+      <button title="Minimize" onclick="window.moveTo && window.moveTo(0,0)">─</button>
+      <button title="Toggle Fullscreen" onclick="toggleFullscreen()">□</button>
       <button class="chrome-close" title="Close" onclick="window.close()">×</button>
     </div>
   </div>
@@ -361,14 +718,13 @@
     <div class="ctx-item" data-action="unmute">Unmute Tab</div>
   </div>
 
-
   <script>
     /* ── State ── */
     const proxies = [
-  "https://cors-proxy.yangxiaoke.workers.dev/?url=",
-  "https://api.allorigins.win/raw?url=",
-  "https://api.codetabs.com/v1/proxy?quest="
-];
+      "https://cors-proxy.yangxiaoke.workers.dev/?url=",
+      "https://api.allorigins.win/raw?url=",
+      "https://api.codetabs.com/v1/proxy?quest="
+    ];
 
     const defaultChannels = [
       { id: "joe-bart-gaming", title: "Joe Bart Gaming", url: "https://www.youtube.com/@JoeBartGames/videos" },
@@ -397,7 +753,7 @@
         navHistory: [],
         navIndex: -1,
         screen: "home",
-      muted: false
+        muted: false
       };
     }
     initTabState(0);
@@ -462,7 +818,7 @@
         item.className = "bm-bar-item";
         item.dataset.dynamic = "true";
         item.innerHTML = `
-          <div class="bm-favicon" style="color:#ff0000;font-size:10px;font-weight:700;">▶</div>
+          <div class="bm-favicon">▶</div>
           <span>${escapeHtml(bm.name)}</span>
           ${bm.deletable !== false ? `<button class="bm-del" onclick="event.stopPropagation(); deleteBookmark('${bm.id}')">×</button>` : ""}
         `;
@@ -542,7 +898,7 @@
           try {
             let fetchUrl = channel.url;
             if (!fetchUrl.includes("hl=")) fetchUrl += (fetchUrl.includes("?") ? "&" : "?") + "hl=en&gl=US";
-            const res = await fetch(proxy + encodeURIComponent(fetchUrl), { headers: { "Accept": "text/html", "Accept-Language": "en-US,en;q=0.9" } });
+            const res = await fetch(proxy + encodeURIComponent(fetchUrl), { headers: { "Accept": "text/html", "Accept-Language": "en-US,en;q=0.9", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" } });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const html = await res.text();
             if (html.length < 2000) throw new Error("Empty response");
@@ -578,7 +934,7 @@
       try {
         const url = `https://www.youtube.com/youtubei/v1/browse?key=${s.apiKey}`;
         const body = { context: { client: { clientName: "WEB", clientVersion: s.clientVersion || "2.20250301.01.00", hl: "en", gl: "US" } }, continuation: s.continuationToken };
-        const res = await fetch(s.proxy + encodeURIComponent(url), { method: "POST", headers: { "Content-Type": "application/json", "Accept-Language": "en-US,en;q=0.9" }, body: JSON.stringify(body) });
+        const res = await fetch(s.proxy + encodeURIComponent(url), { method: "POST", headers: { "Content-Type": "application/json", "Accept-Language": "en-US,en;q=0.9", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" }, body: JSON.stringify(body) });
         if (!res.ok) return false;
         const data = await res.json();
         const newVideos = parseContinuationVideos(data);
@@ -590,7 +946,7 @@
       } catch (e) { console.warn("Preload continuation error:", e); return false; }
     }
 
-        /* ── Tab System ── */
+    /* ── Tab System ── */
     function newTab() {
       const id = nextTabId++;
       initTabState(id);
@@ -600,7 +956,7 @@
       tabEl.id = "tab-" + id;
       tabEl.onclick = () => switchTab(id);
       tabEl.innerHTML = `
-        <span style="color:#ff0000;font-size:10px;">▶</span>
+        <span class="tab-favicon">▶</span>
         <span>New Tab</span>
         <button class="tab-close" onclick="event.stopPropagation(); closeTab(${id})">×</button>
       `;
@@ -774,7 +1130,7 @@
       t.currentVideoId = null;
       t.currentChannels = [];
       t.currentBrowseTitle = "";
-      document.getElementById("tab-" + activeTabId).querySelector("span").textContent = "New Tab";
+      document.getElementById("tab-" + activeTabId).querySelector("span:not(.tab-favicon)").textContent = "New Tab";
       document.getElementById("omnibox-input").value = "";
       document.getElementById("omni-secure").textContent = "🔒";
       if (push) pushNav("home");
@@ -872,7 +1228,7 @@
       const content = getActiveContent();
       const player = content.querySelector(".player");
       player.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1`;
-      document.getElementById("tab-" + activeTabId).querySelector("span").textContent = "▶ YouTube Video";
+      document.getElementById("tab-" + activeTabId).querySelector("span:not(.tab-favicon)").textContent = "▶ YouTube Video";
       document.getElementById("omnibox-input").value = `https://www.youtube.com/watch?v=${videoId}`;
       document.getElementById("omni-secure").textContent = "🔒";
       if (push) pushNav("video", videoId);
@@ -902,7 +1258,7 @@
         t.isSearchMode = !!(customChannels && customChannels[0]?.isSearch);
         t.currentVideoId = null;
 
-        document.getElementById("tab-" + activeTabId).querySelector("span").textContent = t.currentBrowseTitle;
+        document.getElementById("tab-" + activeTabId).querySelector("span:not(.tab-favicon)").textContent = t.currentBrowseTitle;
         document.getElementById("omnibox-input").value = t.currentBrowseTitle;
         document.getElementById("omni-secure").textContent = "🔒";
 
@@ -928,7 +1284,7 @@
       t.isSearchMode = !!(customChannels && customChannels[0]?.isSearch);
       t.currentVideoId = null;
 
-      document.getElementById("tab-" + activeTabId).querySelector("span").textContent = t.currentBrowseTitle;
+      document.getElementById("tab-" + activeTabId).querySelector("span:not(.tab-favicon)").textContent = t.currentBrowseTitle;
       document.getElementById("omnibox-input").value = t.currentBrowseTitle;
       document.getElementById("omni-secure").textContent = "🔒";
 
@@ -961,7 +1317,7 @@
           try {
             let fetchUrl = channel.url;
             if (!fetchUrl.includes("hl=")) fetchUrl += (fetchUrl.includes("?") ? "&" : "?") + "hl=en&gl=US";
-            const res = await fetch(proxy + encodeURIComponent(fetchUrl), { headers: { "Accept": "text/html", "Accept-Language": "en-US,en;q=0.9" } });
+            const res = await fetch(proxy + encodeURIComponent(fetchUrl), { headers: { "Accept": "text/html", "Accept-Language": "en-US,en;q=0.9", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" } });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const html = await res.text();
             if (html.length < 2000) throw new Error("Empty response");
@@ -995,8 +1351,13 @@
     }
 
     function findContinuation(html) {
-      const m = html.match(/"continuationCommand":\s*{"token":"([^"]+)"}/) || html.match(/"continuation":"([^"]+)"/);
-      return m ? m[1] : null;
+      // Prefer continuationCommand tokens (minified or spaced); take the longest as it's usually the grid load-more
+      const matches = [...html.matchAll(/"continuationCommand"\s*:\s*\{\s*"token"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
+      if (matches.length) {
+        return matches.reduce((a, b) => a.length >= b.length ? a : b);
+      }
+      const m2 = html.match(/"continuation"\s*:\s*"([^"]{40,})"/);
+      return m2 ? m2[1] : null;
     }
 
     function parseVideos(html) {
@@ -1007,6 +1368,8 @@
           const data = JSON.parse(match[1]);
           function recurse(obj) {
             if (!obj || typeof obj !== "object") return;
+
+            // Classic renderers (search results, older layouts)
             const vr = obj.videoRenderer || obj.gridVideoRenderer || obj.richItemRenderer?.content?.videoRenderer || obj.compactVideoRenderer || obj.reelItemRenderer;
             if (vr?.videoId) {
               let title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || vr.headline?.simpleText || "Untitled Video";
@@ -1014,6 +1377,27 @@
               const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
               videos.push({ id: vr.videoId, title: title.trim(), thumbnail: thumb });
             }
+
+            // New channel /videos layout (lockupViewModel)
+            const lockup = obj.lockupViewModel || (obj.richItemRenderer?.content?.lockupViewModel);
+            if (lockup) {
+              const id = lockup.contentId || lockup.rendererContext?.commandContext?.onTap?.innertubeCommand?.watchEndpoint?.videoId;
+              if (id && /^[a-zA-Z0-9_-]{11}$/.test(id)) {
+                let title = lockup.metadata?.lockupMetadataViewModel?.title?.content
+                  || lockup.metadata?.title?.content
+                  || lockup.metadata?.metadataDetails?.title?.content
+                  || lockup.rendererContext?.accessibilityContext?.label
+                  || "Untitled Video";
+                // Strip trailing duration from accessibility label if used as title
+                if (typeof title === "string" && /\d+\s+minutes/.test(title)) {
+                  title = title.replace(/\s+\d+\s+minutes.*$/, "").trim() || title;
+                }
+                const sources = lockup.contentImage?.thumbnailViewModel?.image?.sources || [];
+                const thumb = (sources.length ? sources[sources.length - 1].url : null) || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+                videos.push({ id, title: String(title).trim(), thumbnail: thumb });
+              }
+            }
+
             Object.values(obj).forEach(recurse);
           }
           recurse(data);
@@ -1022,13 +1406,12 @@
       if (videos.length === 0) {
         const seen = new Set();
         [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].forEach(m => {
-          if (!seen.has(m[1])) { 
-            seen.add(m[1]); 
-            // Try to find a nearby title for this video ID
+          if (!seen.has(m[1])) {
+            seen.add(m[1]);
             let title = "Video (fallback)";
-            const titleMatch = html.match(new RegExp(`"videoId":"${m[1]}"[\s\S]{0,500}?"title":\s*"([^"]+)"`));
+            const titleMatch = html.match(new RegExp(`"videoId":"${m[1]}"[\\s\\S]{0,800}?"title":\\s*(?:\\{\\s*"content":\\s*)?"([^"]+)"`));
             if (titleMatch) title = titleMatch[1];
-            videos.push({ id: m[1], title: title, thumbnail: `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg` }); 
+            videos.push({ id: m[1], title: title, thumbnail: `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg` });
           }
         });
       }
@@ -1044,7 +1427,7 @@
       try {
         const url = `https://www.youtube.com/youtubei/v1/browse?key=${s.apiKey}`;
         const body = { context: { client: { clientName: "WEB", clientVersion: s.clientVersion || "2.20250301.01.00", hl: "en", gl: "US" } }, continuation: s.continuationToken };
-        const res = await fetch(s.proxy + encodeURIComponent(url), { method: "POST", headers: { "Content-Type": "application/json", "Accept-Language": "en-US,en;q=0.9" }, body: JSON.stringify(body) });
+        const res = await fetch(s.proxy + encodeURIComponent(url), { method: "POST", headers: { "Content-Type": "application/json", "Accept-Language": "en-US,en;q=0.9", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" }, body: JSON.stringify(body) });
         if (!res.ok) return false;
         const data = await res.json();
         const newVideos = parseContinuationVideos(data);
@@ -1060,6 +1443,8 @@
       const videos = [];
       function recurse(obj) {
         if (!obj || typeof obj !== "object") return;
+
+        // Classic renderers
         const vr = obj.gridVideoRenderer || obj.videoRenderer || obj.richItemRenderer?.content?.videoRenderer || obj.compactVideoRenderer || obj.reelItemRenderer;
         if (vr?.videoId) {
           let title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || vr.headline?.simpleText || "Untitled";
@@ -1067,6 +1452,26 @@
           const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
           videos.push({ id: vr.videoId, title: title.trim(), thumbnail: thumb });
         }
+
+        // New lockupViewModel (channel continuations)
+        const lockup = obj.lockupViewModel || (obj.richItemRenderer?.content?.lockupViewModel);
+        if (lockup) {
+          const id = lockup.contentId || lockup.rendererContext?.commandContext?.onTap?.innertubeCommand?.watchEndpoint?.videoId;
+          if (id && /^[a-zA-Z0-9_-]{11}$/.test(id)) {
+            let title = lockup.metadata?.lockupMetadataViewModel?.title?.content
+              || lockup.metadata?.title?.content
+              || lockup.metadata?.metadataDetails?.title?.content
+              || lockup.rendererContext?.accessibilityContext?.label
+              || "Untitled";
+            if (typeof title === "string" && /\d+\s+minutes/.test(title)) {
+              title = title.replace(/\s+\d+\s+minutes.*$/, "").trim() || title;
+            }
+            const sources = lockup.contentImage?.thumbnailViewModel?.image?.sources || [];
+            const thumb = (sources.length ? sources[sources.length - 1].url : null) || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+            videos.push({ id, title: String(title).trim(), thumbnail: thumb });
+          }
+        }
+
         Object.values(obj).forEach(recurse);
       }
       recurse(data);
@@ -1241,7 +1646,7 @@
           t.muted = !t.muted;
           const muted = t.muted;
           // Update tab visual indicator
-          const span = ctxTarget.querySelector("span");
+          const span = ctxTarget.querySelector("span:not(.tab-favicon)");
           if (span) {
             const baseText = span.textContent.replace(" 🔇", "").replace(" ▶", "");
             if (muted && baseText !== "New Tab") {
@@ -1257,7 +1662,7 @@
       hideCtxMenu();
     });
 
-        /* ── Keyboard Shortcuts ── */
+    /* ── Keyboard Shortcuts ── */
     document.addEventListener("keydown", e => {
       // Ctrl+T: New Tab
       if (e.ctrlKey && e.key === "t") {
