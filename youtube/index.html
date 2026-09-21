@@ -18,11 +18,6 @@
       overflow: hidden;
     }
 
-    /* ════════════════════════════════════════
-       CHROME-LIKE SHELL
-       ════════════════════════════════════════ */
-
-    /* Title Bar */
     #chrome-titlebar {
       height: 36px;
       background: #202124;
@@ -32,7 +27,7 @@
       gap: 0;
       user-select: none;
       border-bottom: 1px solid #3c4043;
-      overflow-x: hidden;          /* Chrome doesn't scroll the tab strip */
+      overflow-x: hidden;
       flex-shrink: 0;
     }
     #chrome-titlebar::-webkit-scrollbar { height: 0; }
@@ -48,11 +43,10 @@
       border-radius: 8px 8px 0 0;
       font-size: 12.5px;
       color: #9aa0a6;
-      /* Chrome-like dynamic sizing */
-      flex: 1 1 0;                 /* grow & shrink equally */
-      max-width: 240px;            /* preferred width when few tabs */
-      min-width: 48px;             /* Chrome allows very small tabs when many exist */
-      width: 0;                    /* important so flex can shrink properly */
+      flex: 1 1 0;
+      max-width: 240px;
+      min-width: 48px;
+      width: 0;
       cursor: pointer;
       transition: background 0.12s, color 0.12s;
       margin-right: 1px;
@@ -116,7 +110,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       font-weight: 500;
-      min-width: 0; /* critical so text can shrink properly */
+      min-width: 0;
     }
     .chrome-tab .tab-close {
       width: 16px;
@@ -191,7 +185,6 @@
       color: #fff;
     }
 
-    /* Toolbar */
     #chrome-toolbar {
       height: 40px;
       background: #292a2d;
@@ -282,7 +275,6 @@
       color: #fbbc04;
     }
 
-    /* Bookmarks Bar */
     #chrome-bookmarks {
       min-height: 34px;
       background: #292a2d;
@@ -346,9 +338,6 @@
       color: #fff;
     }
 
-    /* ════════════════════════════════════════
-       CONTENT AREA
-       ════════════════════════════════════════ */
     #chrome-content {
       flex: 1;
       overflow: hidden;
@@ -370,7 +359,6 @@
       display: flex;
     }
 
-    /* Home / New Tab */
     .home-screen {
       flex: 1;
       display: flex;
@@ -462,7 +450,6 @@
       background: #cc0000;
     }
 
-    /* Browse */
     .browse-screen {
       padding-bottom: 2rem;
       flex: 1;
@@ -535,14 +522,81 @@
       display: block;
     }
     .video-info {
-      padding: 0.7rem 0.9rem;
+      padding: 0.7rem 0.9rem 0.4rem;
       color: #e8eaed;
       font-size: 0.9rem;
       font-weight: 600;
       line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .video-meta {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 0.2rem 0.9rem 0.7rem;
+      font-size: 0.75rem;
+      color: #aaa;
+    }
+    .video-meta .meta-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #333;
+      flex-shrink: 0;
+      object-fit: cover;
+      display: block;
+      margin-top: 1px;
+    }
+    .video-meta .meta-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow: hidden;
+      flex: 1;
+      min-width: 0;
+    }
+    .video-meta .meta-channel {
+      font-weight: 600;
+      color: #aaa;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.8rem;
+    }
+    .video-meta .meta-stats {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      color: #888;
+      flex-wrap: wrap;
+    }
+    .video-meta .meta-stats span {
+      white-space: nowrap;
+    }
+    .video-meta .meta-stats .dot {
+      font-size: 0.6rem;
+      opacity: 0.6;
+    }
+    .video-duration {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.3px;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.1);
+      z-index: 2;
     }
 
-    /* Video Player */
     .video-screen {
       background: #000;
       padding: 0;
@@ -566,7 +620,6 @@
       border: none;
     }
 
-    /* Loading & Errors */
     .loading-wrap {
       display: none;
       flex-direction: column;
@@ -598,7 +651,6 @@
       font-weight: 600;
     }
 
-    /* Toast */
     #toast {
       position: fixed;
       bottom: 1.5rem;
@@ -624,7 +676,6 @@
       display: block;
     }
 
-    /* Scrollbars */
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: #0f0f0f; }
     ::-webkit-scrollbar-thumb {
@@ -635,7 +686,6 @@
     ::-webkit-scrollbar-thumb:hover { background: #80868b; }
     ::-webkit-scrollbar-corner { background: transparent; }
 
-    /* Context Menu */
     #context-menu {
       position: fixed;
       background: #2d2e30;
@@ -669,13 +719,13 @@
       .video-grid { grid-template-columns: 1fr; }
       .home-screen .home-logo .logo-text { font-size: 2rem; }
       .home-screen .home-search-box { max-width: 100%; }
-      .chrome-tab { min-width: 40px; } /* allow even smaller on mobile */
+      .chrome-tab { min-width: 40px; }
+      .video-meta .meta-stats { font-size: 0.65rem; }
     }
   </style>
 </head>
 <body style="display:flex;flex-direction:column;height:100vh;">
 
-  <!-- ═══════ CHROME TITLE BAR WITH TABS ═══════ -->
   <div id="chrome-titlebar">
     <div class="chrome-tab active" id="tab-0" onclick="switchTab(0)">
       <span class="tab-favicon">▶</span>
@@ -690,7 +740,6 @@
     </div>
   </div>
 
-  <!-- ═══════ CHROME TOOLBAR / ADDRESS BAR ═══════ -->
   <div id="chrome-toolbar">
     <button class="chrome-nav-btn" id="btn-back" onclick="goBack()" disabled title="Back (Alt+Left)">←</button>
     <button class="chrome-nav-btn" id="btn-fwd" onclick="goForward()" disabled title="Forward (Alt+Right)">→</button>
@@ -703,13 +752,9 @@
     </div>
   </div>
 
-  <!-- ═══════ CHROME BOOKMARKS BAR ═══════ -->
   <div id="chrome-bookmarks"></div>
 
-  <!-- ═══════ CONTENT AREA ═══════ -->
   <div id="chrome-content">
-
-    <!-- Tab 0 -->
     <div class="tab-content active" data-tab="0">
       <div class="home-screen">
         <div class="home-logo">
@@ -725,7 +770,6 @@
         </div>
       </div>
     </div>
-
   </div>
 
   <div id="toast"></div>
@@ -739,7 +783,6 @@
   </div>
 
   <script>
-    /* ── State ── */
     const proxies = [
       "https://cors-proxy.yangxiaoke.workers.dev/?url=",
       "https://api.allorigins.win/raw?url=",
@@ -753,7 +796,6 @@
       { id: "joe-bart-philosophy", title: "Philosophy Videos", url: "https://www.youtube.com/@Joe-Bart-Philosophy/videos", avatar: "https://yt3.googleusercontent.com/0xhaIMs1vajime_rQtgxv1dhugOuVBgXfdsSsvV2tMAO7GOvolfeuZ_TX5RETnBha287nlHL=s88-c-k-c0x00ffffff-no-rj" }
     ];
 
-    // Main Joe avatar used for the combined "Joe" collection bookmark
     const JOE_MAIN_AVATAR = "https://yt3.googleusercontent.com/jbgbWg3aEZKUtuJDdckG4f1Ui9nujB_ji7F1otSJCBTBNaEF68RCQ7iPnDf8vbuZjEOqYSAxoA=s88-c-k-c0x00ffffff-no-rj";
 
     function setTabIcon(tabId, icon) {
@@ -770,7 +812,6 @@
     let activeTabId = 0;
     let nextTabId = 1;
 
-    /* ── Background Preload Cache ── */
     const preloadCache = {};
     let preloadInProgress = false;
 
@@ -791,7 +832,6 @@
     }
     initTabState(0);
 
-    /* ── Bookmarks (localStorage) ── */
     const BM_KEY = "yt_browser_bookmarks";
 
     function getBookmarks() {
@@ -889,7 +929,6 @@
       }
     }
 
-    /* ── Background Preloading ── */
     function getCacheKey(channels) {
       return channels.map(c => c.id).sort().join("|");
     }
@@ -979,7 +1018,6 @@
       } catch (e) { console.warn("Preload continuation error:", e); return false; }
     }
 
-    /* ── Tab System ── */
     function newTab() {
       const id = nextTabId++;
       initTabState(id);
@@ -1028,7 +1066,6 @@
       syncOmnibox();
     }
 
-    // Chrome-like delayed tab resize after closing
     let tabResizeTimer = null;
     function freezeTabWidths() {
       const tabsEls = document.querySelectorAll(".chrome-tab");
@@ -1051,10 +1088,7 @@
     }
     function scheduleTabUnfreeze() {
       clearTimeout(tabResizeTimer);
-      // Chrome keeps widths locked briefly so you can spam-close
-      tabResizeTimer = setTimeout(() => {
-        unfreezeTabWidths();
-      }, 400);
+      tabResizeTimer = setTimeout(() => { unfreezeTabWidths(); }, 400);
     }
 
     function closeTab(id) {
@@ -1062,10 +1096,7 @@
       const contentEl = document.querySelector(`.tab-content[data-tab="${id}"]`);
       if (!tabEl || !contentEl) return;
 
-      // Freeze current widths of remaining tabs (Chrome behavior)
       freezeTabWidths();
-
-      // Stop any video playing in this tab before closing
       const player = contentEl.querySelector(".player");
       if (player) player.src = "";
 
@@ -1086,8 +1117,6 @@
         const newId = parseInt(remaining[newIdx].id.replace("tab-", ""));
         switchTab(newId);
       }
-
-      // After a short delay (or if user stops closing), let tabs expand again
       scheduleTabUnfreeze();
     }
 
@@ -1100,7 +1129,6 @@
       return content?.querySelector(".home-input");
     }
 
-    /* ── Navigation / History ── */
     function pushNav(type, data, title) {
       const t = tabs[activeTabId];
       t.navHistory = t.navHistory.slice(0, t.navIndex + 1);
@@ -1142,7 +1170,6 @@
       else if (entry.type === "browse") openBrowse(null, entry.data, entry.title, false);
     }
 
-    /* ── Fullscreen ── */
     function toggleFullscreen() {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(()=>{});
@@ -1151,12 +1178,10 @@
       }
     }
 
-    /* ── Screens ── */
     function showScreen(id) {
       const content = getActiveContent();
       if (!content) return;
 
-      // Stop video audio whenever we leave the video screen
       const currentScreen = tabs[activeTabId]?.screen;
       if (currentScreen === "video" && id !== "video-screen") {
         const player = content.querySelector(".player");
@@ -1245,7 +1270,6 @@
       }
     }
 
-    /* ── Omnibox & Home Search Handling ── */
     document.getElementById("omnibox-input").addEventListener("keypress", e => {
       if (e.key === "Enter") handleOmnibox();
     });
@@ -1293,7 +1317,6 @@
       return { url, name };
     }
 
-    /* ── Video Player ── */
     function playVideo(input, push=true, title=null, avatar=null) {
       const videoId = typeof input === "string" && input.length === 11 ? input : extractVideoId(input);
       if (!videoId) { toast("Invalid YouTube link"); return; }
@@ -1308,7 +1331,6 @@
       player.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1`;
       const tabTitle = title ? title : "YouTube Video";
       document.getElementById("tab-" + activeTabId).querySelector("span:not(.tab-favicon)").textContent = tabTitle;
-      // Use the channel's pfp when available (e.g. opened from a channel page)
       setTabIcon(activeTabId, avatar || "▶");
       document.getElementById("omnibox-input").value = `https://www.youtube.com/watch?v=${videoId}`;
       document.getElementById("omni-secure").textContent = "🔒";
@@ -1317,20 +1339,15 @@
 
     function getBrowseIcon(channels, title) {
       if (!channels || channels.length === 0) return "▶";
-      // Search results
       if (channels[0]?.isSearch) return "▶";
-      // Single channel with avatar
       if (channels.length === 1) {
         if (channels[0].avatar) return channels[0].avatar;
         const known = defaultChannels.find(c => c.id === channels[0].id || c.url === channels[0].url);
         if (known?.avatar) return known.avatar;
       }
-      // Joe collection (multiple default channels) → use General Videos pfp
       if (channels.length > 1 && channels.some(c => c.id === "joe-bart" || (c.url && c.url.includes("JoeBartolozzi")))) return JOE_MAIN_AVATAR;
-      // Any other multi-channel collection → use first available avatar
       const withAvatar = channels.find(c => c.avatar);
       if (withAvatar) return withAvatar.avatar;
-      // Try matching any known default channel
       for (const ch of channels) {
         const known = defaultChannels.find(c => c.id === ch.id || c.url === ch.url);
         if (known?.avatar) return known.avatar;
@@ -1338,7 +1355,6 @@
       return "▶";
     }
 
-    /* ── Browse ── */
     async function openBrowse(e, customChannels, title, push=true) {
       ensureScreens();
       showScreen("browse-screen");
@@ -1353,7 +1369,6 @@
       const cacheKey = getCacheKey(channelsToLoad);
       const cached = preloadCache[cacheKey];
 
-      // If we have cached data, use it immediately
       if (cached && cached.ready) {
         t.allChannelVideos = JSON.parse(JSON.stringify(cached.allChannelVideos));
         t.channelStates = JSON.parse(JSON.stringify(cached.channelStates));
@@ -1407,7 +1422,6 @@
       await Promise.all(t.currentChannels.map(ch => loadAllChannelVideos(ch)));
 
       loading.classList.remove("active");
-      // Show all sections only after everything is loaded
       content.querySelectorAll(".channel-section").forEach(sec => sec.classList.add("loaded"));
       if (push) pushNav("browse", t.currentChannels, t.currentBrowseTitle);
     }
@@ -1457,7 +1471,6 @@
     }
 
     function findContinuation(html) {
-      // Prefer continuationCommand tokens (minified or spaced); take the longest as it's usually the grid load-more
       const matches = [...html.matchAll(/"continuationCommand"\s*:\s*\{\s*"token"\s*:\s*"([^"]+)"/g)].map(m => m[1]);
       if (matches.length) {
         return matches.reduce((a, b) => a.length >= b.length ? a : b);
@@ -1475,38 +1488,139 @@
           function recurse(obj) {
             if (!obj || typeof obj !== "object") return;
 
-            // Classic renderers (search results, older layouts)
             const vr = obj.videoRenderer || obj.gridVideoRenderer || obj.richItemRenderer?.content?.videoRenderer || obj.compactVideoRenderer || obj.reelItemRenderer;
             if (vr?.videoId) {
               let title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || vr.headline?.simpleText || "Untitled Video";
               const thumbs = vr.thumbnail?.thumbnails || [];
               const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
-              // Try to get channel avatar
+
+              const duration = vr.lengthText?.simpleText || vr.lengthText?.runs?.[0]?.text || null;
+
+              const channelName =
+                vr.ownerText?.runs?.[0]?.text ||
+                vr.shortBylineText?.runs?.[0]?.text ||
+                vr.longBylineText?.runs?.[0]?.text ||
+                vr.owner?.title?.runs?.[0]?.text ||
+                vr.channelName?.simpleText ||
+                null;
+
               let avatar = null;
               const chThumbs = vr.channelThumbnailSupportedRenderers?.channelThumbnailWithLinkRenderer?.thumbnail?.thumbnails
                 || vr.owner?.thumbnail?.thumbnails
                 || vr.channelThumbnail?.thumbnails;
               if (chThumbs?.length) avatar = chThumbs[chThumbs.length - 1].url;
-              videos.push({ id: vr.videoId, title: title.trim(), thumbnail: thumb, avatar });
+
+              const publishedTime = vr.publishedTimeText?.simpleText || null;
+              const viewCount = vr.viewCountText?.simpleText || vr.shortViewCountText?.simpleText || null;
+              let viewsAndDate = "";
+              if (viewCount) viewsAndDate += viewCount;
+              if (publishedTime) {
+                if (viewsAndDate) viewsAndDate += " • ";
+                viewsAndDate += publishedTime;
+              }
+
+              videos.push({
+                id: vr.videoId,
+                title: title.trim(),
+                thumbnail: thumb,
+                avatar,
+                channelName,
+                duration,
+                viewCount,
+                publishedTime,
+                viewsAndDate
+              });
             }
 
-            // New channel /videos layout (lockupViewModel)
             const lockup = obj.lockupViewModel || (obj.richItemRenderer?.content?.lockupViewModel);
             if (lockup) {
               const id = lockup.contentId || lockup.rendererContext?.commandContext?.onTap?.innertubeCommand?.watchEndpoint?.videoId;
               if (id && /^[a-zA-Z0-9_-]{11}$/.test(id)) {
-                let title = lockup.metadata?.lockupMetadataViewModel?.title?.content
+                const lockupMeta = lockup.metadata?.lockupMetadataViewModel;
+                let title = lockupMeta?.title?.content
                   || lockup.metadata?.title?.content
                   || lockup.metadata?.metadataDetails?.title?.content
                   || lockup.rendererContext?.accessibilityContext?.label
                   || "Untitled Video";
-                // Strip trailing duration from accessibility label if used as title
                 if (typeof title === "string" && /\d+\s+minutes/.test(title)) {
                   title = title.replace(/\s+\d+\s+minutes.*$/, "").trim() || title;
                 }
                 const sources = lockup.contentImage?.thumbnailViewModel?.image?.sources || [];
                 const thumb = (sources.length ? sources[sources.length - 1].url : null) || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-                videos.push({ id, title: String(title).trim(), thumbnail: thumb, avatar: null });
+
+                let duration = null;
+                const overlays = lockup.contentImage?.thumbnailViewModel?.overlays || [];
+                for (const ov of overlays) {
+                  const badges = ov.thumbnailOverlayBadgeViewModel?.thumbnailBadges;
+                  if (badges) {
+                    for (const b of badges) {
+                      if (b.thumbnailBadgeViewModel?.text) { duration = b.thumbnailBadgeViewModel.text; break; }
+                    }
+                  }
+                  if (!duration && ov.thumbnailOverlayTimeStatusViewModel?.simpleText) {
+                    duration = ov.thumbnailOverlayTimeStatusViewModel.simpleText;
+                  }
+                  if (duration) break;
+                }
+
+                const metaRows = lockupMeta?.metadata?.contentMetadataViewModel?.metadataRows
+                              || lockup.metadata?.contentMetadataViewModel?.metadataRows
+                              || [];
+
+                let channelName = null;
+                let viewCount = null;
+                let publishedTime = null;
+
+                const allParts = [];
+                for (const row of metaRows) {
+                  for (const part of (row.metadataParts || [])) {
+                    const txt = part.text?.content;
+                    if (txt) allParts.push(txt);
+                  }
+                }
+
+                for (const txt of allParts) {
+                  if (/^\d+:\d+(:\d+)?$/.test(txt)) {
+                    if (!duration) duration = txt;
+                    continue;
+                  }
+                  if (/views?$/i.test(txt)) {
+                    if (!viewCount) viewCount = txt;
+                    continue;
+                  }
+                  if (/(ago|premiered|streamed)/i.test(txt)) {
+                    if (!publishedTime) publishedTime = txt;
+                    continue;
+                  }
+                  if (!channelName) channelName = txt;
+                }
+
+                if (!channelName) {
+                  const acc = lockup.rendererContext?.accessibilityContext?.label;
+                  if (acc) {
+                    const m = acc.match(/\bby\s+(.+?)\s+\d/i);
+                    if (m) channelName = m[1].trim();
+                  }
+                }
+
+                let viewsAndDate = "";
+                if (viewCount) viewsAndDate += viewCount;
+                if (publishedTime) {
+                  if (viewsAndDate) viewsAndDate += " • ";
+                  viewsAndDate += publishedTime;
+                }
+
+                videos.push({
+                  id,
+                  title: String(title).trim(),
+                  thumbnail: thumb,
+                  avatar: null,
+                  channelName,
+                  duration,
+                  viewCount,
+                  publishedTime,
+                  viewsAndDate
+                });
               }
             }
 
@@ -1515,6 +1629,7 @@
           recurse(data);
         }
       } catch (e) { console.error("JSON parse failed:", e); }
+
       if (videos.length === 0) {
         const seen = new Set();
         [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].forEach(m => {
@@ -1523,7 +1638,17 @@
             let title = "Video (fallback)";
             const titleMatch = html.match(new RegExp(`"videoId":"${m[1]}"[\\s\\S]{0,800}?"title":\\s*(?:\\{\\s*"content":\\s*)?"([^"]+)"`));
             if (titleMatch) title = titleMatch[1];
-            videos.push({ id: m[1], title: title, thumbnail: `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg` });
+            videos.push({
+              id: m[1],
+              title: title,
+              thumbnail: `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg`,
+              avatar: null,
+              channelName: null,
+              duration: null,
+              viewCount: null,
+              publishedTime: null,
+              viewsAndDate: null
+            });
           }
         });
       }
@@ -1556,7 +1681,6 @@
       function recurse(obj) {
         if (!obj || typeof obj !== "object") return;
 
-        // Classic renderers
         const vr = obj.gridVideoRenderer || obj.videoRenderer || obj.richItemRenderer?.content?.videoRenderer || obj.compactVideoRenderer || obj.reelItemRenderer;
         if (vr?.videoId) {
           let title = vr.title?.runs?.[0]?.text || vr.title?.simpleText || vr.headline?.simpleText || "Untitled";
@@ -1567,15 +1691,27 @@
             || vr.owner?.thumbnail?.thumbnails
             || vr.channelThumbnail?.thumbnails;
           if (chThumbs?.length) avatar = chThumbs[chThumbs.length - 1].url;
-          videos.push({ id: vr.videoId, title: title.trim(), thumbnail: thumb, avatar });
+
+          const duration = vr.lengthText?.simpleText || vr.lengthText?.runs?.[0]?.text || null;
+          const channelName = vr.ownerText?.runs?.[0]?.text || vr.shortBylineText?.runs?.[0]?.text || vr.longBylineText?.runs?.[0]?.text || null;
+          const publishedTime = vr.publishedTimeText?.simpleText || null;
+          const viewCount = vr.viewCountText?.simpleText || vr.shortViewCountText?.simpleText || null;
+          let viewsAndDate = "";
+          if (viewCount) viewsAndDate += viewCount;
+          if (publishedTime) {
+            if (viewsAndDate) viewsAndDate += " • ";
+            viewsAndDate += publishedTime;
+          }
+
+          videos.push({ id: vr.videoId, title: title.trim(), thumbnail: thumb, avatar, channelName, duration, viewCount, publishedTime, viewsAndDate });
         }
 
-        // New lockupViewModel (channel continuations)
         const lockup = obj.lockupViewModel || (obj.richItemRenderer?.content?.lockupViewModel);
         if (lockup) {
           const id = lockup.contentId || lockup.rendererContext?.commandContext?.onTap?.innertubeCommand?.watchEndpoint?.videoId;
           if (id && /^[a-zA-Z0-9_-]{11}$/.test(id)) {
-            let title = lockup.metadata?.lockupMetadataViewModel?.title?.content
+            const lockupMeta = lockup.metadata?.lockupMetadataViewModel;
+            let title = lockupMeta?.title?.content
               || lockup.metadata?.title?.content
               || lockup.metadata?.metadataDetails?.title?.content
               || lockup.rendererContext?.accessibilityContext?.label
@@ -1585,7 +1721,70 @@
             }
             const sources = lockup.contentImage?.thumbnailViewModel?.image?.sources || [];
             const thumb = (sources.length ? sources[sources.length - 1].url : null) || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-            videos.push({ id, title: String(title).trim(), thumbnail: thumb, avatar: null });
+
+            let duration = null;
+            const overlays = lockup.contentImage?.thumbnailViewModel?.overlays || [];
+            for (const ov of overlays) {
+              const badges = ov.thumbnailOverlayBadgeViewModel?.thumbnailBadges;
+              if (badges) {
+                for (const b of badges) {
+                  if (b.thumbnailBadgeViewModel?.text) { duration = b.thumbnailBadgeViewModel.text; break; }
+                }
+              }
+              if (!duration && ov.thumbnailOverlayTimeStatusViewModel?.simpleText) {
+                duration = ov.thumbnailOverlayTimeStatusViewModel.simpleText;
+              }
+              if (duration) break;
+            }
+
+            const metaRows = lockupMeta?.metadata?.contentMetadataViewModel?.metadataRows
+                          || lockup.metadata?.contentMetadataViewModel?.metadataRows
+                          || [];
+
+            let channelName = null;
+            let viewCount = null;
+            let publishedTime = null;
+
+            const allParts = [];
+            for (const row of metaRows) {
+              for (const part of (row.metadataParts || [])) {
+                const txt = part.text?.content;
+                if (txt) allParts.push(txt);
+              }
+            }
+
+            for (const txt of allParts) {
+              if (/^\d+:\d+(:\d+)?$/.test(txt)) {
+                if (!duration) duration = txt;
+                continue;
+              }
+              if (/views?$/i.test(txt)) {
+                if (!viewCount) viewCount = txt;
+                continue;
+              }
+              if (/(ago|premiered|streamed)/i.test(txt)) {
+                if (!publishedTime) publishedTime = txt;
+                continue;
+              }
+              if (!channelName) channelName = txt;
+            }
+
+            if (!channelName) {
+              const acc = lockup.rendererContext?.accessibilityContext?.label;
+              if (acc) {
+                const m = acc.match(/\bby\s+(.+?)\s+\d/i);
+                if (m) channelName = m[1].trim();
+              }
+            }
+
+            let viewsAndDate = "";
+            if (viewCount) viewsAndDate += viewCount;
+            if (publishedTime) {
+              if (viewsAndDate) viewsAndDate += " • ";
+              viewsAndDate += publishedTime;
+            }
+
+            videos.push({ id, title: String(title).trim(), thumbnail: thumb, avatar: null, channelName, duration, viewCount, publishedTime, viewsAndDate });
           }
         }
 
@@ -1593,7 +1792,6 @@
       }
       recurse(data);
 
-      // Always return unique videos by ID
       const unique = [];
       const seenIds = new Set();
       for (const v of videos) {
@@ -1606,52 +1804,95 @@
     }
 
     function renderChannelVideos(channel) {
-      const t = tabs[activeTabId];
-      const grid = document.getElementById(`grid-${activeTabId}-${channel.id}`);
-      if (!grid) return;
-      grid.innerHTML = "";
+  const t = tabs[activeTabId];
+  const grid = document.getElementById(`grid-${activeTabId}-${channel.id}`);
+  if (!grid) return;
+  grid.innerHTML = "";
 
-      // Final safety dedupe before rendering
-      const raw = t.allChannelVideos[channel.id] || [];
-      const seen = new Set();
-      const videos = [];
-      for (const v of raw) {
-        if (!seen.has(v.id)) {
-          seen.add(v.id);
-          videos.push(v);
-        }
-      }
-      // Keep the cleaned list so future renders stay clean
-      t.allChannelVideos[channel.id] = videos;
-
-      if (videos.length === 0) {
-        grid.innerHTML = `<div class="loading-wrap" style="grid-column:1/-1;"><div style="color:#888;">No videos found</div></div>`;
-        return;
-      }
-      // Prefer channel.avatar, fall back to known defaultChannels avatars
-      let channelAvatar = channel.avatar || null;
-      if (!channelAvatar) {
-        const known = defaultChannels.find(c => c.id === channel.id || c.url === channel.url);
-        if (known) channelAvatar = known.avatar;
-      }
-      videos.forEach(v => grid.appendChild(createVideoCard(v, channelAvatar)));
+  const raw = t.allChannelVideos[channel.id] || [];
+  const seen = new Set();
+  const videos = [];
+  for (const v of raw) {
+    if (!seen.has(v.id)) {
+      seen.add(v.id);
+      videos.push(v);
     }
+  }
+  t.allChannelVideos[channel.id] = videos;
+
+  if (videos.length === 0) {
+    grid.innerHTML = `<div class="loading-wrap" style="grid-column:1/-1;"><div style="color:#888;">No videos found</div></div>`;
+    return;
+  }
+
+  // Resolve channel-level fallback info (name + avatar)
+  let channelAvatar = channel.avatar || null;
+  let channelName = channel.title || null;
+  if (!channelAvatar || !channelName) {
+    const known = defaultChannels.find(c => c.id === channel.id || c.url === channel.url);
+    if (known) {
+      if (!channelAvatar && known.avatar) channelAvatar = known.avatar;
+      if (!channelName && known.title) channelName = known.title;
+    }
+  }
+
+  videos.forEach(v => {
+    // Inject channel fallback into each video if missing
+    if (!v.channelName && channelName) v.channelName = channelName;
+    if (!v.avatar && channelAvatar) v.avatar = channelAvatar;
+    grid.appendChild(createVideoCard(v, channelAvatar));
+  });
+}
 
     function createVideoCard(video, channelAvatar=null) {
-      const card = document.createElement("div");
-      card.className = "video-card";
-      // Prefer per-video avatar (from search results), then channel avatar
-      const avatar = video.avatar || channelAvatar || null;
-      card.onclick = () => { playVideo(video.id, true, video.title, avatar); };
-      card.innerHTML = `
-        <div class="video-thumb">
-          <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}" loading="lazy"
-               onerror="this.src='https://i.ytimg.com/vi/${video.id}/mqdefault.jpg'; this.onerror=null;">
-        </div>
-        <div class="video-info">${escapeHtml(video.title)}</div>
-      `;
-      return card;
+  const card = document.createElement("div");
+  card.className = "video-card";
+
+  const avatar = video.avatar || channelAvatar || null;
+  const channelName = video.channelName || "Unknown Channel";
+
+  const durationHtml = video.duration
+    ? `<span class="video-duration">${escapeHtml(video.duration)}</span>`
+    : "";
+
+  let statsHtml = "";
+  if (video.viewCount || video.publishedTime) {
+    const parts = [];
+    if (video.viewCount) parts.push(`<span>${escapeHtml(video.viewCount)}</span>`);
+    if (video.publishedTime) parts.push(`<span>${escapeHtml(video.publishedTime)}</span>`);
+    if (parts.length > 0) {
+      statsHtml = `<div class="meta-stats">${parts.join('<span class="dot">•</span>')}</div>`;
     }
+  } else if (video.viewsAndDate) {
+    statsHtml = `<div class="meta-stats"><span>${escapeHtml(video.viewsAndDate)}</span></div>`;
+  }
+
+  // Avatar: if no image URL, use a colored circle with first letter
+  const avatarHtml = avatar
+    ? `<img class="meta-avatar" src="${escapeHtml(avatar)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    : `<div class="meta-avatar" style="background:#ff0000;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;">${escapeHtml((channelName[0]||"?").toUpperCase())}</div>`;
+
+  card.onclick = () => {
+    playVideo(video.id, true, video.title, avatar);
+  };
+
+  card.innerHTML = `
+    <div class="video-thumb">
+      <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}" loading="lazy"
+           onerror="this.src='https://i.ytimg.com/vi/${video.id}/mqdefault.jpg'; this.onerror=null;">
+      ${durationHtml}
+    </div>
+    <div class="video-info">${escapeHtml(video.title)}</div>
+    <div class="video-meta">
+      ${avatarHtml}
+      <div class="meta-text">
+        <div class="meta-channel">${escapeHtml(channelName)}</div>
+        ${statsHtml}
+      </div>
+    </div>
+  `;
+  return card;
+}
 
     function escapeHtml(text) {
       const div = document.createElement("div");
@@ -1666,7 +1907,6 @@
       setTimeout(() => t.classList.remove("show"), 2200);
     }
 
-    /* ── Custom Context Menu ── */
     const ctxMenu = document.getElementById("context-menu");
     let ctxTarget = null;
     let ctxTargetType = null;
@@ -1698,7 +1938,6 @@
         }
       }
 
-      // Position and clamp to viewport
       const rect = ctxMenu.getBoundingClientRect();
       let px = x, py = y;
       if (px + rect.width > window.innerWidth) px = window.innerWidth - rect.width - 8;
@@ -1709,7 +1948,6 @@
     }
 
     document.addEventListener("contextmenu", e => {
-      // Check if target is a bookmark bar item
       const bmItem = e.target.closest(".bm-bar-item");
       if (bmItem) {
         e.preventDefault();
@@ -1717,7 +1955,6 @@
         return;
       }
 
-      // Check if target is a video card
       const videoCard = e.target.closest(".video-card");
       if (videoCard) {
         e.preventDefault();
@@ -1725,7 +1962,6 @@
         return;
       }
 
-      // Check if target is a tab
       const tabEl = e.target.closest(".chrome-tab");
       if (tabEl) {
         e.preventDefault();
@@ -1733,7 +1969,6 @@
         return;
       }
 
-      // Anything else: suppress default menu
       e.preventDefault();
       hideCtxMenu();
     });
@@ -1766,7 +2001,6 @@
         }
       }
       else if (action === "bookmark" && ctxTargetType === "video") {
-        // Extract video data from the card
         const titleEl = ctxTarget.querySelector(".video-info");
         const imgEl = ctxTarget.querySelector("img");
         let videoId = "";
@@ -1796,7 +2030,6 @@
         if (t) {
           t.muted = !t.muted;
           const muted = t.muted;
-          // Update tab visual indicator
           const span = ctxTarget.querySelector("span:not(.tab-favicon)");
           if (span) {
             const baseText = span.textContent.replace(" 🔇", "").replace(" ▶", "");
@@ -1813,51 +2046,21 @@
       hideCtxMenu();
     });
 
-    /* ── Keyboard Shortcuts ── */
     document.addEventListener("keydown", e => {
-      // Ctrl+T: New Tab
-      if (e.ctrlKey && e.key === "t") {
-        e.preventDefault();
-        newTab();
-      }
-      // Ctrl+W: Close Tab
-      if (e.ctrlKey && e.key === "w") {
-        e.preventDefault();
-        closeTab(activeTabId);
-      }
-      // Ctrl+L: Focus Address Bar
+      if (e.ctrlKey && e.key === "t") { e.preventDefault(); newTab(); }
+      if (e.ctrlKey && e.key === "w") { e.preventDefault(); closeTab(activeTabId); }
       if (e.ctrlKey && e.key === "l") {
         e.preventDefault();
         document.getElementById("omnibox-input").focus();
         document.getElementById("omnibox-input").select();
       }
-      // Ctrl+D: Bookmark
-      if (e.ctrlKey && e.key === "d") {
-        e.preventDefault();
-        starCurrent();
-      }
-      // Alt+Left: Back
-      if (e.altKey && e.key === "ArrowLeft") {
-        e.preventDefault();
-        goBack();
-      }
-      // Alt+Right: Forward
-      if (e.altKey && e.key === "ArrowRight") {
-        e.preventDefault();
-        goForward();
-      }
-      // Escape: Go Home
-      if (e.key === "Escape") {
-        goHome();
-      }
-      // F11: Fullscreen
-      if (e.key === "F11") {
-        e.preventDefault();
-        toggleFullscreen();
-      }
+      if (e.ctrlKey && e.key === "d") { e.preventDefault(); starCurrent(); }
+      if (e.altKey && e.key === "ArrowLeft") { e.preventDefault(); goBack(); }
+      if (e.altKey && e.key === "ArrowRight") { e.preventDefault(); goForward(); }
+      if (e.key === "Escape") { goHome(); }
+      if (e.key === "F11") { e.preventDefault(); toggleFullscreen(); }
     });
 
-    /* ── Home Search Enter Key Listener ── */
     document.addEventListener("keypress", e => {
       if (e.key === "Enter") {
         const target = e.target;
@@ -1869,20 +2072,16 @@
       }
     });
 
-    /* ── Init ── */
     ensureDefaultBookmark();
     renderBookmarksBar();
     pushNav("home");
 
-    // Preload the first collection bookmark (if any exist)
-    // This way deleting Joe stops the preload, and a new first collection gets preloaded instead
     const bms = getBookmarks();
     const firstCollection = bms.find(b => b.type === "collection");
     if (firstCollection) {
       preloadChannels(firstCollection.channels);
     }
 
-    // When mouse leaves the tab strip, immediately allow tabs to expand (Chrome behavior)
     document.getElementById("chrome-titlebar").addEventListener("mouseleave", () => {
       clearTimeout(tabResizeTimer);
       unfreezeTabWidths();
