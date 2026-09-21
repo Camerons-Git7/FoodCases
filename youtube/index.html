@@ -1263,6 +1263,13 @@
       const t = tabs[activeTabId];
       if (t.currentVideoId) {
         document.getElementById("omnibox-input").value = `https://www.youtube.com/watch?v=${t.currentVideoId}`;
+      } else if (t.currentBrowseTitle && t.isSearchMode) {
+        document.getElementById("omnibox-input").value = t.currentBrowseTitle.replace(/^Search:\s*"|"$/g, "");
+      } else if (t.currentBrowseTitle && t.currentChannels.length === 1 && t.currentChannels[0].url && t.currentChannels[0].url.includes('youtube.com')) {
+        let channelUrl = t.currentChannels[0].url.replace(/[?&](hl|gl)=[^&]*/g, '');
+        channelUrl = channelUrl.replace(/[?&]$/, '');
+        if (!channelUrl.endsWith('/videos')) channelUrl = channelUrl.replace(/\/$/, '') + '/videos';
+        document.getElementById("omnibox-input").value = channelUrl;
       } else if (t.currentBrowseTitle) {
         document.getElementById("omnibox-input").value = t.currentBrowseTitle;
       } else {
@@ -1298,7 +1305,7 @@
       }
 
       const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(input)}`;
-      const searchTitle = `Search: "${input}"`;
+      const searchTitle = input;
       const searchChannels = [{ id: "search-results", title: searchTitle, url: searchUrl, isSearch: true }];
       openBrowse(null, searchChannels, searchTitle);
     }
@@ -1379,7 +1386,7 @@
 
         document.getElementById("tab-" + activeTabId).querySelector("span:not(.tab-favicon)").textContent = t.currentBrowseTitle;
         setTabIcon(activeTabId, getBrowseIcon(channelsToLoad, t.currentBrowseTitle));
-        document.getElementById("omnibox-input").value = t.currentBrowseTitle;
+        syncOmnibox();
         document.getElementById("omni-secure").textContent = "🔒";
 
         channelsToLoad.forEach(ch => {
@@ -1406,7 +1413,7 @@
 
       document.getElementById("tab-" + activeTabId).querySelector("span:not(.tab-favicon)").textContent = t.currentBrowseTitle;
       setTabIcon(activeTabId, getBrowseIcon(t.currentChannels, t.currentBrowseTitle));
-      document.getElementById("omnibox-input").value = t.currentBrowseTitle;
+      syncOmnibox();
       document.getElementById("omni-secure").textContent = "🔒";
 
       t.currentChannels.forEach(ch => {
@@ -1804,95 +1811,92 @@
     }
 
     function renderChannelVideos(channel) {
-  const t = tabs[activeTabId];
-  const grid = document.getElementById(`grid-${activeTabId}-${channel.id}`);
-  if (!grid) return;
-  grid.innerHTML = "";
+      const t = tabs[activeTabId];
+      const grid = document.getElementById(`grid-${activeTabId}-${channel.id}`);
+      if (!grid) return;
+      grid.innerHTML = "";
 
-  const raw = t.allChannelVideos[channel.id] || [];
-  const seen = new Set();
-  const videos = [];
-  for (const v of raw) {
-    if (!seen.has(v.id)) {
-      seen.add(v.id);
-      videos.push(v);
+      const raw = t.allChannelVideos[channel.id] || [];
+      const seen = new Set();
+      const videos = [];
+      for (const v of raw) {
+        if (!seen.has(v.id)) {
+          seen.add(v.id);
+          videos.push(v);
+        }
+      }
+      t.allChannelVideos[channel.id] = videos;
+
+      if (videos.length === 0) {
+        grid.innerHTML = `<div class="loading-wrap" style="grid-column:1/-1;"><div style="color:#888;">No videos found</div></div>`;
+        return;
+      }
+
+      let channelAvatar = channel.avatar || null;
+      let channelName = channel.title || null;
+      if (!channelAvatar || !channelName) {
+        const known = defaultChannels.find(c => c.id === channel.id || c.url === channel.url);
+        if (known) {
+          if (!channelAvatar && known.avatar) channelAvatar = known.avatar;
+          if (!channelName && known.title) channelName = known.title;
+        }
+      }
+
+      videos.forEach(v => {
+        if (!v.channelName && channelName) v.channelName = channelName;
+        if (!v.avatar && channelAvatar) v.avatar = channelAvatar;
+        grid.appendChild(createVideoCard(v, channelAvatar));
+      });
     }
-  }
-  t.allChannelVideos[channel.id] = videos;
-
-  if (videos.length === 0) {
-    grid.innerHTML = `<div class="loading-wrap" style="grid-column:1/-1;"><div style="color:#888;">No videos found</div></div>`;
-    return;
-  }
-
-  // Resolve channel-level fallback info (name + avatar)
-  let channelAvatar = channel.avatar || null;
-  let channelName = channel.title || null;
-  if (!channelAvatar || !channelName) {
-    const known = defaultChannels.find(c => c.id === channel.id || c.url === channel.url);
-    if (known) {
-      if (!channelAvatar && known.avatar) channelAvatar = known.avatar;
-      if (!channelName && known.title) channelName = known.title;
-    }
-  }
-
-  videos.forEach(v => {
-    // Inject channel fallback into each video if missing
-    if (!v.channelName && channelName) v.channelName = channelName;
-    if (!v.avatar && channelAvatar) v.avatar = channelAvatar;
-    grid.appendChild(createVideoCard(v, channelAvatar));
-  });
-}
 
     function createVideoCard(video, channelAvatar=null) {
-  const card = document.createElement("div");
-  card.className = "video-card";
+      const card = document.createElement("div");
+      card.className = "video-card";
 
-  const avatar = video.avatar || channelAvatar || null;
-  const channelName = video.channelName || "Unknown Channel";
+      const avatar = video.avatar || channelAvatar || null;
+      const channelName = video.channelName || "Unknown Channel";
 
-  const durationHtml = video.duration
-    ? `<span class="video-duration">${escapeHtml(video.duration)}</span>`
-    : "";
+      const durationHtml = video.duration
+        ? `<span class="video-duration">${escapeHtml(video.duration)}</span>`
+        : "";
 
-  let statsHtml = "";
-  if (video.viewCount || video.publishedTime) {
-    const parts = [];
-    if (video.viewCount) parts.push(`<span>${escapeHtml(video.viewCount)}</span>`);
-    if (video.publishedTime) parts.push(`<span>${escapeHtml(video.publishedTime)}</span>`);
-    if (parts.length > 0) {
-      statsHtml = `<div class="meta-stats">${parts.join('<span class="dot">•</span>')}</div>`;
+      let statsHtml = "";
+      if (video.viewCount || video.publishedTime) {
+        const parts = [];
+        if (video.viewCount) parts.push(`<span>${escapeHtml(video.viewCount)}</span>`);
+        if (video.publishedTime) parts.push(`<span>${escapeHtml(video.publishedTime)}</span>`);
+        if (parts.length > 0) {
+          statsHtml = `<div class="meta-stats">${parts.join('<span class="dot">•</span>')}</div>`;
+        }
+      } else if (video.viewsAndDate) {
+        statsHtml = `<div class="meta-stats"><span>${escapeHtml(video.viewsAndDate)}</span></div>`;
+      }
+
+      const avatarHtml = avatar
+        ? `<img class="meta-avatar" src="${escapeHtml(avatar)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+        : `<div class="meta-avatar" style="background:#ff0000;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;">${escapeHtml((channelName[0]||"?").toUpperCase())}</div>`;
+
+      card.onclick = () => {
+        playVideo(video.id, true, video.title, avatar);
+      };
+
+      card.innerHTML = `
+        <div class="video-thumb">
+          <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}" loading="lazy"
+               onerror="this.src='https://i.ytimg.com/vi/${video.id}/mqdefault.jpg'; this.onerror=null;">
+          ${durationHtml}
+        </div>
+        <div class="video-info">${escapeHtml(video.title)}</div>
+        <div class="video-meta">
+          ${avatarHtml}
+          <div class="meta-text">
+            <div class="meta-channel">${escapeHtml(channelName)}</div>
+            ${statsHtml}
+          </div>
+        </div>
+      `;
+      return card;
     }
-  } else if (video.viewsAndDate) {
-    statsHtml = `<div class="meta-stats"><span>${escapeHtml(video.viewsAndDate)}</span></div>`;
-  }
-
-  // Avatar: if no image URL, use a colored circle with first letter
-  const avatarHtml = avatar
-    ? `<img class="meta-avatar" src="${escapeHtml(avatar)}" alt="" loading="lazy" onerror="this.style.display='none'">`
-    : `<div class="meta-avatar" style="background:#ff0000;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;">${escapeHtml((channelName[0]||"?").toUpperCase())}</div>`;
-
-  card.onclick = () => {
-    playVideo(video.id, true, video.title, avatar);
-  };
-
-  card.innerHTML = `
-    <div class="video-thumb">
-      <img src="${video.thumbnail}" alt="${escapeHtml(video.title)}" loading="lazy"
-           onerror="this.src='https://i.ytimg.com/vi/${video.id}/mqdefault.jpg'; this.onerror=null;">
-      ${durationHtml}
-    </div>
-    <div class="video-info">${escapeHtml(video.title)}</div>
-    <div class="video-meta">
-      ${avatarHtml}
-      <div class="meta-text">
-        <div class="meta-channel">${escapeHtml(channelName)}</div>
-        ${statsHtml}
-      </div>
-    </div>
-  `;
-  return card;
-}
 
     function escapeHtml(text) {
       const div = document.createElement("div");
