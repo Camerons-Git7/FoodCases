@@ -1,78 +1,32 @@
-name: Fetch cherri.zip and copy folder into repo
+name: Fetch cherri
 
 on:
-  workflow_dispatch:          # Run manually from the Actions tab
-  # Uncomment the lines below if you also want it to run on every push to main
-  # push:
-  #   branches: [ main ]
+  workflow_dispatch:
 
 permissions:
-  contents: write             # Needed so the workflow can commit back to the repo
+  contents: write
 
 jobs:
-  fetch-and-copy:
+  fetch:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Download cherri.zip
+      - name: Download and extract
         run: |
-          curl -L -o cherri.zip \
-            "https://github.com/Camerons-Git7/FoodCases/releases/download/files/cherri.zip"
-
-      - name: Extract the zip
-        run: |
+          curl -L -o cherri.zip "https://github.com/Camerons-Git7/FoodCases/releases/download/files/cherri.zip"
           mkdir -p extracted
           unzip -q cherri.zip -d extracted
+          rm -rf cherri
+          mkdir -p cherri
+          # Copy everything from the zip into the cherri folder
+          cp -a extracted/. cherri/ || cp -a extracted/* cherri/
+          find cherri -maxdepth 2
 
-      - name: Show what was inside the zip (for debugging)
-        run: |
-          echo "=== Contents of the zip ==="
-          find extracted -maxdepth 3 -print
-
-      - name: Copy the folder into the repository
-        run: |
-          # -------------------------------------------------------
-          # Change the target folder name below if you want
-          # something other than "cherri"
-          # -------------------------------------------------------
-          TARGET_FOLDER="cherri"
-
-          # Remove any previous version of the folder
-          rm -rf "$TARGET_FOLDER"
-
-          # Detect the top-level item inside the zip
-          # (handles both "one folder" and "loose files" cases)
-          TOP_LEVEL=$(find extracted -mindepth 1 -maxdepth 1)
-
-          if [ -d "$TOP_LEVEL" ] && [ $(find extracted -mindepth 1 -maxdepth 1 | wc -l) -eq 1 ]; then
-            # Zip contained a single top-level folder → copy its contents
-            echo "Found single top-level folder → copying its contents to $TARGET_FOLDER"
-            mkdir -p "$TARGET_FOLDER"
-            cp -a "$TOP_LEVEL"/. "$TARGET_FOLDER"/
-          else
-            # Zip contained multiple items or loose files → copy everything
-            echo "Copying all extracted contents into $TARGET_FOLDER"
-            mkdir -p "$TARGET_FOLDER"
-            cp -a extracted/. "$TARGET_FOLDER"/
-          fi
-
-          echo "=== Final structure of $TARGET_FOLDER ==="
-          find "$TARGET_FOLDER" -maxdepth 2 -print
-
-      - name: Commit and push the new folder
+      - name: Commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add cherri/          # change this if you changed TARGET_FOLDER above
-          git status
-
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Add/update cherri folder from release asset"
-            git push
-          fi
+          git add cherri
+          git diff --staged --quiet || git commit -m "Add cherri folder from release"
+          git push
