@@ -1,5 +1,4 @@
 name: 🚀 Deploy to InfinityFree
-
 on:
   push:
     branches: [ main, master ]
@@ -13,25 +12,21 @@ on:
         options:
           - 'false'
           - 'true'
-
 jobs:
   web-deploy:
     name: Deploy to InfinityFree
     runs-on: ubuntu-latest
-
     steps:
       - name: Get latest code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Clear sync state (Force Full Sync)
         if: github.event.inputs.force_full_sync == 'true'
         run: |
           echo "Force full sync requested - will delete local sync state if it exists"
           rm -f .ftp-sync-state-1.json .ftp-sync-state-2.json .ftp-sync-state-3.json
           echo "Sync state cleared. All files will be re-uploaded."
-
       # ─── FIRST WEBSITE ─────────────────────────────
       - name: Replace .ico with .png in desktop/index.html for Site 1 deploy
         run: |
@@ -41,7 +36,6 @@ jobs:
           else
             echo "desktop/index.html not found, skipping replacement"
           fi
-
       - name: Deploy to InfinityFree Site 1
         id: deploy1
         continue-on-error: true
@@ -65,11 +59,9 @@ jobs:
             .ftp-sync-state-2.json
             .ftp-sync-state-3.json
           log-level: standard
-
       # ─── SECOND WEBSITE ────────────────────────────
       - name: Restore original code for Site 2
         run: git checkout .
-
       - name: Replace "free.nf" with "site.je" for Site 2 deploy
         run: |
           find . -type f \
@@ -81,7 +73,6 @@ jobs:
             -exec sed -i \
               -e 's/free\.nf/site.je/g' \
               {} +
-
       - name: Replace .ico with .png in desktop/index.html for Site 2 deploy
         run: |
           if [ -f "desktop/index.html" ]; then
@@ -90,7 +81,6 @@ jobs:
           else
             echo "desktop/index.html not found, skipping replacement"
           fi
-
       - name: Deploy to InfinityFree Site 2
         id: deploy2
         continue-on-error: true
@@ -114,12 +104,10 @@ jobs:
             .ftp-sync-state-2.json
             .ftp-sync-state-3.json
           log-level: standard
-
       # ─── THIRD WEBSITE ─────────────────────────────
       - name: Restore original code for Site 3
         run: git checkout .
-
-      - name: Replace "menist" with "seamfull" for Site 3 deploy
+      - name: Replace "menist.free.nf" with "seamless.free.je" for Site 3 deploy
         run: |
           find . -type f \
             ! -path './.git/*' \
@@ -127,8 +115,7 @@ jobs:
             ! -name '.ftp-sync-state-1.json' \
             ! -name '.ftp-sync-state-2.json' \
             ! -name '.ftp-sync-state-3.json' \
-            -exec sed -i 's/menist/seamfull/g' {} +
-
+            -exec sed -i 's/menist\.free\.nf/seamless.free.je/g' {} +
       - name: Deploy to InfinityFree Site 3
         id: deploy3
         continue-on-error: true
@@ -152,33 +139,28 @@ jobs:
             .ftp-sync-state-2.json
             .ftp-sync-state-3.json
           log-level: standard
-
       # ─── FINAL CHECK ───────────────────────────────
       - name: Check deploy results
         run: |
           echo "Site 1 outcome: ${{ steps.deploy1.outcome }}"
           echo "Site 2 outcome: ${{ steps.deploy2.outcome }}"
           echo "Site 3 outcome: ${{ steps.deploy3.outcome }}"
-
           if [[ "${{ steps.deploy1.outcome }}" == "failure" && \
                 "${{ steps.deploy2.outcome }}" == "failure" && \
                 "${{ steps.deploy3.outcome }}" == "failure" ]]; then
             echo "❌ All three sites failed!"
             exit 1
           fi
-
           if [[ "${{ steps.deploy1.outcome }}" == "failure" ]]; then
             echo "⚠️ Site 1 failed"
           else
             echo "✅ Site 1 deployed successfully"
           fi
-
           if [[ "${{ steps.deploy2.outcome }}" == "failure" ]]; then
             echo "⚠️ Site 2 failed"
           else
             echo "✅ Site 2 deployed successfully"
           fi
-
           if [[ "${{ steps.deploy3.outcome }}" == "failure" ]]; then
             echo "⚠️ Site 3 failed"
           else
