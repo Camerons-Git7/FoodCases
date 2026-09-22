@@ -119,7 +119,7 @@ jobs:
       - name: Restore original code for Site 3
         run: git checkout .
 
-      - name: Replace "menist" with "seamless" for Site 3 deploy
+      - name: Replace "menist" with "seamfull" for Site 3 deploy
         run: |
           find . -type f \
             ! -path './.git/*' \
@@ -127,7 +127,7 @@ jobs:
             ! -name '.ftp-sync-state-1.json' \
             ! -name '.ftp-sync-state-2.json' \
             ! -name '.ftp-sync-state-3.json' \
-            -exec sed -i 's/menist/seamless/g' {} +
+            -exec sed -i 's/menist/seamfull/g' {} +
 
       - name: Deploy to InfinityFree Site 3
         id: deploy3
