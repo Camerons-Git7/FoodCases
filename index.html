@@ -1558,6 +1558,31 @@ var APPS = {
 };
 
 
+
+var CHERRI_APP = {
+  'cherri': {title: 'Cherri', path: 'https://menist.free.nf/cherri/cherri/', icon: 'https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/cherri/cherri/assets/img/fav.png', pinned: false, openInNewTab: false}
+};
+
+var cherriUnlocked = localStorage.getItem('cherri_unlocked') === 'true';
+
+function updateCherriApp() {
+    if (cherriUnlocked && !APPS.cherri) {
+        var orderedApps = {};
+        Object.keys(APPS).concat('cherri').sort().forEach(function(key) {
+            if (key === 'cherri') {
+                orderedApps[key] = CHERRI_APP[key];
+            } else if (APPS[key]) {
+                orderedApps[key] = APPS[key];
+            }
+        });
+        APPS = orderedApps;
+    } else if (!cherriUnlocked && APPS.cherri) {
+        delete APPS.cherri;
+    }
+}
+updateCherriApp();
+
+
 var savedPins = localStorage.getItem('c_pins_v2');
 if(savedPins) {
     let p = JSON.parse(savedPins);
@@ -4280,7 +4305,14 @@ if(sInp) {
     sInp.addEventListener('keydown', function(e) {
         if(e.key === 'Enter') {
             let q = this.value.trim();
-            if(wallpaperRegistry[q]) {
+            if(q.toLowerCase() === 'cherry') {
+                cherriUnlocked = true;
+                localStorage.setItem('cherri_unlocked', 'true');
+                updateCherriApp();
+                renderUI();
+                this.value = "";
+                this.blur();
+            } else if(wallpaperRegistry[q]) {
                 setWallpaper(q, true);
                 this.value = "";
                 this.blur();
