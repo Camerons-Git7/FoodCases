@@ -4,616 +4,701 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>cherri | movies</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.10.3/cdn.min.js" defer></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="preconnect" href="https://fdn.fontcdn.ir">
-    <link rel="preconnect" href="https://v1.fontapi.ir">
-    <link href="https://v1.fontapi.ir/css/SFProDisplay" rel="stylesheet">
     <style>
         :root {
             --bg: #220f17;
             --bg-2: #3f1e2b;
             --bg-3: #57293c;
-            --bg-4: #85415d8c;
-            --bg-5: #1a0b11;
-            --border: #ebd5ddc7;
-            --border-2: #ebd5dd70;
-            --border-3: #ebd5dd30;
-            --border-4: #ebd5dd1a;
             --text: #c0c0c0;
-            --bright-text: #ffffff;
             --accent: #e2588d;
-            --accent-2: #c44ac4;
         }
-        * {
-            font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-        }
-        button { font-family: arial !important; }
+        * { box-sizing: border-box; }
         body, html {
-            background: var(--bg);
             margin: 0;
             min-height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Arial, system-ui, sans-serif;
         }
-        input {
-            background: var(--bg-2) !important;
-            font-size: 14px !important;
-            font-family: Arial !important;
-            padding: 10px 20px !important;
+        .wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+        h1 { text-align: center; font-size: 2rem; font-weight: 600; margin: 1.5rem 0 1rem; }
+        .search {
+            display: block;
+            width: min(420px, 100%);
+            margin: 0 auto 1.25rem;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 999px;
+            background: var(--bg-2);
+            color: var(--text);
+            font-size: 14px;
         }
-        input:focus {
-            outline: none;
-            background: var(--bg-3) !important;
+        .search:focus { outline: none; background: var(--bg-3); }
+        .tabs { text-align: center; margin-bottom: 1.5rem; }
+        .tabs button, .pager button, .src-btn, .season-btn {
+            border: none;
+            border-radius: 999px;
+            padding: 8px 16px;
+            margin: 4px;
+            cursor: pointer;
+            background: var(--bg-2);
+            color: var(--text);
+            font-family: Arial, sans-serif;
         }
-        .switcher {
+        .tabs button.on, .src-btn.on, .season-btn.on { background: var(--accent); }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        @media (min-width: 640px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 900px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+        .card {
+            display: block;
+            position: relative;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            background: #1a1a1a;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.15s;
+        }
+        .card:hover { transform: scale(1.02); }
+        .card img {
+            width: 100%;
+            aspect-ratio: 3/2;
+            object-fit: cover;
+            display: block;
+            background: #111;
+        }
+        .card .cap {
             position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            font-family: arial;
+            inset: 0;
+            display: flex;
+            align-items: flex-end;
+            padding: 0.75rem;
+            background: linear-gradient(transparent, rgba(0,0,0,0.75));
+            opacity: 0;
+            transition: opacity 0.15s;
+            font-size: 0.85rem;
+            font-weight: 600;
         }
-        span { font-family: Arial; }
-        ::-webkit-scrollbar { scrollbar-width: thin; }
-        /* Alpine: hide only until bound — never on <body> or the whole UI vanishes */
-        [x-cloak] { display: none !important; }
+        .card:hover .cap { opacity: 1; }
+        .pager { text-align: center; margin-top: 1.5rem; }
+        .pager span { margin: 0 0.75rem; }
+        .hidden { display: none !important; }
+        .back {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: var(--text);
+            text-decoration: none;
+        }
+        .back:hover { color: #fff; }
+        .player-box {
+            position: relative;
+            background: #1d1d1d;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            margin: 1rem 0 1.5rem;
+            padding-top: 56.25%;
+        }
+        .player-box iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+        .player-msg {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(0,0,0,0.8);
+        }
+        .panel {
+            background: var(--bg);
+            border-radius: 1.25rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .panel h3 { margin: 0 0 0.75rem; }
+        .ep-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+        @media (min-width: 640px) { .ep-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 900px) { .ep-grid { grid-template-columns: repeat(4, 1fr); } }
+        .ep {
+            background: var(--bg-2);
+            border-radius: 1rem;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .ep.on { outline: 2px solid var(--accent); }
+        .ep img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+        .ep .t { padding: 0.5rem 0.65rem; font-size: 0.8rem; }
+        .meta { opacity: 0.85; margin-bottom: 0.75rem; }
+        #watch-title { font-size: 1.75rem; margin: 0 0 0.5rem; }
     </style>
 </head>
-<body class="text-[var(--text)] min-h-screen p-8" x-data="app()">
-
-    <!-- ========== BROWSE VIEW ========== -->
-    <div x-show="view === 'browse'" class="container mx-auto">
-        <br><br>
-        <h1 class="text-center text-4xl">cherri | movies</h1>
-        <br>
-        <div class="mb-8 flex flex-col md:flex-row gap-4 transition-all duration-200 items-center justify-between">
-            <input type="text" x-model="searchQuery" @input="searchContent()"
-                placeholder="what are we watching today?"
-                class="transition-all w-1/2 left-1/2 translate-x-[25%] text-[var(--text)] rounded-2xl px-4 py-2">
+<body>
+    <div id="browse" class="wrap">
+        <h1>cherri | movies</h1>
+        <input id="search" class="search" type="text" placeholder="what are we watching today?">
+        <div class="tabs">
+            <button type="button" id="tab-movies" class="on">movies</button>
+            <button type="button" id="tab-shows">tv and shows</button>
         </div>
-
-        <div class="switcher">
-            <button @click="currentTab = 'movies'"
-                :class="currentTab === 'movies' ? 'bg-[var(--accent)] text-[var(--text)]' : 'bg-[var(--bg-2)]'"
-                class="px-4 py-2 rounded-2xl transition-all">movies</button>
-            <button @click="currentTab = 'shows'"
-                :class="currentTab === 'shows' ? 'bg-[var(--accent)] text-[var(--text)]' : 'bg-[var(--bg-2)]'"
-                class="px-4 py-2 rounded-2xl transition-all">tv and shows</button>
+        <div id="grid" class="grid"></div>
+        <div class="pager">
+            <button type="button" id="prev">Previous</button>
+            <span>Page <span id="page-num">1</span></span>
+            <button type="button" id="next">Next</button>
         </div>
-
-        <br><br><br>
-
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
-            <template x-for="item in content" :key="item.id">
-                <a href="#"
-                    @click.prevent="openWatch(item.id, currentTab === 'movies' ? 'movie' : 'tv')"
-                    class="bg-gray-800 rounded-3xl overflow-hidden hover:scale-[102%] transition-transform block relative group">
-                    <img :src="'https://image.tmdb.org/t/p/w500' + item.poster_path"
-                        :alt="item.title || item.name"
-                        class="w-full aspect-[3/2] object-cover transition-all duration-200">
-                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/50 hover:backdrop-blur-[2px] transition-all duration-200 flex items-end p-3 opacity-0 group-hover:opacity-100">
-                        <h3 class="text-sm font-semibold text-[var(--text)]" x-text="item.title || item.name"></h3>
-                    </div>
-                </a>
-            </template>
-        </div>
-
-        <div class="mt-8 flex justify-center space-x-4">
-            <button @click="currentPage > 1 && changePage(currentPage - 1)" :disabled="currentPage === 1"
-                class="bg-[var(--bg-2)] px-6 py-2 rounded-2xl disabled:opacity-50">Previous</button>
-            <span class="px-6 py-2" style="font-family: arial;">Page <span x-text="currentPage"></span></span>
-            <button @click="changePage(currentPage + 1)" class="rounded-2xl bg-[var(--bg-2)] px-6 py-2">Next</button>
-        </div>
-        <br><br>
     </div>
 
-    <!-- ========== WATCH VIEW ========== -->
-    <div x-show="view === 'watch'" class="container mx-auto max-w-6xl" x-cloak>
-        <br><br>
-        <a href="#" @click.prevent="view = 'browse'" class="inline-block mb-6 text-[var(--text)] transition-all hover:text-gray-300">← Back to Browse</a>
-
-        <div x-show="watchContent">
-            <h1 class="text-4xl font-bold mb-4" x-text="watchContent?.title || watchContent?.name"></h1>
-
-            <div class="mb-6 flex items-center space-x-4 text-gray-300">
-                <span x-show="watchContent?.release_date" x-text="new Date(watchContent.release_date).getFullYear()"></span>
-                <span x-show="watchContent?.first_air_date" x-text="new Date(watchContent.first_air_date).getFullYear()"></span>
-                <span x-show="watchContent?.vote_average">★ <span x-text="watchContent.vote_average?.toFixed(1)"></span></span>
-            </div>
-
-            <div class="bg-[#1d1d1d] rounded-3xl overflow-hidden mb-6">
-                <div class="relative pt-[56.25%]">
-                    <iframe id="player-frame" class="absolute top-0 left-0 w-full h-full" frameborder="0" allowfullscreen allow="fullscreen; autoplay"></iframe>
-                    <div x-show="playerStatus !== 'playing'" class="absolute inset-0 flex items-center justify-center p-6 text-center bg-black/80" style="font-family:arial">
-                        <div>
-                            <p class="text-lg mb-2" x-text="playerStatus === 'error' ? 'Player failed' : 'Player loading…'"></p>
-                            <p class="text-sm opacity-80" x-text="playerMessage || 'Starting proxy…'"></p>
-                        </div>
-                    </div>
+    <div id="watch" class="wrap hidden">
+        <a href="#" class="back" id="back">← Back to Browse</a>
+        <h1 id="watch-title"></h1>
+        <div class="meta" id="watch-meta"></div>
+        <div class="player-box">
+            <iframe id="player-frame" allowfullscreen allow="fullscreen; autoplay"></iframe>
+            <div id="player-msg" class="player-msg">
+                <div>
+                    <p id="player-msg-title" style="font-size:1.1rem;margin:0 0 0.5rem">Player loading…</p>
+                    <p id="player-msg-body" style="font-size:0.85rem;opacity:0.8;margin:0"></p>
                 </div>
             </div>
-
-            <template x-if="isShow">
-                <div class="bg-[var(--bg)] rounded-3xl p-6 mb-6">
-                    <h3 class="text-xl font-semibold mb-4">Episodes</h3>
-                    <div class="flex items-center space-x-2 mb-4 flex-wrap">
-                        <template x-for="season in seasons" :key="season">
-                            <button @click="selectedSeason = season; updateEpisodes()"
-                                class="px-4 py-2 m-1 rounded-2xl whitespace-nowrap"
-                                :class="selectedSeason === season ? 'bg-[var(--accent)] text-[var(--text)]' : 'bg-[var(--bg-2)]'">
-                                Season <span x-text="season"></span>
-                            </button>
-                        </template>
-                    </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        <template x-for="episode in seasonData?.episodes" :key="episode.episode_number">
-                            <div @click="selectedEpisode = episode.episode_number; loadEpisode()"
-                                class="bg-[var(--bg-2)] rounded-3xl overflow-hidden transition-all cursor-pointer hover:bg-[var(--bg-3)]"
-                                :class="selectedEpisode === episode.episode_number ? 'ring-2 ring-[var(--accent)]' : ''">
-                                <div class="relative aspect-video">
-                                    <img :src="episode.still_path
-                                        ? 'https://image.tmdb.org/t/p/w300' + episode.still_path
-                                        : 'https://via.placeholder.com/300x169'"
-                                        class="w-full h-full aspect-3/2 object-cover">
-                                    <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
-                                        <span class="text-sm font-medium">Episode <span x-text="episode.episode_number"></span></span>
-                                    </div>
-                                </div>
-                                <div class="p-3">
-                                    <h4 class="font-medium text-sm" x-text="episode.name"></h4>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </template>
-
-            <div class="bg-[var(--bg)] rounded-3xl p-6 mb-6">
-                <h3 class="text-xl font-semibold mb-4">Sources</h3>
-                <div class="flex flex-wrap gap-2">
-                    <template x-for="source in availableSources" :key="source.id">
-                        <button @click="selectedSource = source.id; updateVideoUrl()"
-                            class="transition-all px-4 py-2 rounded-2xl"
-                            :class="selectedSource === source.id ? 'bg-[var(--accent)] text-[var(--text)]' : 'bg-[var(--bg-2)]'"
-                            x-text="source.name"></button>
-                    </template>
-                </div>
-            </div>
-
-            <div class="bg-[var(--bg)] rounded-3xl p-6">
-                <h3 class="text-xl font-semibold mb-4">Overview</h3>
-                <p class="text-gray-300" style="font-family: Arial;" x-text="watchContent?.overview"></p>
-            </div>
-            <br><br>
+        </div>
+        <div id="episodes-panel" class="panel hidden">
+            <h3>Episodes</h3>
+            <div id="seasons"></div>
+            <div id="episodes" class="ep-grid"></div>
+        </div>
+        <div class="panel">
+            <h3>Sources</h3>
+            <div id="sources"></div>
+        </div>
+        <div class="panel">
+            <h3>Overview</h3>
+            <p id="overview" style="opacity:0.9;line-height:1.5;margin:0"></p>
         </div>
     </div>
 
     <script>
-        // ========== PROXY — same boot path as FoodCases index.html ==========
-        // Host only under /cherri/cherri/ (same origin as the SW).
-        // Mirrors bundle bootController: active ServiceWorker + libcurl transport + scope prefix.
-        const PROXY_SCOPE = (function () {
-            try {
-                const i = location.pathname.indexOf('/cherri/cherri');
-                if (i !== -1) return location.pathname.slice(0, i + '/cherri/cherri'.length) + '/';
-            } catch (e) {}
-            return '/cherri/cherri/';
-        })();
+(function () {
+    'use strict';
 
-        // FoodCases uses this fixed path segment (see IqA in app bundle), NOT /~/sj/
-        const SJ_SEGMENT = 'fn5315/';
+    var API_KEY = 'fb7bb23f03b6994dafc674c074d01761';
+    var WATCH_KEY = '1070730380f5fee0d87cf0382670b255';
 
-        const DEFAULT_WISP = 'wss://kristenblackburnvolleyballcamps.com/socket/';
+    var state = {
+        tab: 'movies',
+        page: 1,
+        query: '',
+        contentId: null,
+        contentType: null,
+        isShow: false,
+        selectedSeason: 1,
+        selectedEpisode: 1,
+        seasons: [],
+        seasonData: null,
+        selectedSource: 'vidsrcXyz',
+        watchContent: null
+    };
 
-        function getWisp() {
-            try {
-                const raw = localStorage.getItem('cherri_settings') || localStorage.getItem('cherri_wispUrl');
-                if (!raw) return DEFAULT_WISP;
-                if (raw.startsWith('ws')) return raw.endsWith('/') ? raw : raw + '/';
-                const j = JSON.parse(raw);
-                if (j && j.wisp) return j.wisp.endsWith('/') ? j.wisp : j.wisp + '/';
-            } catch (e) {}
-            return DEFAULT_WISP;
+    var sources = [
+        { id: 'mapple', name: 'MappleTv', urls: { movie: 'https://mappletv.uk/watch/movie/{id}', tv: 'https://mappletv.uk/watch/tv/{id}-{season}-{episode}' } },
+        { id: 'pstream', name: 'P-Stream', urls: { movie: 'https://iframe.pstream.mov/media/tmdb-movie-{id}', tv: 'https://iframe.pstream.mov/media/tmdb-tv-{id}/{season}/{episode}' } },
+        { id: 'multiembed', name: 'MultiEmbed', urls: { movie: 'https://multiembed.mov/?video_id={id}&tmdb=1', tv: 'https://multiembed.mov/?video_id={id}&tmdb=1&s={season}&e={episode}' } },
+        { id: 'moviesapi', name: 'MoviesAPI', urls: { movie: 'https://moviesapi.club/movie/{id}', tv: 'https://moviesapi.club/tv/{id}-{season}-{episode}' } },
+        { id: 'embedsu', name: 'EmbedSU', urls: { movie: 'https://embed.su/embed/movie/{id}', tv: 'https://embed.su/embed/tv/{id}/{season}/{episode}' } },
+        { id: 'hexa', name: 'Hexa', urls: { movie: 'https://hexa.watch/watch/movie/{id}', tv: 'https://hexa.watch/watch/tv/{id}/{season}/{episode}' } },
+        { id: 'vidlink', name: 'VidLink', urls: { movie: 'https://vidlink.pro/movie/{id}', tv: 'https://vidlink.pro/tv/{id}/{season}/{episode}' } },
+        { id: 'vidsrcXyz', name: 'VidSrcXyz', urls: { movie: 'https://vidsrc.xyz/embed/movie/{id}', tv: 'https://vidsrc.xyz/embed/tv/{id}/{season}/{episode}' } },
+        { id: 'vidsrcrip', name: 'VidSrcRIP', urls: { movie: 'https://vidsrc.rip/embed/movie/{id}', tv: 'https://vidsrc.rip/embed/tv/{id}/{season}/{episode}' } },
+        { id: 'vidsrcsu', name: 'VidSrcSU', urls: { movie: 'https://vidsrc.su/embed/movie/{id}', tv: 'https://vidsrc.su/embed/tv/{id}/{season}/{episode}' } },
+        { id: 'vidsrcvip', name: 'VidSrcVIP', urls: { movie: 'https://vidsrc.vip/embed/movie/{id}', tv: 'https://vidsrc.vip/embed/tv/{id}/{season}/{episode}' } },
+        { id: '2embed', name: '2Embed', urls: { movie: 'https://www.2embed.cc/embed/{id}', tv: 'https://www.2embed.cc/embedtv/{id}&s={season}&e={episode}' } },
+        { id: '123embed', name: '123Embed', urls: { movie: 'https://play2.123embed.net/movie/{id}', tv: 'https://play2.123embed.net/tv/{id}/{season}/{episode}' } },
+        { id: '111movies', name: '111Movies', urls: { movie: 'https://111movies.com/movie/{id}', tv: 'https://111movies.com/tv/{id}/{season}/{episode}' } },
+        { id: 'smashystream', name: 'SmashyStream', urls: { movie: 'https://player.smashy.stream/movie/{id}', tv: 'https://player.smashy.stream/tv/{id}?s={season}&e={episode}' } },
+        { id: 'autoembed', name: 'AutoEmbed', urls: { movie: 'https://player.autoembed.cc/embed/movie/{id}', tv: 'https://player.autoembed.cc/embed/tv/{id}/{season}/{episode}' } },
+        { id: 'videasy', name: 'VidEasy (4K)', urls: { movie: 'https://player.videasy.net/movie/{id}?color=8834ec', tv: 'https://player.videasy.net/tv/{id}/{season}/{episode}?color=8834ec' } },
+        { id: 'vidfast', name: 'VidFast (4K)', urls: { movie: 'https://vidfast.pro/movie/{id}', tv: 'https://vidfast.pro/tv/{id}/{season}/{episode}' } },
+        { id: 'vidify', name: 'Vidify', urls: { movie: 'https://vidify.top/embed/movie/{id}', tv: 'https://vidify.top/embed/tv/{id}/{season}/{episode}' } },
+        { id: 'flicky', name: 'Flicky', urls: { movie: 'https://flicky.host/embed/movie/?id={id}', tv: 'https://flicky.host/embed/tv/{id}/{season}/{episode}' } },
+        { id: 'rive', name: 'RiveStream', urls: { movie: 'https://rivestream.org/embed?type=movie&id={id}', tv: 'https://rivestream.org/embed?type=tv&id={id}&season={season}&episode={episode}' } },
+        { id: 'vidora', name: 'Vidora', urls: { movie: 'https://vidora.su/movie/{id}', tv: 'https://vidora.su/tv/{id}/{season}/{episode}' } },
+        { id: 'vidsrccc', name: 'VidSrcCC', urls: { movie: 'https://vidsrc.cc/v2/embed/movie/{id}?autoPlay=false', tv: 'https://vidsrc.cc/v2/embed/tv/{id}/{season}/{episode}?autoPlay=false' } },
+        { id: 'vidzee', name: 'VidZee', urls: { movie: 'https://player.vidzee.wtf/embed/movie/{id}', tv: 'https://player.vidzee.wtf/embed/tv/{id}/{season}/{episode}' } },
+        { id: 'spenflix', name: 'Spenflix', urls: { movie: 'https://spencerdevs.xyz/movie/{id}', tv: 'https://spencerdevs.xyz/tv/{id}/{season}/{episode}' } },
+        { id: 'vidsrccx', name: 'VidSrcCX', urls: { movie: 'https://vidsrc.cx/embed/movie/{id}', tv: 'https://vidsrc.cx/embed/tv/{id}/{season}/{episode}' } }
+    ];
+
+    // ---------- Proxy (FoodCases Scramjet) — only when playing ----------
+    var PROXY_SCOPE = (function () {
+        try {
+            var i = location.pathname.indexOf('/cherri/cherri');
+            if (i !== -1) return location.pathname.slice(0, i + '/cherri/cherri'.length) + '/';
+        } catch (e) {}
+        return '/cherri/cherri/';
+    })();
+    var SJ_SEGMENT = 'fn5315/';
+    var DEFAULT_WISP = 'wss://kristenblackburnvolleyballcamps.com/socket/';
+
+    function getWisp() {
+        try {
+            var raw = localStorage.getItem('cherri_settings') || localStorage.getItem('cherri_wispUrl');
+            if (!raw) return DEFAULT_WISP;
+            if (raw.indexOf('ws') === 0) return raw.slice(-1) === '/' ? raw : raw + '/';
+            var j = JSON.parse(raw);
+            if (j && j.wisp) return j.wisp.slice(-1) === '/' ? j.wisp : j.wisp + '/';
+        } catch (e) {}
+        return DEFAULT_WISP;
+    }
+
+    var foodCodec = {
+        encode: function (e) {
+            if (!e) return e;
+            var t = new TextEncoder().encode(e), a = '', r;
+            for (r = 0; r < t.length; r++) a += String.fromCharCode(t[r]);
+            return btoa(a).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        },
+        decode: function (e) {
+            if (!e) return e;
+            var t = e.replace(/-/g, '+').replace(/_/g, '/');
+            while (t.length % 4) t += '=';
+            var a = atob(t), r = new Uint8Array(a.length), o;
+            for (o = 0; o < a.length; o++) r[o] = a.charCodeAt(o);
+            return new TextDecoder().decode(r);
         }
+    };
 
-        // Same codec as FoodCases i1A (base64url of UTF-8 bytes)
-        const foodCodec = {
-            encode: function (e) {
-                if (!e) return e;
-                const t = new TextEncoder().encode(e);
-                let a = '';
-                for (let r = 0; r < t.length; r++) a += String.fromCharCode(t[r]);
-                return btoa(a).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-            },
-            decode: function (e) {
-                if (!e) return e;
-                let t = e.replace(/-/g, '+').replace(/_/g, '/');
-                while (t.length % 4) t += '=';
-                const a = atob(t);
-                const r = new Uint8Array(a.length);
-                for (let o = 0; o < a.length; o++) r[o] = a.charCodeAt(o);
-                return new TextDecoder().decode(r);
+    function joinScope(rel) {
+        return PROXY_SCOPE + String(rel).replace(/^\//, '');
+    }
+
+    function loadScript(src) {
+        return new Promise(function (resolve, reject) {
+            if (document.querySelector('script[data-cherri-src="' + src + '"]')) {
+                resolve();
+                return;
             }
-        };
+            var s = document.createElement('script');
+            s.src = src;
+            s.async = false;
+            s.dataset.cherriSrc = src;
+            s.onload = function () { resolve(); };
+            s.onerror = function () { reject(new Error('Failed to load ' + src)); };
+            document.head.appendChild(s);
+        });
+    }
 
-        function joinScope(rel) {
-            const base = PROXY_SCOPE.endsWith('/') ? PROXY_SCOPE : PROXY_SCOPE + '/';
-            return base + String(rel).replace(/^\//, '');
-        }
+    var proxy = { ready: false, controller: null, frame: null, iframeEl: null, initPromise: null, error: null };
 
-        function loadScript(src) {
-            return new Promise(function (resolve, reject) {
-                if (document.querySelector('script[data-cherri-src="' + src + '"]')) {
-                    resolve();
-                    return;
-                }
-                const s = document.createElement('script');
-                s.src = src;
-                s.async = false;
-                s.dataset.cherriSrc = src;
-                s.onload = function () { resolve(); };
-                s.onerror = function () { reject(new Error('Failed to load ' + src)); };
-                document.head.appendChild(s);
-            });
-        }
-
-        window.__cherriProxy = {
-            ready: false,
-            controller: null,
-            frame: null,
-            iframeEl: null,
-            initPromise: null,
-            error: null
-        };
-
-        async function waitForActiveWorker(reg, timeoutMs) {
-            timeoutMs = timeoutMs || 15000;
-            if (reg.active) return reg.active;
-            if (navigator.serviceWorker.controller) return navigator.serviceWorker.controller;
-            return new Promise(function (resolve, reject) {
-                const t = setTimeout(function () {
-                    reject(new Error('Timed out waiting for active service worker'));
-                }, timeoutMs);
-                const onChange = function () {
-                    if (navigator.serviceWorker.controller) {
-                        clearTimeout(t);
-                        navigator.serviceWorker.removeEventListener('controllerchange', onChange);
-                        resolve(navigator.serviceWorker.controller);
+    function waitForActiveWorker(reg, timeoutMs) {
+        timeoutMs = timeoutMs || 15000;
+        if (reg.active) return Promise.resolve(reg.active);
+        if (navigator.serviceWorker.controller) return Promise.resolve(navigator.serviceWorker.controller);
+        return new Promise(function (resolve, reject) {
+            var t = setTimeout(function () {
+                reject(new Error('Timed out waiting for active service worker'));
+            }, timeoutMs);
+            function done(w) {
+                clearTimeout(t);
+                navigator.serviceWorker.removeEventListener('controllerchange', onChange);
+                resolve(w);
+            }
+            function onChange() {
+                if (navigator.serviceWorker.controller) done(navigator.serviceWorker.controller);
+            }
+            navigator.serviceWorker.addEventListener('controllerchange', onChange);
+            var w = reg.installing || reg.waiting;
+            if (w) {
+                w.addEventListener('statechange', function () {
+                    if (w.state === 'activated' && (reg.active || navigator.serviceWorker.controller)) {
+                        done(reg.active || navigator.serviceWorker.controller);
                     }
-                };
-                navigator.serviceWorker.addEventListener('controllerchange', onChange);
-                // Also watch installing → active
-                const w = reg.installing || reg.waiting;
-                if (w) {
-                    w.addEventListener('statechange', function () {
-                        if (w.state === 'activated' && (reg.active || navigator.serviceWorker.controller)) {
-                            clearTimeout(t);
-                            resolve(reg.active || navigator.serviceWorker.controller);
-                        }
-                    });
+                });
+            }
+        });
+    }
+
+    function initScramjetProxy() {
+        if (proxy.initPromise) return proxy.initPromise;
+        proxy.initPromise = (async function () {
+            try {
+                if (location.pathname.indexOf('/cherri/cherri') === -1) {
+                    throw new Error('Host this file under /cherri/cherri/');
                 }
-            });
-        }
+                if (!('serviceWorker' in navigator)) throw new Error('No serviceWorker support');
 
-        async function initScramjetProxy() {
-            const state = window.__cherriProxy;
-            if (state.initPromise) return state.initPromise;
-
-            state.initPromise = (async function () {
+                await loadScript(joinScope('bi1wf/8t6ked.js'));
+                await loadScript(joinScope('bwd9x/9lcbx4.js'));
                 try {
-                    if (location.pathname.indexOf('/cherri/cherri') === -1) {
-                        throw new Error('Host this file under /cherri/cherri/');
-                    }
-                    if (!('serviceWorker' in navigator)) {
-                        throw new Error('No serviceWorker support');
-                    }
+                    await loadScript('https://cdn.jsdelivr.net/npm/@mercuryworkshop/libcurl-transport@1.5.0/dist/index.js');
+                } catch (e) {}
+                try {
+                    await loadScript('https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2.1.27/dist/index.js');
+                } catch (e) {}
 
-                    // Same scripts index.html loads
-                    await loadScript(joinScope('bi1wf/8t6ked.js'));
-                    await loadScript(joinScope('bwd9x/9lcbx4.js'));
-
-                    // Libcurl transport (FoodCases uses in-bundle eH ≈ libcurl)
-                    try {
-                        await loadScript('https://cdn.jsdelivr.net/npm/@mercuryworkshop/libcurl-transport@1.5.0/dist/index.js');
-                    } catch (e) {
-                        console.warn('[proxy] libcurl CDN failed', e);
-                    }
-                    try {
-                        await loadScript('https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2.1.27/dist/index.js');
-                    } catch (e) {}
-
-                    // Prefer existing SW registration from main cherri if present
-                    let reg = null;
-                    if (window.__swRegistration) {
-                        try { reg = await window.__swRegistration; } catch (e) {}
-                    }
-                    if (!reg) {
-                        reg = await navigator.serviceWorker.getRegistration(PROXY_SCOPE);
-                    }
-                    if (!reg) {
-                        reg = await navigator.serviceWorker.register(joinScope('v6hxi5.js'), {
-                            scope: PROXY_SCOPE
-                        });
-                    }
-                    await navigator.serviceWorker.ready;
-
-                    // CRITICAL: must be the active ServiceWorker instance (has .postMessage)
-                    const worker = await waitForActiveWorker(reg);
-                    if (!worker || typeof worker.postMessage !== 'function') {
-                        throw new Error('No active ServiceWorker with postMessage (try open index.html then reload)');
-                    }
-
-                    const api = window._wdgvkq9 || window.$scramjetController;
-                    if (!api || !api.Controller) {
-                        throw new Error('Controller API missing after loading bi1wf/bwd9x');
-                    }
-
-                    // Build transport like FoodCases eH
-                    const wisp = getWisp();
-                    let transport = null;
-                    const LibcurlClient =
-                        (window.CurlMod && (window.CurlMod.LibcurlClient || window.CurlMod.default)) ||
-                        (window.LibcurlTransport && (window.LibcurlTransport.LibcurlClient || window.LibcurlTransport)) ||
-                        window.LibcurlClient ||
-                        null;
-                    const EpoxyClient =
-                        (window.EpxMod && (window.EpxMod.EpoxyClient || window.EpxMod.default)) ||
-                        window.EpoxyClient ||
-                        window.EpoxyTransport ||
-                        null;
-
-                    if (LibcurlClient) {
-                        transport = new LibcurlClient({ wisp: wisp });
-                        if (transport.init) await transport.init();
-                    } else if (EpoxyClient) {
-                        transport = new EpoxyClient({ wisp: wisp });
-                        if (transport.init) await transport.init();
-                    } else {
-                        throw new Error('No libcurl/epoxy transport available');
-                    }
-
-                    // Same config shape as FoodCases bootController (uqA)
-                    const controller = new api.Controller({
-                        serviceworker: worker,
-                        transport: transport,
-                        config: {
-                            prefix: PROXY_SCOPE + SJ_SEGMENT,
-                            codec: foodCodec,
-                            _iyosyjgPath: joinScope('bi1wf/8t6ked.js'),
-                            injectPath: joinScope('bwd9x/cdt4qb.js'),
-                            wasmPath: joinScope('bi1wf/ri1n3t.wasm')
-                        }
-                    });
-                    if (controller.wait) await controller.wait();
-
-                    state.controller = controller;
-                    state.ready = true;
-                    state.error = null;
-                    console.info('[proxy] ready (FoodCases boot path)', PROXY_SCOPE + SJ_SEGMENT);
-                    return state;
-                } catch (err) {
-                    state.ready = false;
-                    state.error = err && err.message ? err.message : String(err);
-                    console.error('[proxy] init failed:', state.error);
-                    return state;
+                var reg = null;
+                if (window.__swRegistration) {
+                    try { reg = await window.__swRegistration; } catch (e) {}
                 }
-            })();
+                if (!reg) reg = await navigator.serviceWorker.getRegistration(PROXY_SCOPE);
+                if (!reg) {
+                    reg = await navigator.serviceWorker.register(joinScope('v6hxi5.js'), { scope: PROXY_SCOPE });
+                }
+                await navigator.serviceWorker.ready;
 
-            return state.initPromise;
-        }
+                var worker = await waitForActiveWorker(reg);
+                if (!worker || typeof worker.postMessage !== 'function') {
+                    throw new Error('No active ServiceWorker (open main cherri page once, then reload)');
+                }
 
-        async function resolveEmbedSrc(rawUrl) {
-            const state = await initScramjetProxy();
-            const iframe = document.getElementById('player-frame');
-            if (!state.ready || !state.controller) {
-                console.error('[proxy] not ready:', state.error);
-                if (iframe) iframe.removeAttribute('src');
-                return '';
+                var api = window._wdgvkq9 || window.$scramjetController;
+                if (!api || !api.Controller) throw new Error('Controller API missing');
+
+                var wisp = getWisp();
+                var transport = null;
+                var LibcurlClient =
+                    (window.CurlMod && (window.CurlMod.LibcurlClient || window.CurlMod.default)) ||
+                    (window.LibcurlTransport && (window.LibcurlTransport.LibcurlClient || window.LibcurlTransport)) ||
+                    window.LibcurlClient || null;
+                var EpoxyClient =
+                    (window.EpxMod && (window.EpxMod.EpoxyClient || window.EpxMod.default)) ||
+                    window.EpoxyClient || window.EpoxyTransport || null;
+
+                if (LibcurlClient) {
+                    transport = new LibcurlClient({ wisp: wisp });
+                    if (transport.init) await transport.init();
+                } else if (EpoxyClient) {
+                    transport = new EpoxyClient({ wisp: wisp });
+                    if (transport.init) await transport.init();
+                } else {
+                    throw new Error('No libcurl/epoxy transport available');
+                }
+
+                var controller = new api.Controller({
+                    serviceworker: worker,
+                    transport: transport,
+                    config: {
+                        prefix: PROXY_SCOPE + SJ_SEGMENT,
+                        codec: foodCodec,
+                        _iyosyjgPath: joinScope('bi1wf/8t6ked.js'),
+                        injectPath: joinScope('bwd9x/cdt4qb.js'),
+                        wasmPath: joinScope('bi1wf/ri1n3t.wasm')
+                    }
+                });
+                if (controller.wait) await controller.wait();
+
+                proxy.controller = controller;
+                proxy.ready = true;
+                proxy.error = null;
+                return proxy;
+            } catch (err) {
+                proxy.ready = false;
+                proxy.error = err && err.message ? err.message : String(err);
+                console.error('[proxy]', proxy.error);
+                return proxy;
             }
-            if (!iframe) return '';
-            try {
-                if (!state.frame || state.iframeEl !== iframe) {
-                    state.iframeEl = iframe;
-                    state.frame = state.controller.createFrame(iframe);
-                }
-                state.frame.go(rawUrl);
-                return iframe.src || '';
-            } catch (e) {
-                console.error('[proxy] frame.go failed:', e);
-                if (iframe) iframe.removeAttribute('src');
-                return '';
-            }
+        })();
+        return proxy.initPromise;
+    }
+
+    async function playThroughProxy(rawUrl) {
+        var iframe = document.getElementById('player-frame');
+        var st = await initScramjetProxy();
+        if (!st.ready || !st.controller) {
+            setPlayerMsg(true, 'Player failed', st.error || 'Proxy did not start');
+            if (iframe) iframe.removeAttribute('src');
+            return false;
         }
-
-        // Do NOT boot Scramjet on page load — bi1wf hooks break Alpine and blank the UI.
-        // Init only when the user opens a title (see openWatch / updateVideoUrl).
-
-        const availableSources = [
-            { id: 'mapple', name: 'MappleTv', urls: { movie: 'https://mappletv.uk/watch/movie/{id}', tv: 'https://mappletv.uk/watch/tv/{id}-{season}-{episode}' } },
-            { id: 'pstream', name: 'P-Stream', urls: { movie: 'https://iframe.pstream.mov/media/tmdb-movie-{id}', tv: 'https://iframe.pstream.mov/media/tmdb-tv-{id}/{season}/{episode}' } },
-            { id: 'multiembed', name: 'MultiEmbed', urls: { movie: 'https://multiembed.mov/?video_id={id}&tmdb=1', tv: 'https://multiembed.mov/?video_id={id}&tmdb=1&s={season}&e={episode}' } },
-            { id: 'moviesapi', name: 'MoviesAPI', urls: { movie: 'https://moviesapi.club/movie/{id}', tv: 'https://moviesapi.club/tv/{id}-{season}-{episode}' } },
-            { id: 'embedsu', name: 'EmbedSU', urls: { movie: 'https://embed.su/embed/movie/{id}', tv: 'https://embed.su/embed/tv/{id}/{season}/{episode}' } },
-            { id: 'hexa', name: 'Hexa', urls: { movie: 'https://hexa.watch/watch/movie/{id}', tv: 'https://hexa.watch/watch/tv/{id}/{season}/{episode}' } },
-            { id: 'vidlink', name: 'VidLink', urls: { movie: 'https://vidlink.pro/movie/{id}', tv: 'https://vidlink.pro/tv/{id}/{season}/{episode}' } },
-            { id: 'vidsrcXyz', name: 'VidSrcXyz', urls: { movie: 'https://vidsrc.xyz/embed/movie/{id}', tv: 'https://vidsrc.xyz/embed/tv/{id}/{season}/{episode}' } },
-            { id: 'vidsrcrip', name: 'VidSrcRIP', urls: { movie: 'https://vidsrc.rip/embed/movie/{id}', tv: 'https://vidsrc.rip/embed/tv/{id}/{season}/{episode}' } },
-            { id: 'vidsrcsu', name: 'VidSrcSU', urls: { movie: 'https://vidsrc.su/embed/movie/{id}', tv: 'https://vidsrc.su/embed/tv/{id}/{season}/{episode}' } },
-            { id: 'vidsrcvip', name: 'VidSrcVIP', urls: { movie: 'https://vidsrc.vip/embed/movie/{id}', tv: 'https://vidsrc.vip/embed/tv/{id}/{season}/{episode}' } },
-            { id: '2embed', name: '2Embed', urls: { movie: 'https://www.2embed.cc/embed/{id}', tv: 'https://www.2embed.cc/embedtv/{id}&s={season}&e={episode}' } },
-            { id: '123embed', name: '123Embed', urls: { movie: 'https://play2.123embed.net/movie/{id}', tv: 'https://play2.123embed.net/tv/{id}/{season}/{episode}' } },
-            { id: '111movies', name: '111Movies', urls: { movie: 'https://111movies.com/movie/{id}', tv: 'https://111movies.com/tv/{id}/{season}/{episode}' } },
-            { id: 'smashystream', name: 'SmashyStream', urls: { movie: 'https://player.smashy.stream/movie/{id}', tv: 'https://player.smashy.stream/tv/{id}?s={season}&e={episode}' } },
-            { id: 'autoembed', name: 'AutoEmbed', urls: { movie: 'https://player.autoembed.cc/embed/movie/{id}', tv: 'https://player.autoembed.cc/embed/tv/{id}/{season}/{episode}' } },
-            { id: 'videasy', name: 'VidEasy (4K)', urls: { movie: 'https://player.videasy.net/movie/{id}?color=8834ec', tv: 'https://player.videasy.net/tv/{id}/{season}/{episode}?color=8834ec' } },
-            { id: 'vidfast', name: 'VidFast (4K)', urls: { movie: 'https://vidfast.pro/movie/{id}', tv: 'https://vidfast.pro/tv/{id}/{season}/{episode}' } },
-            { id: 'vidify', name: 'Vidify', urls: { movie: 'https://vidify.top/embed/movie/{id}', tv: 'https://vidify.top/embed/tv/{id}/{season}/{episode}' } },
-            { id: 'flicky', name: 'Flicky', urls: { movie: 'https://flicky.host/embed/movie/?id={id}', tv: 'https://flicky.host/embed/tv/{id}/{season}/{episode}' } },
-            { id: 'rive', name: 'RiveStream', urls: { movie: 'https://rivestream.org/embed?type=movie&id={id}', tv: 'https://rivestream.org/embed?type=tv&id={id}&season={season}&episode={episode}' } },
-            { id: 'vidora', name: 'Vidora', urls: { movie: 'https://vidora.su/movie/{id}', tv: 'https://vidora.su/tv/{id}/{season}/{episode}' } },
-            { id: 'vidsrccc', name: 'VidSrcCC', urls: { movie: 'https://vidsrc.cc/v2/embed/movie/{id}?autoPlay=false', tv: 'https://vidsrc.cc/v2/embed/tv/{id}/{season}/{episode}?autoPlay=false' } },
-            { id: 'streamflix', name: 'StreamFlix', urls: { movie: 'https://watch.streamflix.one/movie/{id}/watch?server=1', tv: 'https://watch.streamflix.one/tv/{id}/watch?server=1&season={season}&episode={episode}' } },
-            { id: 'nebula', name: 'NebulaFlix', urls: { movie: 'https://nebulaflix.stream/movie?mt={id}&server=1', tv: 'https://nebulaflix.stream/show?st={id}&season={season}&episode={episode}&server=1' } },
-            { id: 'vidjoy', name: 'VidJoy', urls: { movie: 'https://vidjoy.pro/embed/movie/{id}', tv: 'https://vidjoy.pro/embed/tv/{id}/{season}/{episode}' } },
-            { id: 'vidzee', name: 'VidZee', urls: { movie: 'https://player.vidzee.wtf/embed/movie/{id}', tv: 'https://player.vidzee.wtf/embed/tv/{id}/{season}/{episode}' } },
-            { id: 'spenflix', name: 'Spenflix', urls: { movie: 'https://spencerdevs.xyz/movie/{id}', tv: 'https://spencerdevs.xyz/tv/{id}/{season}/{episode}' } },
-            { id: 'frembed', name: 'Frembed', urls: { movie: 'https://frembed.icu/api/film.php?id={id}', tv: 'https://frembed.icu/api/serie.php?id={id}&sa={season}&epi={episode}' } },
-            { id: 'uembed', name: 'UEmbed (premium)', urls: { movie: 'https://uembed.site/?id={id}&apikey=thisisforsurenotapremiumkey_right?', tv: 'https://uembed.site/?id={id}&season={season}&episode={episode}&apikey=thisisforsurenotapremiumkey_right?' } },
-            { id: 'vidsrccx', name: 'VidSrcCX', urls: { movie: 'https://vidsrc.cx/embed/movie/{id}', tv: 'https://vidsrc.cx/embed/tv/{id}/{season}/{episode}' } }
-        ];
-
-        function app() {
-            return {
-                // Browse state
-                view: 'browse',
-                apiKey: 'fb7bb23f03b6994dafc674c074d01761',
-                content: [],
-                currentTab: 'movies',
-                currentPage: 1,
-                searchQuery: '',
-
-                // Watch state
-                watchApiKey: '1070730380f5fee0d87cf0382670b255',
-                watchContent: null,
-                contentId: null,
-                contentType: null,
-                isShow: false,
-                selectedSeason: 1,
-                selectedEpisode: 1,
-                seasons: [],
-                seasonData: null,
-                selectedSource: 'vidsrcXyz',
-                availableSources: availableSources,
-                currentVideoUrl: '',
-                playerStatus: 'idle', // idle | loading | playing | error
-                playerMessage: '',
-
-                async init() {
-                    await this.fetchContent();
-                    this.$watch('currentTab', async () => {
-                        this.currentPage = 1;
-                        this.searchQuery = '';
-                        await this.fetchContent();
-                    });
-                },
-
-                async searchContent() {
-                    if (!this.searchQuery.trim()) {
-                        await this.fetchContent();
-                        return;
-                    }
-                    const endpoint = this.currentTab === 'movies' ? 'movie' : 'tv';
-                    const url = `https://api.tmdb.org/3/search/${endpoint}?api_key=${this.apiKey}&query=${encodeURIComponent(this.searchQuery)}&page=${this.currentPage}`;
-                    try {
-                        const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                        const data = await response.json();
-                        this.content = data.results;
-                    } catch (e) {
-                        console.error('Error searching:', e);
-                    }
-                },
-
-                async fetchContent() {
-                    const endpoint = this.currentTab === 'movies' ? 'movie/popular' : 'tv/popular';
-                    const url = `https://api.tmdb.org/3/${endpoint}?api_key=${this.apiKey}&page=${this.currentPage}`;
-                    try {
-                        const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                        const data = await response.json();
-                        this.content = data.results;
-                    } catch (e) {
-                        console.error('Error fetching:', e);
-                        alert('Failed to load movies. TMDB API may be blocked by CORS. Try a local server.');
-                    }
-                },
-
-                async changePage(page) {
-                    this.currentPage = page;
-                    if (this.searchQuery.trim()) await this.searchContent();
-                    else await this.fetchContent();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                },
-
-                async openWatch(id, type) {
-                    this.contentId = id;
-                    this.contentType = type;
-                    this.isShow = type === 'tv';
-                    this.selectedSeason = 1;
-                    this.selectedEpisode = 1;
-                    this.watchContent = null;
-                    this.seasonData = null;
-                    this.currentVideoUrl = '';
-                    this.playerStatus = 'loading';
-                    this.playerMessage = 'Loading…';
-                    this.view = 'watch';
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                    await this.fetchWatchContent();
-                    this.updateVideoUrl();
-                },
-
-                async fetchWatchContent() {
-                    const url = `https://api.themoviedb.org/3/${this.contentType}/${this.contentId}?api_key=${this.watchApiKey}`;
-                    try {
-                        const response = await fetch(url);
-                        const data = await response.json();
-                        this.watchContent = data;
-                        if (this.isShow) {
-                            this.seasons = Array.from({ length: data.number_of_seasons || 1 }, (_, i) => i + 1);
-                            await this.updateEpisodes();
-                        }
-                    } catch (e) {
-                        console.error('Error fetching watch content:', e);
-                    }
-                },
-
-                async updateEpisodes() {
-                    const url = `https://api.themoviedb.org/3/tv/${this.contentId}/season/${this.selectedSeason}?api_key=${this.watchApiKey}`;
-                    try {
-                        const response = await fetch(url);
-                        const data = await response.json();
-                        this.seasonData = data;
-                        this.selectedEpisode = 1;
-                        this.updateVideoUrl();
-                    } catch (e) {
-                        console.error('Error fetching episodes:', e);
-                    }
-                },
-
-                loadEpisode() {
-                    this.updateVideoUrl();
-                },
-
-                async updateVideoUrl() {
-                    const source = this.availableSources.find(s => s.id === this.selectedSource);
-                    if (!source) return;
-                    const params = this.isShow
-                        ? { id: this.contentId, season: this.selectedSeason, episode: this.selectedEpisode }
-                        : { id: this.contentId };
-                    let url = source.urls[this.isShow ? 'tv' : 'movie'];
-                    Object.entries(params).forEach(([key, value]) => {
-                        url = url.replace(`{${key}}`, value);
-                    });
-                    this.playerStatus = 'loading';
-                    this.playerMessage = 'Starting proxy…';
-                    this.currentVideoUrl = '';
-                    try {
-                        const resolved = await resolveEmbedSrc(url);
-                        if (resolved) {
-                            this.currentVideoUrl = resolved;
-                            this.playerStatus = 'playing';
-                            this.playerMessage = '';
-                        } else {
-                            this.playerStatus = 'error';
-                            this.playerMessage = (window.__cherriProxy && window.__cherriProxy.error)
-                                || 'Proxy did not start. Open /cherri/cherri/ once, then reload.';
-                        }
-                    } catch (e) {
-                        this.playerStatus = 'error';
-                        this.playerMessage = String(e && e.message ? e.message : e);
-                    }
-                }
-                }
+        try {
+            if (!st.frame || st.iframeEl !== iframe) {
+                st.iframeEl = iframe;
+                st.frame = st.controller.createFrame(iframe);
             }
+            st.frame.go(rawUrl);
+            setPlayerMsg(false);
+            return true;
+        } catch (e) {
+            setPlayerMsg(true, 'Player failed', String(e && e.message ? e.message : e));
+            if (iframe) iframe.removeAttribute('src');
+            return false;
         }
+    }
+
+    // ---------- UI ----------
+    function $(id) { return document.getElementById(id); }
+
+    function setPlayerMsg(show, title, body) {
+        var el = $('player-msg');
+        if (!el) return;
+        if (!show) {
+            el.classList.add('hidden');
+            return;
+        }
+        el.classList.remove('hidden');
+        if (title) $('player-msg-title').textContent = title;
+        $('player-msg-body').textContent = body || '';
+    }
+
+    function showBrowse() {
+        $('browse').classList.remove('hidden');
+        $('watch').classList.add('hidden');
+        var iframe = $('player-frame');
+        if (iframe) iframe.removeAttribute('src');
+    }
+
+    function showWatch() {
+        $('browse').classList.add('hidden');
+        $('watch').classList.remove('hidden');
+        window.scrollTo(0, 0);
+    }
+
+    function renderGrid(items) {
+        var grid = $('grid');
+        grid.innerHTML = '';
+        (items || []).forEach(function (item) {
+            if (!item || !item.poster_path) return;
+            var a = document.createElement('a');
+            a.href = '#';
+            a.className = 'card';
+            a.innerHTML =
+                '<img src="https://image.tmdb.org/t/p/w500' + item.poster_path + '" alt="" loading="lazy">' +
+                '<div class="cap">' + escapeHtml(item.title || item.name || '') + '</div>';
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                openWatch(item.id, state.tab === 'movies' ? 'movie' : 'tv');
+            });
+            grid.appendChild(a);
+        });
+        $('page-num').textContent = String(state.page);
+        $('prev').disabled = state.page <= 1;
+    }
+
+    function escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    async function fetchList() {
+        var endpoint, url;
+        if (state.query.trim()) {
+            endpoint = state.tab === 'movies' ? 'movie' : 'tv';
+            url = 'https://api.tmdb.org/3/search/' + endpoint +
+                '?api_key=' + API_KEY +
+                '&query=' + encodeURIComponent(state.query) +
+                '&page=' + state.page;
+        } else {
+            endpoint = state.tab === 'movies' ? 'movie/popular' : 'tv/popular';
+            url = 'https://api.tmdb.org/3/' + endpoint +
+                '?api_key=' + API_KEY + '&page=' + state.page;
+        }
+        try {
+            var res = await fetch(url, { headers: { Accept: 'application/json' } });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            var data = await res.json();
+            renderGrid(data.results || []);
+        } catch (e) {
+            console.error(e);
+            $('grid').innerHTML = '<p style="grid-column:1/-1;text-align:center">Failed to load list.</p>';
+        }
+    }
+
+    function buildSourceUrl() {
+        var source = sources.find(function (s) { return s.id === state.selectedSource; });
+        if (!source) return '';
+        var url = source.urls[state.isShow ? 'tv' : 'movie'];
+        var params = state.isShow
+            ? { id: state.contentId, season: state.selectedSeason, episode: state.selectedEpisode }
+            : { id: state.contentId };
+        Object.keys(params).forEach(function (k) {
+            url = url.replace('{' + k + '}', params[k]);
+        });
+        return url;
+    }
+
+    function renderSources() {
+        var box = $('sources');
+        box.innerHTML = '';
+        sources.forEach(function (s) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'src-btn' + (s.id === state.selectedSource ? ' on' : '');
+            b.textContent = s.name;
+            b.addEventListener('click', function () {
+                state.selectedSource = s.id;
+                renderSources();
+                updatePlayer();
+            });
+            box.appendChild(b);
+        });
+    }
+
+    function renderSeasonsAndEpisodes() {
+        var panel = $('episodes-panel');
+        if (!state.isShow) {
+            panel.classList.add('hidden');
+            return;
+        }
+        panel.classList.remove('hidden');
+        var seasons = $('seasons');
+        seasons.innerHTML = '';
+        state.seasons.forEach(function (n) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'season-btn' + (n === state.selectedSeason ? ' on' : '');
+            b.textContent = 'Season ' + n;
+            b.addEventListener('click', async function () {
+                state.selectedSeason = n;
+                await loadSeason();
+            });
+            seasons.appendChild(b);
+        });
+        var eps = $('episodes');
+        eps.innerHTML = '';
+        var list = (state.seasonData && state.seasonData.episodes) || [];
+        list.forEach(function (ep) {
+            var d = document.createElement('div');
+            d.className = 'ep' + (ep.episode_number === state.selectedEpisode ? ' on' : '');
+            var img = ep.still_path
+                ? 'https://image.tmdb.org/t/p/w300' + ep.still_path
+                : 'https://via.placeholder.com/300x169';
+            d.innerHTML =
+                '<img src="' + img + '" alt="">' +
+                '<div class="t">Ep ' + ep.episode_number + ' · ' + escapeHtml(ep.name || '') + '</div>';
+            d.addEventListener('click', function () {
+                state.selectedEpisode = ep.episode_number;
+                renderSeasonsAndEpisodes();
+                updatePlayer();
+            });
+            eps.appendChild(d);
+        });
+    }
+
+    async function loadSeason() {
+        var url = 'https://api.themoviedb.org/3/tv/' + state.contentId +
+            '/season/' + state.selectedSeason + '?api_key=' + WATCH_KEY;
+        try {
+            var res = await fetch(url);
+            state.seasonData = await res.json();
+            state.selectedEpisode = 1;
+            renderSeasonsAndEpisodes();
+            updatePlayer();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function openWatch(id, type) {
+        state.contentId = id;
+        state.contentType = type;
+        state.isShow = type === 'tv';
+        state.selectedSeason = 1;
+        state.selectedEpisode = 1;
+        state.seasonData = null;
+        state.seasons = [];
+        showWatch();
+        setPlayerMsg(true, 'Loading…', '');
+        $('watch-title').textContent = 'Loading…';
+        $('watch-meta').textContent = '';
+        $('overview').textContent = '';
+        renderSources();
+
+        try {
+            var res = await fetch('https://api.themoviedb.org/3/' + type + '/' + id + '?api_key=' + WATCH_KEY);
+            var data = await res.json();
+            state.watchContent = data;
+            $('watch-title').textContent = data.title || data.name || '';
+            var bits = [];
+            if (data.release_date) bits.push(String(data.release_date).slice(0, 4));
+            if (data.first_air_date) bits.push(String(data.first_air_date).slice(0, 4));
+            if (data.vote_average) bits.push('★ ' + Number(data.vote_average).toFixed(1));
+            $('watch-meta').textContent = bits.join(' · ');
+            $('overview').textContent = data.overview || '';
+            if (state.isShow) {
+                var n = data.number_of_seasons || 1;
+                state.seasons = [];
+                for (var i = 1; i <= n; i++) state.seasons.push(i);
+                await loadSeason();
+            } else {
+                $('episodes-panel').classList.add('hidden');
+                updatePlayer();
+            }
+        } catch (e) {
+            console.error(e);
+            setPlayerMsg(true, 'Failed to load title', String(e));
+        }
+    }
+
+    async function updatePlayer() {
+        var url = buildSourceUrl();
+        if (!url) return;
+        setPlayerMsg(true, 'Starting proxy…', 'Please wait');
+        await playThroughProxy(url);
+    }
+
+    // events
+    $('tab-movies').addEventListener('click', function () {
+        state.tab = 'movies';
+        state.page = 1;
+        state.query = '';
+        $('search').value = '';
+        $('tab-movies').classList.add('on');
+        $('tab-shows').classList.remove('on');
+        fetchList();
+    });
+    $('tab-shows').addEventListener('click', function () {
+        state.tab = 'shows';
+        state.page = 1;
+        state.query = '';
+        $('search').value = '';
+        $('tab-shows').classList.add('on');
+        $('tab-movies').classList.remove('on');
+        fetchList();
+    });
+    var searchTimer = null;
+    $('search').addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+            state.query = $('search').value;
+            state.page = 1;
+            fetchList();
+        }, 300);
+    });
+    $('prev').addEventListener('click', function () {
+        if (state.page > 1) {
+            state.page--;
+            fetchList();
+            window.scrollTo(0, 0);
+        }
+    });
+    $('next').addEventListener('click', function () {
+        state.page++;
+        fetchList();
+        window.scrollTo(0, 0);
+    });
+    $('back').addEventListener('click', function (e) {
+        e.preventDefault();
+        showBrowse();
+    });
+
+    // start — no Scramjet until play
+    fetchList();
+})();
     </script>
 </body>
 </html>
