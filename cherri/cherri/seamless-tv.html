@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cherri | movies</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.10.3/cdn.min.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fdn.fontcdn.ir">
+    <link rel="preconnect" href="https://v1.fontapi.ir">
+    <link href="https://v1.fontapi.ir/css/SFProDisplay" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #220f17;
+            --bg-2: #3f1e2b;
+            --bg-3: #57293c;
+            --bg-4: #85415d8c;
+            --bg-5: #1a0b11;
+            --border: #ebd5ddc7;
+            --border-2: #ebd5dd70;
+            --border-3: #ebd5dd30;
+            --border-4: #ebd5dd1a;
+            --text: #c0c0c0;
+            --bright-text: #ffffff;
+            --accent: #e2588d;
+            --accent-2: #c44ac4;
+        }
+        * {
+            font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        }
+        button { font-family: arial !important; }
+        body, html {
+            background: var(--bg);
+            margin: 0;
+            min-height: 100%;
+        }
+        input {
+            background: var(--bg-2) !important;
+            font-size: 14px !important;
+            font-family: Arial !important;
+            padding: 10px 20px !important;
+        }
+        input:focus {
+            outline: none;
+            background: var(--bg-3) !important;
+        }
+        .switcher {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: arial;
+        }
+        span { font-family: Arial; }
+        ::-webkit-scrollbar { scrollbar-width: thin; }
+    </style>
+</head>
+<body class="text-[var(--text)] min-h-screen p-8" x-data="app()" x-cloak>
+
+    <!-- ========== BROWSE VIEW ========== -->
+    <div x-show="view === 'browse'" class="container mx-auto">
+        <br><br>
+        <h1 class="text-center text-4xl">cherri | movies</h1>
+        <br>
+        <div class="mb-8 flex flex-col md:flex-row gap-4 transition-all duration-200 items-center justify-between">
+            <input type="text" x-model="searchQuery" @input="searchContent()"
+                placeholder="what are we watching today?"
+                class="transition-all w-1/2 left-1/2 translate-x-[25%] text-[var(--text)] rounded-2xl px-4 py-2">
+        </div>
+
+        <div class="switcher">
+            <button @click="currentTab = 'movies'"
+                :class="currentTab === 'movies' ? 'bg-[var(--accent)] text-[var(--text)]' : 'bg-[var(--bg-2)]'"
+                class="px-4 py-2 rounded-2xl transition-all">movies</button>
+            <button @click="currentTab = 'shows'"
+                :class="currentTab === 'shows' ? 'bg-[var(--accent)] text-[var(--text)]' : 'bg-[var(--bg-2)]'"
+                class="px-4 py-2 rounded-2xl transition-all">tv and shows</button>
+        </div>
+
+        <br><br><br>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
+            <template x-for="item in content" :key="item.id">
+                <a href="#"
+                    @click.prevent="openWatch(item.id, currentTab === 'movies' ? 'movie' : 'tv')"
+                    class="bg-gray-800 rounded-3xl overflow-hidden hover:scale-[102%] transition-transform block relative group">
+                    <img :src="'https://image.tmdb.org/t/p/w500' + item.poster_path"
+                        :alt="item.title || item.name"
+                        class="w-full aspect-[3/2] object-cover transition-all duration-200">
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/50 hover:backdrop-blur-[2px] transition-all duration-200 flex items-end p-3 opacity-0 group-hover:opacity-100">
+                        <h3 class="text-sm font-semibold text-[var(--text)]" x-text="item.title || item.name"></h3>
+                    </div>
+                </a>
+            </template>
+        </div>
+
+        <div class="mt-8 flex justify-center space-x-4">
+            <button @click="currentPage > 1 && changePage(currentPage - 1)" :disabled="currentPage === 1"
+                class="bg-[var(--bg-2)] px-6 py-2 rounded-2xl disabled:opacity-50">Previous</button>
+            <span class="px-6 py-2" style="font-family: arial;">Page <span x-text="currentPage"></span></span>
+            <button @click="changePage(currentPage + 1)" class="rounded-2xl bg-[var(--bg-2)] px-6 py-2">Next</button>
+        </div>
+        <br><br>
+    </div>
+
+    <!-- ========== WATCH VIEW ========== -->
+    <div x-show="view === 'watch'" class="container mx-auto max-w-6xl" x-cloak>
+        <br><br>
+        <a href="#" @click.prevent="view = 'browse'" class="inline-block mb-6 text-[var(--text)] transition-all hover:text-gray-300">← Back to Browse</a>
+
+        <div x-show="watchContent">
+            <h1 class="text-4xl font-bold mb-4" x-text="watchContent?.title || watchContent?.name"></h1>
+
+            <div class="mb-6 flex items-center space-x-4 text-gray-300">
+                <span x-show="watchContent?.release_date" x-text="new Date(watchContent.release_date).getFullYear()"></span>
+                <span x-show="watchContent?.first_air_date" x-text="new Date(watchContent.first_air_date).getFullYear()"></span>
+                <span x-show="watchContent?.vote_average">★ <span x-text="watchContent.vote_average?.toFixed(1)"></span></span>
+            </div>
+
+            <div class="bg-[#1d1d1d] rounded-3xl overflow-hidden mb-6">
+                <div class="relative pt-[56.25%]">
+                    <iframe id="player-frame" :src="currentVideoUrl" class="absolute top-0 left-0 w-full h-full" frameborder="0" allowfullscreen allow="fullscreen; autoplay"></iframe>
+                </div>
+            </div>
+
+            <template x-if="isShow">
+                <div class="bg-[var(--bg)] rounded-3xl p-6 mb-6">
+                    <h3 class="text-xl font-semibold mb-4">Episodes</h3>
+                    <div class="flex items-center space-x-2 mb-4 flex-wrap">
+                        <template x-for="season in seasons" :key="season">
+                            <button @click="selectedSeason = season; updateEpisodes()"
+                                class="px-4 py-2 m-1 rounded-2xl whitespace-nowrap"
+                                :class="selectedSeason === season ? 'bg-[var(--accent)] text-[var(--text)]' : 'bg-[var(--bg-2)]'">
+                                Season <span x-text="season"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        <template x-for="episode in seasonData?.episodes" :key="episode.episode_number">
+                            <div @click="selectedEpisode = episode.episode_number; loadEpisode()"
+                                class="bg-[var(--bg-2)] rounded-3xl overflow-hidden transition-all cursor-pointer hover:bg-[var(--bg-3)]"
+                                :class="selectedEpisode === episode.episode_number ? 'ring-2 ring-[var(--accent)]' : ''">
+                                <div class="relative aspect-video">
+                                    <img :src="episode.still_path
+                                        ? 'https://image.tmdb.org/t/p/w300' + episode.still_path
+                                        : 'https://via.placeholder.com/300x169'"
+                                        class="w-full h-full aspect-3/2 object-cover">
+                                    <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
+                                        <span class="text-sm font-medium">Episode <span x-text="episode.episode_number"></span></span>
+                                    </div>
+                                </div>
+                                <div class="p-3">
+                                    <h4 class="font-medium text-sm" x-text="episode.name"></h4>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <div class="bg-[var(--bg)] rounded-3xl p-6 mb-6">
+                <h3 class="text-xl font-semibold mb-4">Sources</h3>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="source in availableSources" :key="source.id">
+                        <button @click="selectedSource = source.id; updateVideoUrl()"
+                            class="transition-all px-4 py-2 rounded-2xl"
+                            :class="selectedSource === source.id ? 'bg-[var(--accent)] text-[var(--text)]' : 'bg-[var(--bg-2)]'"
+                            x-text="source.name"></button>
+                    </template>
+                </div>
+            </div>
+
+            <div class="bg-[var(--bg)] rounded-3xl p-6">
+                <h3 class="text-xl font-semibold mb-4">Overview</h3>
+                <p class="text-gray-300" style="font-family: Arial;" x-text="watchContent?.overview"></p>
+            </div>
+            <br><br>
+        </div>
+    </div>
+
+    <script>
+        // ========== PROXY (FoodCases Scramjet) ==========
+        // Priority:
+        //  1) Proxy when this page is under the cherri install (same origin + path)
+        //  2) Direct embed URLs otherwise
+        //
+        // Why not "proxy from anywhere"?
+        // Scramjet is a service-worker proxy. The SW can only control pages under
+        // its scope (e.g. /cherri/cherri/). A page on another host cannot register
+        // or talk to that SW, so /~/sj/... URLs 404 on InfinityFree as static files.
+        const PROXY_BASE = 'https://menist.free.nf/cherri/cherri'.replace(/\/$/, '');
+        const WISP_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('cherri_wispUrl'))
+            || 'wss://fern.best/wisp/';
+
+        function canUseScramjet() {
+            try {
+                const base = new URL(PROXY_BASE + '/');
+                if (location.origin !== base.origin) return false;
+                // Must be under /cherri/cherri so SW scope applies
+                return location.pathname.indexOf(base.pathname.replace(/\/$/, '')) === 0
+                    || location.pathname.indexOf('/cherri/cherri') !== -1;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function loadScript(src) {
+            return new Promise(function (resolve, reject) {
+                const s = document.createElement('script');
+                s.src = src;
+                s.async = false;
+                s.onload = function () { resolve(); };
+                s.onerror = function () { reject(new Error('Failed to load ' + src)); };
+                document.head.appendChild(s);
+            });
+        }
+
+        // Shared proxy state used by Alpine app
+        window.__cherriProxy = {
+            ready: false,
+            mode: 'direct', // 'scramjet' | 'direct'
+            controller: null,
+            frame: null,
+            iframeEl: null,
+            initPromise: null
+        };
+
+        async function initScramjetProxy() {
+            const state = window.__cherriProxy;
+            if (state.initPromise) return state.initPromise;
+            state.initPromise = (async function () {
+                if (!canUseScramjet()) {
+                    state.mode = 'direct';
+                    console.info('[proxy] Not under', PROXY_BASE, '— using direct embeds');
+                    return state;
+                }
+                if (!('serviceWorker' in navigator)) {
+                    state.mode = 'direct';
+                    return state;
+                }
+                try {
+                    // Load Scramjet runtime + controller from your install
+                    await loadScript(PROXY_BASE + '/bi1wf/8t6ked.js');
+                    await loadScript(PROXY_BASE + '/bwd9x/9lcbx4.js');
+                    // Optional transports (needed for outbound requests through wisp)
+                    try {
+                        await loadScript('https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2.1.27/dist/index.js');
+                    } catch (e) {}
+                    try {
+                        await loadScript('https://cdn.jsdelivr.net/npm/@mercuryworkshop/libcurl-transport@1.5.0/dist/index.js');
+                    } catch (e) {}
+                    try {
+                        await loadScript('https://cdn.jsdelivr.net/npm/@mercuryworkshop/bare-mux@2.1.7/dist/index.js');
+                    } catch (e) {}
+
+                    const reg = await navigator.serviceWorker.register(PROXY_BASE + '/v6hxi5.js', {
+                        scope: new URL(PROXY_BASE + '/').pathname
+                    });
+                    await navigator.serviceWorker.ready;
+
+                    // Wait briefly for controller globals
+                    const api = window._wdgvkq9 || window.$scramjetController;
+                    if (!api || !api.Controller) {
+                        console.warn('[proxy] Controller API not found after script load');
+                        state.mode = 'direct';
+                        return state;
+                    }
+
+                    // Transport: try common globals from FoodCases / scramjet builds
+                    let transport = null;
+                    const Libcurl = window.LibcurlClient || window.LibcurlTransport
+                        || (window.BareMux && window.BareMux.LibcurlClient)
+                        || null;
+                    const Epoxy = window.EpoxyTransport || null;
+
+                    if (typeof Epoxy === 'function') {
+                        transport = new Epoxy({ wisp: WISP_URL });
+                    } else if (typeof Libcurl === 'function') {
+                        transport = new Libcurl({ wisp: WISP_URL });
+                    } else if (window.BareMux && window.BareMux.SetTransport) {
+                        // bare-mux style — best-effort
+                        try {
+                            await window.BareMux.SetTransport('EpxMod.EpoxyClient', { wisp: WISP_URL });
+                        } catch (e) {}
+                    }
+
+                    const sw = reg.active || (await navigator.serviceWorker.ready).active;
+                    if (!sw) {
+                        state.mode = 'direct';
+                        return state;
+                    }
+
+                    const controller = new api.Controller({
+                        serviceworker: navigator.serviceWorker.controller || sw,
+                        transport: transport,
+                        config: {
+                            prefix: '/~/sj/',
+                            codec: {
+                                encode: function (e) { return e ? encodeURIComponent(e) : e; },
+                                decode: function (e) { return e ? decodeURIComponent(e) : e; }
+                            }
+                        }
+                    });
+                    if (controller.wait) await controller.wait();
+
+                    state.controller = controller;
+                    state.mode = 'scramjet';
+                    state.ready = true;
+                    console.info('[proxy] Scramjet ready — embeds will route through', PROXY_BASE);
+                    return state;
+                } catch (err) {
+                    console.warn('[proxy] Scramjet init failed, falling back to direct:', err);
+                    state.mode = 'direct';
+                    return state;
+                }
+            })();
+            return state.initPromise;
+        }
+
+        function resolveEmbedSrc(rawUrl, iframeEl) {
+            const state = window.__cherriProxy;
+            if (state.mode === 'scramjet' && state.controller && iframeEl) {
+                try {
+                    // Reuse or create a Scramjet frame bound to this iframe
+                    if (!state.frame || state.iframeEl !== iframeEl) {
+                        state.iframeEl = iframeEl;
+                        state.frame = state.controller.createFrame(iframeEl);
+                    }
+                    state.frame.go(rawUrl);
+                    // frame.go sets iframe.src itself; return current src
+                    return iframeEl.src || '';
+                } catch (e) {
+                    console.warn('[proxy] frame.go failed, direct:', e);
+                    return rawUrl;
+                }
+            }
+            return rawUrl;
+        }
+
+        // Kick off init early (no-op / direct when not under proxy path)
+        initScramjetProxy();
+
+        const availableSources = [
+            { id: 'mapple', name: 'MappleTv', urls: { movie: 'https://mappletv.uk/watch/movie/{id}', tv: 'https://mappletv.uk/watch/tv/{id}-{season}-{episode}' } },
+            { id: 'pstream', name: 'P-Stream', urls: { movie: 'https://iframe.pstream.mov/media/tmdb-movie-{id}', tv: 'https://iframe.pstream.mov/media/tmdb-tv-{id}/{season}/{episode}' } },
+            { id: 'multiembed', name: 'MultiEmbed', urls: { movie: 'https://multiembed.mov/?video_id={id}&tmdb=1', tv: 'https://multiembed.mov/?video_id={id}&tmdb=1&s={season}&e={episode}' } },
+            { id: 'moviesapi', name: 'MoviesAPI', urls: { movie: 'https://moviesapi.club/movie/{id}', tv: 'https://moviesapi.club/tv/{id}-{season}-{episode}' } },
+            { id: 'embedsu', name: 'EmbedSU', urls: { movie: 'https://embed.su/embed/movie/{id}', tv: 'https://embed.su/embed/tv/{id}/{season}/{episode}' } },
+            { id: 'hexa', name: 'Hexa', urls: { movie: 'https://hexa.watch/watch/movie/{id}', tv: 'https://hexa.watch/watch/tv/{id}/{season}/{episode}' } },
+            { id: 'vidlink', name: 'VidLink', urls: { movie: 'https://vidlink.pro/movie/{id}', tv: 'https://vidlink.pro/tv/{id}/{season}/{episode}' } },
+            { id: 'vidsrcXyz', name: 'VidSrcXyz', urls: { movie: 'https://vidsrc.xyz/embed/movie/{id}', tv: 'https://vidsrc.xyz/embed/tv/{id}/{season}/{episode}' } },
+            { id: 'vidsrcrip', name: 'VidSrcRIP', urls: { movie: 'https://vidsrc.rip/embed/movie/{id}', tv: 'https://vidsrc.rip/embed/tv/{id}/{season}/{episode}' } },
+            { id: 'vidsrcsu', name: 'VidSrcSU', urls: { movie: 'https://vidsrc.su/embed/movie/{id}', tv: 'https://vidsrc.su/embed/tv/{id}/{season}/{episode}' } },
+            { id: 'vidsrcvip', name: 'VidSrcVIP', urls: { movie: 'https://vidsrc.vip/embed/movie/{id}', tv: 'https://vidsrc.vip/embed/tv/{id}/{season}/{episode}' } },
+            { id: '2embed', name: '2Embed', urls: { movie: 'https://www.2embed.cc/embed/{id}', tv: 'https://www.2embed.cc/embedtv/{id}&s={season}&e={episode}' } },
+            { id: '123embed', name: '123Embed', urls: { movie: 'https://play2.123embed.net/movie/{id}', tv: 'https://play2.123embed.net/tv/{id}/{season}/{episode}' } },
+            { id: '111movies', name: '111Movies', urls: { movie: 'https://111movies.com/movie/{id}', tv: 'https://111movies.com/tv/{id}/{season}/{episode}' } },
+            { id: 'smashystream', name: 'SmashyStream', urls: { movie: 'https://player.smashy.stream/movie/{id}', tv: 'https://player.smashy.stream/tv/{id}?s={season}&e={episode}' } },
+            { id: 'autoembed', name: 'AutoEmbed', urls: { movie: 'https://player.autoembed.cc/embed/movie/{id}', tv: 'https://player.autoembed.cc/embed/tv/{id}/{season}/{episode}' } },
+            { id: 'videasy', name: 'VidEasy (4K)', urls: { movie: 'https://player.videasy.net/movie/{id}?color=8834ec', tv: 'https://player.videasy.net/tv/{id}/{season}/{episode}?color=8834ec' } },
+            { id: 'vidfast', name: 'VidFast (4K)', urls: { movie: 'https://vidfast.pro/movie/{id}', tv: 'https://vidfast.pro/tv/{id}/{season}/{episode}' } },
+            { id: 'vidify', name: 'Vidify', urls: { movie: 'https://vidify.top/embed/movie/{id}', tv: 'https://vidify.top/embed/tv/{id}/{season}/{episode}' } },
+            { id: 'flicky', name: 'Flicky', urls: { movie: 'https://flicky.host/embed/movie/?id={id}', tv: 'https://flicky.host/embed/tv/{id}/{season}/{episode}' } },
+            { id: 'rive', name: 'RiveStream', urls: { movie: 'https://rivestream.org/embed?type=movie&id={id}', tv: 'https://rivestream.org/embed?type=tv&id={id}&season={season}&episode={episode}' } },
+            { id: 'vidora', name: 'Vidora', urls: { movie: 'https://vidora.su/movie/{id}', tv: 'https://vidora.su/tv/{id}/{season}/{episode}' } },
+            { id: 'vidsrccc', name: 'VidSrcCC', urls: { movie: 'https://vidsrc.cc/v2/embed/movie/{id}?autoPlay=false', tv: 'https://vidsrc.cc/v2/embed/tv/{id}/{season}/{episode}?autoPlay=false' } },
+            { id: 'streamflix', name: 'StreamFlix', urls: { movie: 'https://watch.streamflix.one/movie/{id}/watch?server=1', tv: 'https://watch.streamflix.one/tv/{id}/watch?server=1&season={season}&episode={episode}' } },
+            { id: 'nebula', name: 'NebulaFlix', urls: { movie: 'https://nebulaflix.stream/movie?mt={id}&server=1', tv: 'https://nebulaflix.stream/show?st={id}&season={season}&episode={episode}&server=1' } },
+            { id: 'vidjoy', name: 'VidJoy', urls: { movie: 'https://vidjoy.pro/embed/movie/{id}', tv: 'https://vidjoy.pro/embed/tv/{id}/{season}/{episode}' } },
+            { id: 'vidzee', name: 'VidZee', urls: { movie: 'https://player.vidzee.wtf/embed/movie/{id}', tv: 'https://player.vidzee.wtf/embed/tv/{id}/{season}/{episode}' } },
+            { id: 'spenflix', name: 'Spenflix', urls: { movie: 'https://spencerdevs.xyz/movie/{id}', tv: 'https://spencerdevs.xyz/tv/{id}/{season}/{episode}' } },
+            { id: 'frembed', name: 'Frembed', urls: { movie: 'https://frembed.icu/api/film.php?id={id}', tv: 'https://frembed.icu/api/serie.php?id={id}&sa={season}&epi={episode}' } },
+            { id: 'uembed', name: 'UEmbed (premium)', urls: { movie: 'https://uembed.site/?id={id}&apikey=thisisforsurenotapremiumkey_right?', tv: 'https://uembed.site/?id={id}&season={season}&episode={episode}&apikey=thisisforsurenotapremiumkey_right?' } },
+            { id: 'vidsrccx', name: 'VidSrcCX', urls: { movie: 'https://vidsrc.cx/embed/movie/{id}', tv: 'https://vidsrc.cx/embed/tv/{id}/{season}/{episode}' } }
+        ];
+
+        function app() {
+            return {
+                // Browse state
+                view: 'browse',
+                apiKey: 'fb7bb23f03b6994dafc674c074d01761',
+                content: [],
+                currentTab: 'movies',
+                currentPage: 1,
+                searchQuery: '',
+
+                // Watch state
+                watchApiKey: '1070730380f5fee0d87cf0382670b255',
+                watchContent: null,
+                contentId: null,
+                contentType: null,
+                isShow: false,
+                selectedSeason: 1,
+                selectedEpisode: 1,
+                seasons: [],
+                seasonData: null,
+                selectedSource: 'vidsrcXyz',
+                availableSources: availableSources,
+                currentVideoUrl: '',
+
+                async init() {
+                    await this.fetchContent();
+                    this.$watch('currentTab', async () => {
+                        this.currentPage = 1;
+                        this.searchQuery = '';
+                        await this.fetchContent();
+                    });
+                },
+
+                async searchContent() {
+                    if (!this.searchQuery.trim()) {
+                        await this.fetchContent();
+                        return;
+                    }
+                    const endpoint = this.currentTab === 'movies' ? 'movie' : 'tv';
+                    const url = `https://api.tmdb.org/3/search/${endpoint}?api_key=${this.apiKey}&query=${encodeURIComponent(this.searchQuery)}&page=${this.currentPage}`;
+                    try {
+                        const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        const data = await response.json();
+                        this.content = data.results;
+                    } catch (e) {
+                        console.error('Error searching:', e);
+                    }
+                },
+
+                async fetchContent() {
+                    const endpoint = this.currentTab === 'movies' ? 'movie/popular' : 'tv/popular';
+                    const url = `https://api.tmdb.org/3/${endpoint}?api_key=${this.apiKey}&page=${this.currentPage}`;
+                    try {
+                        const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        const data = await response.json();
+                        this.content = data.results;
+                    } catch (e) {
+                        console.error('Error fetching:', e);
+                        alert('Failed to load movies. TMDB API may be blocked by CORS. Try a local server.');
+                    }
+                },
+
+                async changePage(page) {
+                    this.currentPage = page;
+                    if (this.searchQuery.trim()) await this.searchContent();
+                    else await this.fetchContent();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
+
+                async openWatch(id, type) {
+                    this.contentId = id;
+                    this.contentType = type;
+                    this.isShow = type === 'tv';
+                    this.selectedSeason = 1;
+                    this.selectedEpisode = 1;
+                    this.watchContent = null;
+                    this.seasonData = null;
+                    this.currentVideoUrl = '';
+                    this.view = 'watch';
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    await this.fetchWatchContent();
+                    this.updateVideoUrl();
+                },
+
+                async fetchWatchContent() {
+                    const url = `https://api.themoviedb.org/3/${this.contentType}/${this.contentId}?api_key=${this.watchApiKey}`;
+                    try {
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        this.watchContent = data;
+                        if (this.isShow) {
+                            this.seasons = Array.from({ length: data.number_of_seasons || 1 }, (_, i) => i + 1);
+                            await this.updateEpisodes();
+                        }
+                    } catch (e) {
+                        console.error('Error fetching watch content:', e);
+                    }
+                },
+
+                async updateEpisodes() {
+                    const url = `https://api.themoviedb.org/3/tv/${this.contentId}/season/${this.selectedSeason}?api_key=${this.watchApiKey}`;
+                    try {
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        this.seasonData = data;
+                        this.selectedEpisode = 1;
+                        this.updateVideoUrl();
+                    } catch (e) {
+                        console.error('Error fetching episodes:', e);
+                    }
+                },
+
+                loadEpisode() {
+                    this.updateVideoUrl();
+                },
+
+                updateVideoUrl() {
+                    const source = this.availableSources.find(s => s.id === this.selectedSource);
+                    if (!source) return;
+                    const params = this.isShow
+                        ? { id: this.contentId, season: this.selectedSeason, episode: this.selectedEpisode }
+                        : { id: this.contentId };
+                    let url = source.urls[this.isShow ? 'tv' : 'movie'];
+                    Object.entries(params).forEach(([key, value]) => {
+                        url = url.replace(`{${key}}`, value);
+                    });
+                    this._rawVideoUrl = url;
+                    const iframe = document.getElementById('player-frame') || document.querySelector('iframe');
+                    const proxied = resolveEmbedSrc(url, iframe);
+                    // If Scramjet frame.go already set src, keep Alpine in sync
+                    this.currentVideoUrl = proxied || url;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
