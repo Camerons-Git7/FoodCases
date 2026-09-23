@@ -61,12 +61,6 @@
     <div x-show="view === 'browse'" class="container mx-auto">
         <br><br>
         <h1 class="text-center text-4xl">cherri | movies</h1>
-        <p class="text-center text-sm opacity-70 mt-2" style="font-family:arial">
-            proxy:
-            <span x-text="proxyMode"></span>
-            <span x-show="proxyMode !== 'scramjet' && proxyReason" x-text="' — ' + proxyReason"></span>
-            <span x-show="proxyMode === 'scramjet'" class="text-green-400"> (embeds go through Scramjet only)</span>
-        </p>
         <br>
         <div class="mb-8 flex flex-col md:flex-row gap-4 transition-all duration-200 items-center justify-between">
             <input type="text" x-model="searchQuery" @input="searchContent()"
@@ -113,7 +107,6 @@
     <div x-show="view === 'watch'" class="container mx-auto max-w-6xl" x-cloak>
         <br><br>
         <a href="#" @click.prevent="view = 'browse'" class="inline-block mb-6 text-[var(--text)] transition-all hover:text-gray-300">← Back to Browse</a>
-        <span class="ml-4 text-sm opacity-70" style="font-family:arial">proxy: <span x-text="proxyMode"></span></span>
 
         <div x-show="watchContent">
             <h1 class="text-4xl font-bold mb-4" x-text="watchContent?.title || watchContent?.name"></h1>
@@ -127,11 +120,10 @@
             <div class="bg-[#1d1d1d] rounded-3xl overflow-hidden mb-6">
                 <div class="relative pt-[56.25%]">
                     <iframe id="player-frame" :src="currentVideoUrl" class="absolute top-0 left-0 w-full h-full" frameborder="0" allowfullscreen allow="fullscreen; autoplay"></iframe>
-                    <div x-show="proxyMode !== 'scramjet'" class="absolute inset-0 flex items-center justify-center p-6 text-center bg-black/80" style="font-family:arial">
+                    <div x-show="!currentVideoUrl" class="absolute inset-0 flex items-center justify-center p-6 text-center bg-black/80" style="font-family:arial">
                         <div>
-                            <p class="text-lg mb-2">Proxy not ready</p>
-                            <p class="text-sm opacity-80" x-text="proxyReason || proxyError || 'Scramjet failed to start'"></p>
-                            <p class="text-xs opacity-60 mt-3">Direct embed URLs are disabled. Fix Scramjet / reload.</p>
+                            <p class="text-lg mb-2">Player loading…</p>
+                            <p class="text-sm opacity-80">If this stays blank, open the main cherri page once, then hard-reload this page.</p>
                         </div>
                     </div>
                 </div>
@@ -193,42 +185,60 @@
     </div>
 
     <script>
-        // ========== PROXY (FoodCases Scramjet) — PROXY ONLY, NO DIRECT EMBEDS ==========
-        // Host ONLY under: https://menist.free.nf/cherri/cherri/
-        // If Scramjet fails, the player stays blank (never loads vidsrc etc. directly).
-        const PROXY_BASE = (function () {
+        // ========== PROXY — same boot path as FoodCases index.html ==========
+        // Host only under /cherri/cherri/ (same origin as the SW).
+        // Mirrors bundle bootController: active ServiceWorker + libcurl transport + scope prefix.
+        const PROXY_SCOPE = (function () {
             try {
-                if (location.pathname.indexOf('/cherri/cherri') !== -1) {
-                    // Prefer same-origin relative base so InfinityFree cookies apply
-                    const i = location.pathname.indexOf('/cherri/cherri');
-                    return location.origin + location.pathname.slice(0, i + '/cherri/cherri'.length);
-                }
+                const i = location.pathname.indexOf('/cherri/cherri');
+                if (i !== -1) return location.pathname.slice(0, i + '/cherri/cherri'.length) + '/';
             } catch (e) {}
-            return 'https://menist.free.nf/cherri/cherri';
-        })().replace(/\/$/, '');
+            return '/cherri/cherri/';
+        })();
 
-        const WISP_URL = (typeof localStorage !== 'undefined' && localStorage.getItem('cherri_wispUrl'))
-            || 'wss://fern.best/wisp/';
+        // FoodCases uses this fixed path segment (see IqA in app bundle), NOT /~/sj/
+        const SJ_SEGMENT = 'fn5315/';
 
-        function canUseScramjet() {
+        const DEFAULT_WISP = 'wss://kristenblackburnvolleyballcamps.com/socket/';
+
+        function getWisp() {
             try {
-                if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-                    // SW requires secure context (https) except localhost
-                    console.warn('[proxy] insecure context — SW unavailable');
-                }
-                // Same host and path contains /cherri/cherri
-                if (location.pathname.indexOf('/cherri/cherri') !== -1) return true;
-                const base = new URL(PROXY_BASE + '/');
-                return location.origin === base.origin
-                    && location.pathname.indexOf(base.pathname.replace(/\/$/, '')) === 0;
-            } catch (e) {
-                return false;
+                const raw = localStorage.getItem('cherri_settings') || localStorage.getItem('cherri_wispUrl');
+                if (!raw) return DEFAULT_WISP;
+                if (raw.startsWith('ws')) return raw.endsWith('/') ? raw : raw + '/';
+                const j = JSON.parse(raw);
+                if (j && j.wisp) return j.wisp.endsWith('/') ? j.wisp : j.wisp + '/';
+            } catch (e) {}
+            return DEFAULT_WISP;
+        }
+
+        // Same codec as FoodCases i1A (base64url of UTF-8 bytes)
+        const foodCodec = {
+            encode: function (e) {
+                if (!e) return e;
+                const t = new TextEncoder().encode(e);
+                let a = '';
+                for (let r = 0; r < t.length; r++) a += String.fromCharCode(t[r]);
+                return btoa(a).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            },
+            decode: function (e) {
+                if (!e) return e;
+                let t = e.replace(/-/g, '+').replace(/_/g, '/');
+                while (t.length % 4) t += '=';
+                const a = atob(t);
+                const r = new Uint8Array(a.length);
+                for (let o = 0; o < a.length; o++) r[o] = a.charCodeAt(o);
+                return new TextDecoder().decode(r);
             }
+        };
+
+        function joinScope(rel) {
+            const base = PROXY_SCOPE.endsWith('/') ? PROXY_SCOPE : PROXY_SCOPE + '/';
+            return base + String(rel).replace(/^\//, '');
         }
 
         function loadScript(src) {
             return new Promise(function (resolve, reject) {
-                // Avoid double-inject
                 if (document.querySelector('script[data-cherri-src="' + src + '"]')) {
                     resolve();
                     return;
@@ -245,123 +255,143 @@
 
         window.__cherriProxy = {
             ready: false,
-            mode: 'pending', // pending | scramjet | failed
-            reason: 'starting',
             controller: null,
             frame: null,
             iframeEl: null,
-            initPromise: null
+            initPromise: null,
+            error: null
         };
+
+        async function waitForActiveWorker(reg, timeoutMs) {
+            timeoutMs = timeoutMs || 15000;
+            if (reg.active) return reg.active;
+            if (navigator.serviceWorker.controller) return navigator.serviceWorker.controller;
+            return new Promise(function (resolve, reject) {
+                const t = setTimeout(function () {
+                    reject(new Error('Timed out waiting for active service worker'));
+                }, timeoutMs);
+                const onChange = function () {
+                    if (navigator.serviceWorker.controller) {
+                        clearTimeout(t);
+                        navigator.serviceWorker.removeEventListener('controllerchange', onChange);
+                        resolve(navigator.serviceWorker.controller);
+                    }
+                };
+                navigator.serviceWorker.addEventListener('controllerchange', onChange);
+                // Also watch installing → active
+                const w = reg.installing || reg.waiting;
+                if (w) {
+                    w.addEventListener('statechange', function () {
+                        if (w.state === 'activated' && (reg.active || navigator.serviceWorker.controller)) {
+                            clearTimeout(t);
+                            resolve(reg.active || navigator.serviceWorker.controller);
+                        }
+                    });
+                }
+            });
+        }
 
         async function initScramjetProxy() {
             const state = window.__cherriProxy;
             if (state.initPromise) return state.initPromise;
 
             state.initPromise = (async function () {
-                function fail(reason) {
-                    state.mode = 'failed';
-                    state.ready = true;
-                    state.reason = reason;
-                    console.error('[proxy] FAILED (no direct fallback):', reason);
-                    try {
-                        window.dispatchEvent(new CustomEvent('cherri-proxy', { detail: state }));
-                    } catch (e) {}
-                    return state;
-                }
-
-                if (!canUseScramjet()) {
-                    return fail('page is not under /cherri/cherri on the proxy host');
-                }
-                if (!('serviceWorker' in navigator)) {
-                    return fail('serviceWorker API missing');
-                }
-
                 try {
-                    // Relative paths keep us on the same origin (important for free.nf cookies)
-                    const base = PROXY_BASE;
-                    console.info('[proxy] loading Scramjet from', base);
-
-                    await loadScript(base + '/bi1wf/8t6ked.js');
-                    await loadScript(base + '/bwd9x/9lcbx4.js');
-
-                    // Optional transports
-                    const transportUrls = [
-                        'https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2.1.27/dist/index.js',
-                        'https://cdn.jsdelivr.net/npm/@mercuryworkshop/libcurl-transport@1.5.0/dist/index.js',
-                        'https://cdn.jsdelivr.net/npm/@mercuryworkshop/bare-mux@2.1.7/dist/index.js'
-                    ];
-                    for (const u of transportUrls) {
-                        try { await loadScript(u); } catch (e) { console.warn('[proxy] optional transport skip', u); }
+                    if (location.pathname.indexOf('/cherri/cherri') === -1) {
+                        throw new Error('Host this file under /cherri/cherri/');
+                    }
+                    if (!('serviceWorker' in navigator)) {
+                        throw new Error('No serviceWorker support');
                     }
 
-                    let reg;
+                    // Same scripts index.html loads
+                    await loadScript(joinScope('bi1wf/8t6ked.js'));
+                    await loadScript(joinScope('bwd9x/9lcbx4.js'));
+
+                    // Libcurl transport (FoodCases uses in-bundle eH ≈ libcurl)
                     try {
-                        reg = await navigator.serviceWorker.register(base + '/v6hxi5.js', {
-                            scope: new URL(base + '/').pathname
-                        });
+                        await loadScript('https://cdn.jsdelivr.net/npm/@mercuryworkshop/libcurl-transport@1.5.0/dist/index.js');
                     } catch (e) {
-                        // Scope may already be owned by the main cherri SW — use existing
-                        console.warn('[proxy] SW register:', e);
-                        reg = await navigator.serviceWorker.getRegistration(base + '/');
+                        console.warn('[proxy] libcurl CDN failed', e);
+                    }
+                    try {
+                        await loadScript('https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2.1.27/dist/index.js');
+                    } catch (e) {}
+
+                    // Prefer existing SW registration from main cherri if present
+                    let reg = null;
+                    if (window.__swRegistration) {
+                        try { reg = await window.__swRegistration; } catch (e) {}
+                    }
+                    if (!reg) {
+                        reg = await navigator.serviceWorker.getRegistration(PROXY_SCOPE);
+                    }
+                    if (!reg) {
+                        reg = await navigator.serviceWorker.register(joinScope('v6hxi5.js'), {
+                            scope: PROXY_SCOPE
+                        });
                     }
                     await navigator.serviceWorker.ready;
 
-                    // Discover Controller export (FoodCases minified name)
-                    const api = window._wdgvkq9 || window.$scramjetController || null;
+                    // CRITICAL: must be the active ServiceWorker instance (has .postMessage)
+                    const worker = await waitForActiveWorker(reg);
+                    if (!worker || typeof worker.postMessage !== 'function') {
+                        throw new Error('No active ServiceWorker with postMessage (try open index.html then reload)');
+                    }
+
+                    const api = window._wdgvkq9 || window.$scramjetController;
                     if (!api || !api.Controller) {
-                        console.warn('[proxy] globals after load', Object.keys(window).filter(k => /scram|wdg|nog|Controller/i.test(k)));
-                        return fail('Controller API not found (scripts may have been blocked or are HTML challenge pages)');
+                        throw new Error('Controller API missing after loading bi1wf/bwd9x');
                     }
 
+                    // Build transport like FoodCases eH
+                    const wisp = getWisp();
                     let transport = null;
-                    const Epoxy = window.EpoxyTransport
-                        || (window.epoxy && window.epoxy.EpoxyTransport)
-                        || null;
-                    const Libcurl = window.LibcurlClient || window.LibcurlTransport || null;
+                    const LibcurlClient =
+                        (window.CurlMod && (window.CurlMod.LibcurlClient || window.CurlMod.default)) ||
+                        (window.LibcurlTransport && (window.LibcurlTransport.LibcurlClient || window.LibcurlTransport)) ||
+                        window.LibcurlClient ||
+                        null;
+                    const EpoxyClient =
+                        (window.EpxMod && (window.EpxMod.EpoxyClient || window.EpxMod.default)) ||
+                        window.EpoxyClient ||
+                        window.EpoxyTransport ||
+                        null;
 
-                    if (typeof Epoxy === 'function') {
-                        transport = new Epoxy({ wisp: WISP_URL });
-                        console.info('[proxy] using EpoxyTransport', WISP_URL);
-                    } else if (typeof Libcurl === 'function') {
-                        transport = new Libcurl({ wisp: WISP_URL });
-                        console.info('[proxy] using LibcurlTransport', WISP_URL);
+                    if (LibcurlClient) {
+                        transport = new LibcurlClient({ wisp: wisp });
+                        if (transport.init) await transport.init();
+                    } else if (EpoxyClient) {
+                        transport = new EpoxyClient({ wisp: wisp });
+                        if (transport.init) await transport.init();
                     } else {
-                        console.warn('[proxy] no transport constructor found — controller may still start');
+                        throw new Error('No libcurl/epoxy transport available');
                     }
 
-                    const sw = (reg && reg.active) || navigator.serviceWorker.controller
-                        || (await navigator.serviceWorker.ready).active;
-                    if (!sw) return fail('no active service worker');
-
-                    // Ensure this page is controlled
-                    if (!navigator.serviceWorker.controller) {
-                        console.warn('[proxy] page not yet controlled by SW — reload may be required once');
-                    }
-
+                    // Same config shape as FoodCases bootController (uqA)
                     const controller = new api.Controller({
-                        serviceworker: navigator.serviceWorker,
+                        serviceworker: worker,
                         transport: transport,
                         config: {
-                            prefix: '/~/sj/',
-                            codec: {
-                                encode: function (e) { return e ? encodeURIComponent(e) : e; },
-                                decode: function (e) { return e ? decodeURIComponent(e) : e; }
-                            }
+                            prefix: PROXY_SCOPE + SJ_SEGMENT,
+                            codec: foodCodec,
+                            _iyosyjgPath: joinScope('bi1wf/8t6ked.js'),
+                            injectPath: joinScope('bwd9x/cdt4qb.js'),
+                            wasmPath: joinScope('bi1wf/ri1n3t.wasm')
                         }
                     });
                     if (controller.wait) await controller.wait();
 
                     state.controller = controller;
-                    state.mode = 'scramjet';
                     state.ready = true;
-                    state.reason = 'ok';
-                    console.info('[proxy] Scramjet READY');
-                    try {
-                        window.dispatchEvent(new CustomEvent('cherri-proxy', { detail: state }));
-                    } catch (e) {}
+                    state.error = null;
+                    console.info('[proxy] ready (FoodCases boot path)', PROXY_SCOPE + SJ_SEGMENT);
                     return state;
                 } catch (err) {
-                    return fail(String(err && err.message ? err.message : err));
+                    state.ready = false;
+                    state.error = err && err.message ? err.message : String(err);
+                    console.error('[proxy] init failed:', state.error);
+                    return state;
                 }
             })();
 
@@ -371,32 +401,26 @@
         async function resolveEmbedSrc(rawUrl) {
             const state = await initScramjetProxy();
             const iframe = document.getElementById('player-frame');
-
-            if (state.mode !== 'scramjet' || !state.controller) {
-                console.error('[proxy] Scramjet not ready — refusing direct URL.', state.reason);
-                // Do NOT load the bare embed host. Leave iframe empty / show error.
+            if (!state.ready || !state.controller) {
+                console.error('[proxy] not ready:', state.error);
                 if (iframe) iframe.removeAttribute('src');
                 return '';
             }
-            if (!iframe) {
-                console.error('[proxy] player iframe missing');
-                return '';
-            }
+            if (!iframe) return '';
             try {
                 if (!state.frame || state.iframeEl !== iframe) {
                     state.iframeEl = iframe;
                     state.frame = state.controller.createFrame(iframe);
                 }
                 state.frame.go(rawUrl);
-                return iframe.getAttribute('src') || iframe.src || '';
+                return iframe.src || '';
             } catch (e) {
-                console.error('[proxy] frame.go failed — not falling back to direct:', e);
+                console.error('[proxy] frame.go failed:', e);
                 if (iframe) iframe.removeAttribute('src');
                 return '';
             }
         }
 
-        // Start init immediately
         initScramjetProxy();
 
         const availableSources = [
@@ -456,25 +480,10 @@
                 selectedSource: 'vidsrcXyz',
                 availableSources: availableSources,
                 currentVideoUrl: '',
-                proxyMode: 'pending',
-                proxyReason: '',
-                proxyError: '',
 
                 async init() {
-                    // Wait for proxy decision so first play uses Scramjet if available
-                    try {
-                        const st = await initScramjetProxy();
-                        this.proxyMode = st.mode;
-                        this.proxyReason = st.reason;
-                    } catch (e) {
-                        this.proxyMode = 'failed';
-                        this.proxyReason = String(e);
-                    }
-                    window.addEventListener('cherri-proxy', (ev) => {
-                        this.proxyMode = ev.detail.mode;
-                        this.proxyReason = ev.detail.reason;
-                    });
-
+                    // Warm Scramjet the same way index does (non-blocking for browse grid)
+                    initScramjetProxy();
                     await this.fetchContent();
                     this.$watch('currentTab', async () => {
                         this.currentPage = 1;
@@ -578,17 +587,10 @@
                     Object.entries(params).forEach(([key, value]) => {
                         url = url.replace(`{${key}}`, value);
                     });
-                    this._rawVideoUrl = url;
-                    // Proxy only — never assign the bare embed URL to the iframe
+                    // Proxy only (FoodCases Scramjet frame.go) — never bare embed hosts
                     const resolved = await resolveEmbedSrc(url);
-                    this.proxyMode = window.__cherriProxy.mode;
-                    this.proxyReason = window.__cherriProxy.reason;
-                    if (this.proxyMode === 'scramjet' && resolved) {
-                        this.currentVideoUrl = document.getElementById('player-frame')?.src || resolved;
-                    } else {
-                        this.currentVideoUrl = '';
-                        this.proxyError = this.proxyReason || 'Scramjet not ready';
-                    }
+                    this.currentVideoUrl = resolved || '';
+                }
                 }
             }
         }
