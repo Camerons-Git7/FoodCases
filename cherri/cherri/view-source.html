@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>View Source</title>
+  <style>
+    body { margin:0; background:#1e1e1e; color:#d4d4d4; font-family:monospace; }
+    pre { white-space:pre-wrap; word-break:break-all; padding:16px; margin:0; font-size:13px; line-height:1.4; }
+    #bar { background:#333; padding:8px 12px; display:flex; gap:8px; align-items:center; }
+    input { flex:1; background:#222; border:1px solid #555; color:#fff; padding:6px 10px; }
+    button { background:#0e639c; color:#fff; border:none; padding:6px 14px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div id="bar">
+    <input id="url" placeholder="https://example.com" />
+    <button id="go">View Source</button>
+  </div>
+  <pre id="out">Loading…</pre>
+
+  <script>
+    // Uses the same Scramjet / BareMux path your Cherri already uses
+    async function load() {
+      const raw = new URLSearchParams(location.search).get('url') || document.getElementById('url').value;
+      if (!raw) return;
+
+      document.getElementById('url').value = raw;
+      document.getElementById('out').textContent = 'Fetching through proxy…';
+
+      try {
+        // Force it through the proxy prefix your instance uses
+        // (common ones: /scramjet/, /service/, /uv/service/, etc.)
+        const prefix = location.origin + (window.__scramjet$config?.prefix || '/scramjet/');
+        const proxied = prefix + encodeURIComponent(raw.startsWith('http') ? raw : 'https://' + raw);
+
+        const res = await fetch(proxied, { credentials: 'include' });
+        const text = await res.text();
+        document.getElementById('out').textContent = text;
+      } catch (e) {
+        document.getElementById('out').textContent = 'Error: ' + e.message;
+      }
+    }
+
+    document.getElementById('go').onclick = load;
+    if (location.search.includes('url=')) load();
+  </script>
+</body>
+</html>
