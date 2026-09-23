@@ -53,9 +53,11 @@
         }
         span { font-family: Arial; }
         ::-webkit-scrollbar { scrollbar-width: thin; }
+        /* Alpine: hide only until bound — never on <body> or the whole UI vanishes */
+        [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="text-[var(--text)] min-h-screen p-8" x-data="app()" x-cloak>
+<body class="text-[var(--text)] min-h-screen p-8" x-data="app()">
 
     <!-- ========== BROWSE VIEW ========== -->
     <div x-show="view === 'browse'" class="container mx-auto">
@@ -119,11 +121,11 @@
 
             <div class="bg-[#1d1d1d] rounded-3xl overflow-hidden mb-6">
                 <div class="relative pt-[56.25%]">
-                    <iframe id="player-frame" :src="currentVideoUrl" class="absolute top-0 left-0 w-full h-full" frameborder="0" allowfullscreen allow="fullscreen; autoplay"></iframe>
-                    <div x-show="!currentVideoUrl" class="absolute inset-0 flex items-center justify-center p-6 text-center bg-black/80" style="font-family:arial">
+                    <iframe id="player-frame" class="absolute top-0 left-0 w-full h-full" frameborder="0" allowfullscreen allow="fullscreen; autoplay"></iframe>
+                    <div x-show="playerStatus !== 'playing'" class="absolute inset-0 flex items-center justify-center p-6 text-center bg-black/80" style="font-family:arial">
                         <div>
-                            <p class="text-lg mb-2">Player loading…</p>
-                            <p class="text-sm opacity-80">If this stays blank, open the main cherri page once, then hard-reload this page.</p>
+                            <p class="text-lg mb-2" x-text="playerStatus === 'error' ? 'Player failed' : 'Player loading…'"></p>
+                            <p class="text-sm opacity-80" x-text="playerMessage || 'Starting proxy…'"></p>
                         </div>
                     </div>
                 </div>
@@ -421,7 +423,8 @@
             }
         }
 
-        initScramjetProxy();
+        // Do NOT boot Scramjet on page load — bi1wf hooks break Alpine and blank the UI.
+        // Init only when the user opens a title (see openWatch / updateVideoUrl).
 
         const availableSources = [
             { id: 'mapple', name: 'MappleTv', urls: { movie: 'https://mappletv.uk/watch/movie/{id}', tv: 'https://mappletv.uk/watch/tv/{id}-{season}-{episode}' } },
@@ -480,10 +483,10 @@
                 selectedSource: 'vidsrcXyz',
                 availableSources: availableSources,
                 currentVideoUrl: '',
+                playerStatus: 'idle', // idle | loading | playing | error
+                playerMessage: '',
 
                 async init() {
-                    // Warm Scramjet the same way index does (non-blocking for browse grid)
-                    initScramjetProxy();
                     await this.fetchContent();
                     this.$watch('currentTab', async () => {
                         this.currentPage = 1;
@@ -539,6 +542,8 @@
                     this.watchContent = null;
                     this.seasonData = null;
                     this.currentVideoUrl = '';
+                    this.playerStatus = 'loading';
+                    this.playerMessage = 'Loading…';
                     this.view = 'watch';
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                     await this.fetchWatchContent();
@@ -587,9 +592,24 @@
                     Object.entries(params).forEach(([key, value]) => {
                         url = url.replace(`{${key}}`, value);
                     });
-                    // Proxy only (FoodCases Scramjet frame.go) — never bare embed hosts
-                    const resolved = await resolveEmbedSrc(url);
-                    this.currentVideoUrl = resolved || '';
+                    this.playerStatus = 'loading';
+                    this.playerMessage = 'Starting proxy…';
+                    this.currentVideoUrl = '';
+                    try {
+                        const resolved = await resolveEmbedSrc(url);
+                        if (resolved) {
+                            this.currentVideoUrl = resolved;
+                            this.playerStatus = 'playing';
+                            this.playerMessage = '';
+                        } else {
+                            this.playerStatus = 'error';
+                            this.playerMessage = (window.__cherriProxy && window.__cherriProxy.error)
+                                || 'Proxy did not start. Open /cherri/cherri/ once, then reload.';
+                        }
+                    } catch (e) {
+                        this.playerStatus = 'error';
+                        this.playerMessage = String(e && e.message ? e.message : e);
+                    }
                 }
                 }
             }
