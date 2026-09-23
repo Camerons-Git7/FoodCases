@@ -2,25 +2,120 @@
 <html lang="en">
       <head>
         <meta charset="UTF-8" />
+
     <script>
-      // Map ?url= → ?u= in-place (no redirect) so Cherri opens the proxy directly
+      // Direct proxy mode: ?url=https://example.com  → full-page proxied site, no Cherri UI
       (function () {
         try {
           var p = new URLSearchParams(location.search);
-          var url = p.get("url");
-          if (!url || p.get("u")) return;
-          if (!/^https?:\/\//i.test(url) && url.indexOf("cherri://") !== 0) {
-            url = "https://" + url;
+          var raw = p.get("url");
+          if (!raw) return;
+
+          if (!/^https?:\/\//i.test(raw) && raw.indexOf("cherri://") !== 0) {
+            raw = "https://" + raw;
           }
-          p.set("u", url);
-          p.delete("url");
-          var q = p.toString();
-          history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
-        } catch (e) {}
+          window.__CHERRI_DIRECT_URL__ = raw;
+
+          // Skip onboarding tour so it never blocks the proxy frame
+          try { localStorage.setItem("cherri_onboarded", "1"); } catch (e) {}
+
+          document.documentElement.classList.add("cherri-direct");
+
+          // Hide Cherri chrome as soon as CSS can run
+          var style = document.createElement("style");
+          style.textContent = [
+            "html.cherri-direct, html.cherri-direct body { margin:0 !important; padding:0 !important; overflow:hidden !important; background:#000 !important; }",
+            "html.cherri-direct body > *:not(#cherri-direct-frame) { visibility:hidden !important; pointer-events:none !important; }",
+            "html.cherri-direct #cherri-direct-frame { visibility:visible !important; pointer-events:auto !important; position:fixed !important; inset:0 !important; width:100% !important; height:100% !important; border:0 !important; margin:0 !important; padding:0 !important; z-index:2147483647 !important; background:#000 !important; }",
+            "html.cherri-direct #cherri-direct-status { visibility:visible !important; pointer-events:none !important; position:fixed !important; inset:0 !important; z-index:2147483646 !important; display:flex !important; align-items:center !important; justify-content:center !important; color:#aaa !important; font:14px/1.4 system-ui,sans-serif !important; background:#0a0a0a !important; }"
+          ].join("\n");
+          document.documentElement.appendChild(style);
+
+          function bootDirect() {
+            var status = document.getElementById("cherri-direct-status");
+            if (!status) {
+              status = document.createElement("div");
+              status.id = "cherri-direct-status";
+              status.textContent = "Starting proxy…";
+              document.body.appendChild(status);
+            }
+
+            var tries = 0;
+            var maxTries = 90; // ~45s
+
+            function tick() {
+              tries++;
+              var nav = window.__cherriNavigate;
+              if (typeof nav !== "function") {
+                if (tries < maxTries) return setTimeout(tick, 500);
+                status.textContent = "Proxy failed to start (navigate API missing). Hard-reload and try again.";
+                return;
+              }
+
+              // Open the target inside Cherri's proxy stack
+              try { nav(window.__CHERRI_DIRECT_URL__); } catch (e) {
+                status.textContent = "Navigate failed: " + (e && e.message ? e.message : e);
+                return;
+              }
+
+              // Promote the proxied iframe to full viewport; hide everything else
+              var promoteTries = 0;
+              function promote() {
+                promoteTries++;
+                var frames = document.querySelectorAll("iframe");
+                var best = null;
+                for (var i = 0; i < frames.length; i++) {
+                  var f = frames[i];
+                  // Prefer frames that look like the proxy content frame
+                  if (f.id === "cherri-direct-frame") continue;
+                  var src = f.getAttribute("src") || "";
+                  // Scramjet/Riptide proxies put content under /~/ or /fn5315/ etc.
+                  if (src.indexOf("/~/") !== -1 || src.indexOf("fn5315") !== -1 || src.indexOf("/scram") !== -1 || (src && src.indexOf(location.origin) === 0 && src !== location.href)) {
+                    best = f;
+                    break;
+                  }
+                  // Fallback: largest visible iframe
+                  if (!best && f.offsetWidth > 100 && f.offsetHeight > 100) best = f;
+                }
+                // If none found yet, keep waiting
+                if (!best) {
+                  if (promoteTries < 60) return setTimeout(promote, 500);
+                  status.textContent = "Proxy started but no content frame appeared.";
+                  return;
+                }
+
+                best.id = "cherri-direct-frame";
+                // Ensure it stays on top even if React re-renders
+                best.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;margin:0;padding:0;z-index:2147483647;background:#000";
+                document.body.appendChild(best); // reparent out of hidden UI tree
+                if (status && status.parentNode) status.parentNode.removeChild(status);
+
+                // If React removes our frame, re-promote
+                var obs = new MutationObserver(function () {
+                  if (!document.getElementById("cherri-direct-frame")) {
+                    obs.disconnect();
+                    setTimeout(promote, 200);
+                  }
+                });
+                obs.observe(document.body, { childList: true, subtree: true });
+              }
+              setTimeout(promote, 800);
+            }
+            tick();
+          }
+
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", bootDirect);
+          } else {
+            bootDirect();
+          }
+        } catch (e) {
+          console.error("[cherri-direct]", e);
+        }
       })();
     </script>
 
-    <script>
+<script>
 
 
       (function(){var w=window,s={ps:History.prototype.pushState,rs:History.prototype.replaceState};w.__cherriHs=s;var h=history;try{Object.defineProperty(h,"pushState",{value:s.ps.bind(h),configurable:!0,writable:!0}),Object.defineProperty(h,"replaceState",{value:s.rs.bind(h),configurable:!0,writable:!0})}catch(e){}})();
