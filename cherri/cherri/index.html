@@ -3,6 +3,24 @@
       <head>
         <meta charset="UTF-8" />
     <script>
+      // Map ?url= → ?u= in-place (no redirect) so Cherri opens the proxy directly
+      (function () {
+        try {
+          var p = new URLSearchParams(location.search);
+          var url = p.get("url");
+          if (!url || p.get("u")) return;
+          if (!/^https?:\/\//i.test(url) && url.indexOf("cherri://") !== 0) {
+            url = "https://" + url;
+          }
+          p.set("u", url);
+          p.delete("url");
+          var q = p.toString();
+          history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
+        } catch (e) {}
+      })();
+    </script>
+
+    <script>
 
 
       (function(){var w=window,s={ps:History.prototype.pushState,rs:History.prototype.replaceState};w.__cherriHs=s;var h=history;try{Object.defineProperty(h,"pushState",{value:s.ps.bind(h),configurable:!0,writable:!0}),Object.defineProperty(h,"replaceState",{value:s.rs.bind(h),configurable:!0,writable:!0})}catch(e){}})();
@@ -83,7 +101,7 @@
                       sessionStorage.setItem("__sw_reload", "1");
                       location.reload();
                     }
-                  }, 1200);
+                  }, 1500);
                 });
                 return reg;
               })
