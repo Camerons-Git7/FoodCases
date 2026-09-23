@@ -1,34 +1,71 @@
-<html lang="en"> 
-<head> 
-    <base href="https://cdn.jsdelivr.net/gh/Stinkalistic/UGS@main/SWFs/peggle/"> 
-    <meta charset="utf-8" /> 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
     <title>Peggle</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico"/>
-    <meta http-equiv="x-ua-compatible" content="ie=edge"> 
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no" /> 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/AndreajnRcm4/b398dl2h74v@9a23fbb2373d743a564873251cbb57736ebc1f73/style.css" type="text/css" /> 
-    
+
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no">
+
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/AndreajnRcm4/b398dl2h74v@9a23fbb2373d743a564873251cbb57736ebc1f73/style.css"
+        type="text/css"
+    >
+
     <style>
-        /* Forces the page to take up the entire screen */
-        html, body {
+        html,
+        body {
             margin: 0;
             padding: 0;
             width: 100vw;
             height: 100vh;
             overflow: hidden;
-            background-color: #000; /* Optional: adds a black background */
+            background-color: #000;
+        }
+
+        #game {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        ruffle-player {
+            display: block;
+            width: 100%;
+            height: 100%;
         }
     </style>
-</head> 
-<body> 
-    <script src="https://cdn.jsdelivr.net/gh/u-cvlassrom-y/google@main/ruffle.js"></script> 
-    
-    <object width="100%" height="100%"> 
-        <param name="movie" value="peggle.swf"> 
-        <param name="allowFullScreen" value="true"> <!-- Enables actual Flash/Ruffle fullscreen -->
-        <param name="scale" value="showall"> <!-- Ensures the game keeps its aspect ratio -->
-        
-        <embed src="peggle.swf" width="100%" height="100%" allowFullScreen="true" scale="showall"> 
-    </object>
 
-</body> </html>
+    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+</head>
+
+<body>
+
+    <div id="game"></div>
+
+    <script>
+        window.addEventListener("DOMContentLoaded", function () {
+            const ruffle = window.RufflePlayer.newest();
+            const player = ruffle.createPlayer();
+
+            player.style.width = "100%";
+            player.style.height = "100%";
+
+            document.getElementById("game").appendChild(player);
+
+            player.ruffle().load({
+                url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/peak/peggle/peggle.swf",
+                autoplay: "on",
+                letterbox: "fullscreen",
+                backgroundColor: "#000000",
+                compatibilityRules: true
+            });
+        });
+    </script>
+
+</body>
+</html>
