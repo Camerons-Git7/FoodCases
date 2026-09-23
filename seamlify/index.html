@@ -195,14 +195,13 @@
   }
 
   function isRippleProxy(url) {
-    try {
-      const u = new URL(url, window.location.href);
-      return u.origin === window.location.origin &&
-             u.pathname === "/seamlify/api/ripple.php";
-    } catch {
-      return false;
-    }
+  try {
+    const u = new URL(url, window.location.href);
+    return u.hostname === "seamlify.29richmoca.workers.dev";
+  } catch {
+    return false;
   }
+}
 
   function ripplePath(url) {
     try {
