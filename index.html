@@ -1560,24 +1560,28 @@ var APPS = {
 
 
 var CHERRI_APP = {
-  'cherri': {title: 'Cherri', path: 'https://menist.free.nf/cherri/cherri/', icon: 'https://i.ibb.co/Nn2zwt1N/fav.jpg', pinned: true, openInNewTab: false}
+  'cherri': {title: 'Cherri', path: 'https://menist.free.nf/cherri/cherri/', icon: 'https://i.ibb.co/Nn2zwt1N/fav.jpg', pinned: true, openInNewTab: false},
+  'geforcenow': {title: 'Geforce Now', path: 'https://seamless.free.je/cherri/cherri/#/embed?u=https%3A%2F%2Fplay.geforcenow.com%2F', icon: 'https://i.ibb.co/Qv1D3L03/412-Vbl-QIz-RL.png', pinned: true, openInNewTab: false}
 };
 
 var cherriUnlocked = localStorage.getItem('cherri_unlocked') === 'true';
 
 function updateCherriApp() {
-    if (cherriUnlocked && !APPS.cherri) {
+    if (cherriUnlocked) {
         var orderedApps = {};
-        Object.keys(APPS).concat('cherri').sort().forEach(function(key) {
-            if (key === 'cherri') {
+        var extraKeys = Object.keys(CHERRI_APP);
+        Object.keys(APPS).concat(extraKeys).sort().forEach(function(key) {
+            if (CHERRI_APP[key]) {
                 orderedApps[key] = CHERRI_APP[key];
             } else if (APPS[key]) {
                 orderedApps[key] = APPS[key];
             }
         });
         APPS = orderedApps;
-    } else if (!cherriUnlocked && APPS.cherri) {
-        delete APPS.cherri;
+    } else {
+        Object.keys(CHERRI_APP).forEach(function(key) {
+            if (APPS[key]) delete APPS[key];
+        });
     }
 }
 updateCherriApp();
