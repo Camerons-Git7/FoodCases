@@ -2,42 +2,69 @@
 <html lang="en">
       <head>
         <meta charset="UTF-8" />
-    <script>
-      // Boot URL: support ?url= and ?u= so
-      //   index.html?url=https://example.com
-      // opens that site in a proxy tab (app reads search param "u" via Et(Ne)).
+        <script>
+      // Cherri uses HASH history (see BIe in the bundle): the React location is
+      // parsed from location.hash, NOT location.search.
       //
-      // IMPORTANT: use location.replace (full navigation), not history.replaceState.
-      // React Router's useSearchParams does not reliably pick up replaceState done
-      // before the router mounts, so Et(Ne) was getting the default cherri://home.
+      // App boot (due component):
+      //   Ne = useSearchParams().get("u") || "cherri://home"
+      //   Et(Ne)  → opens a proxy tab
+      //
+      // So the working form is:
+      //   index.html#/?u=https://example.com
+      //
+      // Accept legacy/real query forms and rewrite into the hash:
+      //   index.html?url=https://example.com
+      //   index.html?u=https://example.com
       (function () {
         try {
-          var p = new URLSearchParams(location.search);
-          var raw = p.get("url") || p.get("u");
+          var search = new URLSearchParams(location.search);
+          var fromQuery = search.get("url") || search.get("u");
+
+          // Also accept hash already present but missing leading /
+          // e.g. #?u=... or #/embed?u=...
+          var hashRaw = (location.hash || "").replace(/^#/, "");
+          var hashPath = "/";
+          var hashQuery = "";
+          if (hashRaw) {
+            var qi = hashRaw.indexOf("?");
+            if (qi >= 0) {
+              hashPath = hashRaw.slice(0, qi) || "/";
+              hashQuery = hashRaw.slice(qi + 1);
+            } else {
+              hashPath = hashRaw.charAt(0) === "/" ? hashRaw : "/" + hashRaw;
+            }
+          }
+          var hashParams = new URLSearchParams(hashQuery);
+          var fromHash = hashParams.get("u");
+
+          var raw = fromQuery || fromHash;
           if (!raw) return;
 
-          // Normalize bare domains → https://
           var target = raw;
           if (!/^https?:\/\//i.test(target) && target.indexOf("cherri://") !== 0) {
             target = "https://" + target;
           }
-
-          // Expose for debugging / any early readers
           window.__CHERRI_BOOT_U__ = target;
 
-          // Already the canonical form the app expects?
-          var already =
-            p.get("u") === target && !p.get("url");
-          if (already) return;
+          // Canonical hash the router will actually read
+          hashParams.set("u", target);
+          var nextHash = "#/?u=" + encodeURIComponent(target);
 
-          // Rebuild query: u=<target>, drop url=, keep any other params
-          p.delete("url");
-          p.set("u", target);
-          var q = p.toString();
+          // Strip url/u from the real query string so they don't linger
+          search.delete("url");
+          search.delete("u");
+          var nextSearch = search.toString();
           var next =
-            location.pathname + (q ? "?" + q : "") + location.hash;
+            location.pathname +
+            (nextSearch ? "?" + nextSearch : "") +
+            nextHash;
 
-          // Hard navigation so the document loads with ?u= visible to React
+          // Skip if we are already exactly there
+          if (location.pathname + location.search + location.hash === next) return;
+          // Also skip if hash already has the right u and path is /
+          if (!fromQuery && fromHash === target && (hashPath === "/" || hashPath === "")) return;
+
           location.replace(next);
         } catch (e) {
           console.warn("[cherri] boot url rewrite failed:", e);
