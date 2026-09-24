@@ -7,12 +7,9 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
 
     <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no">
-
-    <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/gh/AndreajnRcm4/b398dl2h74v@9a23fbb2373d743a564873251cbb57736ebc1f73/style.css"
-        type="text/css"
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no"
     >
 
     <style>
@@ -57,20 +54,378 @@
     <div id="game"></div>
 
     <script>
-        window.addEventListener("DOMContentLoaded", function () {
-            const ruffle = window.RufflePlayer.newest();
-            const player = ruffle.createPlayer();
+        /*
+         * ============================================
+         * Peggle persistent storage + asset caching
+         * ============================================
+         *
+         * Ruffle handles Peggle's actual Flash save data
+         * through SharedObject/local browser storage.
+         *
+         * Cache Storage is used separately for the large
+         * SWF and external stylesheet so they can load
+         * locally after the first successful download.
+         */
 
-            document.getElementById("game").appendChild(player);
+        const CACHE_NAME = "peggle-assets-v1";
 
-            player.ruffle().load({
-                url: "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/peak/peggle/peggle.swf",
-                autoplay: "on",
-                letterbox: "fullscreen",
-                backgroundColor: "#000000",
-                compatibilityRules: true
-            });
-        });
+        const SWF_URL =
+            "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/peak/peggle/peggle.swf";
+
+        const CSS_URL =
+            "https://cdn.jsdelivr.net/gh/AndreajnRcm4/b398dl2h74v@9a23fbb2373d743a564873251cbb57736ebc1f73/style.css";
+
+
+        /*
+         * Save the original fetch function before overriding it.
+         */
+        const originalFetch = window.fetch.bind(window);
+
+
+        /*
+         * ============================================
+         * Cache helpers
+         * ============================================
+         */
+
+        async function getCached(url) {
+            if (!("caches" in window)) {
+                return null;
+            }
+
+            try {
+                const cache = await caches.open(CACHE_NAME);
+                return await cache.match(url);
+            } catch (error) {
+                console.warn(
+                    "Peggle cache read failed:",
+                    error
+                );
+
+                return null;
+            }
+        }
+
+
+        async function putCached(url, response) {
+            if (!("caches" in window)) {
+                return;
+            }
+
+            if (!response || !response.ok) {
+                return;
+            }
+
+            try {
+                const cache = await caches.open(CACHE_NAME);
+
+                await cache.put(
+                    url,
+                    response.clone()
+                );
+            } catch (error) {
+                console.warn(
+                    "Peggle cache write failed:",
+                    error
+                );
+            }
+        }
+
+
+        async function getAsset(url) {
+            /*
+             * Check Cache Storage first.
+             */
+            const cached = await getCached(url);
+
+            if (cached) {
+                return cached;
+            }
+
+
+            /*
+             * Nothing cached, so download it normally.
+             */
+            const response = await originalFetch(url);
+
+            if (response.ok) {
+                await putCached(
+                    url,
+                    response
+                );
+            }
+
+            return response;
+        }
+
+
+        /*
+         * ============================================
+         * Intercept SWF fetches
+         * ============================================
+         *
+         * Ruffle still receives the original SWF URL.
+         * If Ruffle requests that URL through fetch(),
+         * return the cached copy instead of downloading
+         * the SWF again.
+         */
+
+        window.fetch = async function (input, init) {
+            let url = "";
+
+            try {
+                url =
+                    typeof input === "string"
+                        ? input
+                        : input.url;
+            } catch (error) {
+                return originalFetch(
+                    input,
+                    init
+                );
+            }
+
+
+            if (
+                url === SWF_URL ||
+                url === CSS_URL
+            ) {
+                const cached = await getCached(url);
+
+                if (cached) {
+                    return cached;
+                }
+
+
+                const response =
+                    await originalFetch(
+                        input,
+                        init
+                    );
+
+
+                if (response.ok) {
+                    await putCached(
+                        url,
+                        response
+                    );
+                }
+
+
+                return response;
+            }
+
+
+            return originalFetch(
+                input,
+                init
+            );
+        };
+
+
+        /*
+         * ============================================
+         * Load cached stylesheet
+         * ============================================
+         *
+         * The original <link> was removed so the CSS
+         * can also be controlled by Cache Storage.
+         */
+
+        async function loadCachedStylesheet() {
+            try {
+                const response =
+                    await getAsset(CSS_URL);
+
+
+                if (
+                    !response ||
+                    !response.ok
+                ) {
+                    return;
+                }
+
+
+                const blob =
+                    await response.blob();
+
+
+                const blobURL =
+                    URL.createObjectURL(blob);
+
+
+                const link =
+                    document.createElement("link");
+
+
+                link.rel = "stylesheet";
+                link.type = "text/css";
+                link.href = blobURL;
+
+
+                document.head.appendChild(link);
+
+            } catch (error) {
+                console.warn(
+                    "Peggle stylesheet cache failed:",
+                    error
+                );
+
+
+                /*
+                 * Fallback to the original stylesheet
+                 * if Cache Storage is unavailable.
+                 */
+
+                if (
+                    !document.querySelector(
+                        'link[rel="stylesheet"]'
+                    )
+                ) {
+                    const link =
+                        document.createElement("link");
+
+                    link.rel = "stylesheet";
+                    link.type = "text/css";
+                    link.href = CSS_URL;
+
+                    document.head.appendChild(link);
+                }
+            }
+        }
+
+
+        /*
+         * ============================================
+         * Page-level localStorage
+         * ============================================
+         *
+         * This is only small HTML-side state.
+         *
+         * Peggle's actual progress is handled by Ruffle's
+         * Flash SharedObject implementation.
+         */
+
+        function savePageState() {
+            try {
+                localStorage.setItem(
+                    "peggle_storage_version",
+                    "1"
+                );
+
+                localStorage.setItem(
+                    "peggle_last_played",
+                    String(Date.now())
+                );
+
+            } catch (error) {
+                console.warn(
+                    "Peggle localStorage is unavailable:",
+                    error
+                );
+            }
+        }
+
+
+        /*
+         * ============================================
+         * Start Peggle
+         * ============================================
+         */
+
+        window.addEventListener(
+            "DOMContentLoaded",
+            async function () {
+
+                savePageState();
+
+
+                /*
+                 * Cache the SWF and stylesheet in parallel.
+                 *
+                 * First visit:
+                 *     download -> cache -> play
+                 *
+                 * Later visits:
+                 *     cache -> play
+                 */
+
+                try {
+                    await Promise.all([
+                        getAsset(SWF_URL),
+                        loadCachedStylesheet()
+                    ]);
+
+                } catch (error) {
+                    console.warn(
+                        "Peggle asset caching failed:",
+                        error
+                    );
+
+
+                    /*
+                     * Make sure the stylesheet still loads
+                     * if caching encounters an error.
+                     */
+
+                    if (
+                        !document.querySelector(
+                            'link[rel="stylesheet"]'
+                        )
+                    ) {
+                        const link =
+                            document.createElement("link");
+
+                        link.rel = "stylesheet";
+                        link.type = "text/css";
+                        link.href = CSS_URL;
+
+                        document.head.appendChild(link);
+                    }
+                }
+
+
+                /*
+                 * Create Ruffle.
+                 */
+
+                const ruffle =
+                    window.RufflePlayer.newest();
+
+
+                const player =
+                    ruffle.createPlayer();
+
+
+                document
+                    .getElementById("game")
+                    .appendChild(player);
+
+
+                /*
+                 * Load Peggle.
+                 *
+                 * IMPORTANT:
+                 * Keep the real SWF URL instead of changing it
+                 * to a blob URL. This preserves the normal URL
+                 * identity used by Ruffle's SharedObject storage.
+                 */
+
+                player.ruffle().load({
+                    url: SWF_URL,
+
+                    autoplay: "on",
+
+                    letterbox: "fullscreen",
+
+                    backgroundColor: "#000000",
+
+                    compatibilityRules: true,
+
+                    allowNetworking: "all"
+                });
+            }
+        );
     </script>
 
 </body>
