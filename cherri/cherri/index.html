@@ -8,10 +8,10 @@
       //
       // App boot (due component):
       //   Ne = useSearchParams().get("u") || "cherri://home"
-      //   Et(Ne)  → opens a proxy tab
+      //   Et(Ne)  → opens full-viewport embed (no browser UI)
       //
       // So the working form is:
-      //   index.html#/?u=https://example.com
+      //   index.html#/embed?u=https://example.com
       //
       // Accept legacy/real query forms and rewrite into the hash:
       //   index.html?url=https://example.com
@@ -47,9 +47,9 @@
           }
           window.__CHERRI_BOOT_U__ = target;
 
-          // Canonical hash the router will actually read
+          // Canonical hash: /embed route = full-viewport proxy, no browser chrome
           hashParams.set("u", target);
-          var nextHash = "#/?u=" + encodeURIComponent(target);
+          var nextHash = "#/embed?u=" + encodeURIComponent(target);
 
           // Strip url/u from the real query string so they don't linger
           search.delete("url");
@@ -63,7 +63,7 @@
           // Skip if we are already exactly there
           if (location.pathname + location.search + location.hash === next) return;
           // Also skip if hash already has the right u and path is /
-          if (!fromQuery && fromHash === target && (hashPath === "/" || hashPath === "")) return;
+          if (!fromQuery && fromHash === target && (hashPath === "/embed" || hashPath === "embed")) return;
 
           location.replace(next);
         } catch (e) {
