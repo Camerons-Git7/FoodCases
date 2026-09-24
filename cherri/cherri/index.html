@@ -211,14 +211,20 @@
   
         <script src="./assets/bundle-1vghyvjv.js"></script>
       
+
+      
+
+      
     <script>
-      // Embed mode: when the proxied iframe navigates (link click, redirect),
-      // mirror the browser UI by sending the whole top-level page to the new URL
-      // via ?url= (which rewrites to #/embed?u=…).
+      // Embed: follow in-proxy navigations at the top level (like the browser UI).
+      //
+      // 1) iframe src attribute changes (full loads)
+      // 2) contentWindow.location changes (SPA / JS redirects, e.g. GeForce Now
+      //    "Get in") — same-origin under the proxy, so we can read it.
       (function () {
         function isEmbedRoute() {
           var h = (location.hash || "").replace(/^#/, "");
-          var path = h.split("?")[0] || "";
+          var path = (h.split("?")[0] || "");
           return path === "/embed" || path === "embed";
         }
 
@@ -226,30 +232,25 @@
           try {
             var h = (location.hash || "").replace(/^#/, "");
             var qi = h.indexOf("?");
-            if (qi < 0) return null;
+            if (qi < 0) {
+              var qs = new URLSearchParams(location.search).get("url");
+              return qs;
+            }
             return new URLSearchParams(h.slice(qi + 1)).get("u");
           } catch (e) {
             return null;
           }
         }
 
-        // Decode scramjet frame URL:
-        //   /…/fn5315/<ctrl>/<frame>/<base64url-encoded target>
-        function targetFromProxySrc(src) {
+        function decodePayload(encoded) {
+          if (!encoded || encoded.length < 4) return null;
           try {
-            var u = new URL(src, location.href);
-            var parts = u.pathname.split("/").filter(Boolean);
-            var i = parts.indexOf("fn5315");
-            if (i < 0 || i >= parts.length - 1) return null;
-            var encoded = parts[parts.length - 1];
-            if (!encoded || encoded.length < 8) return null;
             var b64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
             while (b64.length % 4) b64 += "=";
             var bin = atob(b64);
             var bytes = new Uint8Array(bin.length);
-            for (var n = 0; n < bin.length; n++) bytes[n] = bin.charCodeAt(n);
+            for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
             var text = new TextDecoder().decode(bytes);
-            // Must look like a URL
             if (!/^https?:\/\//i.test(text) && text.indexOf("cherri://") !== 0) return null;
             return text;
           } catch (e) {
@@ -257,48 +258,99 @@
           }
         }
 
+        // /…/fn5315/<ctrl>/<frame>/<base64url>
+        function targetFromProxyHref(href) {
+          try {
+            var u = new URL(href, location.href);
+            var parts = u.pathname.split("/").filter(Boolean);
+            var i = parts.indexOf("fn5315");
+            if (i < 0 || i >= parts.length - 1) return null;
+            return decodePayload(parts[parts.length - 1]);
+          } catch (e) {
+            return null;
+          }
+        }
+
+        function sameUrl(a, b) {
+          if (!a || !b) return false;
+          if (a === b) return true;
+          try {
+            return new URL(a).href === new URL(b).href;
+          } catch (e) {
+            return false;
+          }
+        }
+
         function navigateTopTo(rawUrl) {
           if (!rawUrl) return;
-          var cur = currentEmbedTarget();
-          if (cur === rawUrl) return;
-          // Avoid redirect loops
+          if (sameUrl(rawUrl, currentEmbedTarget())) return;
           try {
-            if (cur && new URL(cur).href === new URL(rawUrl).href) return;
-          } catch (e) {}
-
-          var next = new URL(location.pathname, location.href);
-          next.search = "";
-          next.hash = "";
-          next.searchParams.set("url", rawUrl);
-          location.replace(next.href);
+            var next = new URL(location.pathname, location.href);
+            next.search = "";
+            next.hash = "";
+            next.searchParams.set("url", rawUrl);
+            location.replace(next.href);
+          } catch (e) {
+            console.warn("[cherri] navigateTopTo", e);
+          }
         }
 
         function watchIframe(iframe) {
           if (!iframe || iframe.dataset.cherriEmbedWatch === "1") return;
           iframe.dataset.cherriEmbedWatch = "1";
 
-          var last = "";
-          function check() {
+          var lastTarget = currentEmbedTarget() || "";
+          var bootstrapped = false;
+
+          function readTarget() {
+            // Prefer live contentWindow location (catches SPA redirects)
+            try {
+              var cw = iframe.contentWindow;
+              if (cw && cw.location) {
+                var live = targetFromProxyHref(cw.location.href);
+                if (live) return live;
+              }
+            } catch (e) {}
+            // Fallback: iframe src attribute
+            try {
+              if (iframe.src) return targetFromProxyHref(iframe.src);
+            } catch (e) {}
+            return null;
+          }
+
+          function check(fromBoot) {
             if (!isEmbedRoute()) return;
-            var src = iframe.src || "";
-            if (!src || src === last) return;
-            var target = targetFromProxySrc(src);
+            var target = readTarget();
             if (!target) return;
-            // First load sets last without redirect (boot already chose this URL)
-            if (!last) {
-              last = src;
+
+            if (!bootstrapped) {
+              bootstrapped = true;
+              lastTarget = target;
               return;
             }
-            if (src === last) return;
-            last = src;
+            if (sameUrl(target, lastTarget)) return;
+            lastTarget = target;
             navigateTopTo(target);
           }
 
-          iframe.addEventListener("load", check);
-          // Some navigations update src before load
-          var mo = new MutationObserver(check);
+          iframe.addEventListener("load", function () { check(false); });
+
+          var mo = new MutationObserver(function () { check(false); });
           mo.observe(iframe, { attributes: true, attributeFilter: ["src"] });
-          check();
+
+          // Poll contentWindow — GeForce Now style JS redirects often never
+          // change the parent iframe.src attribute.
+          var poll = setInterval(function () {
+            if (!iframe.isConnected) {
+              clearInterval(poll);
+              return;
+            }
+            if (!isEmbedRoute()) return;
+            check(false);
+          }, 400);
+
+          // Initial
+          setTimeout(function () { check(true); }, 100);
         }
 
         function scan(root) {
@@ -306,26 +358,25 @@
           (root || document).querySelectorAll("iframe").forEach(watchIframe);
         }
 
-        var boot = function () {
+        function boot() {
           scan(document);
           new MutationObserver(function (muts) {
             muts.forEach(function (m) {
-              m.addedNodes && m.addedNodes.forEach(function (n) {
-                if (n.nodeType !== 1) return;
-                if (n.tagName === "IFRAME") watchIframe(n);
-                else if (n.querySelectorAll) scan(n);
-              });
+              m.addedNodes &&
+                m.addedNodes.forEach(function (n) {
+                  if (n.nodeType !== 1) return;
+                  if (n.tagName === "IFRAME") watchIframe(n);
+                  else if (n.querySelectorAll) scan(n);
+                });
             });
           }).observe(document.documentElement, { childList: true, subtree: true });
-        };
+        }
 
         if (document.readyState === "loading") {
           document.addEventListener("DOMContentLoaded", boot);
         } else {
           boot();
         }
-
-        // Re-scan on hash changes (embed route entered later)
         window.addEventListener("hashchange", function () {
           setTimeout(function () { scan(document); }, 50);
         });
