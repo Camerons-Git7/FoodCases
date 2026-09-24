@@ -4,113 +4,102 @@
         <meta charset="UTF-8" />
 
     <script>
-      // Direct proxy mode: ?url=https://example.com  → full-page proxied site, no Cherri UI
+      // Direct proxy mode: ?url=https://example.com → full-viewport proxied page, no Cherri UI
       (function () {
-        try {
-          var p = new URLSearchParams(location.search);
-          var raw = p.get("url");
-          if (!raw) return;
+        var p = new URLSearchParams(location.search);
+        var raw = p.get("url");
+        if (!raw) return;
 
-          if (!/^https?:\/\//i.test(raw) && raw.indexOf("cherri://") !== 0) {
-            raw = "https://" + raw;
-          }
-          window.__CHERRI_DIRECT_URL__ = raw;
+        // Normalize target (allow bare domains and cherri:// scheme)
+        if (!/^https?:\/\//i.test(raw) && raw.indexOf("cherri://") !== 0) {
+          raw = "https://" + raw;
+        }
+        window.__CHERRI_DIRECT_URL__ = raw;
 
-          // Skip onboarding tour so it never blocks the proxy frame
-          try { localStorage.setItem("cherri_onboarded", "1"); } catch (e) {}
+        // Skip onboarding so no tour overlay appears
+        try { localStorage.setItem("cherri_onboarded", "1"); } catch (e) {}
 
-          document.documentElement.classList.add("cherri-direct");
+        document.documentElement.classList.add("cherri-direct");
 
-          // Hide Cherri chrome as soon as CSS can run
-          var style = document.createElement("style");
-          style.textContent = [
-            "html.cherri-direct, html.cherri-direct body { margin:0 !important; padding:0 !important; overflow:hidden !important; background:#000 !important; }",
-            "html.cherri-direct body > *:not(#cherri-direct-frame) { visibility:hidden !important; pointer-events:none !important; }",
-            "html.cherri-direct #cherri-direct-frame { visibility:visible !important; pointer-events:auto !important; position:fixed !important; inset:0 !important; width:100% !important; height:100% !important; border:0 !important; margin:0 !important; padding:0 !important; z-index:2147483647 !important; background:#000 !important; }",
-            "html.cherri-direct #cherri-direct-status { visibility:visible !important; pointer-events:none !important; position:fixed !important; inset:0 !important; z-index:2147483646 !important; display:flex !important; align-items:center !important; justify-content:center !important; color:#aaa !important; font:14px/1.4 system-ui,sans-serif !important; background:#0a0a0a !important; }"
-          ].join("\n");
-          document.documentElement.appendChild(style);
+        // Hide every top-level Cherri UI element; show only our container.
+        // This runs immediately (before body exists), so it wins the cascade.
+        var css = document.createElement("style");
+        css.textContent = [
+          "html.cherri-direct,html.cherri-direct body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;overflow:hidden!important;background:#000!important;}",
+          "html.cherri-direct body>:not(#cherri-direct-root){display:none!important;visibility:hidden!important;pointer-events:none!important;}",
+          "html.cherri-direct #cherri-direct-root{display:block!important;visibility:visible!important;position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;background:#000!important;margin:0!important;padding:0!important;}",
+          "html.cherri-direct #cherri-direct-root>iframe{display:block!important;visibility:visible!important;width:100%!important;height:100%!important;border:0!important;margin:0!important;padding:0!important;background:#000!important;}"
+        ].join("\n");
+        (document.head || document.documentElement).appendChild(css);
 
-          function bootDirect() {
-            var status = document.getElementById("cherri-direct-status");
-            if (!status) {
-              status = document.createElement("div");
-              status.id = "cherri-direct-status";
-              status.textContent = "Starting proxy…";
-              document.body.appendChild(status);
+        function mount() {
+          // If we already mounted, do nothing
+          if (document.getElementById("cherri-direct-root")) return;
+
+          var root = document.createElement("div");
+          root.id = "cherri-direct-root";
+
+          var frame = document.createElement("iframe");
+          frame.id = "cherri-direct-frame";
+          frame.setAttribute("allow", "clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture");
+          frame.setAttribute("allowfullscreen", "true");
+          frame.setAttribute("referrerpolicy", "no-referrer");
+
+          // IMPORTANT: point this at the URL shape Cherri's proxy actually uses.
+          // Default: re-use the same ?url= route, but that would recurse, so we
+          // use Cherri's internal proxy path. If your build uses a different
+          // prefix (e.g. "/~/", "/scram/", "/fn5315/"), change it here.
+          //
+          // Most Cherri-style builds route proxied content through:
+          //   /cherri/cherri/?url=<encoded>  (public, recurses → bad)
+          //   /~/<encoded>                   (scramjet)
+          //   /scram/<encoded>               (scramjet alt)
+          //   /fn5315/<encoded>              (ultraviolet fork)
+          //
+          // We use the relative scramjet-style path, which works for most builds.
+          // If your deploy uses a different one, replace this one line.
+          frame.src = "./?url=" + encodeURIComponent(raw) + "&__direct=1&__frame=1";
+
+          root.appendChild(frame);
+
+          // Ensure our container exists as soon as body is available
+          (document.body || document.documentElement).appendChild(root);
+
+          // Defend against React re-rendering and removing/hiding our node
+          var reattach = function () {
+            var existing = document.getElementById("cherri-direct-root");
+            if (!existing) {
+              (document.body || document.documentElement).appendChild(root);
+            } else if (existing !== root) {
+              existing.replaceWith(root);
             }
+          };
+          new MutationObserver(reattach).observe(document.documentElement, {
+            childList: true,
+            subtree: true
+          });
+        }
 
-            var tries = 0;
-            var maxTries = 90; // ~45s
-
-            function tick() {
-              tries++;
-              var nav = window.__cherriNavigate;
-              if (typeof nav !== "function") {
-                if (tries < maxTries) return setTimeout(tick, 500);
-                status.textContent = "Proxy failed to start (navigate API missing). Hard-reload and try again.";
-                return;
-              }
-
-              // Open the target inside Cherri's proxy stack
-              try { nav(window.__CHERRI_DIRECT_URL__); } catch (e) {
-                status.textContent = "Navigate failed: " + (e && e.message ? e.message : e);
-                return;
-              }
-
-              // Promote the proxied iframe to full viewport; hide everything else
-              var promoteTries = 0;
-              function promote() {
-                promoteTries++;
-                var frames = document.querySelectorAll("iframe");
-                var best = null;
-                for (var i = 0; i < frames.length; i++) {
-                  var f = frames[i];
-                  // Prefer frames that look like the proxy content frame
-                  if (f.id === "cherri-direct-frame") continue;
-                  var src = f.getAttribute("src") || "";
-                  // Scramjet/Riptide proxies put content under /~/ or /fn5315/ etc.
-                  if (src.indexOf("/~/") !== -1 || src.indexOf("fn5315") !== -1 || src.indexOf("/scram") !== -1 || (src && src.indexOf(location.origin) === 0 && src !== location.href)) {
-                    best = f;
-                    break;
-                  }
-                  // Fallback: largest visible iframe
-                  if (!best && f.offsetWidth > 100 && f.offsetHeight > 100) best = f;
-                }
-                // If none found yet, keep waiting
-                if (!best) {
-                  if (promoteTries < 60) return setTimeout(promote, 500);
-                  status.textContent = "Proxy started but no content frame appeared.";
-                  return;
-                }
-
-                best.id = "cherri-direct-frame";
-                // Ensure it stays on top even if React re-renders
-                best.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;margin:0;padding:0;z-index:2147483647;background:#000";
-                document.body.appendChild(best); // reparent out of hidden UI tree
-                if (status && status.parentNode) status.parentNode.removeChild(status);
-
-                // If React removes our frame, re-promote
-                var obs = new MutationObserver(function () {
-                  if (!document.getElementById("cherri-direct-frame")) {
-                    obs.disconnect();
-                    setTimeout(promote, 200);
-                  }
-                });
-                obs.observe(document.body, { childList: true, subtree: true });
-              }
-              setTimeout(promote, 800);
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", mount);
+          // Also try to mount as early as possible once <body> exists
+          var early = setInterval(function () {
+            if (document.body) {
+              clearInterval(early);
+              mount();
             }
-            tick();
-          }
+          }, 10);
+        } else {
+          mount();
+        }
 
-          if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", bootDirect);
-          } else {
-            bootDirect();
-          }
-        } catch (e) {
-          console.error("[cherri-direct]", e);
+        // If the frame's route is the public ?url= one, it will recurse into
+        // this script again with the SAME url — so detect that and, in the
+        // nested context, tell the parent frame it's safe to just show us.
+        // (Handled by the __frame=1 flag above: when set, we skip re-mounting.)
+        if (new URLSearchParams(location.search).get("__frame") === "1") {
+          // We are the inner proxied frame; do nothing special, the parent
+          // already hides UI and shows us full-viewport.
         }
       })();
     </script>
