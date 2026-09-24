@@ -35,9 +35,9 @@
 
   setTimeout(function () {
     if (!statusEl.classList.contains("hidden")) {
-      log(""); log("--- still running after 25s ---"); log("stage = " + stage);
+      log(""); log("--- still running after 30s ---"); log("stage = " + stage);
     }
-  }, 25000);
+  }, 30000);
 
   var params = new URLSearchParams(location.search);
   var raw = params.get("url");
@@ -49,189 +49,204 @@
   if (!("serviceWorker" in navigator)) { fail("No SW support."); return; }
   if (!window._wdgvkq9 || !window._wdgvkq9.Controller) { fail("Runtime not loaded."); return; }
 
-  // Match the production build's hashed names (see index.html's bundle).
-  var RUNTIME_PATH = new URL("bi1wf/8t6ked.js",   location.href).href;
-  var WASM_PATH    = new URL("bi1wf/ri1n3t.wasm", location.href).href;
+  // ---- Exact copies of the bundle's helper functions --------------------
+  // From bundle-1vghyvjv.js:
+  //   IqA = "fn5315/"
+  //   BqA() → "bi1wf/8t6ked.js"
+  //   QqA() → "bi1wf/ri1n3t.wasm"
+  //   dqA() → "bwd9x/cdt4qb.js"
+  //   CqA(scope) → scope + "fn5315/"
+  //   Ij(scope, path) → scope + path (without leading slash)
 
-  // ---- 1. Probe required files -------------------------------------------
-  stage = "probe-sw-deps";
-  Promise.all([
-    fetch("9vcrck.js",         { method: "HEAD" }).then(function (r) { return { name: "9vcrck.js",         ok: r.ok, status: r.status }; }),
-    fetch("bwd9x/vzyras.js",   { method: "HEAD" }).then(function (r) { return { name: "bwd9x/vzyras.js",   ok: r.ok, status: r.status }; }),
-    fetch("bi1wf/8t6ked.js",   { method: "HEAD" }).then(function (r) { return { name: "bi1wf/8t6ked.js",   ok: r.ok, status: r.status }; }),
-    fetch("bi1wf/ri1n3t.wasm", { method: "HEAD" }).then(function (r) { return { name: "bi1wf/ri1n3t.wasm", ok: r.ok, status: r.status }; })
-  ]).then(function (results) {
-    results.forEach(function (r) { log("probe " + r.name + " → " + r.status + (r.ok ? "" : "  ** MISSING **")); });
-    var missing = results.filter(function (r) { return !r.ok; });
-    if (missing.length) { fail("Files missing: " + missing.map(function(r){return r.name;}).join(", ")); return; }
-    startController();
-  }).catch(function (e) { fail("probe failed: " + (e && e.message ? e.message : String(e))); });
+  var IqA = "fn5315/";
+  function BqA() { return "bi1wf/8t6ked.js"; }
+  function QqA() { return "bi1wf/ri1n3t.wasm"; }
+  function dqA() { return "bwd9x/cdt4qb.js"; }
+  function CqA(scopePath) { return scopePath + IqA; }
+  function Ij(scopePath, p) { return scopePath + (p.startsWith("/") ? p.slice(1) : p); }
 
-  // ---- 2. SW registration ------------------------------------------------
-  function ensureSW() {
+  // Base64url codec, mirroring `i1A` in the bundle.
+  var codec = {
+    encode: function (e) {
+      if (!e) return e;
+      var t = new TextEncoder().encode(e), a = "";
+      for (var r = 0; r < t.length; r++) a += String.fromCharCode(t[r]);
+      return btoa(a).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    },
+    decode: function (e) {
+      if (!e) return e;
+      var t = e.replace(/-/g, "+").replace(/_/g, "/");
+      while (t.length % 4) t += "=";
+      var a = atob(t), r = new Uint8Array(a.length);
+      for (var o = 0; o < a.length; o++) r[o] = a.charCodeAt(o);
+      return new TextDecoder().decode(r);
+    }
+  };
+
+  // ---- Re-implementation of lqA() from the bundle -----------------------
+  // Waits for the SW, then returns { worker, registration }.
+  function getWorkerAndRegistration() {
+    if (!("serviceWorker" in navigator)) return Promise.reject(new Error("no SW"));
+    var SW_FILE = window.__SW_FILE__ ? window.__SW_FILE__.split("/").pop() : "v6hxi5.js";
+
     return navigator.serviceWorker.getRegistrations().then(function (regs) {
       for (var i = 0; i < regs.length; i++) {
         var w = regs[i].active || regs[i].waiting || regs[i].installing;
-        if (w && w.scriptURL.split("/").pop() === "v6hxi5.js") return regs[i];
+        if (w && w.scriptURL.split("/").pop() === SW_FILE) return regs[i];
       }
-      log("registering v6hxi5.js");
-      return navigator.serviceWorker.register("v6hxi5.js", { scope: "./" });
+      log("registering " + SW_FILE);
+      return navigator.serviceWorker.register(SW_FILE, { scope: "./" });
     }).then(function () {
       return navigator.serviceWorker.ready;
-    });
-  }
-
-  function startController() {
-    stage = "ensure-sw";
-    ensureSW().then(function (registration) {
-      log("SW ready, controller = " + (navigator.serviceWorker.controller ? "yes" : "no"));
-      stage = "wait-for-control";
-      return waitFor(function () {
-        return navigator.serviceWorker.controller &&
-               navigator.serviceWorker.controller.scriptURL.split("/").pop() === "v6hxi5.js";
-      }, 5000).then(
-        function () { log("SW is controlling this page"); return registration; },
-        function () {
-          if (!sessionStorage.getItem("__direct_reload")) {
-            sessionStorage.setItem("__direct_reload", "1");
-            log("not controlled yet — reloading once…");
-            location.reload();
-            return new Promise(function () {});
-          }
-          log("WARNING: still not controlled after reload");
-          return registration;
-        }
-      );
     }).then(function (registration) {
-      if (!registration) return;
-      try { sessionStorage.removeItem("__direct_reload"); } catch (e) {}
-
-      // The runtime expects options.serviceworker to have .postMessage().
-      // ServiceWorkerRegistration.prototype.postMessage doesn't exist in
-      // all browsers, so forward to the active worker.
-      var swTarget = registration.active
-                  || registration.waiting
-                  || registration.installing
-                  || navigator.serviceWorker.controller;
-      if (!swTarget) { fail("No active worker."); return; }
-
-      var swShim = {
-        postMessage: function (msg, transfer) { return swTarget.postMessage(msg, transfer || []); },
-        get active()     { return registration.active; },
-        get waiting()    { return registration.waiting; },
-        get installing() { return registration.installing; },
-        get scope()      { return registration.scope; }
-      };
-
-      // ---- 3. Use the runtime's own transport --------------------------
-      // _nog837i (the 8t6ked.js bundle) exports the transport class used by
-      // index.html's app. That's what actually supports WebSockets and keeps
-      // a persistent MessageChannel to the SW. We reuse it here.
-      stage = "transport";
-      var transport = null;
-      try {
-        // The bundler's export surface is `_nog837i` (see 8t6ked.js: it
-        // assigns `self._nog837i = h` at the end). If it exposes a transport
-        // class, use it; otherwise fall back to a fetch shim so at least
-        // plain HTML proxying works.
-        var T = window._nog837i && window._nog837i.BareClient;
-        if (typeof T === "function") {
-          log("using runtime BareClient transport");
-          transport = new T("https://bare.seamless.free.je/");   // bare-mux endpoint
-        } else {
-          log("BareClient not exposed; falling back to fetch transport");
-          transport = {
-            ready: Promise.resolve(true),
-            init: function () { return Promise.resolve(); },
-            request: function (remote, method, body, headers) {
-              return fetch(remote.href, { method: method, body: body, headers: headers })
-                .then(function (res) {
-                  return res.arrayBuffer().then(function (buf) {
-                    return { status: res.status, statusText: res.statusText,
-                             headers: Array.from(res.headers), body: buf };
-                  });
-                });
-            },
-            connect: function () { throw new Error("WebSockets not supported in fetch fallback"); }
-          };
-        }
-      } catch (e) {
-        fail("transport setup: " + (e && e.message ? e.message : String(e)));
-        return;
+      function matchWorker() {
+        var c = navigator.serviceWorker.controller;
+        if (!c) return null;
+        try {
+          return new URL(c.scriptURL, location.href).pathname.split("/").pop() === SW_FILE ? c : null;
+        } catch (e) { return null; }
       }
+      var w = matchWorker();
+      if (w) return { worker: w, registration: registration };
 
-      // ---- 4. Controller ------------------------------------------------
-      stage = "controller-ctor";
-      var controller;
-      try {
-        controller = new window._wdgvkq9.Controller({
-          transport: transport,
-          serviceworker: swShim,
-          config: {
-            _iyosyjgPath: RUNTIME_PATH,
-            wasmPath:     WASM_PATH
-          }
-        });
-      } catch (e) { fail("Controller ctor: " + (e && e.message ? e.message : String(e))); return; }
-      log("controller.prefix = " + controller.prefix);
-
-      stage = "controller-wait";
-      controller.wait().then(function () {
-        log("controller ready");
-
-        // ---- 5. Create frame ------------------------------------------
-        stage = "frame-create";
-        var iframe = document.createElement("iframe");
-        iframe.setAttribute("allow",
-          "clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture");
-        iframe.setAttribute("allowfullscreen", "true");
-        holder.appendChild(iframe);
-
-        var frame = controller.createFrame(iframe, { plugins: [] });
-        log("frame.prefix = " + frame.prefix);
-
-        iframe.addEventListener("load", function () { log("iframe load fired"); hide(); });
-
-        // ---- 6. Warm the SW, then navigate ---------------------------
-        // The SW needs at least one request after $controller$init before
-        // it's guaranteed to have our controller registered in this worker
-        // lifetime. Do a HEAD to ourselves and a request through the frame
-        // prefix, then navigate.
-        stage = "warm-sw";
-        log("warming SW…");
-        fetch(location.href, { method: "HEAD", cache: "no-store" })
-          .catch(function () {})
-          .then(function () { return fetch(frame.prefix + "warmup", { cache: "no-store" }).catch(function () {}); })
-          .then(function () { return new Promise(function (r) { setTimeout(r, 500); }); })
-          .then(function () {
-            stage = "frame-go";
-            log("frame.go(" + target.href + ")");
-            frame.go(target.href);
-
-            setTimeout(function () {
-              if (!statusEl.classList.contains("hidden")) {
-                log(""); log("--- 10s after frame.go ---");
-                log("iframe.src = " + iframe.src);
-                log("if you see this, the SW never routed the navigation");
-              }
-            }, 10000);
-
-            setTimeout(hide, 15000);
-          });
-      }).catch(function (e) { fail("controller.wait(): " + (e && e.message ? e.message : String(e))); });
-    }).catch(function (e) { fail("setup: " + (e && e.message ? e.message : String(e))); });
-  }
-
-  function waitFor(cond, timeoutMs) {
-    return new Promise(function (resolve, reject) {
-      var t0 = Date.now();
-      (function tick() {
-        try { if (cond()) return resolve(); } catch (e) {}
-        if (Date.now() - t0 > timeoutMs) return reject(new Error("timeout"));
-        setTimeout(tick, 100);
-      })();
+      // Wait for controllerchange up to 45s (matches gqA=45e3 in the bundle)
+      return new Promise(function (resolve) {
+        var settled = false;
+        function done(val) {
+          if (settled) return;
+          settled = true;
+          navigator.serviceWorker.removeEventListener("controllerchange", onChange);
+          clearTimeout(t);
+          resolve(val);
+        }
+        function onChange() { done(matchWorker()); }
+        navigator.serviceWorker.addEventListener("controllerchange", onChange);
+        var t = setTimeout(function () { done(null); }, 45000);
+        var m = matchWorker();
+        if (m) done(m);
+      }).then(function (w2) {
+        if (w2) return { worker: w2, registration: registration };
+        var active = registration.active;
+        if (!active) throw new Error("Registration has no active worker.");
+        return { worker: active, registration: registration };
+      });
     });
   }
+
+  // ---- bootController(), mirroring uqA() -------------------------------
+  function bootController() {
+    stage = "sw";
+    return getWorkerAndRegistration().then(function (pair) {
+      var worker = pair.worker;
+      var registration = pair.registration;
+      log("worker = " + worker.scriptURL);
+
+      // Transport.
+      //
+      // The bundle uses `new eH({wisp: eg().wisp})` where `eH` is a
+      // wisp-backed BareClient. That class isn't exported from
+      // 8t6ked.js or 9lcbx4.js as far as I can see, so we build a
+      // transport that satisfies the same interface the Controller
+      // expects: { ready, init, request, connect }.
+      //
+      // `request` and `connect` are what the runtime calls. `request`
+      // is used for all top-level fetches, `connect` for WebSockets.
+      stage = "transport";
+      var transport = {
+        ready: false,
+        init: function () {
+          this.ready = true;
+          return Promise.resolve();
+        },
+        request: function (remote, method, body, headers) {
+          return fetch(remote.href, {
+            method: method,
+            body: body,
+            headers: headers,
+            mode: "cors",
+            credentials: "omit"
+          }).then(function (res) {
+            return res.arrayBuffer().then(function (buf) {
+              return {
+                status: res.status,
+                statusText: res.statusText,
+                headers: Array.from(res.headers),
+                body: buf
+              };
+            });
+          });
+        },
+        connect: function () {
+          throw new Error("WebSocket transport unavailable in direct.html");
+        }
+      };
+      return transport.init().then(function () { return transport; });
+    }).then(function (transport) {
+      // Now get the worker again (we already have it, but keep the
+      // structure parallel to the bundle's uqA).
+      return getWorkerAndRegistration().then(function (pair) {
+        var worker = pair.worker;
+        var registration = pair.registration;
+
+        // `r` in the bundle: the scope path, e.g. "/cherri/cherri/".
+        var r = new URL(registration.scope).pathname;
+        log("scope path = " + r);
+
+        // Build the config exactly like the bundle.
+        var cfg = {
+          prefix: CqA(r),                       // r + "fn5315/"
+          codec: codec,
+          _iyosyjgPath: Ij(r, BqA()),           // r + "bi1wf/8t6ked.js"
+          injectPath:   Ij(r, dqA()),           // r + "bwd9x/cdt4qb.js"
+          wasmPath:     Ij(r, QqA())            // r + "bi1wf/ri1n3t.wasm"
+        };
+        log("prefix = " + cfg.prefix);
+        log("_iyosyjgPath = " + cfg._iyosyjgPath);
+        log("injectPath = " + cfg.injectPath);
+        log("wasmPath = " + cfg.wasmPath);
+
+        stage = "controller-ctor";
+        var controller = new window._wdgvkq9.Controller({
+          serviceworker: worker,     // ← the worker, matching the bundle
+          transport: transport,
+          config: cfg
+        });
+        log("controller.prefix = " + controller.prefix);
+
+        stage = "controller-wait";
+        return controller.wait().then(function () { return controller; });
+      });
+    });
+  }
+
+  // ---- Go --------------------------------------------------------------
+  bootController().then(function (controller) {
+    stage = "frame-create";
+    var iframe = document.createElement("iframe");
+    iframe.setAttribute("allow",
+      "autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-read; clipboard-write");
+    iframe.setAttribute("allowfullscreen", "true");
+    holder.appendChild(iframe);
+
+    var frame = controller.createFrame(iframe);
+    log("frame.prefix = " + frame.prefix);
+
+    iframe.addEventListener("load", function () { log("iframe load"); hide(); });
+
+    stage = "frame-go";
+    log("frame.go(" + target.href + ")");
+    frame.go(target.href);
+
+    setTimeout(function () {
+      if (!statusEl.classList.contains("hidden")) {
+        log(""); log("--- 15s after frame.go ---");
+        log("iframe.src = " + iframe.src);
+      }
+    }, 15000);
+    setTimeout(hide, 20000);
+  }).catch(function (e) {
+    fail(stage + ": " + (e && e.message ? e.message : String(e)));
+  });
 })();
 </script>
 </body>
