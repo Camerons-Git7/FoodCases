@@ -5,166 +5,168 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>cherri — direct</title>
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    background: #000;
-    overflow: hidden;
-  }
-  #frame {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    border: 0;
-    margin: 0;
-    padding: 0;
-    background: #000;
-    display: block;
-  }
-  #status {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #aaa;
-    font: 14px/1.4 system-ui, -apple-system, Segoe UI, sans-serif;
-    background: #0a0a0a;
-    text-align: center;
-    padding: 24px;
-    box-sizing: border-box;
-  }
-  #status a { color: #6cf; }
-  #status.hidden { display: none; }
+  html, body { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }
+  #frame-holder { position:fixed; inset:0; width:100vw; height:100vh; background:#000; }
+  #frame-holder iframe { width:100%; height:100%; border:0; margin:0; padding:0; display:block; background:#000; }
+  #status { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+            color:#aaa; font:14px/1.5 system-ui,sans-serif; background:#0a0a0a; text-align:center;
+            padding:24px; box-sizing:border-box; white-space:pre-wrap; }
+  #status.hidden { display:none; }
+  #status code { color:#6cf; }
 </style>
 </head>
 <body>
 
 <div id="status">Starting proxy…</div>
-<iframe id="frame" allow="clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>
+<div id="frame-holder"></div>
+
+<!-- These are the same two scripts index.html loads, in the same order. -->
+<script src="./bi1wf/8t6ked.js"></script>
+<script src="./bwd9x/9lcbx4.js"></script>
 
 <script>
 (function () {
   var statusEl = document.getElementById("status");
-  var frameEl  = document.getElementById("frame");
+  var holder   = document.getElementById("frame-holder");
 
   function fail(msg) {
     statusEl.classList.remove("hidden");
     statusEl.innerHTML = msg;
-    frameEl.style.display = "none";
   }
+  function hide() { statusEl.classList.add("hidden"); }
 
-  // ---- 1. Read and normalize the target URL -------------------------------
+  // ---- 1. Target URL ------------------------------------------------------
   var params = new URLSearchParams(location.search);
   var raw = params.get("url");
   if (!raw) {
-    fail(
-      "Missing <code>?url=</code> parameter.<br><br>" +
-      "Try: <code>direct.html?url=https://example.com</code>"
-    );
+    fail("Missing <code>?url=</code> parameter.\n\nExample: direct.html?url=https://example.com");
     return;
   }
-  if (!/^https?:\/\//i.test(raw) && raw.indexOf("cherri://") !== 0) {
-    raw = "https://" + raw;
-  }
+  if (!/^https?:\/\//i.test(raw) && raw.indexOf("cherri://") !== 0) raw = "https://" + raw;
   var target;
-  try {
-    target = new URL(raw);
-  } catch (e) {
-    fail("Invalid URL: " + raw);
-    return;
-  }
+  try { target = new URL(raw); } catch (e) { fail("Invalid URL: " + raw); return; }
 
-  // ---- 2. Wait for the service worker that powers the proxy ---------------
-  // Cherri's proxy only works if its SW (v6hxi5.js, registered by index.html)
-  // is installed and controlling this origin. direct.html itself does not
-  // register it — but if you've visited index.html once on this origin, the
-  // SW is already active and will intercept fetches from this page too.
-  //
-  // If it's NOT registered yet, we register it here so direct.html works
-  // standalone.
-  var SW_FILE = "v6hxi5.js"; // same file index.html registers
-
-  function registerSW() {
-    if (!("serviceWorker" in navigator)) return Promise.resolve(null);
-    return navigator.serviceWorker.getRegistrations().then(function (regs) {
-      for (var i = 0; i < regs.length; i++) {
-        var w = regs[i].active || regs[i].waiting || regs[i].installing;
-        if (w && w.scriptURL.split("/").pop() === SW_FILE) return regs[i];
-      }
-      return navigator.serviceWorker.register(SW_FILE, { scope: "./" });
+  // ---- 2. Wait for the controller runtime to exist ------------------------
+  // bwd9x/9lcbx4.js sets window._wdgvkq9 = { Controller, Frame, ... }.
+  // It also needs the matching SW (v6hxi5.js) to be active on this origin,
+  // because Frame() drives everything through the SW's MessageChannel.
+  function waitFor(cond, timeoutMs, intervalMs) {
+    return new Promise(function (resolve, reject) {
+      var t0 = Date.now();
+      (function tick() {
+        try { if (cond()) return resolve(); } catch (e) {}
+        if (Date.now() - t0 > timeoutMs) return reject(new Error("timeout"));
+        setTimeout(tick, intervalMs || 50);
+      })();
     });
   }
 
-  // ---- 3. Build the proxied URL -------------------------------------------
-  // Cherri (like most scramjet/UV-based proxies) exposes proxied content
-  // through a path prefix that its service worker claims. The three common
-  // shapes are:
-  //   /~/<encoded>       (scramjet)
-  //   /scram/<encoded>   (scramjet alt)
-  //   /fn5315/<encoded>  (ultraviolet fork)
-  // Set PROXY_PREFIX to whichever one your build uses. If you're unsure,
-  // open index.html, load any site through the UI, and copy the iframe src.
-  var PROXY_PREFIX = "/~/";
-
-  // scramjet-style: keep the scheme, just prefix the whole href
-  var proxiedHref = PROXY_PREFIX + target.href;
-
-  // ---- 4. Boot ------------------------------------------------------------
-  registerSW()
-    .then(function () {
-      // Wait until a controller exists (SW active) so the fetch inside the
-      // iframe is actually intercepted.
-      if (!navigator.serviceWorker) return null;
-      if (navigator.serviceWorker.controller) return null;
-
-      return new Promise(function (resolve) {
-        var done = false;
-        var onChange = function () {
-          if (done) return;
-          done = true;
-          navigator.serviceWorker.removeEventListener("controllerchange", onChange);
-          resolve(null);
-        };
-        navigator.serviceWorker.addEventListener("controllerchange", onChange);
-        // Give up waiting after 3s and try anyway (some browsers control
-        // only after the first navigation).
-        setTimeout(function () {
-          if (done) return;
-          done = true;
-          navigator.serviceWorker.removeEventListener("controllerchange", onChange);
-          resolve(null);
-        }, 3000);
+  function ensureSW() {
+    if (!("serviceWorker" in navigator)) return Promise.reject(new Error("No service worker support"));
+    return navigator.serviceWorker.getRegistrations().then(function (regs) {
+      for (var i = 0; i < regs.length; i++) {
+        var w = regs[i].active || regs[i].waiting || regs[i].installing;
+        if (w && w.scriptURL.split("/").pop() === "v6hxi5.js") return regs[i];
+      }
+      // Not registered yet → register it. It lives at the same folder level
+      // as this file (v6hxi5.js sits next to index.html).
+      return navigator.serviceWorker.register("v6hxi5.js", { scope: "./" });
+    }).then(function (reg) {
+      return navigator.serviceWorker.ready.then(function () {
+        // If we aren't controlled yet, one reload makes it take effect.
+        if (!navigator.serviceWorker.controller &&
+            !sessionStorage.getItem("__direct_sw_reloaded")) {
+          sessionStorage.setItem("__direct_sw_reloaded", "1");
+          location.reload();
+          return new Promise(function () {}); // halt
+        }
+        return reg;
       });
+    });
+  }
+
+  // ---- 3. Build the Controller + Frame ------------------------------------
+  var SW_URL = new URL("v6hxi5.js", location.href).href;
+  var RUNTIME_PATH = new URL("bi1wf/8t6ked.js", location.href).href;
+  var WASM_PATH = new URL("_iyosyjg/_iyosyjg.wasm", location.href).href;
+
+  ensureSW()
+    .then(function () {
+      return waitFor(function () { return window._wdgvkq9 && window._wdgvkq9.Controller; }, 10000);
+    })
+    .then(function () {
+      // Browser backend for scramjet (bare-mux style transport).
+      // The runtime bundled inside bwd9x/9lcbx4.js knows how to talk to the
+      // service worker; we just need to hand it a transport that can do
+      // direct fetch(). `fetch`-based transport is what Cherri's own app uses.
+      var transport = {
+        ready: Promise.resolve(true),
+        init:  function () { return Promise.resolve(); },
+        request: function (remote, method, body, headers) {
+          return fetch(remote.href, { method: method, body: body, headers: headers })
+            .then(function (res) {
+              return res.arrayBuffer().then(function (buf) {
+                return { status: res.status, statusText: res.statusText,
+                         headers: Array.from(res.headers), body: buf };
+              });
+            });
+        },
+        connect: function () { throw new Error("WebSockets not supported in direct.html"); },
+      };
+
+      var controller = new window._wdgvkq9.Controller({
+        transport: transport,
+        serviceworker: navigator.serviceWorker,
+        config: {
+          prefix: "/~/sj/",                       // matches 9lcbx4.js default
+          wasmPath: WASM_PATH,                    // absolute, so the SW can fetch it
+        },
+      });
+      window.__directController = controller;
+
+      // The controller needs the runtime script to be loadable at the path the
+      // service worker will serve it from. index.html serves it from
+      // bi1wf/8t6ked.js — same relative path here, so it resolves.
+      // (The Controller class reads it via the SW's getInjectScripts path,
+      // which uses controller.config + injectPath, both defaulting correctly.)
+
+      // Give the SW a moment to register the controller prefix
+      // (it happens via postMessage in Controller.setupMessagePort).
+      return waitFor(function () { return controller.frames !== undefined; }, 1000)
+        .then(function () { return controller.wait(); })
+        .then(function () { return controller; });
+    })
+    .then(function (controller) {
+      // Create the proxied iframe inside our own holder.
+      var iframe = document.createElement("iframe");
+      iframe.setAttribute("allow", "clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture");
+      iframe.setAttribute("allowfullscreen", "true");
+      holder.appendChild(iframe);
+
+      // createFrame(iframe, options) is Cherri's own API — see 9lcbx4.js:
+      //   createFrame(element, options) → new Frame(this, element, options)
+      // Frame's constructor wires up hooks and gives the frame its own
+      // per-frame prefix under controller.prefix.
+      var frame = controller.createFrame(iframe, { plugins: [] });
+
+      // Frame exposes .go(url) which rewrites the URL through the proxy and
+      // sets iframe.src. That's the exact call index.html's UI ultimately
+      // makes when you type in the address bar.
+      frame.go(target.href);
+
+      iframe.addEventListener("load", hide);
+      setTimeout(hide, 8000);   // fallback: reveal even if load is silent
+
+      statusEl.textContent = "";
+      hide();
     })
     .catch(function (err) {
-      console.warn("[direct] SW registration failed:", err);
-    })
-    .then(function () {
-      // Point the iframe at the proxied URL
-      frameEl.addEventListener("load", function onLoad() {
-        frameEl.removeEventListener("load", onLoad);
-        statusEl.classList.add("hidden");
-      });
-
-      frameEl.addEventListener("error", function () {
-        fail(
-          "Failed to load proxied page.<br><br>" +
-          "Check that <code>" + PROXY_PREFIX + "</code> is the correct " +
-          "proxy prefix for this build (see comment in direct.html)."
-        );
-      });
-
-      frameEl.src = proxiedHref;
-
-      // Safety net: if load never fires within 15s, reveal the frame anyway
-      // so the user isn't stuck on the splash forever.
-      setTimeout(function () {
-        statusEl.classList.add("hidden");
-      }, 15000);
+      console.error("[direct]", err);
+      fail(
+        "Could not start proxy.\n\n" + (err && err.message ? err.message : String(err)) +
+        "\n\nMake sure index.html has been opened once on this origin so\n" +
+        "the service worker (v6hxi5.js) is installed, then reload this page."
+      );
     });
 })();
 </script>
