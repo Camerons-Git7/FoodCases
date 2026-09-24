@@ -11,17 +11,21 @@
   #status { position:fixed; inset:0; display:flex; align-items:flex-start; justify-content:flex-start;
             color:#ddd; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace; background:#0a0a0a;
             text-align:left; padding:16px; box-sizing:border-box; white-space:pre-wrap;
-            overflow:auto; z-index:10; }
+            overflow:auto; z-index:2147483647; }
   #status.hidden { display:none; }
+  /* The bundle's own CSS may try to style the body; make sure our frame wins. */
+  html.cherri-direct body > *:not(#frame-holder):not(#status) { display:none !important; }
 </style>
 </head>
-<body>
+<body class="cherri-direct">
 
 <div id="status">Starting proxy…</div>
 <div id="frame-holder"></div>
 
+<!-- Same three scripts index.html loads, same order. -->
 <script src="./bi1wf/8t6ked.js"></script>
 <script src="./bwd9x/9lcbx4.js"></script>
+<script src="./assets/bundle-1vghyvjv.js"></script>
 
 <script>
 (function () {
@@ -39,127 +43,173 @@
   var target;
   try { target = new URL(raw); } catch (e) { fail("Invalid URL"); return; }
 
-  if (!window._wdgvkq9 || !window._wdgvkq9.Controller) { fail("Runtime not loaded."); return; }
+  // ---- Find the wisp client class the bundle defined ------------------
+  // In the bundle it's minified as `sl`, and the WebSocket wrapper is `Ft`.
+  // We scan the bundle's module registry by grabbing a reference the first
+  // time the bundle exposes anything on window.
+  function findWispClient() {
+    // The bundle doesn't export these directly, so we instantiate one via the
+    // bundle's own code path: the app creates `new sl(url)` where sl is the
+    // wisp client. We can reach it by walking the module closure indirectly:
+    // the app stores the created transport on the controller, so the safest
+    // way is to reconstruct it from the wisp URL ourselves using the same
+    // class the app does.
+    //
+    // If the bundle has already created a controller, grab its transport.
+    if (window.__cherriController && window.__cherriController.frames) {
+      // not helpful here
+    }
+    // Fallback: the bundle exposes an internal module system, but the cleanest
+    // way is to just construct our own using the standard wisp protocol which
+    // we have full source for (see WispClient below).
+    return null;
+  }
 
-  // Wisp endpoints — copied from the bundle (gQe + gB.wisp).
+  // ---- Real wisp client (mirrors `sl` in the bundle) ------------------
+  // Packet types from the bundle: DATA=2, CONTINUE=3, CLOSE=4.
+  // Stream-create is frame type 1; the payload layout is:
+  //   [stream_type(1) | port(2) | hostname(rest)]
+  // Both the connect payload and the close payload use the QB() encoder
+  // from the bundle, which writes a 4-byte big-endian length prefix.
+  var RL_DATA = 2, RL_CONTINUE = 3, RL_CLOSE = 4;
+
+  function u32(n) {
+    var b = new Uint8Array(4);
+    new DataView(b.buffer).setUint32(0, n);
+    return b;
+  }
+  function u16(n) {
+    var b = new Uint8Array(2);
+    new DataView(b.buffer).setUint16(0, n);
+    return b;
+  }
+  function concat() {
+    var total = 0, i;
+    for (i = 0; i < arguments.length; i++) total += arguments[i].length;
+    var out = new Uint8Array(total), off = 0;
+    for (i = 0; i < arguments.length; i++) { out.set(arguments[i], off); off += arguments[i].length; }
+    return out;
+  }
+  // QB(type, id, payload): [type(1) | id(4) | len(payload)(4) | payload]
+  function QB(type, id, payload) {
+    payload = payload || new Uint8Array(0);
+    var out = new Uint8Array(1 + 4 + 4 + payload.length);
+    out[0] = type;
+    new DataView(out.buffer).setUint32(1, id);
+    new DataView(out.buffer).setUint32(5, payload.length);
+    out.set(payload, 9);
+    return out;
+  }
+
+  function WispClient(url) {
+    var self = this;
+    this.url = url;
+    this.ws = new WebSocket(url);
+    this.ws.binaryType = "arraybuffer";
+    this.nextStreamId = 1;
+    this.streams = {};
+    this.connected = false;
+    this._readyP = new Promise(function (resolve, reject) {
+      self.ws.addEventListener("open", function () { self.connected = true; resolve(); });
+      self.ws.addEventListener("error", function () { if (!self.connected) reject(new Error("ws error")); });
+      self.ws.addEventListener("close", function () { if (!self.connected) reject(new Error("ws closed")); });
+      setTimeout(function () { if (!self.connected) reject(new Error("ws timeout")); }, 10000);
+    });
+    this.ws.addEventListener("message", function (ev) { self._onMsg(ev); });
+  }
+  WispClient.prototype.ready = function () { return this._readyP; };
+  WispClient.prototype.init  = function () { return this._readyP; };
+  WispClient.prototype._onMsg = function (ev) {
+    var buf = new Uint8Array(ev.data);
+    if (buf.length < 5) return;
+    var type = buf[0];
+    var id   = new DataView(buf.buffer).getUint32(1);
+    var body = buf.slice(5);
+    var stream = this.streams[id];
+    if (!stream) return;
+    if (type === RL_DATA) {
+      stream.onData(body);
+    } else if (type === RL_CLOSE) {
+      var code = body[0] || 1000;
+      stream.onClose(code, "");
+      delete this.streams[id];
+    }
+  };
+  WispClient.prototype.request = function (remote, method, body, headers) {
+    var self = this;
+    return this._readyP.then(function () {
+      var host = remote.hostname, port = Number(remote.port) || (remote.protocol === "https:" ? 443 : 80);
+      var id = self.nextStreamId++;
+      var payload = concat(new Uint8Array([1]), u16(port), new TextEncoder().encode(host));
+      return new Promise(function (resolve, reject) {
+        var respHeaders = [], respStatus = 200, chunks = [], done = false;
+        self.streams[id] = {
+          onData: function (chunk) {
+            // Wisp sends one complete HTTP response as a series of DATA frames:
+            // the first frame is the status line + headers, then body frames.
+            // The simplest reliable decode is to accumulate and let the caller
+            // treat the whole thing as a byte stream; the SW expects body bytes.
+            chunks.push(chunk);
+          },
+          onClose: function (code) {
+            if (done) return;
+            done = true;
+            var all = concat.apply(null, chunks);
+            // Parse minimal status from the first bytes if present:
+            var text = "";
+            try { text = new TextDecoder("latin1").decode(all.slice(0, 128)); } catch (e) {}
+            var statusMatch = text.match(/^HTTP\/\d\.\d (\d{3})/);
+            var status = statusMatch ? parseInt(statusMatch[1], 10) : 200;
+            var headerEnd = text.indexOf("\r\n\r\n");
+            var bodyStart = headerEnd >= 0 ? headerEnd + 4 : 0;
+            resolve({
+              status: status,
+              statusText: "",
+              headers: respHeaders,
+              body: all.slice(bodyStart).buffer
+            });
+          }
+        };
+        self.ws.send(QB(1, id, payload));
+        // Send HTTP request as the first DATA payload on this stream
+        var reqLine = (method || "GET") + " " + (remote.pathname + remote.search || "/") + " HTTP/1.1\r\n";
+        var hostHdr = "Host: " + host + "\r\n";
+        var hdrs = (headers || []).map(function (h) { return h[0] + ": " + h[1] + "\r\n"; }).join("");
+        var tail = "Connection: close\r\n\r\n";
+        var reqBytes = new TextEncoder().encode(reqLine + hostHdr + hdrs + tail);
+        self.ws.send(QB(2, id, reqBytes));
+
+        setTimeout(function () {
+          if (!done) { done = true; delete self.streams[id]; reject(new Error("wisp timeout")); }
+        }, 30000);
+      });
+    });
+  };
+  WispClient.prototype.connect = function () {
+    throw new Error("WebSockets not supported in direct.html");
+  };
+
+  // ---- SW / controller bootstrap -------------------------------------
   var WISP_URLS = [
     "wss://fern.best/wisp/",
     "wss://fern.best/socket/",
     "wss://kristenblackburnvolleyballcamps.com/socket/"
   ];
-
-  // ---- Wisp transport ---------------------------------------------------
-  // This is the same protocol class `eH` in the bundle implements.
-  function WispTransport(urls) {
-    this.urls = urls;
-    this.ws = null;
-    this.ready = false;
-    this.seq = 0;
-    this.pending = new Map();
-    this._readyP = null;
-  }
-  WispTransport.prototype.init = function () {
-    var self = this;
-    if (self._readyP) return self._readyP;
-    self._readyP = (function tryNext(i) {
-      if (i >= self.urls.length) throw new Error("all wisp endpoints failed");
-      return new Promise(function (resolve, reject) {
-        var ws = new WebSocket(self.urls[i]);
-        ws.binaryType = "arraybuffer";
-        var opened = false;
-        ws.onopen = function () {
-          opened = true;
-          self.ws = ws;
-          self.ready = true;
-          resolve();
-        };
-        ws.onmessage = function (ev) { self._onMessage(ev.data); };
-        ws.onclose = function () {
-          self.ws = null;
-          self.ready = false;
-          if (!opened) { try { resolve(tryNext(i + 1)); } catch (e) { reject(e); } }
-        };
-        ws.onerror = function () {
-          if (!opened) { try { resolve(tryNext(i + 1)); } catch (e) { reject(e); } }
-        };
-        setTimeout(function () {
-          if (!opened) { try { ws.close(); } catch (e) {} }
-        }, 8000);
-      });
-    })(0);
-    return self._readyP;
-  };
-  WispTransport.prototype._send = function (obj, transfer) {
-    if (!this.ws) throw new Error("wisp not connected");
-    // Wisp protocol: 4-byte big-endian type + JSON payload (or raw bytes after).
-    var payload = new TextEncoder().encode(JSON.stringify(obj));
-    var buf = new Uint8Array(4 + payload.length);
-    var dv = new DataView(buf.buffer);
-    dv.setUint32(0, obj.type === "connect" ? 1 :
-                    obj.type === "data"    ? 2 :
-                    obj.type === "close"   ? 3 : 0);
-    buf.set(payload, 4);
-    this.ws.send(buf);
-  };
-  WispTransport.prototype._onMessage = function (data) {
-    if (!(data instanceof ArrayBuffer)) return;
-    var dv = new DataView(data);
-    var type = dv.getUint32(0);
-    var body = data.slice(4);
-    var meta;
-    try { meta = JSON.parse(new TextDecoder().decode(body)); }
-    catch (e) { meta = null; }
-    if (!meta) return;
-    var p = this.pending.get(meta.id);
-    if (!p) return;
-    if (type === 0) {
-      // Response
-      var headers = meta.headers || [];
-      var status = meta.status || 200;
-      // If body is binary in a subsequent message we'd accumulate; wisp/epoxy
-      // servers generally send the whole response as one binary frame.
-      var bodyBuf = meta.body ? Uint8Array.from(atob(meta.body), c => c.charCodeAt(0)).buffer
-                              : new ArrayBuffer(0);
-      this.pending.delete(meta.id);
-      p.resolve({ status: status, statusText: "", headers: headers, body: bodyBuf });
-    }
-  };
-  WispTransport.prototype.request = function (remote, method, body, headers) {
-    var self = this;
-    return this.init().then(function () {
-      var id = ++self.seq;
-      return new Promise(function (resolve, reject) {
-        self.pending.set(id, { resolve: resolve, reject: reject });
-        self._send({
-          type: "request",
-          id: id,
-          url: remote.href,
-          method: method || "GET",
-          headers: headers || [],
-          body: body ? Array.from(new Uint8Array(body)) : null
-        });
-        setTimeout(function () {
-          if (self.pending.has(id)) {
-            self.pending.delete(id);
-            reject(new Error("wisp request timeout"));
-          }
-        }, 30000);
-      });
-    });
-  };
-  WispTransport.prototype.connect = function (url, protocols, headers, onOpen, onData, onClose, onErr) {
-    var self = this;
-    return this.init().then(function () {
-      var id = ++self.seq;
-      var openFn = function (proto, ext) { onOpen(proto, ext); };
-      self._send({ type: "websocket-open", id: id, url: url.href, protocols: protocols || [], headers: headers || [] });
-      return [function send(d) { self._send({ type: "websocket-data", id: id, data: Array.from(new Uint8Array(d)) }); },
-              function close(code, reason) { self._send({ type: "websocket-close", id: id, code: code || 1000, reason: reason || "" }); }];
-    });
-  };
-
-  // ---- SW / controller bootstrap (mirrors bundle's lqA + uqA) ----------
   var SW_FILE = window.__SW_FILE__ ? window.__SW_FILE__.split("/").pop() : "v6hxi5.js";
+  var IqA = "fn5315/";
+  var codec = {
+    encode: function (e) { if (!e) return e;
+      var t = new TextEncoder().encode(e), a = "";
+      for (var r = 0; r < t.length; r++) a += String.fromCharCode(t[r]);
+      return btoa(a).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); },
+    decode: function (e) { if (!e) return e;
+      var t = e.replace(/-/g, "+").replace(/_/g, "/");
+      while (t.length % 4) t += "=";
+      var a = atob(t), r = new Uint8Array(a.length);
+      for (var o = 0; o < a.length; o++) r[o] = a.charCodeAt(o);
+      return new TextDecoder().decode(r); }
+  };
+  function Ij(scope, p) { return scope + (p.startsWith("/") ? p.slice(1) : p); }
 
   function getWorkerAndRegistration() {
     return navigator.serviceWorker.getRegistrations().then(function (regs) {
@@ -192,54 +242,43 @@
       });
   }
 
-  var IqA = "fn5315/";
-  var codec = {
-    encode: function (e) { if (!e) return e;
-      var t = new TextEncoder().encode(e), a = "";
-      for (var r = 0; r < t.length; r++) a += String.fromCharCode(t[r]);
-      return btoa(a).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); },
-    decode: function (e) { if (!e) return e;
-      var t = e.replace(/-/g, "+").replace(/_/g, "/");
-      while (t.length % 4) t += "=";
-      var a = atob(t), r = new Uint8Array(a.length);
-      for (var o = 0; o < a.length; o++) r[o] = a.charCodeAt(o);
-      return new TextDecoder().decode(r); }
-  };
-  function Ij(scope, p) { return scope + (p.startsWith("/") ? p.slice(1) : p); }
+  // Try wisp endpoints in order
+  function tryWisp(i) {
+    if (i >= WISP_URLS.length) throw new Error("all wisp endpoints failed");
+    var t = new WispClient(WISP_URLS[i]);
+    return t.ready().then(function () { log("wisp ok: " + WISP_URLS[i]); return t; },
+                           function () { return tryWisp(i + 1); });
+  }
 
-  var transport = new WispTransport(WISP_URLS);
-  transport.init().then(function () {
-    log("wisp connected");
-    return getWorkerAndRegistration();
-  }).then(function (pair) {
-    var r = new URL(pair.registration.scope).pathname;
-    log("scope = " + r);
-    var controller = new window._wdgvkq9.Controller({
-      serviceworker: pair.worker,
-      transport: transport,
-      config: {
-        prefix: r + IqA,
-        codec: codec,
-        _iyosyjgPath: Ij(r, "bi1wf/8t6ked.js"),
-        injectPath:   Ij(r, "bwd9x/cdt4qb.js"),
-        wasmPath:     Ij(r, "bi1wf/ri1n3t.wasm")
-      }
+  log("starting…");
+  tryWisp(0).then(function (transport) {
+    return getWorkerAndRegistration().then(function (pair) {
+      var r = new URL(pair.registration.scope).pathname;
+      var controller = new window._wdgvkq9.Controller({
+        serviceworker: pair.worker,
+        transport: transport,
+        config: {
+          prefix: r + IqA,
+          codec: codec,
+          _iyosyjgPath: Ij(r, "bi1wf/8t6ked.js"),
+          injectPath:   Ij(r, "bwd9x/cdt4qb.js"),
+          wasmPath:     Ij(r, "bi1wf/ri1n3t.wasm")
+        }
+      });
+      log("prefix = " + controller.prefix);
+      return controller.wait().then(function () { return controller; });
     });
-    log("controller.prefix = " + controller.prefix);
-    return controller.wait().then(function () { return controller; });
   }).then(function (controller) {
     var iframe = document.createElement("iframe");
     iframe.setAttribute("allow", "autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-read; clipboard-write");
     iframe.setAttribute("allowfullscreen", "true");
     holder.appendChild(iframe);
     var frame = controller.createFrame(iframe);
-    log("frame.prefix = " + frame.prefix);
     iframe.addEventListener("load", function () { hide(); });
-    log("frame.go(" + target.href + ")");
     frame.go(target.href);
     setTimeout(hide, 15000);
   }).catch(function (e) {
-    fail((e && e.message ? e.message : String(e)));
+    fail(e && e.message ? e.message : String(e));
   });
 })();
 </script>
