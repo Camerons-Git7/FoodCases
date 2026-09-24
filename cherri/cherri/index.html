@@ -3,108 +3,6 @@
       <head>
         <meta charset="UTF-8" />
 
-    <script>
-      // Direct proxy mode: ?url=https://example.com  → full-page proxied site, no Cherri UI
-      (function () {
-        try {
-          var p = new URLSearchParams(location.search);
-          var raw = p.get("url");
-          if (!raw) return;
-
-          if (!/^https?:\/\//i.test(raw) && raw.indexOf("cherri://") !== 0) {
-            raw = "https://" + raw;
-          }
-          window.__CHERRI_DIRECT_URL__ = raw;
-
-          try { localStorage.setItem("cherri_onboarded", "1"); } catch (e) {}
-
-          document.documentElement.classList.add("cherri-direct");
-
-          var style = document.createElement("style");
-          style.textContent = [
-            "html.cherri-direct, html.cherri-direct body { margin:0 !important; padding:0 !important; overflow:hidden !important; background:#000 !important; }",
-            "html.cherri-direct body > *:not(#cherri-direct-frame) { visibility:hidden !important; pointer-events:none !important; }",
-            "html.cherri-direct #cherri-direct-frame { visibility:visible !important; pointer-events:auto !important; position:fixed !important; inset:0 !important; width:100% !important; height:100% !important; border:0 !important; margin:0 !important; padding:0 !important; z-index:2147483647 !important; background:#000 !important; }",
-            "html.cherri-direct #cherri-direct-status { visibility:visible !important; pointer-events:none !important; position:fixed !important; inset:0 !important; z-index:2147483646 !important; display:flex !important; align-items:center !important; justify-content:center !important; color:#aaa !important; font:14px/1.4 system-ui,sans-serif !important; background:#0a0a0a !important; }"
-          ].join("\n");
-          document.documentElement.appendChild(style);
-
-          function bootDirect() {
-            var status = document.getElementById("cherri-direct-status");
-            if (!status) {
-              status = document.createElement("div");
-              status.id = "cherri-direct-status";
-              status.textContent = "Starting proxy…";
-              document.body.appendChild(status);
-            }
-
-            var tries = 0;
-            var maxTries = 90;
-
-            function tick() {
-              tries++;
-              var nav = window.__cherriNavigate;
-              if (typeof nav !== "function") {
-                if (tries < maxTries) return setTimeout(tick, 500);
-                status.textContent = "Proxy failed to start (navigate API missing). Hard-reload and try again.";
-                return;
-              }
-
-              try { nav(window.__CHERRI_DIRECT_URL__); } catch (e) {
-                status.textContent = "Navigate failed: " + (e && e.message ? e.message : e);
-                return;
-              }
-
-              var promoteTries = 0;
-              function promote() {
-                promoteTries++;
-                var frames = document.querySelectorAll("iframe");
-                var best = null;
-                for (var i = 0; i < frames.length; i++) {
-                  var f = frames[i];
-                  if (f.id === "cherri-direct-frame") continue;
-                  var src = f.getAttribute("src") || "";
-                  if (src.indexOf("/~/") !== -1 || src.indexOf("fn5315") !== -1 || src.indexOf("/scram") !== -1 || (src && src.indexOf(location.origin) === 0 && src !== location.href)) {
-                    best = f;
-                    break;
-                  }
-                  if (!best && f.offsetWidth > 100 && f.offsetHeight > 100) best = f;
-                }
-                if (!best) {
-                  if (promoteTries < 60) return setTimeout(promote, 500);
-                  status.textContent = "Proxy started but no content frame appeared.";
-                  return;
-                }
-
-                best.id = "cherri-direct-frame";
-                best.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;margin:0;padding:0;z-index:2147483647;background:#000";
-                document.body.appendChild(best);
-                if (status && status.parentNode) status.parentNode.removeChild(status);
-
-                var obs = new MutationObserver(function () {
-                  if (!document.getElementById("cherri-direct-frame")) {
-                    obs.disconnect();
-                    setTimeout(promote, 200);
-                  }
-                });
-                obs.observe(document.body, { childList: true, subtree: true });
-              }
-              setTimeout(promote, 800);
-            }
-            tick();
-          }
-
-          if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", bootDirect);
-          } else {
-            bootDirect();
-          }
-        } catch (e) {
-          console.error("[cherri-direct]", e);
-        }
-      })();
-    </script>
-
 <script>
 
 
@@ -231,8 +129,7 @@
   
         <script src="./assets/bundle-1vghyvjv.js"></script>
 
-    <!-- Direct URL mode: index.html?url=https://example.com  → full-viewport
-         proxied page with the Cherri UI hidden. -->
+    <!-- Direct URL mode: index.html?url=https://example.com -->
     <script>
       (function () {
         var p = new URLSearchParams(location.search);
@@ -240,46 +137,83 @@
         if (!raw) return;
         if (!/^https?:\/\//i.test(raw) && raw.indexOf("cherri://") !== 0) raw = "https://" + raw;
 
-        document.documentElement.classList.add("cherri-direct-mode");
-
-        var css = document.createElement("style");
-        css.textContent = [
-          "html.cherri-direct-mode body > *:not(#cherri-direct-root) { display:none !important; visibility:hidden !important; }",
-          "html.cherri-direct-mode #cherri-direct-root { position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important; z-index:2147483647 !important; background:#000 !important; display:block !important; visibility:visible !important; margin:0 !important; padding:0 !important; }",
-          "html.cherri-direct-mode #cherri-direct-root iframe { width:100% !important; height:100% !important; border:0 !important; margin:0 !important; padding:0 !important; display:block !important; }"
-        ].join("\n");
-        document.head.appendChild(css);
+        // Show a status line while we work, so we're never staring at pure black
+        var status = document.createElement("div");
+        status.id = "cherri-direct-status";
+        status.textContent = "Loading " + raw + " …";
+        status.style.cssText =
+          "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;" +
+          "background:#0a0a0a;color:#888;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;" +
+          "z-index:2147483647;text-align:center;padding:24px;box-sizing:border-box";
+        document.body.appendChild(status);
 
         var tries = 0;
-        var maxTries = 120; // ~60s
+        var maxTries = 240; // 120s
+        var navigated = false;
+        var promoted = false;
+
+        function hideApp() {
+          // Hide every body child except our status + the iframe container
+          var kids = document.body.children;
+          for (var i = 0; i < kids.length; i++) {
+            var k = kids[i];
+            if (k === status || k.id === "cherri-direct-root") continue;
+            k.style.setProperty("display", "none", "important");
+            k.style.setProperty("visibility", "hidden", "important");
+          }
+        }
+
+        function promote() {
+          if (promoted) return true;
+          var frames = document.querySelectorAll("iframe");
+          var best = null, bestArea = 0;
+          for (var i = 0; i < frames.length; i++) {
+            var f = frames[i];
+            var a = f.offsetWidth * f.offsetHeight;
+            if (a > bestArea) { bestArea = a; best = f; }
+          }
+          if (!best || bestArea < 10000) return false;
+          var root = document.getElementById("cherri-direct-root");
+          if (!root) {
+            root = document.createElement("div");
+            root.id = "cherri-direct-root";
+            document.body.appendChild(root);
+          }
+          root.appendChild(best);
+          best.style.cssText = "width:100%;height:100%;border:0;margin:0;padding:0;display:block;background:#000";
+          status.remove();
+          promoted = true;
+          return true;
+        }
+
+        hideApp();
 
         (function tick() {
-          if (typeof window.__cherriNavigate === "function") {
-            try { window.__cherriNavigate(raw); } catch (e) { /* ignore */ }
+          tries++;
 
-            // Give the app a moment to spawn its proxied iframe, then lift
-            // the largest visible iframe into a full-viewport container.
-            setTimeout(function () {
-              var frames = document.querySelectorAll("iframe");
-              var best = null;
-              for (var i = 0; i < frames.length; i++) {
-                var f = frames[i];
-                if (f.offsetWidth > 200 && f.offsetHeight > 200) { best = f; break; }
-              }
-              if (!best) {
-                // Try once more a bit later
-                setTimeout(arguments.callee, 1500);
-                return;
-              }
-              var root = document.createElement("div");
-              root.id = "cherri-direct-root";
-              document.body.appendChild(root);
-              root.appendChild(best);
-              best.style.cssText = "width:100%;height:100%;border:0;margin:0;padding:0;display:block;background:#000";
-            }, 1500);
+          if (!navigated && typeof window.__cherriNavigate === "function") {
+            try {
+              window.__cherriNavigate(raw);
+              navigated = true;
+            } catch (e) {
+              status.textContent = "Navigate error: " + (e && e.message ? e.message : e);
+              return;
+            }
+          }
+
+          if (navigated) {
+            hideApp();
+            if (promote()) return;
+            // Give the iframe more time to appear
+            if (tries < maxTries) return setTimeout(tick, 500);
+            status.textContent = "Proxy started but no content iframe appeared.";
             return;
           }
-          if (++tries > maxTries) return;
+
+          if (tries >= maxTries) {
+            status.textContent = "Timed out waiting for the app's navigate API.";
+            return;
+          }
           setTimeout(tick, 500);
         })();
       })();
