@@ -7,12 +7,12 @@
 <style>
   html, body { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }
   #frame-holder { position:fixed; inset:0; width:100vw; height:100vh; background:#000; }
-  #frame-holder iframe { width:100%; height:100%; border:0; margin:0; padding:0; display:block; background:#000; }
+  #frame-holder iframe { width:100%; height:100%; border:0; margin:0; padding:0; display:block; }
   #status { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-            color:#aaa; font:14px/1.5 system-ui,sans-serif; background:#0a0a0a; text-align:center;
-            padding:24px; box-sizing:border-box; white-space:pre-wrap; }
+            color:#aaa; font:13px/1.6 ui-monospace,Menlo,Consolas,monospace; background:#0a0a0a;
+            text-align:left; padding:24px; box-sizing:border-box; white-space:pre-wrap;
+            overflow:auto; z-index:10; }
   #status.hidden { display:none; }
-  #status code { color:#6cf; }
 </style>
 </head>
 <body>
@@ -20,7 +20,6 @@
 <div id="status">Starting proxy…</div>
 <div id="frame-holder"></div>
 
-<!-- These are the same two scripts index.html loads, in the same order. -->
 <script src="./bi1wf/8t6ked.js"></script>
 <script src="./bwd9x/9lcbx4.js"></script>
 
@@ -28,146 +27,142 @@
 (function () {
   var statusEl = document.getElementById("status");
   var holder   = document.getElementById("frame-holder");
+  var lines = [];
+  function log(m) { lines.push(m); statusEl.textContent = lines.join("\n"); console.log("[direct]", m); }
+  function fail(m) { log("FAIL: " + m); }
 
-  function fail(msg) {
-    statusEl.classList.remove("hidden");
-    statusEl.innerHTML = msg;
-  }
-  function hide() { statusEl.classList.add("hidden"); }
+  log("1. location = " + location.href);
+  log("2. _nog837i = " + typeof window._nog837i);
+  log("3. _wdgvkq9 = " + typeof window._wdgvkq9);
+  if (window._wdgvkq9) log("   keys: " + Object.keys(window._wdgvkq9).join(","));
+  log("4. SW support = " + ("serviceWorker" in navigator));
+  log("5. SW controller = " + (navigator.serviceWorker.controller
+        ? navigator.serviceWorker.controller.scriptURL : "(none)"));
 
-  // ---- 1. Target URL ------------------------------------------------------
   var params = new URLSearchParams(location.search);
   var raw = params.get("url");
-  if (!raw) {
-    fail("Missing <code>?url=</code> parameter.\n\nExample: direct.html?url=https://example.com");
-    return;
-  }
-  if (!/^https?:\/\//i.test(raw) && raw.indexOf("cherri://") !== 0) raw = "https://" + raw;
-  var target;
-  try { target = new URL(raw); } catch (e) { fail("Invalid URL: " + raw); return; }
+  if (!raw) { fail("no ?url="); return; }
+  if (!/^https?:\/\//i.test(raw)) raw = "https://" + raw;
+  var target = new URL(raw);
+  log("6. target = " + target.href);
 
-  // ---- 2. Wait for the controller runtime to exist ------------------------
-  // bwd9x/9lcbx4.js sets window._wdgvkq9 = { Controller, Frame, ... }.
-  // It also needs the matching SW (v6hxi5.js) to be active on this origin,
-  // because Frame() drives everything through the SW's MessageChannel.
-  function waitFor(cond, timeoutMs, intervalMs) {
-    return new Promise(function (resolve, reject) {
-      var t0 = Date.now();
-      (function tick() {
-        try { if (cond()) return resolve(); } catch (e) {}
-        if (Date.now() - t0 > timeoutMs) return reject(new Error("timeout"));
-        setTimeout(tick, intervalMs || 50);
-      })();
+  function checkScripts() {
+    if (typeof window._nog837i === "undefined") {
+      log("   !! _nog837i (bi1wf/8t6ked.js) did not load");
+    }
+    if (typeof window._wdgvkq9 === "undefined") {
+      log("   !! _wdgvkq9 (bwd9x/9lcbx4.js) did not load");
+    }
+  }
+  checkScripts();
+
+  // Paths relative to this folder
+  var SW_URL      = new URL("v6hxi5.js", location.href).href;
+  var WASM_PATH   = new URL("_iyosyjg/_iyosyjg.wasm", location.href).href;
+  log("7. SW url   = " + SW_URL);
+  log("8. wasm url = " + WASM_PATH);
+
+  // Step A: register the SW if needed
+  if (!("serviceWorker" in navigator)) { fail("no SW"); return; }
+
+  navigator.serviceWorker.getRegistrations().then(function (regs) {
+    log("9. existing registrations = " + regs.length);
+    regs.forEach(function (r) {
+      var w = r.active || r.waiting || r.installing;
+      log("   - " + r.scope + "  worker=" + (w ? w.scriptURL : "(none)"));
     });
-  }
-
-  function ensureSW() {
-    if (!("serviceWorker" in navigator)) return Promise.reject(new Error("No service worker support"));
-    return navigator.serviceWorker.getRegistrations().then(function (regs) {
-      for (var i = 0; i < regs.length; i++) {
-        var w = regs[i].active || regs[i].waiting || regs[i].installing;
-        if (w && w.scriptURL.split("/").pop() === "v6hxi5.js") return regs[i];
+    var ours = regs.find(function (r) {
+      var w = r.active || r.waiting || r.installing;
+      return w && w.scriptURL.split("/").pop() === "v6hxi5.js";
+    });
+    if (ours) return ours;
+    log("10. registering v6hxi5.js");
+    return navigator.serviceWorker.register("v6hxi5.js", { scope: "./" });
+  }).then(function () {
+    return navigator.serviceWorker.ready;
+  }).then(function () {
+    log("11. SW ready");
+    log("12. controller now = " + (navigator.serviceWorker.controller
+          ? navigator.serviceWorker.controller.scriptURL : "(still none)"));
+    if (!navigator.serviceWorker.controller) {
+      // Try one reload
+      if (!sessionStorage.getItem("__d_reload")) {
+        sessionStorage.setItem("__d_reload", "1");
+        log("13. no controller yet → reloading once");
+        setTimeout(function(){ location.reload(); }, 400);
+        return new Promise(function(){}); // halt
+      } else {
+        log("13. still no controller after reload → giving up on SW");
       }
-      // Not registered yet → register it. It lives at the same folder level
-      // as this file (v6hxi5.js sits next to index.html).
-      return navigator.serviceWorker.register("v6hxi5.js", { scope: "./" });
-    }).then(function (reg) {
-      return navigator.serviceWorker.ready.then(function () {
-        // If we aren't controlled yet, one reload makes it take effect.
-        if (!navigator.serviceWorker.controller &&
-            !sessionStorage.getItem("__direct_sw_reloaded")) {
-          sessionStorage.setItem("__direct_sw_reloaded", "1");
-          location.reload();
-          return new Promise(function () {}); // halt
-        }
-        return reg;
-      });
-    });
-  }
+    }
+    sessionStorage.removeItem("__d_reload");
 
-  // ---- 3. Build the Controller + Frame ------------------------------------
-  var SW_URL = new URL("v6hxi5.js", location.href).href;
-  var RUNTIME_PATH = new URL("bi1wf/8t6ked.js", location.href).href;
-  var WASM_PATH = new URL("_iyosyjg/_iyosyjg.wasm", location.href).href;
+    // Step B: build Controller
+    if (typeof window._wdgvkq9 === "undefined" || !window._wdgvkq9.Controller) {
+      fail("_wdgvkq9.Controller not available");
+      return;
+    }
+    log("14. constructing Controller…");
 
-  ensureSW()
-    .then(function () {
-      return waitFor(function () { return window._wdgvkq9 && window._wdgvkq9.Controller; }, 10000);
-    })
-    .then(function () {
-      // Browser backend for scramjet (bare-mux style transport).
-      // The runtime bundled inside bwd9x/9lcbx4.js knows how to talk to the
-      // service worker; we just need to hand it a transport that can do
-      // direct fetch(). `fetch`-based transport is what Cherri's own app uses.
-      var transport = {
-        ready: Promise.resolve(true),
-        init:  function () { return Promise.resolve(); },
-        request: function (remote, method, body, headers) {
-          return fetch(remote.href, { method: method, body: body, headers: headers })
-            .then(function (res) {
-              return res.arrayBuffer().then(function (buf) {
-                return { status: res.status, statusText: res.statusText,
-                         headers: Array.from(res.headers), body: buf };
-              });
+    var transport = {
+      ready: Promise.resolve(true),
+      init: function () { return Promise.resolve(); },
+      request: function (remote, method, body, headers) {
+        log("   fetch " + method + " " + remote.href);
+        return fetch(remote.href, { method: method, body: body, headers: headers })
+          .then(function (res) {
+            return res.arrayBuffer().then(function (buf) {
+              return {
+                status: res.status,
+                statusText: res.statusText,
+                headers: Array.from(res.headers),
+                body: buf,
+              };
             });
-        },
-        connect: function () { throw new Error("WebSockets not supported in direct.html"); },
-      };
+          });
+      },
+      connect: function () { throw new Error("WebSocket not supported"); },
+    };
 
-      var controller = new window._wdgvkq9.Controller({
+    var controller;
+    try {
+      controller = new window._wdgvkq9.Controller({
         transport: transport,
         serviceworker: navigator.serviceWorker,
-        config: {
-          prefix: "/~/sj/",                       // matches 9lcbx4.js default
-          wasmPath: WASM_PATH,                    // absolute, so the SW can fetch it
-        },
+        config: { wasmPath: WASM_PATH },
       });
-      window.__directController = controller;
+    } catch (e) {
+      fail("Controller ctor: " + e.message);
+      return;
+    }
+    log("15. controller.prefix = " + controller.prefix);
 
-      // The controller needs the runtime script to be loadable at the path the
-      // service worker will serve it from. index.html serves it from
-      // bi1wf/8t6ked.js — same relative path here, so it resolves.
-      // (The Controller class reads it via the SW's getInjectScripts path,
-      // which uses controller.config + injectPath, both defaulting correctly.)
-
-      // Give the SW a moment to register the controller prefix
-      // (it happens via postMessage in Controller.setupMessagePort).
-      return waitFor(function () { return controller.frames !== undefined; }, 1000)
-        .then(function () { return controller.wait(); })
-        .then(function () { return controller; });
-    })
-    .then(function (controller) {
-      // Create the proxied iframe inside our own holder.
+    controller.wait().then(function () {
+      log("16. controller ready");
       var iframe = document.createElement("iframe");
-      iframe.setAttribute("allow", "clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture");
+      iframe.setAttribute("allow", "clipboard-read; clipboard-write; fullscreen; autoplay");
       iframe.setAttribute("allowfullscreen", "true");
       holder.appendChild(iframe);
 
-      // createFrame(iframe, options) is Cherri's own API — see 9lcbx4.js:
-      //   createFrame(element, options) → new Frame(this, element, options)
-      // Frame's constructor wires up hooks and gives the frame its own
-      // per-frame prefix under controller.prefix.
       var frame = controller.createFrame(iframe, { plugins: [] });
-
-      // Frame exposes .go(url) which rewrites the URL through the proxy and
-      // sets iframe.src. That's the exact call index.html's UI ultimately
-      // makes when you type in the address bar.
+      log("17. frame.prefix = " + frame.prefix);
+      log("18. frame.go(" + target.href + ")");
       frame.go(target.href);
 
-      iframe.addEventListener("load", hide);
-      setTimeout(hide, 8000);   // fallback: reveal even if load is silent
-
-      statusEl.textContent = "";
-      hide();
-    })
-    .catch(function (err) {
-      console.error("[direct]", err);
-      fail(
-        "Could not start proxy.\n\n" + (err && err.message ? err.message : String(err)) +
-        "\n\nMake sure index.html has been opened once on this origin so\n" +
-        "the service worker (v6hxi5.js) is installed, then reload this page."
-      );
+      iframe.addEventListener("load", function () {
+        log("19. iframe load fired");
+      });
+      setTimeout(function () {
+        log("20. iframe.src now = " + iframe.src);
+        log("21. iframe.contentWindow.location = " +
+            (iframe.contentWindow ? iframe.contentWindow.location.href : "(null)"));
+      }, 3000);
+    }).catch(function (e) {
+      fail("controller.wait(): " + e.message);
     });
+  }).catch(function (e) {
+    fail("SW setup: " + (e && e.message ? e.message : String(e)));
+  });
 })();
 </script>
 </body>
