@@ -162,13 +162,12 @@
             <button type="button" id="next">Next</button>
         </div>
     </div>
-
     <div id="watch" class="wrap hidden">
         <a href="#" class="back" id="back">← Back to Browse</a>
         <h1 id="watch-title"></h1>
         <div class="meta" id="watch-meta"></div>
         <div class="player-box">
-            <iframe id="player-frame" allowfullscreen allow="fullscreen; autoplay"></iframe>
+            <iframe id="player-frame" allowfullscreen allow="fullscreen; autoplay; encrypted-media; picture-in-picture"></iframe>
             <div id="player-msg" class="player-msg">
                 <div>
                     <p id="player-msg-title" style="font-size:1.1rem;margin:0 0 0.5rem">Player loading…</p>
@@ -190,14 +189,11 @@
             <p id="overview" style="opacity:0.9;line-height:1.5;margin:0"></p>
         </div>
     </div>
-
     <script>
 (function () {
     'use strict';
-
     var API_KEY = 'fb7bb23f03b6994dafc674c074d01761';
     var WATCH_KEY = '1070730380f5fee0d87cf0382670b255';
-
     var state = {
         tab: 'movies',
         page: 1,
@@ -212,7 +208,6 @@
         selectedSource: 'vidsrcXyz',
         watchContent: null
     };
-
     var sources = [
         { id: 'mapple', name: 'MappleTv', urls: { movie: 'https://mappletv.uk/watch/movie/{id}', tv: 'https://mappletv.uk/watch/tv/{id}-{season}-{episode}' } },
         { id: 'pstream', name: 'P-Stream', urls: { movie: 'https://iframe.pstream.mov/media/tmdb-movie-{id}', tv: 'https://iframe.pstream.mov/media/tmdb-tv-{id}/{season}/{episode}' } },
@@ -242,204 +237,36 @@
         { id: 'vidsrccx', name: 'VidSrcCX', urls: { movie: 'https://vidsrc.cx/embed/movie/{id}', tv: 'https://vidsrc.cx/embed/tv/{id}/{season}/{episode}' } }
     ];
 
-    // ---------- Proxy (FoodCases Scramjet) — only when playing ----------
-    var PROXY_SCOPE = (function () {
-        try {
-            var i = location.pathname.indexOf('/cherri/cherri');
-            if (i !== -1) return location.pathname.slice(0, i + '/cherri/cherri'.length) + '/';
-        } catch (e) {}
-        return '/cherri/cherri/';
-    })();
-    var SJ_SEGMENT = 'fn5315/';
-    var DEFAULT_WISP = 'wss://kristenblackburnvolleyballcamps.com/socket/';
-
-    function getWisp() {
-        try {
-            var raw = localStorage.getItem('cherri_settings') || localStorage.getItem('cherri_wispUrl');
-            if (!raw) return DEFAULT_WISP;
-            if (raw.indexOf('ws') === 0) return raw.slice(-1) === '/' ? raw : raw + '/';
-            var j = JSON.parse(raw);
-            if (j && j.wisp) return j.wisp.slice(-1) === '/' ? j.wisp : j.wisp + '/';
-        } catch (e) {}
-        return DEFAULT_WISP;
+    // ---------- Proxy via Cherri embed route (hash history) ----------
+    // Same path as index.html?url=… → #/embed?u=…
+    // Uses the real app Controller (Uf + epoxy), no hand-rolled SW handshake.
+    function embedProxyUrl(rawUrl) {
+        // Resolve index.html next to this file (cherri/cherri/seamless-tv.html)
+        var index = new URL('index.html', location.href);
+        return index.pathname + '#/embed?u=' + encodeURIComponent(rawUrl);
     }
 
-    var foodCodec = {
-        encode: function (e) {
-            if (!e) return e;
-            var t = new TextEncoder().encode(e), a = '', r;
-            for (r = 0; r < t.length; r++) a += String.fromCharCode(t[r]);
-            return btoa(a).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-        },
-        decode: function (e) {
-            if (!e) return e;
-            var t = e.replace(/-/g, '+').replace(/_/g, '/');
-            while (t.length % 4) t += '=';
-            var a = atob(t), r = new Uint8Array(a.length), o;
-            for (o = 0; o < a.length; o++) r[o] = a.charCodeAt(o);
-            return new TextDecoder().decode(r);
-        }
-    };
-
-    function joinScope(rel) {
-        return PROXY_SCOPE + String(rel).replace(/^\//, '');
-    }
-
-    function loadScript(src) {
-        return new Promise(function (resolve, reject) {
-            if (document.querySelector('script[data-cherri-src="' + src + '"]')) {
-                resolve();
-                return;
-            }
-            var s = document.createElement('script');
-            s.src = src;
-            s.async = false;
-            s.dataset.cherriSrc = src;
-            s.onload = function () { resolve(); };
-            s.onerror = function () { reject(new Error('Failed to load ' + src)); };
-            document.head.appendChild(s);
-        });
-    }
-
-    var proxy = { ready: false, controller: null, frame: null, iframeEl: null, initPromise: null, error: null };
-
-    function waitForActiveWorker(reg, timeoutMs) {
-        timeoutMs = timeoutMs || 15000;
-        if (reg.active) return Promise.resolve(reg.active);
-        if (navigator.serviceWorker.controller) return Promise.resolve(navigator.serviceWorker.controller);
-        return new Promise(function (resolve, reject) {
-            var t = setTimeout(function () {
-                reject(new Error('Timed out waiting for active service worker'));
-            }, timeoutMs);
-            function done(w) {
-                clearTimeout(t);
-                navigator.serviceWorker.removeEventListener('controllerchange', onChange);
-                resolve(w);
-            }
-            function onChange() {
-                if (navigator.serviceWorker.controller) done(navigator.serviceWorker.controller);
-            }
-            navigator.serviceWorker.addEventListener('controllerchange', onChange);
-            var w = reg.installing || reg.waiting;
-            if (w) {
-                w.addEventListener('statechange', function () {
-                    if (w.state === 'activated' && (reg.active || navigator.serviceWorker.controller)) {
-                        done(reg.active || navigator.serviceWorker.controller);
-                    }
-                });
-            }
-        });
-    }
-
-    function initScramjetProxy() {
-        if (proxy.initPromise) return proxy.initPromise;
-        proxy.initPromise = (async function () {
-            try {
-                if (location.pathname.indexOf('/cherri/cherri') === -1) {
-                    throw new Error('Host this file under /cherri/cherri/');
-                }
-                if (!('serviceWorker' in navigator)) throw new Error('No serviceWorker support');
-
-                await loadScript(joinScope('bi1wf/8t6ked.js'));
-                await loadScript(joinScope('bwd9x/9lcbx4.js'));
-                try {
-                    await loadScript('https://cdn.jsdelivr.net/npm/@mercuryworkshop/libcurl-transport@1.5.0/dist/index.js');
-                } catch (e) {}
-                try {
-                    await loadScript('https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-transport@2.1.27/dist/index.js');
-                } catch (e) {}
-
-                var reg = null;
-                if (window.__swRegistration) {
-                    try { reg = await window.__swRegistration; } catch (e) {}
-                }
-                if (!reg) reg = await navigator.serviceWorker.getRegistration(PROXY_SCOPE);
-                if (!reg) {
-                    reg = await navigator.serviceWorker.register(joinScope('v6hxi5.js'), { scope: PROXY_SCOPE });
-                }
-                await navigator.serviceWorker.ready;
-
-                var worker = await waitForActiveWorker(reg);
-                if (!worker || typeof worker.postMessage !== 'function') {
-                    throw new Error('No active ServiceWorker (open main cherri page once, then reload)');
-                }
-
-                var api = window._wdgvkq9 || window.$scramjetController;
-                if (!api || !api.Controller) throw new Error('Controller API missing');
-
-                var wisp = getWisp();
-                var transport = null;
-                var LibcurlClient =
-                    (window.CurlMod && (window.CurlMod.LibcurlClient || window.CurlMod.default)) ||
-                    (window.LibcurlTransport && (window.LibcurlTransport.LibcurlClient || window.LibcurlTransport)) ||
-                    window.LibcurlClient || null;
-                var EpoxyClient =
-                    (window.EpxMod && (window.EpxMod.EpoxyClient || window.EpxMod.default)) ||
-                    window.EpoxyClient || window.EpoxyTransport || null;
-
-                if (LibcurlClient) {
-                    transport = new LibcurlClient({ wisp: wisp });
-                    if (transport.init) await transport.init();
-                } else if (EpoxyClient) {
-                    transport = new EpoxyClient({ wisp: wisp });
-                    if (transport.init) await transport.init();
-                } else {
-                    throw new Error('No libcurl/epoxy transport available');
-                }
-
-                var controller = new api.Controller({
-                    serviceworker: worker,
-                    transport: transport,
-                    config: {
-                        prefix: PROXY_SCOPE + SJ_SEGMENT,
-                        codec: foodCodec,
-                        _iyosyjgPath: joinScope('bi1wf/8t6ked.js'),
-                        injectPath: joinScope('bwd9x/cdt4qb.js'),
-                        wasmPath: joinScope('bi1wf/ri1n3t.wasm')
-                    }
-                });
-                if (controller.wait) await controller.wait();
-
-                proxy.controller = controller;
-                proxy.ready = true;
-                proxy.error = null;
-                return proxy;
-            } catch (err) {
-                proxy.ready = false;
-                proxy.error = err && err.message ? err.message : String(err);
-                console.error('[proxy]', proxy.error);
-                return proxy;
-            }
-        })();
-        return proxy.initPromise;
-    }
-
-    async function playThroughProxy(rawUrl) {
+    function playThroughProxy(rawUrl) {
         var iframe = document.getElementById('player-frame');
-        var st = await initScramjetProxy();
-        if (!st.ready || !st.controller) {
-            setPlayerMsg(true, 'Player failed', st.error || 'Proxy did not start');
-            if (iframe) iframe.removeAttribute('src');
-            return false;
-        }
+        if (!iframe) return false;
         try {
-            if (!st.frame || st.iframeEl !== iframe) {
-                st.iframeEl = iframe;
-                st.frame = st.controller.createFrame(iframe);
-            }
-            st.frame.go(rawUrl);
-            setPlayerMsg(false);
+            setPlayerMsg(true, 'Starting player…', 'Loading proxied embed');
+            iframe.onload = function () {
+                setPlayerMsg(false);
+            };
+            iframe.src = embedProxyUrl(rawUrl);
+            // Hide splash after a short grace even if onload is blocked cross-origin
+            setTimeout(function () { setPlayerMsg(false); }, 4000);
             return true;
         } catch (e) {
             setPlayerMsg(true, 'Player failed', String(e && e.message ? e.message : e));
-            if (iframe) iframe.removeAttribute('src');
+            iframe.removeAttribute('src');
             return false;
         }
     }
 
     // ---------- UI ----------
     function $(id) { return document.getElementById(id); }
-
     function setPlayerMsg(show, title, body) {
         var el = $('player-msg');
         if (!el) return;
@@ -451,20 +278,20 @@
         if (title) $('player-msg-title').textContent = title;
         $('player-msg-body').textContent = body || '';
     }
-
     function showBrowse() {
         $('browse').classList.remove('hidden');
         $('watch').classList.add('hidden');
         var iframe = $('player-frame');
-        if (iframe) iframe.removeAttribute('src');
+        if (iframe) {
+            iframe.onload = null;
+            iframe.removeAttribute('src');
+        }
     }
-
     function showWatch() {
         $('browse').classList.add('hidden');
         $('watch').classList.remove('hidden');
         window.scrollTo(0, 0);
     }
-
     function renderGrid(items) {
         var grid = $('grid');
         grid.innerHTML = '';
@@ -485,7 +312,6 @@
         $('page-num').textContent = String(state.page);
         $('prev').disabled = state.page <= 1;
     }
-
     function escapeHtml(s) {
         return String(s)
             .replace(/&/g, '&amp;')
@@ -493,7 +319,6 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
     }
-
     async function fetchList() {
         var endpoint, url;
         if (state.query.trim()) {
@@ -517,7 +342,6 @@
             $('grid').innerHTML = '<p style="grid-column:1/-1;text-align:center">Failed to load list.</p>';
         }
     }
-
     function buildSourceUrl() {
         var source = sources.find(function (s) { return s.id === state.selectedSource; });
         if (!source) return '';
@@ -530,7 +354,6 @@
         });
         return url;
     }
-
     function renderSources() {
         var box = $('sources');
         box.innerHTML = '';
@@ -547,7 +370,6 @@
             box.appendChild(b);
         });
     }
-
     function renderSeasonsAndEpisodes() {
         var panel = $('episodes-panel');
         if (!state.isShow) {
@@ -588,7 +410,6 @@
             eps.appendChild(d);
         });
     }
-
     async function loadSeason() {
         var url = 'https://api.themoviedb.org/3/tv/' + state.contentId +
             '/season/' + state.selectedSeason + '?api_key=' + WATCH_KEY;
@@ -602,7 +423,6 @@
             console.error(e);
         }
     }
-
     async function openWatch(id, type) {
         state.contentId = id;
         state.contentType = type;
@@ -617,7 +437,6 @@
         $('watch-meta').textContent = '';
         $('overview').textContent = '';
         renderSources();
-
         try {
             var res = await fetch('https://api.themoviedb.org/3/' + type + '/' + id + '?api_key=' + WATCH_KEY);
             var data = await res.json();
@@ -643,14 +462,11 @@
             setPlayerMsg(true, 'Failed to load title', String(e));
         }
     }
-
-    async function updatePlayer() {
+    function updatePlayer() {
         var url = buildSourceUrl();
         if (!url) return;
-        setPlayerMsg(true, 'Starting proxy…', 'Please wait');
-        await playThroughProxy(url);
+        playThroughProxy(url);
     }
-
     // events
     $('tab-movies').addEventListener('click', function () {
         state.tab = 'movies';
@@ -695,8 +511,6 @@
         e.preventDefault();
         showBrowse();
     });
-
-    // start — no Scramjet until play
     fetchList();
 })();
     </script>
