@@ -8,9 +8,9 @@
   html, body { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }
   #frame-holder { position:fixed; inset:0; width:100vw; height:100vh; background:#000; }
   #frame-holder iframe { width:100%; height:100%; border:0; margin:0; padding:0; display:block; }
-  #status { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-            color:#aaa; font:13px/1.6 ui-monospace,Menlo,Consolas,monospace; background:#0a0a0a;
-            text-align:left; padding:24px; box-sizing:border-box; white-space:pre-wrap;
+  #status { position:fixed; inset:0; display:flex; align-items:flex-start; justify-content:flex-start;
+            color:#ddd; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace; background:#0a0a0a;
+            text-align:left; padding:16px; box-sizing:border-box; white-space:pre-wrap;
             overflow:auto; z-index:10; }
   #status.hidden { display:none; }
 </style>
@@ -28,9 +28,19 @@
   var statusEl = document.getElementById("status");
   var holder   = document.getElementById("frame-holder");
   var lines = [];
+  var stage = "init";
   function log(m)  { lines.push(m); statusEl.textContent = lines.join("\n"); }
   function fail(m) { log("FAIL: " + m); }
   function hide()  { statusEl.classList.add("hidden"); }
+
+  // Whatever happens, after 15s dump the state so we can see where it stopped.
+  setTimeout(function () {
+    if (!statusEl.classList.contains("hidden")) {
+      log("");
+      log("--- after 15s, still running ---");
+      log("stage = " + stage);
+    }
+  }, 15000);
 
   var params = new URLSearchParams(location.search);
   var raw = params.get("url");
@@ -39,48 +49,56 @@
   var target;
   try { target = new URL(raw); } catch (e) { fail("Invalid URL: " + raw); return; }
 
+  log("runtime _nog837i = " + typeof window._nog837i);
+  log("runtime _wdgvkq9 = " + typeof window._wdgvkq9);
+
   if (!("serviceWorker" in navigator)) { fail("No service worker support."); return; }
   if (!window._wdgvkq9 || !window._wdgvkq9.Controller) {
-    fail("Proxy runtime (_wdgvkq9) not loaded.");
+    fail("Proxy runtime not loaded.");
     return;
   }
 
   var WASM_PATH = new URL("_iyosyjg/_iyosyjg.wasm", location.href).href;
 
-  // ---- 1. Ensure our service worker is registered and ready ---------------
+  stage = "getRegistrations";
   navigator.serviceWorker.getRegistrations().then(function (regs) {
+    log("existing SW regs = " + regs.length);
     var ours = null;
     for (var i = 0; i < regs.length; i++) {
       var w = regs[i].active || regs[i].waiting || regs[i].installing;
+      log("  - " + (w ? w.scriptURL : "(none)"));
       if (w && w.scriptURL.split("/").pop() === "v6hxi5.js") { ours = regs[i]; break; }
     }
     if (ours) return ours;
+    log("registering v6hxi5.js");
     return navigator.serviceWorker.register("v6hxi5.js", { scope: "./" });
   }).then(function () {
+    stage = "ready";
     return navigator.serviceWorker.ready;
   }).then(function (registration) {
 
-    // If we aren't controlled yet, one reload fixes it.
+    log("SW ready, controller = " + (navigator.serviceWorker.controller ? "yes" : "no"));
+    stage = "controller-check";
     if (!navigator.serviceWorker.controller) {
       if (!sessionStorage.getItem("__direct_reload")) {
         sessionStorage.setItem("__direct_reload", "1");
+        log("reloading once to gain control...");
         location.reload();
-        return new Promise(function () {}); // halt
+        return new Promise(function () {});
       }
+      log("still no controller after reload — continuing anyway");
     }
     try { sessionStorage.removeItem("__direct_reload"); } catch (e) {}
 
-    // ---- 2. Build a service-worker shim -----------------------------------
-    // The runtime calls `options.serviceworker.postMessage(...)`.
-    // `ServiceWorkerRegistration.prototype.postMessage` is only available on
-    // recent Chrome/Firefox and not at all on Safari, so we forward to the
-    // active worker's postMessage instead, which exists everywhere.
+    stage = "shim";
     var swTarget = registration.active
                 || registration.waiting
                 || registration.installing
                 || navigator.serviceWorker.controller;
 
     if (!swTarget) { fail("No active service worker to message."); return; }
+    log("swTarget = " + swTarget.scriptURL);
+    log("swTarget.postMessage = " + typeof swTarget.postMessage);
 
     var swShim = {
       postMessage: function (msg, transfer) {
@@ -92,7 +110,7 @@
       get scope()      { return registration.scope; }
     };
 
-    // ---- 3. Fetch-based transport -----------------------------------------
+    stage = "transport";
     var transport = {
       ready: Promise.resolve(true),
       init: function () { return Promise.resolve(); },
@@ -114,7 +132,8 @@
       }
     };
 
-    // ---- 4. Construct the controller --------------------------------------
+    stage = "controller-ctor";
+    log("constructing Controller…");
     var controller;
     try {
       controller = new window._wdgvkq9.Controller({
@@ -126,9 +145,13 @@
       fail("Controller ctor: " + (e && e.message ? e.message : String(e)));
       return;
     }
+    log("controller.prefix = " + controller.prefix);
 
+    stage = "controller-wait";
     controller.wait().then(function () {
-      // ---- 5. Create the frame and navigate -----------------------------
+      log("controller ready");
+
+      stage = "frame-create";
       var iframe = document.createElement("iframe");
       iframe.setAttribute("allow",
         "clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture");
@@ -136,9 +159,27 @@
       holder.appendChild(iframe);
 
       var frame = controller.createFrame(iframe, { plugins: [] });
-      iframe.addEventListener("load", hide);
+      log("frame.prefix = " + frame.prefix);
+
+      iframe.addEventListener("load", function () {
+        log("iframe load fired");
+        hide();
+      });
+
+      stage = "frame-go";
+      log("calling frame.go(" + target.href + ")");
       frame.go(target.href);
-      setTimeout(hide, 8000);
+
+      stage = "waiting-for-load";
+      setTimeout(function () {
+        if (!statusEl.classList.contains("hidden")) {
+          log("");
+          log("--- 8s after frame.go ---");
+          log("iframe.src = " + iframe.src);
+        }
+      }, 8000);
+
+      setTimeout(hide, 10000);
     }).catch(function (e) {
       fail("controller.wait(): " + (e && e.message ? e.message : String(e)));
     });
