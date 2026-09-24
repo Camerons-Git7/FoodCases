@@ -3,20 +3,45 @@
       <head>
         <meta charset="UTF-8" />
     <script>
-      // Map ?url= → ?u= in-place (no redirect) so Cherri opens the proxy directly
+      // Boot URL: support ?url= and ?u= so
+      //   index.html?url=https://example.com
+      // opens that site in a proxy tab (app reads search param "u" via Et(Ne)).
+      //
+      // IMPORTANT: use location.replace (full navigation), not history.replaceState.
+      // React Router's useSearchParams does not reliably pick up replaceState done
+      // before the router mounts, so Et(Ne) was getting the default cherri://home.
       (function () {
         try {
           var p = new URLSearchParams(location.search);
-          var url = p.get("url");
-          if (!url || p.get("u")) return;
-          if (!/^https?:\/\//i.test(url) && url.indexOf("cherri://") !== 0) {
-            url = "https://" + url;
+          var raw = p.get("url") || p.get("u");
+          if (!raw) return;
+
+          // Normalize bare domains → https://
+          var target = raw;
+          if (!/^https?:\/\//i.test(target) && target.indexOf("cherri://") !== 0) {
+            target = "https://" + target;
           }
-          p.set("u", url);
+
+          // Expose for debugging / any early readers
+          window.__CHERRI_BOOT_U__ = target;
+
+          // Already the canonical form the app expects?
+          var already =
+            p.get("u") === target && !p.get("url");
+          if (already) return;
+
+          // Rebuild query: u=<target>, drop url=, keep any other params
           p.delete("url");
+          p.set("u", target);
           var q = p.toString();
-          history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
-        } catch (e) {}
+          var next =
+            location.pathname + (q ? "?" + q : "") + location.hash;
+
+          // Hard navigation so the document loads with ?u= visible to React
+          location.replace(next);
+        } catch (e) {
+          console.warn("[cherri] boot url rewrite failed:", e);
+        }
       })();
     </script>
 
