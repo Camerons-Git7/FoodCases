@@ -22,7 +22,6 @@
 <div id="status">Starting proxy…</div>
 <div id="frame-holder"></div>
 
-<!-- Same runtime scripts index.html loads, same order -->
 <script src="./bi1wf/8t6ked.js"></script>
 <script src="./bwd9x/9lcbx4.js"></script>
 
@@ -42,16 +41,15 @@
   setTimeout(function () {
     if (!statusEl.classList.contains("hidden")) {
       log("");
-      log("--- still running after 30s ---");
+      log("--- still running after 35s ---");
       log("stage = " + stage);
     }
-  }, 30000);
+  }, 35000);
 
-  // ---- target URL ---------------------------------------------------------
   var params = new URLSearchParams(location.search);
   var raw = params.get("url");
   if (!raw) {
-    fail("Missing ?url= parameter.\nExample: direct.html?url=https://example.com");
+    fail("Missing ?url=\nExample: direct.html?url=https://example.com");
     return;
   }
   if (!/^https?:\/\//i.test(raw) && raw.indexOf("cherri://") !== 0) raw = "https://" + raw;
@@ -65,29 +63,17 @@
     return;
   }
 
-  // ---- paths taken verbatim from assets/bundle-1vghyvjv.js (uqA / BqA / dqA / QqA / CqA / Ij / i1A / IqA)
-  //
-  //   IqA  = "fn5315/"
-  //   BqA  = "bi1wf/8t6ked.js"
-  //   dqA  = "bwd9x/cdt4qb.js"
-  //   QqA  = "bi1wf/ri1n3t.wasm"
-  //   CqA(scope) = scope + "fn5315/"
-  //   Ij(scope, file) = scope + file
-  //
-  // Previous direct.html versions used /~/sj/ and _iyosyjg/_iyosyjg.wasm — those
-  // are NOT what this build uses. The real prefix is {SW scope}fn5315/.
-  var SW_FILE       = "v6hxi5.js";
-  var PREFIX_TAIL   = "fn5315/";
-  var RUNTIME_REL   = "bi1wf/8t6ked.js";
-  var INJECT_REL    = "bwd9x/cdt4qb.js";
-  var WASM_REL      = "bi1wf/ri1n3t.wasm";
+  // From assets/bundle-1vghyvjv.js (uqA / BqA / dqA / QqA / CqA / IqA)
+  var SW_FILE     = "v6hxi5.js";
+  var PREFIX_TAIL = "fn5315/";
+  var RUNTIME_REL = "bi1wf/8t6ked.js";
+  var INJECT_REL  = "bwd9x/cdt4qb.js";
+  var WASM_REL    = "bi1wf/ri1n3t.wasm";
 
-  // base64url codec — identical to i1A in the bundle
   var codec = {
     encode: function (e) {
       if (!e) return e;
-      var t = new TextEncoder().encode(e);
-      var a = "";
+      var t = new TextEncoder().encode(e), a = "";
       for (var r = 0; r < t.length; r++) a += String.fromCharCode(t[r]);
       return btoa(a).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     },
@@ -95,25 +81,23 @@
       if (!e) return e;
       var t = e.replace(/-/g, "+").replace(/_/g, "/");
       while (t.length % 4) t += "=";
-      var a = atob(t);
-      var r = new Uint8Array(a.length);
+      var a = atob(t), r = new Uint8Array(a.length);
       for (var o = 0; o < a.length; o++) r[o] = a.charCodeAt(o);
       return new TextDecoder().decode(r);
     }
   };
 
-  // Default wisp endpoint from gB in the bundle. Settings may override via localStorage.
   var DEFAULT_WISP = "wss://kristenblackburnvolleyballcamps.com/socket/";
   function readWisp() {
     try {
-      // settings key is hashed from build id; fall back to scanning common keys
       var keys = Object.keys(localStorage);
       for (var i = 0; i < keys.length; i++) {
         var k = keys[i];
         if (k.indexOf("settings") === -1 && k.indexOf("cherri") === -1) continue;
         try {
           var parsed = JSON.parse(localStorage.getItem(k));
-          if (parsed && typeof parsed.wisp === "string" && /^wss?:\/\//.test(parsed.wisp) && parsed.wisp.slice(-1) === "/") {
+          if (parsed && typeof parsed.wisp === "string" &&
+              /^wss?:\/\//.test(parsed.wisp) && parsed.wisp.slice(-1) === "/") {
             return parsed.wisp;
           }
         } catch (_) {}
@@ -122,11 +106,141 @@
     return DEFAULT_WISP;
   }
 
-  // ---- 1. Ensure SW is registered and controlling this page ---------------
-  // Mirrors lqA() from the bundle: return { worker, registration } where
-  // worker is the ACTIVE ServiceWorker (has .postMessage), NOT the container
-  // and NOT the registration. Passing navigator.serviceWorker was the
-  // "postMessage is not a function" crash.
+  function headOk(url) {
+    return fetch(url, { method: "HEAD", cache: "no-store" })
+      .then(function (r) { return { url: url, ok: r.ok, status: r.status }; })
+      .catch(function (e) { return { url: url, ok: false, status: 0, err: String(e && e.message || e) }; });
+  }
+
+  // Epoxy transport — same role as `new eH({wisp})` inside the React bundle.
+  // Loaded from the public epoxy-tls package and adapted to Controller's transport API.
+  function makeEpoxyTransport(wispUrl) {
+    stage = "epoxy-import";
+    log("loading epoxy-tls from CDN…");
+    return import("https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-tls@2.1.19-1/full/epoxy-bundled.js")
+      .then(function (mod) {
+        stage = "epoxy-init";
+        return Promise.resolve(mod.default()).then(function () { return mod; });
+      })
+      .then(function (mod) {
+        var opts = new mod.EpoxyClientOptions();
+        try { opts.user_agent = navigator.userAgent; } catch (_) {}
+        try { opts.wisp_v2 = true; } catch (_) {}
+        var client = new mod.EpoxyClient(wispUrl, opts);
+        log("epoxy client ready → " + wispUrl);
+
+        function headersToObject(headers) {
+          var h = {};
+          if (!headers) return h;
+          if (typeof headers.forEach === "function") {
+            headers.forEach(function (v, k) { h[k] = v; });
+          } else if (Array.isArray(headers)) {
+            headers.forEach(function (pair) {
+              if (pair && pair.length >= 2) h[pair[0]] = pair[1];
+            });
+          } else if (typeof headers === "object") {
+            Object.keys(headers).forEach(function (k) { h[k] = headers[k]; });
+          }
+          return h;
+        }
+
+        return {
+          ready: Promise.resolve(true),
+          init: function () { return Promise.resolve(); },
+          request: function (remote, method, body, headers, signal) {
+            var init = {
+              method: method || "GET",
+              headers: headersToObject(headers),
+              redirect: "manual"
+            };
+            if (body != null && method && method !== "GET" && method !== "HEAD") {
+              init.body = body;
+            }
+            if (signal) init.signal = signal;
+            return client.fetch(remote.href, init).then(function (res) {
+              return res.arrayBuffer().then(function (buf) {
+                var hdrs = [];
+                try {
+                  if (res.headers && typeof res.headers.forEach === "function") {
+                    res.headers.forEach(function (v, k) { hdrs.push([k, v]); });
+                  } else if (res.rawHeaders && Array.isArray(res.rawHeaders)) {
+                    hdrs = res.rawHeaders;
+                  }
+                } catch (_) {}
+                return {
+                  status: res.status,
+                  statusText: res.statusText || "",
+                  headers: hdrs,
+                  body: buf
+                };
+              });
+            });
+          },
+          connect: function (url, protocols, requestHeaders, onopen, onmessage, onclose, onerror) {
+            var opened = false;
+            var handlers = new mod.EpoxyHandlers(
+              function () {
+                opened = true;
+                try { onopen("", ""); } catch (_) {}
+              },
+              function (code, reason) {
+                try { onclose(code || 1000, reason || ""); } catch (_) {}
+              },
+              function (err) {
+                try { onerror(String(err || "ws error")); } catch (_) {}
+              },
+              function (msg) {
+                try { onmessage(msg); } catch (_) {}
+              }
+            );
+            var protos = protocols || [];
+            var hdrs = headersToObject(requestHeaders);
+            var wsPromise = client.connect_websocket(handlers, url.href || String(url), protos, hdrs);
+            var sendFn = function (data) {
+              wsPromise.then(function (ws) { return ws.send(data); }).catch(function () {});
+            };
+            var closeFn = function (code, reason) {
+              wsPromise.then(function (ws) { return ws.close(code || 1000, reason || ""); }).catch(function () {});
+            };
+            wsPromise.catch(function (err) {
+              if (!opened) {
+                try { onerror(String(err && err.message || err)); } catch (_) {}
+              }
+            });
+            return [sendFn, closeFn];
+          }
+        };
+      });
+  }
+
+  function makeFetchFallback() {
+    log("WARNING: epoxy failed — falling back to plain fetch (no WebSockets)");
+    return {
+      ready: Promise.resolve(true),
+      init: function () { return Promise.resolve(); },
+      request: function (remote, method, body, headers) {
+        var h = {};
+        if (headers) {
+          if (typeof headers.forEach === "function") headers.forEach(function (v, k) { h[k] = v; });
+          else if (Array.isArray(headers)) headers.forEach(function (p) { h[p[0]] = p[1]; });
+          else Object.keys(headers).forEach(function (k) { h[k] = headers[k]; });
+        }
+        return fetch(remote.href, { method: method, body: body, headers: h, redirect: "manual" })
+          .then(function (res) {
+            return res.arrayBuffer().then(function (buf) {
+              return {
+                status: res.status,
+                statusText: res.statusText,
+                headers: Array.from(res.headers.entries()),
+                body: buf
+              };
+            });
+          });
+      },
+      connect: function () { throw new Error("WebSockets require epoxy transport"); }
+    };
+  }
+
   function ensureSW() {
     stage = "ensure-sw";
     return navigator.serviceWorker.getRegistrations().then(function (regs) {
@@ -149,167 +263,133 @@
         } catch (_) {}
         return null;
       }
-
       var worker = currentWorker();
       if (worker) {
         log("SW controlling: " + worker.scriptURL);
         return { worker: worker, registration: registration };
       }
-
-      // First visit: registration exists but page is not controlled yet.
-      // One reload is how index.html (via its own SW bootstrap) also gets control.
       if (!sessionStorage.getItem("__direct_sw_reload")) {
         sessionStorage.setItem("__direct_sw_reload", "1");
-        log("SW registered but not controlling yet — reloading once…");
+        log("SW not controlling yet — reloading once…");
         location.reload();
-        return new Promise(function () {}); // halt
+        return new Promise(function () {});
       }
       sessionStorage.removeItem("__direct_sw_reload");
-
-      // Last resort: use registration.active even if controller is null
       worker = registration.active || registration.waiting || registration.installing;
-      if (!worker) throw new Error("Service worker registration has no active worker");
-      log("WARNING: using registration.active (page may not be controlled)");
+      if (!worker) throw new Error("No active service worker");
+      log("WARNING: using registration.active (page may be uncontrolled)");
       return { worker: worker, registration: registration };
     });
   }
 
-  // ---- 2. Transport -------------------------------------------------------
-  // index.html uses `new eH({ wisp })` (epoxy) from the React bundle. eH is
-  // NOT exported by bi1wf/8t6ked.js or bwd9x/9lcbx4.js — it only lives inside
-  // assets/bundle-*.js. Without loading the full 4 MB bundle we cannot construct
-  // the real epoxy transport.
-  //
-  // Fallback: a fetch-based transport that is enough for plain HTML/CSS/JS pages.
-  // Sites that need WebSockets (GeForce Now, Discord, etc.) will fail on connect()
-  // — that is a limitation of not loading the epoxy client, not of the proxy path.
-  function makeFetchTransport() {
-    return {
-      ready: Promise.resolve(true),
-      init: function () { return Promise.resolve(); },
-      request: function (remote, method, body, headers) {
-        var h = {};
-        if (headers) {
-          if (typeof headers.forEach === "function") {
-            headers.forEach(function (v, k) { h[k] = v; });
-          } else if (Array.isArray(headers)) {
-            headers.forEach(function (pair) { h[pair[0]] = pair[1]; });
-          } else {
-            Object.keys(headers).forEach(function (k) { h[k] = headers[k]; });
-          }
-        }
-        return fetch(remote.href, { method: method, body: body, headers: h, redirect: "manual" })
-          .then(function (res) {
-            return res.arrayBuffer().then(function (buf) {
-              return {
-                status: res.status,
-                statusText: res.statusText,
-                headers: Array.from(res.headers.entries()),
-                body: buf
-              };
-            });
-          });
-      },
-      connect: function () {
-        throw new Error("WebSockets require the epoxy transport (only in the React bundle). Plain pages still work.");
-      }
-    };
-  }
+  var wisp = readWisp();
+  log("wisp = " + wisp);
 
-  // ---- 3. Boot Controller exactly like uqA() ------------------------------
-  ensureSW().then(function (pair) {
-    if (!pair) return;
-    try { sessionStorage.removeItem("__direct_sw_reload"); } catch (_) {}
-
-    var worker = pair.worker;
-    var registration = pair.registration;
-    var scopePath = new URL(registration.scope).pathname; // e.g. "/cherri/cherri/"
-    if (scopePath.slice(-1) !== "/") scopePath += "/";
-
-    var prefix      = scopePath + PREFIX_TAIL;           // "/cherri/cherri/fn5315/"
-    var iyosyjgPath = scopePath + RUNTIME_REL;         // ".../bi1wf/8t6ked.js"
-    var injectPath  = scopePath + INJECT_REL;          // ".../bwd9x/cdt4qb.js"
-    var wasmPath    = scopePath + WASM_REL;            // ".../bi1wf/ri1n3t.wasm"
-
-    log("scope   = " + scopePath);
-    log("prefix  = " + prefix);
-    log("wasm    = " + wasmPath);
-    log("wisp    = " + readWisp() + " (epoxy unavailable outside bundle — using fetch transport)");
-
-    stage = "controller-ctor";
-    var transport = makeFetchTransport();
-
-    var controller;
-    try {
-      // Mirrors:
-      //   new $J({
-      //     serviceworker: e,          // ACTIVE worker
-      //     transport: a,
-      //     config: {
-      //       prefix: CqA(r),
-      //       codec: i1A,
-      //       _iyosyjgPath: Ij(r, BqA()),
-      //       injectPath: Ij(r, dqA()),
-      //       wasmPath: Ij(r, QqA())
-      //     }
-      //   })
-      controller = new window._wdgvkq9.Controller({
-        serviceworker: worker,
-        transport: transport,
-        config: {
-          prefix: prefix,
-          codec: codec,
-          _iyosyjgPath: iyosyjgPath,
-          injectPath: injectPath,
-          wasmPath: wasmPath
-        }
-      });
-    } catch (e) {
-      fail("Controller ctor: " + (e && e.message ? e.message : String(e)));
+  Promise.all([
+    headOk(WASM_REL),
+    headOk(INJECT_REL),
+    headOk(RUNTIME_REL),
+    headOk(SW_FILE)
+  ]).then(function (probes) {
+    probes.forEach(function (p) {
+      log("probe " + p.url + " → " + p.status + (p.ok ? "" : " ** MISSING **"));
+    });
+    var missing = probes.filter(function (p) { return !p.ok; });
+    if (missing.length) {
+      fail("Required files missing: " + missing.map(function (p) { return p.url; }).join(", "));
       return;
     }
-    log("controller.prefix = " + controller.prefix);
-    window.__directController = controller;
+    return ensureSW();
+  }).then(function (pair) {
+    if (!pair) return;
 
-    stage = "controller-wait";
-    return controller.wait().then(function () {
-      log("controller ready");
+    try { sessionStorage.removeItem("__direct_sw_reload"); } catch (_) {}
 
-      stage = "frame-create";
-      var iframe = document.createElement("iframe");
-      iframe.setAttribute(
-        "allow",
-        "clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture"
-      );
-      iframe.setAttribute("allowfullscreen", "true");
-      iframe.referrerPolicy = "no-referrer";
-      holder.appendChild(iframe);
+    return makeEpoxyTransport(wisp)
+      .catch(function (err) {
+        log("epoxy load error: " + (err && err.message ? err.message : String(err)));
+        return makeFetchFallback();
+      })
+      .then(function (transport) {
+        var registration = pair.registration;
+        var worker = pair.worker;
+        var scopePath = new URL(registration.scope).pathname;
+        if (scopePath.slice(-1) !== "/") scopePath += "/";
 
-      // Same API the embed route uses: controller.createFrame(el).go(url)
-      var frame = controller.createFrame(iframe, { plugins: [] });
-      log("frame.prefix = " + frame.prefix);
+        var prefix      = scopePath + PREFIX_TAIL;
+        var iyosyjgPath = scopePath + RUNTIME_REL;
+        var injectPath  = scopePath + INJECT_REL;
+        var wasmPath    = scopePath + WASM_REL;
 
-      iframe.addEventListener("load", function () {
-        log("iframe load fired");
-        hide();
-      });
+        log("scope   = " + scopePath);
+        log("prefix  = " + prefix);
+        log("wasm    = " + wasmPath);
 
-      stage = "frame-go";
-      log("frame.go(" + target.href + ")");
-      frame.go(target.href);
-
-      setTimeout(function () {
-        if (!statusEl.classList.contains("hidden")) {
-          log("");
-          log("--- 12s after frame.go ---");
-          log("iframe.src = " + iframe.src);
-          log("If this is a host 404, the SW did not route the navigation.");
-          log("If this is blank with a real proxied URL, the page may need WebSockets.");
+        stage = "controller-ctor";
+        var controller;
+        try {
+          controller = new window._wdgvkq9.Controller({
+            serviceworker: worker,
+            transport: transport,
+            config: {
+              prefix: prefix,
+              codec: codec,
+              _iyosyjgPath: iyosyjgPath,
+              injectPath: injectPath,
+              wasmPath: wasmPath
+            }
+          });
+        } catch (e) {
+          fail("Controller ctor: " + (e && e.message ? e.message : String(e)));
+          return;
         }
-      }, 12000);
+        log("controller.prefix = " + controller.prefix);
+        window.__directController = controller;
 
-      setTimeout(hide, 20000);
-    });
+        stage = "controller-wait";
+        log("waiting for controller (SW ready + wasm)…");
+
+        var waitTimeout = new Promise(function (_, reject) {
+          setTimeout(function () {
+            reject(new Error("controller.wait() timed out after 20s — check wasm fetch and SW messages"));
+          }, 20000);
+        });
+
+        return Promise.race([controller.wait(), waitTimeout]).then(function () {
+          log("controller ready");
+
+          stage = "frame-create";
+          var iframe = document.createElement("iframe");
+          iframe.setAttribute(
+            "allow",
+            "clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture"
+          );
+          iframe.setAttribute("allowfullscreen", "true");
+          iframe.referrerPolicy = "no-referrer";
+          holder.appendChild(iframe);
+
+          var frame = controller.createFrame(iframe, { plugins: [] });
+          log("frame.prefix = " + frame.prefix);
+
+          iframe.addEventListener("load", function () {
+            log("iframe load fired");
+            hide();
+          });
+
+          stage = "frame-go";
+          log("frame.go(" + target.href + ")");
+          frame.go(target.href);
+
+          setTimeout(function () {
+            if (!statusEl.classList.contains("hidden")) {
+              log("");
+              log("--- 12s after frame.go ---");
+              log("iframe.src = " + iframe.src);
+            }
+          }, 12000);
+          setTimeout(hide, 20000);
+        });
+      });
   }).catch(function (e) {
     fail("setup: " + (e && e.message ? e.message : String(e)));
   });
