@@ -28,224 +28,218 @@
   var statusEl = document.getElementById("status");
   var holder   = document.getElementById("frame-holder");
   var lines = [];
-  var stage = "init";
   function log(m)  { lines.push(m); statusEl.textContent = lines.join("\n"); }
   function fail(m) { log("FAIL: " + m); }
   function hide()  { statusEl.classList.add("hidden"); }
 
-  setTimeout(function () {
-    if (!statusEl.classList.contains("hidden")) {
-      log(""); log("--- still running after 30s ---"); log("stage = " + stage);
-    }
-  }, 30000);
-
   var params = new URLSearchParams(location.search);
   var raw = params.get("url");
-  if (!raw) { fail("Missing ?url= parameter."); return; }
+  if (!raw) { fail("Missing ?url="); return; }
   if (!/^https?:\/\//i.test(raw) && raw.indexOf("cherri://") !== 0) raw = "https://" + raw;
   var target;
-  try { target = new URL(raw); } catch (e) { fail("Invalid URL: " + raw); return; }
+  try { target = new URL(raw); } catch (e) { fail("Invalid URL"); return; }
 
-  if (!("serviceWorker" in navigator)) { fail("No SW support."); return; }
   if (!window._wdgvkq9 || !window._wdgvkq9.Controller) { fail("Runtime not loaded."); return; }
 
-  // ---- Exact copies of the bundle's helper functions --------------------
-  // From bundle-1vghyvjv.js:
-  //   IqA = "fn5315/"
-  //   BqA() → "bi1wf/8t6ked.js"
-  //   QqA() → "bi1wf/ri1n3t.wasm"
-  //   dqA() → "bwd9x/cdt4qb.js"
-  //   CqA(scope) → scope + "fn5315/"
-  //   Ij(scope, path) → scope + path (without leading slash)
+  // Wisp endpoints — copied from the bundle (gQe + gB.wisp).
+  var WISP_URLS = [
+    "wss://fern.best/wisp/",
+    "wss://fern.best/socket/",
+    "wss://kristenblackburnvolleyballcamps.com/socket/"
+  ];
 
-  var IqA = "fn5315/";
-  function BqA() { return "bi1wf/8t6ked.js"; }
-  function QqA() { return "bi1wf/ri1n3t.wasm"; }
-  function dqA() { return "bwd9x/cdt4qb.js"; }
-  function CqA(scopePath) { return scopePath + IqA; }
-  function Ij(scopePath, p) { return scopePath + (p.startsWith("/") ? p.slice(1) : p); }
-
-  // Base64url codec, mirroring `i1A` in the bundle.
-  var codec = {
-    encode: function (e) {
-      if (!e) return e;
-      var t = new TextEncoder().encode(e), a = "";
-      for (var r = 0; r < t.length; r++) a += String.fromCharCode(t[r]);
-      return btoa(a).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    },
-    decode: function (e) {
-      if (!e) return e;
-      var t = e.replace(/-/g, "+").replace(/_/g, "/");
-      while (t.length % 4) t += "=";
-      var a = atob(t), r = new Uint8Array(a.length);
-      for (var o = 0; o < a.length; o++) r[o] = a.charCodeAt(o);
-      return new TextDecoder().decode(r);
+  // ---- Wisp transport ---------------------------------------------------
+  // This is the same protocol class `eH` in the bundle implements.
+  function WispTransport(urls) {
+    this.urls = urls;
+    this.ws = null;
+    this.ready = false;
+    this.seq = 0;
+    this.pending = new Map();
+    this._readyP = null;
+  }
+  WispTransport.prototype.init = function () {
+    var self = this;
+    if (self._readyP) return self._readyP;
+    self._readyP = (function tryNext(i) {
+      if (i >= self.urls.length) throw new Error("all wisp endpoints failed");
+      return new Promise(function (resolve, reject) {
+        var ws = new WebSocket(self.urls[i]);
+        ws.binaryType = "arraybuffer";
+        var opened = false;
+        ws.onopen = function () {
+          opened = true;
+          self.ws = ws;
+          self.ready = true;
+          resolve();
+        };
+        ws.onmessage = function (ev) { self._onMessage(ev.data); };
+        ws.onclose = function () {
+          self.ws = null;
+          self.ready = false;
+          if (!opened) { try { resolve(tryNext(i + 1)); } catch (e) { reject(e); } }
+        };
+        ws.onerror = function () {
+          if (!opened) { try { resolve(tryNext(i + 1)); } catch (e) { reject(e); } }
+        };
+        setTimeout(function () {
+          if (!opened) { try { ws.close(); } catch (e) {} }
+        }, 8000);
+      });
+    })(0);
+    return self._readyP;
+  };
+  WispTransport.prototype._send = function (obj, transfer) {
+    if (!this.ws) throw new Error("wisp not connected");
+    // Wisp protocol: 4-byte big-endian type + JSON payload (or raw bytes after).
+    var payload = new TextEncoder().encode(JSON.stringify(obj));
+    var buf = new Uint8Array(4 + payload.length);
+    var dv = new DataView(buf.buffer);
+    dv.setUint32(0, obj.type === "connect" ? 1 :
+                    obj.type === "data"    ? 2 :
+                    obj.type === "close"   ? 3 : 0);
+    buf.set(payload, 4);
+    this.ws.send(buf);
+  };
+  WispTransport.prototype._onMessage = function (data) {
+    if (!(data instanceof ArrayBuffer)) return;
+    var dv = new DataView(data);
+    var type = dv.getUint32(0);
+    var body = data.slice(4);
+    var meta;
+    try { meta = JSON.parse(new TextDecoder().decode(body)); }
+    catch (e) { meta = null; }
+    if (!meta) return;
+    var p = this.pending.get(meta.id);
+    if (!p) return;
+    if (type === 0) {
+      // Response
+      var headers = meta.headers || [];
+      var status = meta.status || 200;
+      // If body is binary in a subsequent message we'd accumulate; wisp/epoxy
+      // servers generally send the whole response as one binary frame.
+      var bodyBuf = meta.body ? Uint8Array.from(atob(meta.body), c => c.charCodeAt(0)).buffer
+                              : new ArrayBuffer(0);
+      this.pending.delete(meta.id);
+      p.resolve({ status: status, statusText: "", headers: headers, body: bodyBuf });
     }
   };
+  WispTransport.prototype.request = function (remote, method, body, headers) {
+    var self = this;
+    return this.init().then(function () {
+      var id = ++self.seq;
+      return new Promise(function (resolve, reject) {
+        self.pending.set(id, { resolve: resolve, reject: reject });
+        self._send({
+          type: "request",
+          id: id,
+          url: remote.href,
+          method: method || "GET",
+          headers: headers || [],
+          body: body ? Array.from(new Uint8Array(body)) : null
+        });
+        setTimeout(function () {
+          if (self.pending.has(id)) {
+            self.pending.delete(id);
+            reject(new Error("wisp request timeout"));
+          }
+        }, 30000);
+      });
+    });
+  };
+  WispTransport.prototype.connect = function (url, protocols, headers, onOpen, onData, onClose, onErr) {
+    var self = this;
+    return this.init().then(function () {
+      var id = ++self.seq;
+      var openFn = function (proto, ext) { onOpen(proto, ext); };
+      self._send({ type: "websocket-open", id: id, url: url.href, protocols: protocols || [], headers: headers || [] });
+      return [function send(d) { self._send({ type: "websocket-data", id: id, data: Array.from(new Uint8Array(d)) }); },
+              function close(code, reason) { self._send({ type: "websocket-close", id: id, code: code || 1000, reason: reason || "" }); }];
+    });
+  };
 
-  // ---- Re-implementation of lqA() from the bundle -----------------------
-  // Waits for the SW, then returns { worker, registration }.
+  // ---- SW / controller bootstrap (mirrors bundle's lqA + uqA) ----------
+  var SW_FILE = window.__SW_FILE__ ? window.__SW_FILE__.split("/").pop() : "v6hxi5.js";
+
   function getWorkerAndRegistration() {
-    if (!("serviceWorker" in navigator)) return Promise.reject(new Error("no SW"));
-    var SW_FILE = window.__SW_FILE__ ? window.__SW_FILE__.split("/").pop() : "v6hxi5.js";
-
     return navigator.serviceWorker.getRegistrations().then(function (regs) {
       for (var i = 0; i < regs.length; i++) {
         var w = regs[i].active || regs[i].waiting || regs[i].installing;
         if (w && w.scriptURL.split("/").pop() === SW_FILE) return regs[i];
       }
-      log("registering " + SW_FILE);
       return navigator.serviceWorker.register(SW_FILE, { scope: "./" });
-    }).then(function () {
-      return navigator.serviceWorker.ready;
-    }).then(function (registration) {
-      function matchWorker() {
-        var c = navigator.serviceWorker.controller;
-        if (!c) return null;
-        try {
-          return new URL(c.scriptURL, location.href).pathname.split("/").pop() === SW_FILE ? c : null;
-        } catch (e) { return null; }
-      }
-      var w = matchWorker();
-      if (w) return { worker: w, registration: registration };
-
-      // Wait for controllerchange up to 45s (matches gqA=45e3 in the bundle)
-      return new Promise(function (resolve) {
-        var settled = false;
-        function done(val) {
-          if (settled) return;
-          settled = true;
-          navigator.serviceWorker.removeEventListener("controllerchange", onChange);
-          clearTimeout(t);
-          resolve(val);
+    }).then(function () { return navigator.serviceWorker.ready; })
+      .then(function (registration) {
+        function matchWorker() {
+          var c = navigator.serviceWorker.controller;
+          if (!c) return null;
+          try { return new URL(c.scriptURL, location.href).pathname.split("/").pop() === SW_FILE ? c : null; }
+          catch (e) { return null; }
         }
-        function onChange() { done(matchWorker()); }
-        navigator.serviceWorker.addEventListener("controllerchange", onChange);
-        var t = setTimeout(function () { done(null); }, 45000);
-        var m = matchWorker();
-        if (m) done(m);
-      }).then(function (w2) {
-        if (w2) return { worker: w2, registration: registration };
-        var active = registration.active;
-        if (!active) throw new Error("Registration has no active worker.");
-        return { worker: active, registration: registration };
-      });
-    });
-  }
-
-  // ---- bootController(), mirroring uqA() -------------------------------
-  function bootController() {
-    stage = "sw";
-    return getWorkerAndRegistration().then(function (pair) {
-      var worker = pair.worker;
-      var registration = pair.registration;
-      log("worker = " + worker.scriptURL);
-
-      // Transport.
-      //
-      // The bundle uses `new eH({wisp: eg().wisp})` where `eH` is a
-      // wisp-backed BareClient. That class isn't exported from
-      // 8t6ked.js or 9lcbx4.js as far as I can see, so we build a
-      // transport that satisfies the same interface the Controller
-      // expects: { ready, init, request, connect }.
-      //
-      // `request` and `connect` are what the runtime calls. `request`
-      // is used for all top-level fetches, `connect` for WebSockets.
-      stage = "transport";
-      var transport = {
-        ready: false,
-        init: function () {
-          this.ready = true;
-          return Promise.resolve();
-        },
-        request: function (remote, method, body, headers) {
-          return fetch(remote.href, {
-            method: method,
-            body: body,
-            headers: headers,
-            mode: "cors",
-            credentials: "omit"
-          }).then(function (res) {
-            return res.arrayBuffer().then(function (buf) {
-              return {
-                status: res.status,
-                statusText: res.statusText,
-                headers: Array.from(res.headers),
-                body: buf
-              };
-            });
-          });
-        },
-        connect: function () {
-          throw new Error("WebSocket transport unavailable in direct.html");
-        }
-      };
-      return transport.init().then(function () { return transport; });
-    }).then(function (transport) {
-      // Now get the worker again (we already have it, but keep the
-      // structure parallel to the bundle's uqA).
-      return getWorkerAndRegistration().then(function (pair) {
-        var worker = pair.worker;
-        var registration = pair.registration;
-
-        // `r` in the bundle: the scope path, e.g. "/cherri/cherri/".
-        var r = new URL(registration.scope).pathname;
-        log("scope path = " + r);
-
-        // Build the config exactly like the bundle.
-        var cfg = {
-          prefix: CqA(r),                       // r + "fn5315/"
-          codec: codec,
-          _iyosyjgPath: Ij(r, BqA()),           // r + "bi1wf/8t6ked.js"
-          injectPath:   Ij(r, dqA()),           // r + "bwd9x/cdt4qb.js"
-          wasmPath:     Ij(r, QqA())            // r + "bi1wf/ri1n3t.wasm"
-        };
-        log("prefix = " + cfg.prefix);
-        log("_iyosyjgPath = " + cfg._iyosyjgPath);
-        log("injectPath = " + cfg.injectPath);
-        log("wasmPath = " + cfg.wasmPath);
-
-        stage = "controller-ctor";
-        var controller = new window._wdgvkq9.Controller({
-          serviceworker: worker,     // ← the worker, matching the bundle
-          transport: transport,
-          config: cfg
+        var w = matchWorker();
+        if (w) return { worker: w, registration: registration };
+        return new Promise(function (resolve) {
+          var settled = false;
+          function done(v) { if (settled) return; settled = true; clearTimeout(t);
+            navigator.serviceWorker.removeEventListener("controllerchange", oc); resolve(v); }
+          function oc() { done(matchWorker()); }
+          navigator.serviceWorker.addEventListener("controllerchange", oc);
+          var t = setTimeout(function () { done(null); }, 20000);
+          var m = matchWorker(); if (m) done(m);
+        }).then(function (w2) {
+          return { worker: w2 || registration.active, registration: registration };
         });
-        log("controller.prefix = " + controller.prefix);
-
-        stage = "controller-wait";
-        return controller.wait().then(function () { return controller; });
       });
-    });
   }
 
-  // ---- Go --------------------------------------------------------------
-  bootController().then(function (controller) {
-    stage = "frame-create";
+  var IqA = "fn5315/";
+  var codec = {
+    encode: function (e) { if (!e) return e;
+      var t = new TextEncoder().encode(e), a = "";
+      for (var r = 0; r < t.length; r++) a += String.fromCharCode(t[r]);
+      return btoa(a).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); },
+    decode: function (e) { if (!e) return e;
+      var t = e.replace(/-/g, "+").replace(/_/g, "/");
+      while (t.length % 4) t += "=";
+      var a = atob(t), r = new Uint8Array(a.length);
+      for (var o = 0; o < a.length; o++) r[o] = a.charCodeAt(o);
+      return new TextDecoder().decode(r); }
+  };
+  function Ij(scope, p) { return scope + (p.startsWith("/") ? p.slice(1) : p); }
+
+  var transport = new WispTransport(WISP_URLS);
+  transport.init().then(function () {
+    log("wisp connected");
+    return getWorkerAndRegistration();
+  }).then(function (pair) {
+    var r = new URL(pair.registration.scope).pathname;
+    log("scope = " + r);
+    var controller = new window._wdgvkq9.Controller({
+      serviceworker: pair.worker,
+      transport: transport,
+      config: {
+        prefix: r + IqA,
+        codec: codec,
+        _iyosyjgPath: Ij(r, "bi1wf/8t6ked.js"),
+        injectPath:   Ij(r, "bwd9x/cdt4qb.js"),
+        wasmPath:     Ij(r, "bi1wf/ri1n3t.wasm")
+      }
+    });
+    log("controller.prefix = " + controller.prefix);
+    return controller.wait().then(function () { return controller; });
+  }).then(function (controller) {
     var iframe = document.createElement("iframe");
-    iframe.setAttribute("allow",
-      "autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-read; clipboard-write");
+    iframe.setAttribute("allow", "autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-read; clipboard-write");
     iframe.setAttribute("allowfullscreen", "true");
     holder.appendChild(iframe);
-
     var frame = controller.createFrame(iframe);
     log("frame.prefix = " + frame.prefix);
-
-    iframe.addEventListener("load", function () { log("iframe load"); hide(); });
-
-    stage = "frame-go";
+    iframe.addEventListener("load", function () { hide(); });
     log("frame.go(" + target.href + ")");
     frame.go(target.href);
-
-    setTimeout(function () {
-      if (!statusEl.classList.contains("hidden")) {
-        log(""); log("--- 15s after frame.go ---");
-        log("iframe.src = " + iframe.src);
-      }
-    }, 15000);
-    setTimeout(hide, 20000);
+    setTimeout(hide, 15000);
   }).catch(function (e) {
-    fail(stage + ": " + (e && e.message ? e.message : String(e)));
+    fail((e && e.message ? e.message : String(e)));
   });
 })();
 </script>
