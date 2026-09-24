@@ -72,8 +72,9 @@
       })();
     </script>
 
+
     <script>
-      // Embed: set the tab favicon to the proxied site's icon
+      // Embed: tab favicon = proxied site (must replace SVG link, not just change href)
       (function () {
         function targetFromLocation() {
           try {
@@ -92,7 +93,8 @@
 
         function hostnameOf(raw) {
           try {
-            var s = raw;
+            var s = String(raw || "");
+            if (!s) return null;
             if (!/^https?:\/\//i.test(s) && s.indexOf("cherri://") !== 0) s = "https://" + s;
             return new URL(s).hostname;
           } catch (e) {
@@ -100,47 +102,79 @@
           }
         }
 
-        function setFavicon(rawUrl) {
+        function iconUrls(host) {
+          return [
+            "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(host) + "&sz=64",
+            "https://icons.duckduckgo.com/ip3/" + encodeURIComponent(host) + ".ico",
+            "https://" + host + "/favicon.ico",
+          ];
+        }
+
+        window.__cherriSetFavicon = function (rawUrl) {
           var host = hostnameOf(rawUrl);
           if (!host) return;
-          // Google S2 is reliable and doesn't need the site to allow CORS
-          var href =
-            "https://www.google.com/s2/favicons?domain=" +
-            encodeURIComponent(host) +
-            "&sz=64";
 
-          var links = document.querySelectorAll('link[rel*="icon"]');
-          if (!links.length) {
-            var l = document.createElement("link");
-            l.rel = "icon";
-            document.head.appendChild(l);
-            links = [l];
-          }
-          links.forEach(function (el) {
-            el.type = "image/png";
-            el.href = href;
+          // Remove every existing icon link (SVG cherri favicon fights otherwise)
+          document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]').forEach(function (el) {
+            el.parentNode && el.parentNode.removeChild(el);
           });
 
-          // Optional: title hint from hostname while embed loads
+          var urls = iconUrls(host);
+          var primary = urls[0];
+
+          function add(rel, href, type) {
+            var l = document.createElement("link");
+            l.rel = rel;
+            if (type) l.type = type;
+            l.href = href;
+            // cache-bust so browser does not keep old SVG
+            l.href = href + (href.indexOf("?") >= 0 ? "&" : "?") + "cherri=" + Date.now();
+            document.head.appendChild(l);
+            return l;
+          }
+
+          add("icon", primary, "image/png");
+          add("shortcut icon", primary, "image/png");
+          add("apple-touch-icon", primary, null);
+
+          // Fallback if Google is blocked: swap to DuckDuckGo after error
+          var img = new Image();
+          img.onerror = function () {
+            var fb = urls[1];
+            document.querySelectorAll('link[rel*="icon"]').forEach(function (el) {
+              el.href = fb + (fb.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now();
+              el.type = "image/x-icon";
+            });
+          };
+          img.src = primary;
+
           try {
-            if (document.title === "cherri" || !document.title) {
+            var t = document.title || "";
+            if (!t || t === "cherri" || t.indexOf("cherri") === 0) {
               document.title = host;
             }
           } catch (e) {}
-        }
+        };
 
         function apply() {
           var t = targetFromLocation();
-          if (t) setFavicon(t);
+          if (t) window.__cherriSetFavicon(t);
         }
 
         apply();
         window.addEventListener("hashchange", apply);
-        // Boot script may replace() to hash shortly after
         setTimeout(apply, 0);
-        setTimeout(apply, 300);
+        setTimeout(apply, 200);
+        setTimeout(apply, 1000);
+
+        // If React re-inserts favicon.svg later, strip it and re-apply
+        new MutationObserver(function () {
+          var bad = document.querySelector('link[rel*="icon"][href*="favicon.svg"]');
+          if (bad) apply();
+        }).observe(document.head, { childList: true, subtree: true });
       })();
     </script>
+
 
 
     <script>
@@ -238,7 +272,7 @@
 
 </script>
 
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="icon" id="cherri-favicon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W5W0AAAAASUVORK5CYII=" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>cherri</title>
     <script src="bi1wf/8t6ked.js"></script>
@@ -347,25 +381,9 @@
         }
 
         function setFaviconFor(rawUrl) {
-          try {
-            var host = new URL(rawUrl).hostname;
-            var href =
-              "https://www.google.com/s2/favicons?domain=" +
-              encodeURIComponent(host) +
-              "&sz=64";
-            var links = document.querySelectorAll('link[rel*="icon"]');
-            if (!links.length) {
-              var l = document.createElement("link");
-              l.rel = "icon";
-              document.head.appendChild(l);
-              links = [l];
-            }
-            links.forEach(function (el) {
-              el.type = "image/png";
-              el.href = href;
-            });
-            if (document.title === "cherri" || !document.title) document.title = host;
-          } catch (e) {}
+          if (typeof window.__cherriSetFavicon === "function") {
+            window.__cherriSetFavicon(rawUrl);
+          }
         }
 
         // Soft update: change the visible URL without remounting React/embed
