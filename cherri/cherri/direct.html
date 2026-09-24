@@ -33,14 +33,11 @@
   function fail(m) { log("FAIL: " + m); }
   function hide()  { statusEl.classList.add("hidden"); }
 
-  // Whatever happens, after 15s dump the state so we can see where it stopped.
   setTimeout(function () {
     if (!statusEl.classList.contains("hidden")) {
-      log("");
-      log("--- after 15s, still running ---");
-      log("stage = " + stage);
+      log(""); log("--- still running after 20s ---"); log("stage = " + stage);
     }
-  }, 15000);
+  }, 20000);
 
   var params = new URLSearchParams(location.search);
   var raw = params.get("url");
@@ -49,144 +46,170 @@
   var target;
   try { target = new URL(raw); } catch (e) { fail("Invalid URL: " + raw); return; }
 
-  log("runtime _nog837i = " + typeof window._nog837i);
-  log("runtime _wdgvkq9 = " + typeof window._wdgvkq9);
+  if (!("serviceWorker" in navigator)) { fail("No SW support."); return; }
+  if (!window._wdgvkq9 || !window._wdgvkq9.Controller) { fail("Runtime not loaded."); return; }
 
-  if (!("serviceWorker" in navigator)) { fail("No service worker support."); return; }
-  if (!window._wdgvkq9 || !window._wdgvkq9.Controller) {
-    fail("Proxy runtime not loaded.");
-    return;
-  }
+  // The production build renames the runtime+wasm from their dev defaults
+  // (/_iyosyjg/_iyosyjg.{js,wasm}) to hashed names inside ./bi1wf/.
+  // index.html's bundle passes these overrides in; we do the same here.
+  var RUNTIME_PATH = new URL("bi1wf/8t6ked.js",   location.href).href;
+  var WASM_PATH    = new URL("bi1wf/ri1n3t.wasm", location.href).href;
 
-  var WASM_PATH = new URL("_iyosyjg/_iyosyjg.wasm", location.href).href;
-
-  stage = "getRegistrations";
-  navigator.serviceWorker.getRegistrations().then(function (regs) {
-    log("existing SW regs = " + regs.length);
-    var ours = null;
-    for (var i = 0; i < regs.length; i++) {
-      var w = regs[i].active || regs[i].waiting || regs[i].installing;
-      log("  - " + (w ? w.scriptURL : "(none)"));
-      if (w && w.scriptURL.split("/").pop() === "v6hxi5.js") { ours = regs[i]; break; }
-    }
-    if (ours) return ours;
-    log("registering v6hxi5.js");
-    return navigator.serviceWorker.register("v6hxi5.js", { scope: "./" });
-  }).then(function () {
-    stage = "ready";
-    return navigator.serviceWorker.ready;
-  }).then(function (registration) {
-
-    log("SW ready, controller = " + (navigator.serviceWorker.controller ? "yes" : "no"));
-    stage = "controller-check";
-    if (!navigator.serviceWorker.controller) {
-      if (!sessionStorage.getItem("__direct_reload")) {
-        sessionStorage.setItem("__direct_reload", "1");
-        log("reloading once to gain control...");
-        location.reload();
-        return new Promise(function () {});
-      }
-      log("still no controller after reload — continuing anyway");
-    }
-    try { sessionStorage.removeItem("__direct_reload"); } catch (e) {}
-
-    stage = "shim";
-    var swTarget = registration.active
-                || registration.waiting
-                || registration.installing
-                || navigator.serviceWorker.controller;
-
-    if (!swTarget) { fail("No active service worker to message."); return; }
-    log("swTarget = " + swTarget.scriptURL);
-    log("swTarget.postMessage = " + typeof swTarget.postMessage);
-
-    var swShim = {
-      postMessage: function (msg, transfer) {
-        return swTarget.postMessage(msg, transfer || []);
-      },
-      get active()     { return registration.active; },
-      get waiting()    { return registration.waiting; },
-      get installing() { return registration.installing; },
-      get scope()      { return registration.scope; }
-    };
-
-    stage = "transport";
-    var transport = {
-      ready: Promise.resolve(true),
-      init: function () { return Promise.resolve(); },
-      request: function (remote, method, body, headers) {
-        return fetch(remote.href, { method: method, body: body, headers: headers })
-          .then(function (res) {
-            return res.arrayBuffer().then(function (buf) {
-              return {
-                status: res.status,
-                statusText: res.statusText,
-                headers: Array.from(res.headers),
-                body: buf
-              };
-            });
-          });
-      },
-      connect: function () {
-        throw new Error("WebSockets not supported in direct.html");
-      }
-    };
-
-    stage = "controller-ctor";
-    log("constructing Controller…");
-    var controller;
-    try {
-      controller = new window._wdgvkq9.Controller({
-        transport: transport,
-        serviceworker: swShim,
-        config: { wasmPath: WASM_PATH }
-      });
-    } catch (e) {
-      fail("Controller ctor: " + (e && e.message ? e.message : String(e)));
+  // --- Verify the SW's imported scripts exist ---------------------------
+  stage = "probe-sw-deps";
+  Promise.all([
+    fetch("9vcrck.js",          { method: "GET"  }).then(function (r) { return { name: "9vcrck.js",          ok: r.ok, status: r.status }; }),
+    fetch("bwd9x/vzyras.js",    { method: "GET"  }).then(function (r) { return { name: "bwd9x/vzyras.js",    ok: r.ok, status: r.status }; }),
+    fetch("bi1wf/8t6ked.js",    { method: "HEAD" }).then(function (r) { return { name: "bi1wf/8t6ked.js",    ok: r.ok, status: r.status }; }),
+    fetch("bi1wf/ri1n3t.wasm",  { method: "HEAD" }).then(function (r) { return { name: "bi1wf/ri1n3t.wasm",  ok: r.ok, status: r.status }; })
+  ]).then(function (results) {
+    results.forEach(function (r) {
+      log("probe " + r.name + " → " + r.status + (r.ok ? "" : "  ** MISSING **"));
+    });
+    var missing = results.filter(function (r) { return !r.ok; });
+    if (missing.length) {
+      fail("Files missing: " + missing.map(function(r){return r.name;}).join(", "));
       return;
     }
-    log("controller.prefix = " + controller.prefix);
-
-    stage = "controller-wait";
-    controller.wait().then(function () {
-      log("controller ready");
-
-      stage = "frame-create";
-      var iframe = document.createElement("iframe");
-      iframe.setAttribute("allow",
-        "clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture");
-      iframe.setAttribute("allowfullscreen", "true");
-      holder.appendChild(iframe);
-
-      var frame = controller.createFrame(iframe, { plugins: [] });
-      log("frame.prefix = " + frame.prefix);
-
-      iframe.addEventListener("load", function () {
-        log("iframe load fired");
-        hide();
-      });
-
-      stage = "frame-go";
-      log("calling frame.go(" + target.href + ")");
-      frame.go(target.href);
-
-      stage = "waiting-for-load";
-      setTimeout(function () {
-        if (!statusEl.classList.contains("hidden")) {
-          log("");
-          log("--- 8s after frame.go ---");
-          log("iframe.src = " + iframe.src);
-        }
-      }, 8000);
-
-      setTimeout(hide, 10000);
-    }).catch(function (e) {
-      fail("controller.wait(): " + (e && e.message ? e.message : String(e)));
-    });
-
+    continueAfterProbes();
   }).catch(function (e) {
-    fail("setup: " + (e && e.message ? e.message : String(e)));
+    fail("probe failed: " + (e && e.message ? e.message : String(e)));
   });
+
+  function continueAfterProbes() {
+    stage = "getRegistrations";
+    navigator.serviceWorker.getRegistrations().then(function (regs) {
+      var ours = null;
+      for (var i = 0; i < regs.length; i++) {
+        var w = regs[i].active || regs[i].waiting || regs[i].installing;
+        if (w && w.scriptURL.split("/").pop() === "v6hxi5.js") { ours = regs[i]; break; }
+      }
+      if (ours) return ours;
+      log("registering v6hxi5.js");
+      return navigator.serviceWorker.register("v6hxi5.js", { scope: "./" });
+    }).then(function () {
+      stage = "ready";
+      return navigator.serviceWorker.ready;
+    }).then(function (registration) {
+
+      log("SW ready, controller = " + (navigator.serviceWorker.controller ? "yes" : "no"));
+      stage = "wait-for-control";
+
+      return waitFor(function () {
+        return navigator.serviceWorker.controller &&
+               navigator.serviceWorker.controller.scriptURL.split("/").pop() === "v6hxi5.js";
+      }, 5000).then(function () {
+        log("SW is controlling this page");
+        return registration;
+      }, function () {
+        if (!sessionStorage.getItem("__direct_reload")) {
+          sessionStorage.setItem("__direct_reload", "1");
+          log("not controlled yet — reloading once…");
+          location.reload();
+          return new Promise(function () {});
+        }
+        log("WARNING: still not controlled after reload — trying anyway");
+        return registration;
+      });
+    }).then(function (registration) {
+      if (!registration) return;
+
+      try { sessionStorage.removeItem("__direct_reload"); } catch (e) {}
+
+      stage = "shim";
+      var swTarget = registration.active
+                  || registration.waiting
+                  || registration.installing
+                  || navigator.serviceWorker.controller;
+      if (!swTarget) { fail("No active worker."); return; }
+
+      var swShim = {
+        postMessage: function (msg, transfer) { return swTarget.postMessage(msg, transfer || []); },
+        get active()     { return registration.active; },
+        get waiting()    { return registration.waiting; },
+        get installing() { return registration.installing; },
+        get scope()      { return registration.scope; }
+      };
+
+      stage = "transport";
+      var transport = {
+        ready: Promise.resolve(true),
+        init: function () { return Promise.resolve(); },
+        request: function (remote, method, body, headers) {
+          return fetch(remote.href, { method: method, body: body, headers: headers })
+            .then(function (res) {
+              return res.arrayBuffer().then(function (buf) {
+                return {
+                  status: res.status, statusText: res.statusText,
+                  headers: Array.from(res.headers), body: buf
+                };
+              });
+            });
+        },
+        connect: function () { throw new Error("WebSockets not supported in direct.html"); }
+      };
+
+      stage = "controller-ctor";
+      var controller;
+      try {
+        controller = new window._wdgvkq9.Controller({
+          transport: transport,
+          serviceworker: swShim,
+          config: {
+            // Override the dev defaults with the real production paths.
+            _iyosyjgPath: RUNTIME_PATH,
+            wasmPath:     WASM_PATH
+          }
+        });
+      } catch (e) { fail("Controller ctor: " + (e && e.message ? e.message : String(e))); return; }
+      log("controller.prefix = " + controller.prefix);
+
+      stage = "controller-wait";
+      return controller.wait().then(function () {
+        log("controller ready");
+
+        stage = "frame-create";
+        var iframe = document.createElement("iframe");
+        iframe.setAttribute("allow",
+          "clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture");
+        iframe.setAttribute("allowfullscreen", "true");
+        holder.appendChild(iframe);
+
+        var frame = controller.createFrame(iframe, { plugins: [] });
+        log("frame.prefix = " + frame.prefix);
+
+        iframe.addEventListener("load", function () { log("iframe load fired"); hide(); });
+
+        stage = "frame-go";
+        log("frame.go(" + target.href + ")");
+        frame.go(target.href);
+
+        setTimeout(function () {
+          if (!statusEl.classList.contains("hidden")) {
+            log(""); log("--- 8s after frame.go ---");
+            log("iframe.src = " + iframe.src);
+          }
+        }, 8000);
+
+        setTimeout(hide, 12000);
+      }).catch(function (e) {
+        fail("controller.wait(): " + (e && e.message ? e.message : String(e)));
+      });
+    }).catch(function (e) {
+      fail("setup: " + (e && e.message ? e.message : String(e)));
+    });
+  }
+
+  function waitFor(cond, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+      var t0 = Date.now();
+      (function tick() {
+        try { if (cond()) return resolve(); } catch (e) {}
+        if (Date.now() - t0 > timeoutMs) return reject(new Error("timeout"));
+        setTimeout(tick, 100);
+      })();
+    });
+  }
 })();
 </script>
 </body>
