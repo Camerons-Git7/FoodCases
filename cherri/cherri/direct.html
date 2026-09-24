@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>cherri — direct</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+  }
+  #frame {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    background: #000;
+    display: block;
+  }
+  #status {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    font: 14px/1.4 system-ui, -apple-system, Segoe UI, sans-serif;
+    background: #0a0a0a;
+    text-align: center;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  #status a { color: #6cf; }
+  #status.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div id="status">Starting proxy…</div>
+<iframe id="frame" allow="clipboard-read; clipboard-write; fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>
+
+<script>
+(function () {
+  var statusEl = document.getElementById("status");
+  var frameEl  = document.getElementById("frame");
+
+  function fail(msg) {
+    statusEl.classList.remove("hidden");
+    statusEl.innerHTML = msg;
+    frameEl.style.display = "none";
+  }
+
+  // ---- 1. Read and normalize the target URL -------------------------------
+  var params = new URLSearchParams(location.search);
+  var raw = params.get("url");
+  if (!raw) {
+    fail(
+      "Missing <code>?url=</code> parameter.<br><br>" +
+      "Try: <code>direct.html?url=https://example.com</code>"
+    );
+    return;
+  }
+  if (!/^https?:\/\//i.test(raw) && raw.indexOf("cherri://") !== 0) {
+    raw = "https://" + raw;
+  }
+  var target;
+  try {
+    target = new URL(raw);
+  } catch (e) {
+    fail("Invalid URL: " + raw);
+    return;
+  }
+
+  // ---- 2. Wait for the service worker that powers the proxy ---------------
+  // Cherri's proxy only works if its SW (v6hxi5.js, registered by index.html)
+  // is installed and controlling this origin. direct.html itself does not
+  // register it — but if you've visited index.html once on this origin, the
+  // SW is already active and will intercept fetches from this page too.
+  //
+  // If it's NOT registered yet, we register it here so direct.html works
+  // standalone.
+  var SW_FILE = "v6hxi5.js"; // same file index.html registers
+
+  function registerSW() {
+    if (!("serviceWorker" in navigator)) return Promise.resolve(null);
+    return navigator.serviceWorker.getRegistrations().then(function (regs) {
+      for (var i = 0; i < regs.length; i++) {
+        var w = regs[i].active || regs[i].waiting || regs[i].installing;
+        if (w && w.scriptURL.split("/").pop() === SW_FILE) return regs[i];
+      }
+      return navigator.serviceWorker.register(SW_FILE, { scope: "./" });
+    });
+  }
+
+  // ---- 3. Build the proxied URL -------------------------------------------
+  // Cherri (like most scramjet/UV-based proxies) exposes proxied content
+  // through a path prefix that its service worker claims. The three common
+  // shapes are:
+  //   /~/<encoded>       (scramjet)
+  //   /scram/<encoded>   (scramjet alt)
+  //   /fn5315/<encoded>  (ultraviolet fork)
+  // Set PROXY_PREFIX to whichever one your build uses. If you're unsure,
+  // open index.html, load any site through the UI, and copy the iframe src.
+  var PROXY_PREFIX = "/~/";
+
+  // scramjet-style: keep the scheme, just prefix the whole href
+  var proxiedHref = PROXY_PREFIX + target.href;
+
+  // ---- 4. Boot ------------------------------------------------------------
+  registerSW()
+    .then(function () {
+      // Wait until a controller exists (SW active) so the fetch inside the
+      // iframe is actually intercepted.
+      if (!navigator.serviceWorker) return null;
+      if (navigator.serviceWorker.controller) return null;
+
+      return new Promise(function (resolve) {
+        var done = false;
+        var onChange = function () {
+          if (done) return;
+          done = true;
+          navigator.serviceWorker.removeEventListener("controllerchange", onChange);
+          resolve(null);
+        };
+        navigator.serviceWorker.addEventListener("controllerchange", onChange);
+        // Give up waiting after 3s and try anyway (some browsers control
+        // only after the first navigation).
+        setTimeout(function () {
+          if (done) return;
+          done = true;
+          navigator.serviceWorker.removeEventListener("controllerchange", onChange);
+          resolve(null);
+        }, 3000);
+      });
+    })
+    .catch(function (err) {
+      console.warn("[direct] SW registration failed:", err);
+    })
+    .then(function () {
+      // Point the iframe at the proxied URL
+      frameEl.addEventListener("load", function onLoad() {
+        frameEl.removeEventListener("load", onLoad);
+        statusEl.classList.add("hidden");
+      });
+
+      frameEl.addEventListener("error", function () {
+        fail(
+          "Failed to load proxied page.<br><br>" +
+          "Check that <code>" + PROXY_PREFIX + "</code> is the correct " +
+          "proxy prefix for this build (see comment in direct.html)."
+        );
+      });
+
+      frameEl.src = proxiedHref;
+
+      // Safety net: if load never fires within 15s, reveal the frame anyway
+      // so the user isn't stuck on the splash forever.
+      setTimeout(function () {
+        statusEl.classList.add("hidden");
+      }, 15000);
+    });
+})();
+</script>
+</body>
+</html>
