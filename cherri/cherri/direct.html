@@ -41,10 +41,10 @@
   setTimeout(function () {
     if (!statusEl.classList.contains("hidden")) {
       log("");
-      log("--- still running after 35s ---");
+      log("--- still running after 40s ---");
       log("stage = " + stage);
     }
-  }, 35000);
+  }, 40000);
 
   var params = new URLSearchParams(location.search);
   var raw = params.get("url");
@@ -59,11 +59,10 @@
 
   if (!("serviceWorker" in navigator)) { fail("No service worker support"); return; }
   if (!window._wdgvkq9 || !window._wdgvkq9.Controller) {
-    fail("_wdgvkq9.Controller missing — bi1wf/8t6ked.js or bwd9x/9lcbx4.js failed to load");
+    fail("_wdgvkq9.Controller missing");
     return;
   }
 
-  // From assets/bundle-1vghyvjv.js (uqA / BqA / dqA / QqA / CqA / IqA)
   var SW_FILE     = "v6hxi5.js";
   var PREFIX_TAIL = "fn5315/";
   var RUNTIME_REL = "bi1wf/8t6ked.js";
@@ -109,17 +108,14 @@
   function headOk(url) {
     return fetch(url, { method: "HEAD", cache: "no-store" })
       .then(function (r) { return { url: url, ok: r.ok, status: r.status }; })
-      .catch(function (e) { return { url: url, ok: false, status: 0, err: String(e && e.message || e) }; });
+      .catch(function (e) { return { url: url, ok: false, status: 0 }; });
   }
 
-  // Epoxy transport — same role as `new eH({wisp})` inside the React bundle.
-  // Loaded from the public epoxy-tls package and adapted to Controller's transport API.
   function makeEpoxyTransport(wispUrl) {
     stage = "epoxy-import";
-    log("loading epoxy-tls from CDN…");
+    log("loading epoxy-tls…");
     return import("https://cdn.jsdelivr.net/npm/@mercuryworkshop/epoxy-tls@2.1.19-1/full/epoxy-bundled.js")
       .then(function (mod) {
-        stage = "epoxy-init";
         return Promise.resolve(mod.default()).then(function () { return mod; });
       })
       .then(function (mod) {
@@ -127,7 +123,7 @@
         try { opts.user_agent = navigator.userAgent; } catch (_) {}
         try { opts.wisp_v2 = true; } catch (_) {}
         var client = new mod.EpoxyClient(wispUrl, opts);
-        log("epoxy client ready → " + wispUrl);
+        log("epoxy ready → " + wispUrl);
 
         function headersToObject(headers) {
           var h = {};
@@ -153,9 +149,7 @@
               headers: headersToObject(headers),
               redirect: "manual"
             };
-            if (body != null && method && method !== "GET" && method !== "HEAD") {
-              init.body = body;
-            }
+            if (body != null && method && method !== "GET" && method !== "HEAD") init.body = body;
             if (signal) init.signal = signal;
             return client.fetch(remote.href, init).then(function (res) {
               return res.arrayBuffer().then(function (buf) {
@@ -163,8 +157,6 @@
                 try {
                   if (res.headers && typeof res.headers.forEach === "function") {
                     res.headers.forEach(function (v, k) { hdrs.push([k, v]); });
-                  } else if (res.rawHeaders && Array.isArray(res.rawHeaders)) {
-                    hdrs = res.rawHeaders;
                   }
                 } catch (_) {}
                 return {
@@ -179,23 +171,17 @@
           connect: function (url, protocols, requestHeaders, onopen, onmessage, onclose, onerror) {
             var opened = false;
             var handlers = new mod.EpoxyHandlers(
-              function () {
-                opened = true;
-                try { onopen("", ""); } catch (_) {}
-              },
-              function (code, reason) {
-                try { onclose(code || 1000, reason || ""); } catch (_) {}
-              },
-              function (err) {
-                try { onerror(String(err || "ws error")); } catch (_) {}
-              },
-              function (msg) {
-                try { onmessage(msg); } catch (_) {}
-              }
+              function () { opened = true; try { onopen("", ""); } catch (_) {} },
+              function (code, reason) { try { onclose(code || 1000, reason || ""); } catch (_) {} },
+              function (err) { try { onerror(String(err || "ws error")); } catch (_) {} },
+              function (msg) { try { onmessage(msg); } catch (_) {} }
             );
-            var protos = protocols || [];
-            var hdrs = headersToObject(requestHeaders);
-            var wsPromise = client.connect_websocket(handlers, url.href || String(url), protos, hdrs);
+            var wsPromise = client.connect_websocket(
+              handlers,
+              url.href || String(url),
+              protocols || [],
+              headersToObject(requestHeaders)
+            );
             var sendFn = function (data) {
               wsPromise.then(function (ws) { return ws.send(data); }).catch(function () {});
             };
@@ -203,9 +189,7 @@
               wsPromise.then(function (ws) { return ws.close(code || 1000, reason || ""); }).catch(function () {});
             };
             wsPromise.catch(function (err) {
-              if (!opened) {
-                try { onerror(String(err && err.message || err)); } catch (_) {}
-              }
+              if (!opened) try { onerror(String(err && err.message || err)); } catch (_) {}
             });
             return [sendFn, closeFn];
           }
@@ -214,7 +198,7 @@
   }
 
   function makeFetchFallback() {
-    log("WARNING: epoxy failed — falling back to plain fetch (no WebSockets)");
+    log("WARNING: epoxy failed — fetch fallback (no WebSockets)");
     return {
       ready: Promise.resolve(true),
       init: function () { return Promise.resolve(); },
@@ -237,7 +221,7 @@
             });
           });
       },
-      connect: function () { throw new Error("WebSockets require epoxy transport"); }
+      connect: function () { throw new Error("WebSockets require epoxy"); }
     };
   }
 
@@ -270,17 +254,26 @@
       }
       if (!sessionStorage.getItem("__direct_sw_reload")) {
         sessionStorage.setItem("__direct_sw_reload", "1");
-        log("SW not controlling yet — reloading once…");
+        log("SW not controlling — reloading once…");
         location.reload();
         return new Promise(function () {});
       }
       sessionStorage.removeItem("__direct_sw_reload");
       worker = registration.active || registration.waiting || registration.installing;
       if (!worker) throw new Error("No active service worker");
-      log("WARNING: using registration.active (page may be uncontrolled)");
+      log("WARNING: using registration.active");
       return { worker: worker, registration: registration };
     });
   }
+
+  // Listen for ANY message from the SW so we can see if the ready RPC arrives
+  navigator.serviceWorker.addEventListener("message", function (e) {
+    try {
+      log("SW→page message: " + JSON.stringify(e.data).slice(0, 200));
+    } catch (_) {
+      log("SW→page message (unserializable)");
+    }
+  });
 
   var wisp = readWisp();
   log("wisp = " + wisp);
@@ -294,25 +287,69 @@
     probes.forEach(function (p) {
       log("probe " + p.url + " → " + p.status + (p.ok ? "" : " ** MISSING **"));
     });
-    var missing = probes.filter(function (p) { return !p.ok; });
-    if (missing.length) {
-      fail("Required files missing: " + missing.map(function (p) { return p.url; }).join(", "));
+    if (probes.some(function (p) { return !p.ok; })) {
+      fail("Required files missing");
       return;
     }
     return ensureSW();
   }).then(function (pair) {
     if (!pair) return;
-
     try { sessionStorage.removeItem("__direct_sw_reload"); } catch (_) {}
+
+    // Pre-fetch wasm ourselves so we know it works before Controller tries
+    stage = "wasm-prefetch";
+    var wasmAbs = new URL(WASM_REL, location.href).href;
+    log("prefetching wasm " + wasmAbs);
+    return fetch(wasmAbs, { cache: "no-store" })
+      .then(function (r) {
+        log("wasm GET " + r.status + " (" + (r.headers.get("content-type") || "?") + ")");
+        if (!r.ok) throw new Error("wasm GET failed: " + r.status);
+        return r.arrayBuffer();
+      })
+      .then(function (buf) {
+        log("wasm bytes = " + buf.byteLength);
+        return pair;
+      });
+  }).then(function (pair) {
+    if (!pair) return;
 
     return makeEpoxyTransport(wisp)
       .catch(function (err) {
-        log("epoxy load error: " + (err && err.message ? err.message : String(err)));
+        log("epoxy error: " + (err && err.message ? err.message : String(err)));
         return makeFetchFallback();
       })
       .then(function (transport) {
         var registration = pair.registration;
-        var worker = pair.worker;
+        // Prefer the controlling worker; fall back to registration.active
+        var worker =
+          navigator.serviceWorker.controller ||
+          registration.active ||
+          pair.worker;
+
+        if (!worker || typeof worker.postMessage !== "function") {
+          fail("No SW worker with postMessage");
+          return;
+        }
+
+        // Wrap postMessage so we can log the $controller$init handshake
+        var postCount = 0;
+        var swShim = {
+          postMessage: function (msg, transfer) {
+            postCount += 1;
+            try {
+              var keys = msg && typeof msg === "object" ? Object.keys(msg).join(",") : typeof msg;
+              log("page→SW postMessage #" + postCount + " keys=" + keys +
+                  " ports=" + ((transfer && transfer.length) || 0));
+            } catch (_) {}
+            try {
+              worker.postMessage(msg, transfer || []);
+            } catch (err) {
+              log("postMessage threw: " + (err && err.message ? err.message : String(err)));
+              throw err;
+            }
+          }
+        };
+
         var scopePath = new URL(registration.scope).pathname;
         if (scopePath.slice(-1) !== "/") scopePath += "/";
 
@@ -321,15 +358,14 @@
         var injectPath  = scopePath + INJECT_REL;
         var wasmPath    = scopePath + WASM_REL;
 
-        log("scope   = " + scopePath);
-        log("prefix  = " + prefix);
-        log("wasm    = " + wasmPath);
+        log("scope  = " + scopePath);
+        log("prefix = " + prefix);
 
         stage = "controller-ctor";
         var controller;
         try {
           controller = new window._wdgvkq9.Controller({
-            serviceworker: worker,
+            serviceworker: swShim,
             transport: transport,
             config: {
               prefix: prefix,
@@ -346,18 +382,23 @@
         log("controller.prefix = " + controller.prefix);
         window.__directController = controller;
 
-        stage = "controller-wait";
-        log("waiting for controller (SW ready + wasm)…");
-
-        var waitTimeout = new Promise(function (_, reject) {
+        // Re-send init a few times — some hosts drop the first MessagePort transfer
+        stage = "handshake";
+        [200, 800, 2000].forEach(function (ms) {
           setTimeout(function () {
-            reject(new Error("controller.wait() timed out after 20s — check wasm fetch and SW messages"));
-          }, 20000);
+            try {
+              log("re-setupMessagePort @ " + ms + "ms");
+              controller.setupMessagePort();
+            } catch (e) {
+              log("setupMessagePort error: " + (e && e.message ? e.message : String(e)));
+            }
+          }, ms);
         });
 
-        return Promise.race([controller.wait(), waitTimeout]).then(function () {
-          log("controller ready");
+        stage = "controller-wait";
+        log("waiting for controller ready…");
 
+        function startFrame() {
           stage = "frame-create";
           var iframe = document.createElement("iframe");
           iframe.setAttribute(
@@ -387,8 +428,33 @@
               log("iframe.src = " + iframe.src);
             }
           }, 12000);
-          setTimeout(hide, 20000);
-        });
+          setTimeout(hide, 25000);
+        }
+
+        // Wait up to 8s for the real ready signal; then proceed anyway.
+        // createFrame only checks this.ready (a Promise, always truthy), so it
+        // will not throw. Routing only works if SW got $controller$init — which
+        // is why we re-post setupMessagePort above.
+        var readyOrTimeout = Promise.race([
+          controller.wait().then(function () {
+            log("controller ready (SW handshake ok)");
+          }),
+          new Promise(function (resolve) {
+            setTimeout(function () {
+              log("ready timed out — forcing readyResolve and continuing");
+              try {
+                if (typeof controller.readyResolve === "function") {
+                  controller.readyResolve();
+                }
+              } catch (e) {
+                log("readyResolve error: " + e);
+              }
+              resolve();
+            }, 8000);
+          })
+        ]);
+
+        return readyOrTimeout.then(startFrame);
       });
   }).catch(function (e) {
     fail("setup: " + (e && e.message ? e.message : String(e)));
