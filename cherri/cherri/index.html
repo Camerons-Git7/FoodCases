@@ -210,5 +210,127 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
   
         <script src="./assets/bundle-1vghyvjv.js"></script>
+      
+    <script>
+      // Embed mode: when the proxied iframe navigates (link click, redirect),
+      // mirror the browser UI by sending the whole top-level page to the new URL
+      // via ?url= (which rewrites to #/embed?u=…).
+      (function () {
+        function isEmbedRoute() {
+          var h = (location.hash || "").replace(/^#/, "");
+          var path = h.split("?")[0] || "";
+          return path === "/embed" || path === "embed";
+        }
+
+        function currentEmbedTarget() {
+          try {
+            var h = (location.hash || "").replace(/^#/, "");
+            var qi = h.indexOf("?");
+            if (qi < 0) return null;
+            return new URLSearchParams(h.slice(qi + 1)).get("u");
+          } catch (e) {
+            return null;
+          }
+        }
+
+        // Decode scramjet frame URL:
+        //   /…/fn5315/<ctrl>/<frame>/<base64url-encoded target>
+        function targetFromProxySrc(src) {
+          try {
+            var u = new URL(src, location.href);
+            var parts = u.pathname.split("/").filter(Boolean);
+            var i = parts.indexOf("fn5315");
+            if (i < 0 || i >= parts.length - 1) return null;
+            var encoded = parts[parts.length - 1];
+            if (!encoded || encoded.length < 8) return null;
+            var b64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+            while (b64.length % 4) b64 += "=";
+            var bin = atob(b64);
+            var bytes = new Uint8Array(bin.length);
+            for (var n = 0; n < bin.length; n++) bytes[n] = bin.charCodeAt(n);
+            var text = new TextDecoder().decode(bytes);
+            // Must look like a URL
+            if (!/^https?:\/\//i.test(text) && text.indexOf("cherri://") !== 0) return null;
+            return text;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        function navigateTopTo(rawUrl) {
+          if (!rawUrl) return;
+          var cur = currentEmbedTarget();
+          if (cur === rawUrl) return;
+          // Avoid redirect loops
+          try {
+            if (cur && new URL(cur).href === new URL(rawUrl).href) return;
+          } catch (e) {}
+
+          var next = new URL(location.pathname, location.href);
+          next.search = "";
+          next.hash = "";
+          next.searchParams.set("url", rawUrl);
+          location.replace(next.href);
+        }
+
+        function watchIframe(iframe) {
+          if (!iframe || iframe.dataset.cherriEmbedWatch === "1") return;
+          iframe.dataset.cherriEmbedWatch = "1";
+
+          var last = "";
+          function check() {
+            if (!isEmbedRoute()) return;
+            var src = iframe.src || "";
+            if (!src || src === last) return;
+            var target = targetFromProxySrc(src);
+            if (!target) return;
+            // First load sets last without redirect (boot already chose this URL)
+            if (!last) {
+              last = src;
+              return;
+            }
+            if (src === last) return;
+            last = src;
+            navigateTopTo(target);
+          }
+
+          iframe.addEventListener("load", check);
+          // Some navigations update src before load
+          var mo = new MutationObserver(check);
+          mo.observe(iframe, { attributes: true, attributeFilter: ["src"] });
+          check();
+        }
+
+        function scan(root) {
+          if (!isEmbedRoute()) return;
+          (root || document).querySelectorAll("iframe").forEach(watchIframe);
+        }
+
+        var boot = function () {
+          scan(document);
+          new MutationObserver(function (muts) {
+            muts.forEach(function (m) {
+              m.addedNodes && m.addedNodes.forEach(function (n) {
+                if (n.nodeType !== 1) return;
+                if (n.tagName === "IFRAME") watchIframe(n);
+                else if (n.querySelectorAll) scan(n);
+              });
+            });
+          }).observe(document.documentElement, { childList: true, subtree: true });
+        };
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", boot);
+        } else {
+          boot();
+        }
+
+        // Re-scan on hash changes (embed route entered later)
+        window.addEventListener("hashchange", function () {
+          setTimeout(function () { scan(document); }, 50);
+        });
+      })();
+    </script>
+
       </body>
     </html>
