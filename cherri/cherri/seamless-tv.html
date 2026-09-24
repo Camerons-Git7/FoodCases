@@ -119,7 +119,9 @@
             text-align: center;
             padding: 1.5rem;
             background: rgba(0,0,0,0.8);
+            z-index: 2;
         }
+        .player-msg a { color: var(--accent); }
         .panel {
             background: var(--bg);
             border-radius: 1.25rem;
@@ -167,8 +169,11 @@
         <h1 id="watch-title"></h1>
         <div class="meta" id="watch-meta"></div>
         <div class="player-box">
-            <iframe id="player-frame" allowfullscreen allow="fullscreen; autoplay; encrypted-media; picture-in-picture"></iframe>
-            <div id="player-msg" class="player-msg">
+            <iframe id="player-frame"
+                allowfullscreen
+                allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
+                referrerpolicy="no-referrer"></iframe>
+            <div id="player-msg" class="player-msg hidden">
                 <div>
                     <p id="player-msg-title" style="font-size:1.1rem;margin:0 0 0.5rem">Player loading…</p>
                     <p id="player-msg-body" style="font-size:0.85rem;opacity:0.8;margin:0"></p>
@@ -237,37 +242,20 @@
         { id: 'vidsrccx', name: 'VidSrcCX', urls: { movie: 'https://vidsrc.cx/embed/movie/{id}', tv: 'https://vidsrc.cx/embed/tv/{id}/{season}/{episode}' } }
     ];
 
-    // ---------- Proxy via Cherri embed route (hash history) ----------
-    // Same path as index.html?url=… → #/embed?u=…
-    // Uses the real app Controller (Uf + epoxy), no hand-rolled SW handshake.
-    function embedProxyUrl(rawUrl) {
-        // Resolve index.html next to this file (cherri/cherri/seamless-tv.html)
-        var index = new URL('index.html', location.href);
-        return index.pathname + '#/embed?u=' + encodeURIComponent(rawUrl);
+    // Always leave this page and open Cherri's working top-level proxy:
+    //   index.html?url=<stream>
+    // which rewrites to #/embed?u=… (full viewport, no nested iframe).
+    function cherriPlayUrl(rawUrl) {
+        var u = new URL('index.html', location.href);
+        u.search = '';
+        u.hash = '';
+        u.searchParams.set('url', rawUrl);
+        return u.href;
     }
 
-    function playThroughProxy(rawUrl) {
-        var iframe = document.getElementById('player-frame');
-        if (!iframe) return false;
-        try {
-            setPlayerMsg(true, 'Starting player…', 'Loading proxied embed');
-            iframe.onload = function () {
-                setPlayerMsg(false);
-            };
-            iframe.src = embedProxyUrl(rawUrl);
-            // Hide splash after a short grace even if onload is blocked cross-origin
-            setTimeout(function () { setPlayerMsg(false); }, 4000);
-            return true;
-        } catch (e) {
-            setPlayerMsg(true, 'Player failed', String(e && e.message ? e.message : e));
-            iframe.removeAttribute('src');
-            return false;
-        }
-    }
-
-    // ---------- UI ----------
     function $(id) { return document.getElementById(id); }
-    function setPlayerMsg(show, title, body) {
+
+    function setPlayerMsg(show, title, bodyHtml) {
         var el = $('player-msg');
         if (!el) return;
         if (!show) {
@@ -276,8 +264,16 @@
         }
         el.classList.remove('hidden');
         if (title) $('player-msg-title').textContent = title;
-        $('player-msg-body').textContent = body || '';
+        $('player-msg-body').innerHTML = bodyHtml || '';
     }
+
+    function updatePlayer() {
+        var url = buildSourceUrl();
+        if (!url) return;
+        setPlayerMsg(true, 'Opening player…', 'Redirecting to Cherri proxy');
+        location.href = cherriPlayUrl(url);
+    }
+
     function showBrowse() {
         $('browse').classList.remove('hidden');
         $('watch').classList.add('hidden');
@@ -462,12 +458,7 @@
             setPlayerMsg(true, 'Failed to load title', String(e));
         }
     }
-    function updatePlayer() {
-        var url = buildSourceUrl();
-        if (!url) return;
-        playThroughProxy(url);
-    }
-    // events
+
     $('tab-movies').addEventListener('click', function () {
         state.tab = 'movies';
         state.page = 1;
