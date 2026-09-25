@@ -9,7 +9,6 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; background: #0a0a0a; font-family: system-ui, -apple-system, sans-serif; color: #fff; overflow-x: hidden; }
 
-    /* ── Header ─────────────────────────────────────────────────────── */
     #header {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       padding: 14px 22px;
@@ -44,7 +43,6 @@
     }
     #back-btn:hover { background: rgba(255,255,255,.14); }
 
-    /* ── Search results dropdown ────────────────────────────────────── */
     #search-results {
       position: absolute; top: calc(100% + 8px); left: 0; right: 0;
       background: #141414; border: 1px solid rgba(255,255,255,.1);
@@ -65,10 +63,8 @@
     .sr-title { font-size: .9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sr-meta { font-size: .75rem; color: rgba(255,255,255,.5); margin-top: 2px; }
 
-    /* ── Main content ───────────────────────────────────────────────── */
     #main { padding: 0 0 60px; }
 
-    /* Hero / detail view */
     #detail { display: none; }
     #detail.open { display: block; }
     #hero {
@@ -91,7 +87,7 @@
     .btn {
       padding: 12px 26px; border-radius: 10px; font-size: .95rem; font-weight: 600;
       border: none; cursor: pointer; transition: transform .15s, background .2s;
-      display: inline-flex; align-items: center; gap: 8px;
+      display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
     }
     .btn:active { transform: scale(.97); }
     .btn-primary { background: #fff; color: #000; }
@@ -99,7 +95,6 @@
     .btn-ghost { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.15); }
     .btn-ghost:hover { background: rgba(255,255,255,.2); }
 
-    /* Seasons / episodes */
     #seasons-bar {
       padding: 28px 44px 8px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
     }
@@ -130,7 +125,6 @@
     .ep-name { font-size: .88rem; font-weight: 600; margin: 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ep-overview { font-size: .75rem; color: rgba(255,255,255,.5); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-    /* Browse / trending rows */
     #browse { padding: 90px 0 40px; }
     .row-section { margin-bottom: 34px; }
     .row-title { font-size: 1.15rem; font-weight: 700; padding: 0 44px 14px; letter-spacing: -.01em; }
@@ -141,10 +135,7 @@
     }
     .row-scroll::-webkit-scrollbar { height: 6px; }
     .row-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 3px; }
-    .card {
-      flex-shrink: 0; width: 155px; cursor: pointer;
-      transition: transform .2s;
-    }
+    .card { flex-shrink: 0; width: 155px; cursor: pointer; transition: transform .2s; }
     .card:hover { transform: translateY(-4px); }
     .card-poster {
       width: 155px; height: 232px; border-radius: 10px; object-fit: cover;
@@ -154,7 +145,6 @@
     .card-title { font-size: .82rem; font-weight: 600; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .card-year { font-size: .72rem; color: rgba(255,255,255,.45); margin-top: 2px; }
 
-    /* ── Player overlay ─────────────────────────────────────────────── */
     #player-overlay {
       position: fixed; inset: 0; z-index: 200; background: #000;
       display: none; flex-direction: column;
@@ -173,7 +163,6 @@
     #player-video-wrap { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; }
     #v { width: 100%; height: 100%; max-height: 100%; display: block; }
 
-    /* ── Loader / error ─────────────────────────────────────────────── */
     #loader {
       position: fixed; inset: 0; z-index: 300; display: none;
       flex-direction: column; align-items: center; justify-content: center; gap: 24px;
@@ -204,7 +193,6 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
 
-    /* ── Responsive ─────────────────────────────────────────────────── */
     @media (max-width: 720px) {
       #hero-content { padding: 0 20px 26px; }
       #hero-title { font-size: 2rem; }
@@ -222,7 +210,6 @@
 </head>
 <body>
 
-<!-- ═══ Header ═══════════════════════════════════════════════════════ -->
 <div id="header">
   <button id="back-btn">← Back</button>
   <div id="logo" onclick="goHome()">Zenith</div>
@@ -233,10 +220,7 @@
   </div>
 </div>
 
-<!-- ═══ Main ═════════════════════════════════════════════════════════ -->
 <div id="main">
-
-  <!-- Browse view (trending rows) -->
   <div id="browse">
     <div class="row-section">
       <div class="row-title">Trending Movies</div>
@@ -264,7 +248,6 @@
     </div>
   </div>
 
-  <!-- Detail view -->
   <div id="detail">
     <div id="hero">
       <div id="hero-content">
@@ -282,10 +265,8 @@
     </div>
     <div id="episodes"></div>
   </div>
-
 </div>
 
-<!-- ═══ Player overlay ══════════════════════════════════════════════ -->
 <div id="player-overlay">
   <div id="player-head">
     <button onclick="closePlayer()">✕ Close</button>
@@ -296,13 +277,11 @@
   </div>
 </div>
 
-<!-- ═══ Loader ══════════════════════════════════════════════════════ -->
 <div id="loader">
   <div class="spinner"></div>
   <div id="loader-text">Loading...</div>
 </div>
 
-<!-- ═══ Error ═══════════════════════════════════════════════════════ -->
 <div id="err">
   <div id="err-title">Playback Error</div>
   <div id="err-msg"></div>
@@ -314,9 +293,6 @@
 </div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════════════
-   CONFIG
-   ═══════════════════════════════════════════════════════════════════ */
 const TMDB_KEY = '3a73619bbb8fc6d47742d1b5b2b707b5';
 const TMDB     = 'https://api.themoviedb.org/3';
 const IMG      = 'https://image.tmdb.org/t/p';
@@ -330,19 +306,13 @@ const LOADER_MSGS = [
   'Waking up the interns...'
 ];
 
-/* ═══════════════════════════════════════════════════════════════════
-   STATE
-   ═══════════════════════════════════════════════════════════════════ */
-let currentItem   = null;   // { id, type:'movie'|'tv', title, ... }
+let currentItem   = null;
 let currentSeason = null;
 let hlsInstance   = null;
 let loaderTimer   = null;
 let wasmBooted    = false;
 let wasmBootPromise = null;
 
-/* ═══════════════════════════════════════════════════════════════════
-   UTILITIES
-   ═══════════════════════════════════════════════════════════════════ */
 function $(s) { return document.querySelector(s); }
 function el(tag, attrs = {}, ...children) {
   const n = document.createElement(tag);
@@ -371,18 +341,13 @@ function posterUrl(path, size = 'w342') {
   return path ? `${IMG}/${size}${path}` : '';
 }
 
-function yearOf(dateStr) {
-  return dateStr ? dateStr.slice(0, 4) : '';
-}
+function yearOf(dateStr) { return dateStr ? dateStr.slice(0, 4) : ''; }
 
 function debounce(fn, ms) {
   let t;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   LOADER
-   ═══════════════════════════════════════════════════════════════════ */
 function showLoader(text) {
   const l = $('#loader');
   l.classList.add('open');
@@ -399,9 +364,6 @@ function hideLoader() {
   $('#loader').classList.remove('open');
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   ERROR
-   ═══════════════════════════════════════════════════════════════════ */
 function showErr(msg, detail) {
   hideLoader();
   $('#err').classList.add('open');
@@ -416,13 +378,6 @@ function showErr(msg, detail) {
 }
 function closeErr() { $('#err').classList.remove('open'); }
 
-/* ═══════════════════════════════════════════════════════════════════
-   URL ROUTING
-   ?id=550                     → movie
-   ?id=456&s=1&e=1             → TV episode
-   ?id=456                     → TV show detail (season 1)
-   ?q=inception                → search
-   ═══════════════════════════════════════════════════════════════════ */
 function getParams() {
   const p = new URLSearchParams(location.search);
   return {
@@ -461,9 +416,6 @@ function goHome() {
   showBrowse();
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   VIEWS
-   ═══════════════════════════════════════════════════════════════════ */
 function showBrowse() {
   $('#browse').style.display = 'block';
   $('#detail').classList.remove('open');
@@ -479,9 +431,6 @@ function showDetail() {
   window.scrollTo(0, 0);
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   BROWSE ROWS
-   ═══════════════════════════════════════════════════════════════════ */
 const BROWSE_ROWS = [
   { el: '#row-trending-movies', path: '/trending/movie/week', type: 'movie' },
   { el: '#row-trending-tv',     path: '/trending/tv/week',    type: 'tv' },
@@ -500,7 +449,7 @@ async function loadBrowseRows() {
       const r = await fetch(tmdbUrl(row.path));
       const d = await r.json();
       renderRow(container, d.results || [], row.type);
-    } catch (e) { /* silent */ }
+    } catch (e) {}
   }
 }
 
@@ -524,9 +473,6 @@ function renderRow(container, items, type) {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   SEARCH
-   ═══════════════════════════════════════════════════════════════════ */
 const searchInput = $('#search');
 const searchResults = $('#search-results');
 
@@ -537,7 +483,7 @@ const doSearch = debounce(async (q) => {
     const d = await r.json();
     const items = (d.results || []).filter(x => x.media_type === 'movie' || x.media_type === 'tv');
     renderSearchResults(items);
-  } catch (e) { /* silent */ }
+  } catch (e) {}
 }, 280);
 
 searchInput.addEventListener('input', (e) => {
@@ -585,9 +531,6 @@ function renderSearchResults(items) {
   searchResults.classList.add('open');
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   DETAIL VIEW
-   ═══════════════════════════════════════════════════════════════════ */
 async function openDetail(id, type, opts = {}) {
   showDetail();
   showLoader('Loading details...');
@@ -644,7 +587,7 @@ function renderDetail(d, type) {
   playBtn.onclick = () => {
     if (type === 'tv') {
       const season = currentSeason || 1;
-      loadEpisodesAndPlay(d.id, season, 1);
+      loadSeason(d.id, season, 1);
     } else {
       playStream(d.id, 'movie');
     }
@@ -708,23 +651,432 @@ async function loadSeason(tvId, seasonNum, autoplayEpisode) {
   }
 }
 
-async function loadEpisodesAndPlay(tvId, seasonNum, epNum) {
-  await loadSeason(tvId, seasonNum, epNum);
-}
+/* ═══════════════════════════════════════════════════════════════════
+   INLINED script.js (Go WASM glue) — was previously fetched from disk
+   ═══════════════════════════════════════════════════════════════════ */
+const SCRIPT_JS_SOURCE = String.raw`
+"use strict";
+
+(() => {
+  const enosys = () => {
+    const err = new Error("not implemented");
+    err.code = "ENOSYS";
+    return err;
+  };
+
+  if (!globalThis.fs) {
+    let outputBuf = "";
+    globalThis.fs = {
+      constants: { O_WRONLY: -1, O_RDWR: -1, O_CREAT: -1, O_TRUNC: -1, O_APPEND: -1, O_EXCL: -1 },
+      writeSync(fd, buf) {
+        outputBuf += decoder.decode(buf);
+        const nl = outputBuf.lastIndexOf("\n");
+        if (nl != -1) { console.log(outputBuf.substring(0, nl)); outputBuf = outputBuf.substring(nl + 1); }
+        return buf.length;
+      },
+      write(fd, buf, offset, length, position, callback) {
+        if (offset !== 0 || length !== buf.length || position !== null) { callback(enosys()); return; }
+        const n = this.writeSync(fd, buf);
+        callback(null, n);
+      },
+      chmod(path, mode, callback) { callback(enosys()); },
+      chown(path, uid, gid, callback) { callback(enosys()); },
+      close(fd, callback) { callback(enosys()); },
+      fchmod(fd, mode, callback) { callback(enosys()); },
+      fchown(fd, uid, gid, callback) { callback(enosys()); },
+      fstat(fd, callback) { callback(enosys()); },
+      fsync(fd, callback) { callback(null); },
+      ftruncate(fd, length, callback) { callback(enosys()); },
+      lchown(path, uid, gid, callback) { callback(enosys()); },
+      link(path, link, callback) { callback(enosys()); },
+      lstat(path, callback) { callback(enosys()); },
+      mkdir(path, perm, callback) { callback(enosys()); },
+      open(path, flags, mode, callback) { callback(enosys()); },
+      read(fd, buffer, offset, length, position, callback) { callback(enosys()); },
+      readdir(path, callback) { callback(enosys()); },
+      readlink(path, callback) { callback(enosys()); },
+      rename(from, to, callback) { callback(enosys()); },
+      rmdir(path, callback) { callback(enosys()); },
+      stat(path, callback) { callback(enosys()); },
+      symlink(path, link, callback) { callback(enosys()); },
+      truncate(path, length, callback) { callback(enosys()); },
+      unlink(path, callback) { callback(enosys()); },
+      utimes(path, atime, mtime, callback) { callback(enosys()); },
+    };
+  }
+
+  if (!globalThis.process) {
+    globalThis.process = {
+      getuid() { return -1; },
+      getgid() { return -1; },
+      geteuid() { return -1; },
+      getegid() { return -1; },
+      getgroups() { throw enosys(); },
+      pid: -1,
+      ppid: -1,
+      umask() { throw enosys(); },
+      cwd() { throw enosys(); },
+      chdir() { throw enosys(); },
+    };
+  }
+
+  if (!globalThis.crypto) throw new Error("globalThis.crypto is not available");
+  if (!globalThis.performance) throw new Error("globalThis.performance is not available");
+  if (!globalThis.TextEncoder) throw new Error("globalThis.TextEncoder is not available");
+  if (!globalThis.TextDecoder) throw new Error("globalThis.TextDecoder is not available");
+
+  const encoder = new TextEncoder("utf-8");
+  const decoder = new TextDecoder("utf-8");
+
+  globalThis.Dm = class {
+    constructor() {
+      this.argv = ["js"];
+      this.env = {};
+      this.exit = (code) => { if (code !== 0) console.warn("exit code:", code); };
+      this._exitPromise = new Promise((resolve) => { this._resolveExitPromise = resolve; });
+      this._pendingEvent = null;
+      this._scheduledTimeouts = new Map();
+      this._nextCallbackTimeoutID = 1;
+
+      const setInt64 = (addr, v) => {
+        this.mem.setUint32(addr + 0, v, true);
+        this.mem.setUint32(addr + 4, Math.floor(v / 4294967296), true);
+      };
+      const setInt32 = (addr, v) => { this.mem.setUint32(addr + 0, v, true); };
+      const getInt64 = (addr) => {
+        const low = this.mem.getUint32(addr + 0, true);
+        const high = this.mem.getInt32(addr + 4, true);
+        return low + high * 4294967296;
+      };
+      const loadValue = (addr) => {
+        const f = this.mem.getFloat64(addr, true);
+        if (f === 0) return undefined;
+        if (!isNaN(f)) return f;
+        const id = this.mem.getUint32(addr, true);
+        return this._values[id];
+      };
+      const storeValue = (addr, v) => {
+        const nanHead = 0x7ff80000;
+        if (typeof v === "number" && v !== 0) {
+          if (isNaN(v)) { this.mem.setUint32(addr + 4, nanHead, true); this.mem.setUint32(addr, 0, true); return; }
+          this.mem.setFloat64(addr, v, true); return;
+        }
+        if (v === undefined) { this.mem.setFloat64(addr, 0, true); return; }
+        let id = this._ids.get(v);
+        if (id === undefined) {
+          id = this._idPool.pop();
+          if (id === undefined) id = this._values.length;
+          this._values[id] = v;
+          this._goRefCounts[id] = 0;
+          this._ids.set(v, id);
+        }
+        this._goRefCounts[id]++;
+        let typeFlag = 0;
+        switch (typeof v) {
+          case "object": if (v !== null) typeFlag = 1; break;
+          case "string": typeFlag = 2; break;
+          case "symbol": typeFlag = 3; break;
+          case "function": typeFlag = 4; break;
+        }
+        this.mem.setUint32(addr + 4, nanHead | typeFlag, true);
+        this.mem.setUint32(addr, id, true);
+      };
+      const loadSlice = (addr) => {
+        const array = getInt64(addr + 0);
+        const len = getInt64(addr + 8);
+        return new Uint8Array(this._inst.exports.mem.buffer, array, len);
+      };
+      const loadSliceOfValues = (addr) => {
+        const array = getInt64(addr + 0);
+        const len = getInt64(addr + 8);
+        const a = new Array(len);
+        for (let i = 0; i < len; i++) a[i] = loadValue(array + i * 8);
+        return a;
+      };
+      const loadString = (addr) => {
+        const saddr = getInt64(addr + 0);
+        const len = getInt64(addr + 8);
+        return decoder.decode(new DataView(this._inst.exports.mem.buffer, saddr, len));
+      };
+      const timeOrigin = Date.now() - performance.now();
+
+      this.importObject = {
+        _gotest: { add: (a, b) => a + b },
+        gojs: {
+          "runtime.wasmExit": (sp) => {
+            sp >>>= 0;
+            const code = this.mem.getInt32(sp + 8, true);
+            this.exited = true;
+            delete this._inst; delete this._values; delete this._goRefCounts;
+            delete this._ids; delete this._idPool;
+            this.exit(code);
+          },
+          "runtime.wasmWrite": (sp) => {
+            sp >>>= 0;
+            const fd = getInt64(sp + 8);
+            const p = getInt64(sp + 16);
+            const n = this.mem.getInt32(sp + 24, true);
+            fs.writeSync(fd, new Uint8Array(this._inst.exports.mem.buffer, p, n));
+          },
+          "runtime.resetMemoryDataView": (sp) => {
+            sp >>>= 0;
+            this.mem = new DataView(this._inst.exports.mem.buffer);
+          },
+          "runtime.nanotime1": (sp) => {
+            sp >>>= 0;
+            setInt64(sp + 8, (timeOrigin + performance.now()) * 1000000);
+          },
+          "runtime.walltime": (sp) => {
+            sp >>>= 0;
+            const msec = new Date().getTime();
+            setInt64(sp + 8, msec / 1000);
+            this.mem.setInt32(sp + 16, (msec % 1000) * 1000000, true);
+          },
+          "runtime.scheduleTimeoutEvent": (sp) => {
+            sp >>>= 0;
+            const id = this._nextCallbackTimeoutID;
+            this._nextCallbackTimeoutID++;
+            this._scheduledTimeouts.set(id, setTimeout(() => {
+              this._resume();
+              while (this._scheduledTimeouts.has(id)) {
+                console.warn("scheduleTimeoutEvent: missed timeout event");
+                this._resume();
+              }
+            }, getInt64(sp + 8)));
+            this.mem.setInt32(sp + 16, id, true);
+          },
+          "runtime.clearTimeoutEvent": (sp) => {
+            sp >>>= 0;
+            const id = this.mem.getInt32(sp + 8, true);
+            clearTimeout(this._scheduledTimeouts.get(id));
+            this._scheduledTimeouts.delete(id);
+          },
+          "runtime.getRandomData": (sp) => {
+            sp >>>= 0;
+            crypto.getRandomValues(loadSlice(sp + 8));
+          },
+          "syscall/js.finalizeRef": (sp) => {
+            sp >>>= 0;
+            const id = this.mem.getUint32(sp + 8, true);
+            this._goRefCounts[id]--;
+            if (this._goRefCounts[id] === 0) {
+              const v = this._values[id];
+              this._values[id] = null;
+              this._ids.delete(v);
+              this._idPool.push(id);
+            }
+          },
+          "syscall/js.stringVal": (sp) => {
+            sp >>>= 0;
+            storeValue(sp + 24, loadString(sp + 8));
+          },
+          "syscall/js.valueGet": (sp) => {
+            sp >>>= 0;
+            const result = Reflect.get(loadValue(sp + 8), loadString(sp + 16));
+            sp = this._inst.exports.getsp() >>> 0;
+            storeValue(sp + 32, result);
+          },
+          "syscall/js.valueSet": (sp) => {
+            sp >>>= 0;
+            Reflect.set(loadValue(sp + 8), loadString(sp + 16), loadValue(sp + 32));
+          },
+          "syscall/js.valueDelete": (sp) => {
+            sp >>>= 0;
+            Reflect.deleteProperty(loadValue(sp + 8), loadString(sp + 16));
+          },
+          "syscall/js.valueIndex": (sp) => {
+            sp >>>= 0;
+            storeValue(sp + 24, Reflect.get(loadValue(sp + 8), getInt64(sp + 16)));
+          },
+          "syscall/js.valueSetIndex": (sp) => {
+            sp >>>= 0;
+            Reflect.set(loadValue(sp + 8), getInt64(sp + 16), loadValue(sp + 24));
+          },
+          "syscall/js.valueCall": (sp) => {
+            sp >>>= 0;
+            try {
+              const v = loadValue(sp + 8);
+              const m = Reflect.get(v, loadString(sp + 16));
+              const args = loadSliceOfValues(sp + 32);
+              const result = Reflect.apply(m, v, args);
+              sp = this._inst.exports.getsp() >>> 0;
+              storeValue(sp + 56, result);
+              this.mem.setUint8(sp + 64, 1);
+            } catch (err) {
+              sp = this._inst.exports.getsp() >>> 0;
+              storeValue(sp + 56, err);
+              this.mem.setUint8(sp + 64, 0);
+            }
+          },
+          "syscall/js.valueInvoke": (sp) => {
+            sp >>>= 0;
+            try {
+              const v = loadValue(sp + 8);
+              const args = loadSliceOfValues(sp + 16);
+              const result = Reflect.apply(v, undefined, args);
+              sp = this._inst.exports.getsp() >>> 0;
+              storeValue(sp + 40, result);
+              this.mem.setUint8(sp + 48, 1);
+            } catch (err) {
+              sp = this._inst.exports.getsp() >>> 0;
+              storeValue(sp + 40, err);
+              this.mem.setUint8(sp + 48, 0);
+            }
+          },
+          "syscall/js.valueNew": (sp) => {
+            sp >>>= 0;
+            try {
+              const v = loadValue(sp + 8);
+              const args = loadSliceOfValues(sp + 16);
+              const result = Reflect.construct(v, args);
+              sp = this._inst.exports.getsp() >>> 0;
+              storeValue(sp + 40, result);
+              this.mem.setUint8(sp + 48, 1);
+            } catch (err) {
+              sp = this._inst.exports.getsp() >>> 0;
+              storeValue(sp + 40, err);
+              this.mem.setUint8(sp + 48, 0);
+            }
+          },
+          "syscall/js.valueLength": (sp) => {
+            sp >>>= 0;
+            setInt64(sp + 16, parseInt(loadValue(sp + 8).length));
+          },
+          "syscall/js.valuePrepareString": (sp) => {
+            sp >>>= 0;
+            const str = encoder.encode(String(loadValue(sp + 8)));
+            storeValue(sp + 16, str);
+            setInt64(sp + 24, str.length);
+          },
+          "syscall/js.valueLoadString": (sp) => {
+            sp >>>= 0;
+            const str = loadValue(sp + 8);
+            loadSlice(sp + 16).set(str);
+          },
+          "syscall/js.valueInstanceOf": (sp) => {
+            sp >>>= 0;
+            this.mem.setUint8(sp + 24, loadValue(sp + 8) instanceof loadValue(sp + 16) ? 1 : 0);
+          },
+          "syscall/js.copyBytesToGo": (sp) => {
+            sp >>>= 0;
+            const dst = loadSlice(sp + 8);
+            const src = loadValue(sp + 32);
+            if (!(src instanceof Uint8Array || src instanceof Uint8ClampedArray)) {
+              this.mem.setUint8(sp + 48, 0); return;
+            }
+            const toCopy = src.subarray(0, dst.length);
+            dst.set(toCopy);
+            setInt64(sp + 40, toCopy.length);
+            this.mem.setUint8(sp + 48, 1);
+          },
+          "syscall/js.copyBytesToJS": (sp) => {
+            sp >>>= 0;
+            const dst = loadValue(sp + 8);
+            const src = loadSlice(sp + 16);
+            if (!(dst instanceof Uint8Array || dst instanceof Uint8ClampedArray)) {
+              this.mem.setUint8(sp + 48, 0); return;
+            }
+            const toCopy = src.subarray(0, dst.length);
+            dst.set(toCopy);
+            setInt64(sp + 40, toCopy.length);
+            this.mem.setUint8(sp + 48, 1);
+          },
+          debug: (value) => { console.log(value); },
+        },
+      };
+    }
+
+    async run(instance) {
+      if (!(instance instanceof WebAssembly.Instance)) throw new Error("Instance expected");
+      this._inst = instance;
+      this.mem = new DataView(this._inst.exports.mem.buffer);
+      this._values = [NaN, 0, null, true, false, globalThis, this];
+      this._goRefCounts = new Array(this._values.length).fill(Infinity);
+      this._ids = new Map([
+        [0, 1], [null, 2], [true, 3], [false, 4], [globalThis, 5], [this, 6],
+      ]);
+      this._idPool = [];
+      this.exited = false;
+      let offset = 4096;
+
+      const strPtr = (str) => {
+        const ptr = offset;
+        const bytes = encoder.encode(str + "\0");
+        new Uint8Array(this.mem.buffer, offset, bytes.length).set(bytes);
+        offset += bytes.length;
+        if (offset % 8 !== 0) offset += 8 - (offset % 8);
+        return ptr;
+      };
+
+      const argc = this.argv.length;
+      const argvPtrs = [];
+      this.argv.forEach((arg) => { argvPtrs.push(strPtr(arg)); });
+      argvPtrs.push(0);
+
+      const keys = Object.keys(this.env).sort();
+      keys.forEach((key) => { argvPtrs.push(strPtr(key + "=" + this.env[key])); });
+      argvPtrs.push(0);
+
+      const argv = offset;
+      argvPtrs.forEach((ptr) => {
+        this.mem.setUint32(offset, ptr, true);
+        this.mem.setUint32(offset + 4, 0, true);
+        offset += 8;
+      });
+
+      const wasmMinDataAddr = 4096 + 8192;
+      if (offset >= wasmMinDataAddr) throw new Error("total length of command line and environment variables exceeds limit");
+
+      this._inst.exports.run(argc, argv);
+      if (this.exited) this._resolveExitPromise();
+      await this._exitPromise;
+    }
+
+    _resume() {
+      if (this.exited) throw new Error("program has already exited");
+      this._inst.exports.resume();
+      if (this.exited) this._resolveExitPromise();
+    }
+
+    _makeFuncWrapper(id) {
+      const go = this;
+      return function () {
+        const event = { id: id, this: this, args: arguments };
+        go._pendingEvent = event;
+        go._resume();
+        return event.result;
+      };
+    }
+  };
+})();
+`;
 
 /* ═══════════════════════════════════════════════════════════════════
-   WASM + STREAM RESOLUTION
+   WASM BOOT — evals inlined glue, fetches only fu.wasm externally
    ═══════════════════════════════════════════════════════════════════ */
 function bootWasm() {
   if (wasmBootPromise) return wasmBootPromise;
   wasmBootPromise = (async () => {
-    const scriptResp = await fetch('/script.js');
-    if (!scriptResp.ok) throw new Error('Could not load script.js');
-    const scriptText = await scriptResp.text();
-    (0, eval)(scriptText);
+    window.globalThis = window;
+    window.self = window;
+    window.document = document;
+    window.process = window.process || {
+      getuid: () => -1, getgid: () => -1, geteuid: () => -1, getegid: () => -1,
+      getgroups: () => { throw new Error('not implemented'); },
+      pid: -1, ppid: -1,
+      umask: () => { throw new Error('not implemented'); },
+      cwd: () => { throw new Error('not implemented'); },
+      chdir: () => { throw new Error('not implemented'); }
+    };
+    if (!window.crypto) {
+      window.crypto = { getRandomValues: (arr) => { for (let i = 0; i < arr.length; i++) arr[i] = Math.floor(Math.random() * 256); return arr; } };
+    }
+    if (!window.performance) window.performance = { now: () => Date.now() };
+
+    (0, eval)(SCRIPT_JS_SOURCE);
 
     const wasmResp = await fetch(WASM_URL);
-    if (!wasmResp.ok) throw new Error('Could not load fu.wasm');
+    if (!wasmResp.ok) throw new Error('fu.wasm fetch failed: ' + wasmResp.status);
     const wasmBuf = await wasmResp.arrayBuffer();
 
     const go = new globalThis.Dm();
@@ -826,14 +1178,8 @@ function closePlayer() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   MONKEY-PATCH FETCH FOR /api
+   /api INTERCEPT — same as before
    ═══════════════════════════════════════════════════════════════════ */
-window.globalThis = window;
-window.self = window;
-window.process = { getuid: () => -1, getgid: () => -1, geteuid: () => -1, getegid: () => -1 };
-window.crypto = window.crypto || { getRandomValues: (arr) => { for (let i = 0; i < arr.length; i++) arr[i] = Math.floor(Math.random() * 256); return arr; } };
-window.performance = window.performance || { now: () => Date.now() };
-
 function rewriteM3u8(body, url) {
   const base = url.split('?')[0];
   const baseDir = base.substring(0, base.lastIndexOf('/') + 1);
@@ -909,7 +1255,7 @@ window.fetch = function(input, init) {
 };
 
 /* ═══════════════════════════════════════════════════════════════════
-   ROUTER — reads URL params on load & popstate
+   ROUTER
    ═══════════════════════════════════════════════════════════════════ */
 async function route() {
   const { id, s, e, type, q } = getParams();
@@ -928,7 +1274,6 @@ async function route() {
 
   let resolvedType = type;
   if (!resolvedType) {
-    // Try movie first, fall back to tv
     try {
       const r = await fetch(tmdbUrl(`/movie/${id}`));
       const d = await r.json();
@@ -943,23 +1288,16 @@ async function route() {
   });
 
   if (resolvedType === 'tv' && s && e) {
-    // auto-play the requested episode
     playStream(id, 'tv', s, e);
   }
 }
 
 window.addEventListener('popstate', route);
 
-/* ═══════════════════════════════════════════════════════════════════
-   SCROLL EFFECT FOR HEADER
-   ═══════════════════════════════════════════════════════════════════ */
 window.addEventListener('scroll', () => {
   $('#header').classList.toggle('solid', window.scrollY > 30);
 }, { passive: true });
 
-/* ═══════════════════════════════════════════════════════════════════
-   BOOT
-   ═══════════════════════════════════════════════════════════════════ */
 route();
 </script>
 </body>
