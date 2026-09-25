@@ -281,6 +281,7 @@ body {
 .dock-item img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
 .dock-sep { width: 1px; height: 24px; background: rgba(255, 255, 255, 0.2); margin: 0 8px; flex-shrink: 0; }
 
+/* Running / open app indicator (line under icon) */
 .dock-item.running::after,
 .dock-item.open-app::after {
     content: '';
@@ -301,6 +302,7 @@ body {
     width: 10px;
 }
 
+/* Group open apps on the left of pinned */
 #dock-open-apps,
 #dock-pinned-apps {
     display: flex;
@@ -537,6 +539,7 @@ body {
     transform: scale(1) translateY(0);
 }
 
+/* Open / restore: same motion as minimize, reversed */
 .window.opening {
     opacity: 0;
     pointer-events: none;
@@ -544,6 +547,7 @@ body {
     transform: scale(0.15) translateY(30vh);
 }
 
+/* Minimize animation: shrink + slide toward dock, then fully hidden */
 .window.minimizing {
     transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -560,6 +564,7 @@ body {
     display: none !important;
 }
 
+/* True fullscreen */
 .window.maximized {
     width: 100vw !important;
     height: 100vh !important;
@@ -605,6 +610,7 @@ body {
     box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
 }
 
+/* macOS traffic lights */
 .btn-close {
     background: #ff5f57;
 }
@@ -669,6 +675,7 @@ body {
     opacity: 1;
 }
 
+/* Refresh button (top-right of window header) */
 .win-refresh {
     position: absolute;
     right: 12px;
@@ -947,6 +954,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 
 <body id="desktop-area" role="application">
 
+<!-- accessibility wrapper for screen readers -->
 <div id="fps-counter" aria-live="polite"><span id="fps-val">60</span> FPS</div>
 
 <dialog id="mobile-warning" aria-modal="true">
@@ -963,7 +971,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 <section id="boot-layer" aria-label="System Boot Sequence">
   <div id="boot-content">
     <h1 class="boot-logo">𝐒𝐄𝐀𝐌𝐋𝐄𝐒𝐒-𝐎𝐒</h1>
-    <p class="boot-sub">Seamless-Hub Softwares 
+    <p class="boot-sub">Seamless-Hub Softwares // V1</p>
     <button id="boot-btn" onclick="startBootSequence()" tabindex="1">Enter SEAMLESS</button>
     <div class="boot__hint">Double-Tap ENTER to skip sequence</div>
   </div>
@@ -973,7 +981,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 <main id="lock-screen" onclick="unlockSystem()" role="presentation">
   <video id="lock-video" autoplay loop muted playsinline aria-hidden="true"></video>
   <img id="lock-img" class="media__fallback" alt="Lockscreen Background">
-
+  
  <article id="lock-ui">
     <div class="lock-content">
       <div class="l-day" id="lock-day-large">FRIDAY</div>
@@ -983,6 +991,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   </article>
 </main>
 
+<!-- Base OS Backgrounds -->
 <video id="bg-video" loop muted playsinline aria-hidden="true"></video>
 <img id="bg-img" class="media__fallback" alt="Desktop Background">
 <canvas id="snow-fx" aria-hidden="true"></canvas>
@@ -996,22 +1005,24 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   <img id="proxy-img" src="" alt="Dragging">
 </div>
 
+<!-- Taskbar -->
 <nav id="dock-container" aria-label="System Taskbar"></nav>
 <section id="windows-layer" aria-live="assertive"></section>
 
+<!-- Modals -->
 <dialog id="wallpaper-menu" aria-label="Wallpaper Settings">
   <header class="wp-modal-header">
     <h2>WALLPAPER PROTOCOLS</h2>
     <i class="fas fa-times close-icon" role="button" tabindex="0" onclick="var menu = document.getElementById('wallpaper-menu'); menu.classList.remove('open'); menu.style.display='none'; try { if (menu.close) menu.close(); } catch(e){}"></i>
   </header>
-
+  
   <div class="wp-controls-row">
     <fieldset class="segmented-control">
       <label><input type="radio" name="wpmd" value="both" checked onclick="window.wpMode='both'"><span>Both</span></label>
       <label><input type="radio" name="wpmd" value="home" onclick="window.wpMode='home'"><span>Homescreen</span></label>
       <label><input type="radio" name="wpmd" value="lock" onclick="window.wpMode='lock'"><span>Lockscreen</span></label>
     </fieldset>
-
+    
     <div class="loop-toggle-container">
       <span class="loop-label">Loop Wallpaper</span>
       <label class="switch wp-loop-switch">
@@ -1076,6 +1087,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
     <li class="ctx-item" id="ctx-copylink-dock" role="menuitem" tabindex="0"><i class="fas fa-link fa-fw" aria-hidden="true"></i> Copy Link</li>
 </menu>
 
+<!-- Context menu for open (running) apps on the dock -->
 <menu id="dock-open-ctx-menu" class="os-context-menu" role="menu">
     <li class="ctx-item" id="ctx-dock-open-restore" role="menuitem" tabindex="0" style="display:none;"><i class="fas fa-window-restore fa-fw" aria-hidden="true"></i> Open</li>
     <li class="ctx-item" id="ctx-dock-open-minimize" role="menuitem" tabindex="0" style="display:none;"><i class="fas fa-window-minimize fa-fw" aria-hidden="true"></i> Minimize</li>
@@ -1095,12 +1107,14 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   <li class="ctx-item" role="menuitem" tabindex="0" onclick="location.reload()"><i class="fas fa-sync fa-fw"></i> Refresh System</li>
 </menu>
 
+<!-- Context menu for wallpaper cards -->
 <menu id="wp-context-menu" class="os-context-menu" role="menu">
   <li class="ctx-item" id="ctx-wp-refresh" role="menuitem" tabindex="0"><i class="fas fa-sync fa-fw" aria-hidden="true"></i> Refresh Wallpaper</li>
 </menu>
 
 <div id="toast-container" aria-live="polite"></div>
 
+<!-- Assistant -->
 <div id="ciri-backdrop" onclick="closeCiri()" aria-hidden="true"></div>
 <aside id="ciri-window" aria-label="Ciri AI Assistant">
   <div id="ciri-boot-screen">
@@ -1138,6 +1152,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 <video id="screen-video" autoplay playsinline class="hidden-media"></video>
 <canvas id="screen-canvas" class="hidden-media"></canvas>
 
+<!-- Media Player -->
 <button id="restore-btn" title="Restore Player" aria-label="Restore Media Player">
   <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
 </button>
@@ -1182,6 +1197,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   </nav>
 </aside>
 
+<!-- Update Modal (Inline styles stripped out) -->
 <dialog id="update-modal" class="modal__backdrop" aria-modal="true">
   <article class="modal__content">
     <h2 class="modal__header">UPDATE LOG v3.0</h2>
@@ -1201,6 +1217,15 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 var _SYSTEM_PATHS = ["C:/Windows/System32/kernel32.dll", "/var/www/html/cine-os/", "https://cine-os.local/api/v1/auth"];
 var _devBuildVer = "3.0.1";
 
+/* ============================================================
+   SEAMLESS-OS RESOURCE CACHE (Service Worker)
+   Caches EVERYTHING loaded outside of iframes:
+   - Wallpaper videos / images
+   - Icons, fonts, CSS, JS libraries
+   - Boot / lock / home media
+   - Any other static asset the main page requests
+   Strategy: Cache-first + background update
+   ============================================================ */
 (function registerSeamlessCache() {
   if (!('serviceWorker' in navigator) || !('caches' in window)) return;
 
@@ -1299,12 +1324,15 @@ var _devBuildVer = "3.0.1";
       console.warn('[Seamless Cache] SW registration failed (normal on file://):', err);
     });
 
+  // Persistent per-URL content versions (survive full page reload).
+  // After "Refresh Wallpaper", media always loads with ?_v=<token> so browser + SW
+  // cannot serve the previous body under the clean key.
   try {
     window._wpVersions = JSON.parse(localStorage.getItem('cine_wp_versions') || '{}') || {};
   } catch (e) {
     window._wpVersions = {};
   }
-
+  // Short-lived in-memory force (same session) — versions are the durable source of truth
   window._wpForceReload = window._wpForceReload || {};
 
   function _wpNormPath(u) {
@@ -1341,14 +1369,14 @@ var _devBuildVer = "3.0.1";
   function _wpMarkForce(url, token) {
     var p = _wpNormPath(url);
     var t = token || Date.now();
-
+    // Persist version so page refresh still uses the busted URL
     _wpSetVersion(url, t);
     window._wpForceReload[p] = { token: t, until: Date.now() + 120000 };
     window._wpForceReload[url] = window._wpForceReload[p];
   }
 
   function _wpGetForce(url) {
-
+    // Prefer durable version (survives reload)
     var ver = _wpGetVersion(url);
     if (ver) return { token: ver, until: Number.MAX_SAFE_INTEGER };
     var p = _wpNormPath(url);
@@ -1367,13 +1395,15 @@ var _devBuildVer = "3.0.1";
     return base + '?_v=' + (token || Date.now());
   }
 
+  // Helper so the main page can force-cache any URL it discovers
   window.seamlessCacheAdd = function(url, opts) {
     if (!url || typeof url !== 'string') return;
     opts = opts || {};
     var ver = _wpGetVersion(url);
-
+    // Never overwrite a versioned/refreshed entry with a possibly-stale no-cors fetch
+    // unless this call is itself a force refresh.
     if (!opts.force && ver) {
-
+      // Warm the versioned key only (do not put under clean URL — that would fight refresh)
       var warmUrl = _wpBustUrl(url, ver);
       caches.open(CACHE_NAME).then(function(cache) {
         cache.match(warmUrl).then(function(hit) {
@@ -1393,7 +1423,7 @@ var _devBuildVer = "3.0.1";
       var reqUrl = opts.force ? _wpBustUrl(url, token) : (ver ? _wpBustUrl(url, ver) : url);
       fetch(reqUrl, fetchOpts).then(res => {
         if (!res) return;
-
+        // Store under versioned key (and clean only when not versioned)
         var puts = [];
         if (opts.force || ver) {
           puts.push(cache.put(_wpBustUrl(url, token), res.clone()));
@@ -1418,6 +1448,7 @@ var _devBuildVer = "3.0.1";
     }).catch(() => {});
   };
 
+  // Delete a specific URL (and any absolute / path / versioned variants) from the Seamless cache
   window.seamlessCacheDelete = function(url) {
     if (!url || typeof url !== 'string' || !('caches' in window)) return Promise.resolve(false);
     return caches.open(CACHE_NAME).then(async cache => {
@@ -1446,6 +1477,7 @@ var _devBuildVer = "3.0.1";
     }).catch(() => false);
   };
 
+  // Clear cache entry then re-fetch from network and re-store under versioned keys
   window.seamlessCacheRefresh = function(url) {
     if (!url || typeof url !== 'string') return Promise.resolve(false);
     var token = Date.now();
@@ -1456,7 +1488,7 @@ var _devBuildVer = "3.0.1";
         function store(res) {
           if (!res) return Promise.resolve(false);
           try { res.clone(); } catch (e) { return Promise.resolve(false); }
-
+          // Store under the versioned URL the page will actually request after reload
           var puts = [cache.put(bust, res.clone())];
           return Promise.all(puts.map(function(p) { return p.catch(function(){}); }))
             .then(function() { return true; });
@@ -1712,6 +1744,8 @@ var APPS = {
   'settings': {title: 'Settings', internal: true, icon: 'https://cdn.iconscout.com/icon/free/png-256/free-apple-settings-icon-svg-download-png-493162.png', pinned: true, openInNewTab: false},
 };
 
+
+
 var CHERRI_APP = {
   'cherri': {title: 'Cherri', path: 'https://menist.free.nf/cherri/cherri/', icon: 'https://i.ibb.co/Nn2zwt1N/fav.jpg', pinned: true, openInNewTab: false},
   'geforcenow': {title: 'Geforce Now', path: 'https://menist.free.nf/cherri/cherri/#/embed?u=https%3A%2F%2Fplay.geforcenow.com%2F', icon: 'https://i.ibb.co/Qv1D3L03/412-Vbl-QIz-RL.png', pinned: true, openInNewTab: false},
@@ -1739,6 +1773,7 @@ function updateCherriApp() {
     }
 }
 updateCherriApp();
+
 
 var savedPins = localStorage.getItem('c_pins_v2');
 if(savedPins) {
@@ -1829,7 +1864,7 @@ if(isMobile) {
     var mobWarn = document.getElementById('mobile-warning');
     if(mobWarn && mobWarn.showModal) mobWarn.showModal();
     else if(mobWarn) mobWarn.style.display = 'flex';
-
+    
     var lastTap = 0;
     document.addEventListener('touchstart', function(e) {
         let t = new Date().getTime();
@@ -1872,30 +1907,32 @@ function isWindowMinimized(id) {
 
 function renderUI() {
     let dock = document.getElementById('dock-container');
-
+    
+    // Order: Start → App Drawer → Pinned → Open → Time
     let dHTML = 
         '<div class="dock-item" onclick="toggleStartMenu()"><img src="https://missionsupport.archden.org/wp-content/uploads/2022/02/windows11-icon.png"></div>' +
         '<div class="dock-sep"></div>' +
-
+        // App Drawer (waffle grid)
         '<div class="dock-item" onclick="toggleAppDrawer()" style="display:flex; align-items:center; justify-content:center;">' +
         '<svg width="26" height="26" viewBox="0 0 24 24" fill="#ddd"><path d="M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z"/></svg>' +
         '</div>' +
         '<div class="dock-sep"></div>' +
-
+        // Pinned apps
         '<div id="dock-pinned-apps">';
-
+    
     for(let id in APPS) {
         if(APPS[id].pinned) {
             dHTML += '<div class="dock-item" data-id="'+id+'" data-dock-type="pinned" onmousedown="DragSystem.start(event,this,\'dock\',\''+id+'\')" onclick="toggleApp(\''+id+'\')" oncontextmenu="openDockCtx(event, \''+id+'\')"><img src="'+APPS[id].icon+'"></div>';
         }
     }
-
+    
     dHTML += '</div>' +
-
+        // Separator between pinned and open (shown when there are open apps)
         '<div id="dock-open-sep" class="dock-sep" style="display:none;"></div>' +
-
+        // Open apps (right of pinned) — filled by updateOpenAppsDock
         '<div id="dock-open-apps"></div>';
-
+    
+    // Fancy Time + Date on the right
     dHTML += `
         <div class="dock-sep"></div>
         <div id="dock-time" style="padding: 0 14px; font-size: 13px; font-weight: 600; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; min-width: 78px; user-select: none; pointer-events: none; height: 100%;">
@@ -1903,9 +1940,9 @@ function renderUI() {
             <div id="dock-date-small" style="font-size: 10.8px; color: #aaa; margin-top: 1px;"></div>
         </div>
     `;
-
+    
     dock.innerHTML = dHTML;
-
+    
     let pGrid = document.getElementById('pinned-grid');
     let pHTML = '';
     for(let id in APPS) {
@@ -1914,12 +1951,15 @@ function renderUI() {
         }
     }
     pGrid.innerHTML = pHTML;
-
+    
     populateDrawer();
     updateDockTime();
     updateOpenAppsDock();
 }
 
+/** Refresh the open-apps section (left of pinned).
+ *  Every open window gets its own icon here (with the under-icon line),
+ *  including apps that are also pinned — pinned icons stay without the line. */
 function updateOpenAppsDock() {
     const openWrap = document.getElementById('dock-open-apps');
     const openSep = document.getElementById('dock-open-sep');
@@ -1941,6 +1981,7 @@ function updateOpenAppsDock() {
         openSep.style.display = openIds.length > 0 ? '' : 'none';
     }
 
+    // Ensure pinned icons never show the running line
     const pinnedWrap = document.getElementById('dock-pinned-apps');
     if (pinnedWrap) {
         const pinnedItems = pinnedWrap.querySelectorAll('.dock-item[data-dock-type="pinned"]');
@@ -1955,7 +1996,7 @@ function openDockCtx(e, id) {
     e.stopPropagation();
     hideAllCtx();
     activeCtxId = id;
-
+    // Pinned icon always uses pin/unpin menu (open copy is separate in open-apps section)
     let m = document.getElementById('dock-ctx-menu');
     if(m) {
         positionContextMenu(m, e);
@@ -1976,6 +2017,7 @@ function openDockOpenCtx(e, id) {
     if (restoreItem) restoreItem.style.display = minimized ? '' : 'none';
     if (minItem) minItem.style.display = minimized ? 'none' : '';
 
+    // Show unpin only when this app is pinned
     const isPinned = APPS[id] && APPS[id].pinned;
     const sep = document.getElementById('ctx-dock-open-sep');
     const unpin = document.getElementById('ctx-dock-open-unpin');
@@ -2014,6 +2056,7 @@ document.getElementById('ctx-unpin-app').onclick = function() {
     hideAllCtx();
 }
 
+// Open-app dock context menu actions
 document.getElementById('ctx-dock-open-restore').onclick = function() {
     if (activeCtxId) toggleApp(activeCtxId);
     hideAllCtx();
@@ -2035,6 +2078,7 @@ document.getElementById('ctx-dock-open-unpin').onclick = function() {
     hideAllCtx();
 };
 
+// New Tab Handlers
 document.getElementById('ctx-open-newtab-drawer').onclick = function() {
     if(activeCtxId && APPS[activeCtxId]) {
         const app = APPS[activeCtxId];
@@ -2053,14 +2097,15 @@ document.getElementById('ctx-open-newtab-dock').onclick = function() {
     hideAllCtx();
 };
 
+// Copy Link function
 function copyAppLink(id) {
     const app = APPS[id];
     if (!app) return;
 
     navigator.clipboard.writeText(app.path).then(() => {
-
+        // Optional: you can add a temporary toast later if you want
     }).catch(() => {
-
+        // fallback
         const textarea = document.createElement('textarea');
         textarea.value = app.path;
         document.body.appendChild(textarea);
@@ -2070,6 +2115,7 @@ function copyAppLink(id) {
     });
 }
 
+// Attach copy link handlers
 document.getElementById('ctx-copylink').onclick = function() {
     if (activeCtxId) copyAppLink(activeCtxId);
     hideAllCtx();
@@ -2093,12 +2139,14 @@ function hideAllCtx() {
     }
 }
 
+// Close menus when clicking anywhere else
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.os-context-menu')) {
         hideAllCtx();
     }
 });
 
+// Boot skip (Double Enter)
 document.addEventListener('keydown', function(e) {
     if(bootActive && e.key === 'Enter' && document.getElementById('boot-layer').style.display !== 'none') {
         enterCount++;
@@ -2107,47 +2155,48 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// === SMART CONTEXT MENU POSITIONING - QUADRANT BASED ===
 function positionContextMenu(menu, e) {
     if (!menu) return;
-
+    
     menu.style.display = 'block';
     menu.style.visibility = 'hidden';
     menu.style.left = '0px';
     menu.style.top = '0px';
-
+    
     const menuRect = menu.getBoundingClientRect();
     const menuWidth = menuRect.width || 240;
     const menuHeight = menuRect.height || 220;
-
+    
     menu.style.visibility = 'visible';
-
+    
     let x = e.pageX;
     let y = e.pageY;
-
+    
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-
+    
     const midX = vw / 2;
     const midY = vh / 2;
-
+    
     const isRight = x > midX;
     const isBottom = y > midY;
-
+    
     if (isRight) {
         x = x - menuWidth - 8;
     } else {
         x = x + 8;
     }
-
+    
     if (isBottom) {
         y = y - menuHeight - 8;
     } else {
         y = y + 8;
     }
-
+    
     x = Math.max(10, Math.min(x, vw - menuWidth - 10));
     y = Math.max(10, Math.min(y, vh - menuHeight - 10));
-
+    
     menu.style.left = x + 'px';
     menu.style.top = y + 'px';
 }
@@ -2156,24 +2205,27 @@ function startBootSequence() {
     let bootLayer = document.getElementById('boot-layer');
     let cb = document.getElementById('boot-content');
     let bv = document.getElementById('boot-video');
-
+    
+    // Hide the static boot content
     cb.style.display = 'none';
     bv.style.display = 'block';
     bv.muted = false;
     bv.volume = 1.0;
-
+    
+    // === START HIDING CURSOR HERE ===
     bootLayer.classList.add('boot-animation');
-
+    
+    // Cache the boot videos so the next launch is instant
     if (typeof window.seamlessCacheAdd === 'function') {
         window.seamlessCacheAdd("cine-os/Videos/Boot.mp4");
         window.seamlessCacheAdd("cine-os/Videos/QuickBoot.mp4");
     }
-
+    
     if(sysConfig.shortBoot) {
         bv.src = "cine-os/Videos/QuickBoot.mp4";
         bv.load();
     }
-
+    
     let p = bv.play();
     if(p !== undefined) {
         p.catch(function() {
@@ -2181,7 +2233,7 @@ function startBootSequence() {
             bv.play();
         });
     }
-
+    
     bv.onended = function() {
         if(bootActive) skipBootSequence();
     };
@@ -2190,22 +2242,23 @@ function startBootSequence() {
 function skipBootSequence() {
     if(!bootActive) return;
     bootActive = false;
-
+    
     let lay = document.getElementById('boot-layer');
     let bv = document.getElementById('boot-video');
     if(bv) bv.pause();
-
+    
+    // Restore cursor when boot animation ends
     if(lay) lay.classList.remove('boot-animation');
-
+    
     if(lay) {
         lay.style.opacity = '0';
         document.getElementById('lock-screen').classList.add('active');
-
+        
         let lv = document.getElementById('lock-video');
         if(lv.style.display !== 'none') {
             lv.play().catch(function(e) {});
         }
-
+        
         setTimeout(function() { 
             lay.style.display = 'none'; 
         }, 600);
@@ -2219,7 +2272,7 @@ function showNotification(title, msg) {
     t.className = 'toast-notification';
     t.innerHTML = '<div class="toast-header"><div class="toast-app-info"><div class="toast-icon"><i class="fas fa-bell"></i></div><span>System</span></div><i class="fas fa-times toast-close"></i></div><div class="toast-title">' + title + '</div><div class="toast-body">' + msg + '</div>';
     c.appendChild(t);
-
+    
     setTimeout(function(){ t.classList.add('show'); }, 100);
     t.onclick = function() {
         t.classList.remove('show');
@@ -2236,7 +2289,7 @@ window.unlockSystem = function() {
         scr.classList.remove('active');
         isDesktopActive = true;
         document.getElementById('lock-video').pause();
-
+        
         if(!sysConfig.optBg) {
             let bV = document.getElementById('bg-video');
             if(bV.style.display !== 'none') bV.play().catch(function(e){});
@@ -2245,7 +2298,8 @@ window.unlockSystem = function() {
             showNotification("Welcome To Seamless V2", "Go to The Seamless Games App to Save Your Progress!");
             welcomeShown = true;
         }
-
+        
+        // Start clock properly
         updateClock();
         if (!window.clockInterval) {
             window.clockInterval = setInterval(updateClock, 500);
@@ -2256,14 +2310,17 @@ window.unlockSystem = function() {
 
 function applyMediaToElements(url, vidEl, imgEl, isBg) {
     if(!url) return;
-
+    // After a wallpaper refresh, a durable ?_v= token is stored in localStorage.
+    // Always load that version so a full page reload cannot fall back to the old
+    // SW / HTTP cache entry under the clean URL.
     var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
     var loadUrl = url;
     if (force) {
         loadUrl = (typeof window._wpBustUrl === 'function')
             ? window._wpBustUrl(url, force.token)
             : (url + (url.indexOf('?') >= 0 ? '&' : '?') + '_v=' + force.token);
-
+        // Only force-network-seed right after an explicit Refresh (short-lived session flag).
+        // Durable versions just use the busted URL; SW cache-first will hit the versioned key.
         var sessionForce = false;
         if (window._wpForceReload) {
             var np = (typeof window._wpNormPath === 'function') ? window._wpNormPath(url) : url;
@@ -2273,7 +2330,7 @@ function applyMediaToElements(url, vidEl, imgEl, isBg) {
         if (sessionForce && typeof window.seamlessCacheAdd === 'function') {
             window.seamlessCacheAdd(url, { force: true, token: force.token });
         } else if (typeof window.seamlessCacheAdd === 'function') {
-            window.seamlessCacheAdd(url); 
+            window.seamlessCacheAdd(url); // warms versioned key only
         }
     } else if (typeof window.seamlessCacheAdd === 'function') {
         window.seamlessCacheAdd(url);
@@ -2303,7 +2360,7 @@ function initWallpapers() {
     let bI = document.getElementById('bg-img');
     let lV = document.getElementById('lock-video');
     let lI = document.getElementById('lock-img');
-
+    
     if(wallpaperRegistry[sysConfig.homeWallpaper]) {
         applyMediaToElements(wallpaperRegistry[sysConfig.homeWallpaper].url, bV, bI, true);
     }
@@ -2312,11 +2369,12 @@ function initWallpapers() {
     } else {
         applyMediaToElements("cine-os/Videos/green.mp4", lV, lI, false);
     }
-
+    
     updateWallpaperLoop();
     let wChk = document.getElementById('wp-loop-chk');
     if(wChk) wChk.checked = sysConfig.wpLoop;
 
+    // Background-cache every wallpaper so switching later is instant
     if (typeof window.seamlessCacheAdd === 'function') {
         setTimeout(function() {
             for (let key in wallpaperRegistry) {
@@ -2342,41 +2400,41 @@ function updateClock() {
     let n = new Date();
     let dArr = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
     let mArr = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
-
+    
     let hrs = n.getHours().toString().padStart(2, '0');
     let min = n.getMinutes().toString().padStart(2, '0');
     let dNum = n.getDate().toString().padStart(2, '0');
     let dName = dArr[n.getDay()];
     let yr = n.getFullYear();
-
+    
     let lDay = document.getElementById('lock-day-large');
     let lDat = document.getElementById('lock-date');
     let lTim = document.getElementById('lock-time');
     let hDay = document.getElementById('lbl-day');
-
+    
     if(lDay) lDay.innerText = dName;
     if(hDay) hDay.innerText = dName;
     if(lDat) lDat.innerText = dNum + ' ' + mArr[n.getMonth()] + ', ' + yr + '.';
     if(lTim) lTim.innerText = '- ' + hrs + ':' + min + ' -';
-
-    updateDockTime();   
+    
+    updateDockTime();   // ← Add this line
 }
 
 function updateDockTime() {
     let n = new Date();
-
+    
     let hrs = n.getHours() % 12 || 12;
     let ampm = n.getHours() >= 12 ? 'PM' : 'AM';
     let min = n.getMinutes().toString().padStart(2, '0');
     let sec = n.getSeconds().toString().padStart(2, '0');
-
+    
     let month = (n.getMonth() + 1).toString().padStart(2, '0');
     let day = n.getDate().toString().padStart(2, '0');
     let year = n.getFullYear();
-
+    
     const timeMain = document.getElementById('dock-time-main');
     const dateSmall = document.getElementById('dock-date-small');
-
+    
     if(timeMain) timeMain.textContent = `${hrs}:${min}:${sec} ${ampm}`;
     if(dateSmall) dateSmall.textContent = `${month}/${day}/${year}`;
 }
@@ -2403,6 +2461,10 @@ setInterval(function() {
     }
 }, 1000);
 
+
+
+
+
 function populateDrawer() {
     let g = document.getElementById('drawer-grid');
     g.innerHTML = '';
@@ -2412,7 +2474,7 @@ function populateDrawer() {
         d.className = 'drawer-item';
         d.dataset.id = key;
         d.innerHTML = '<img src="' + a.icon + '" style="pointer-events:none;"><span>' + a.title + '</span>';
-
+        
         d.onmousedown = function(e) { DragSystem.start(e, this, 'drawer', this.dataset.id); };
         d.onclick = function(e) {
             if(!DragSystem.isDragMove) {
@@ -2450,20 +2512,22 @@ function toggleApp(id) {
     let app = APPS[id];
     if (!app) return;
 
+    // Open in new tab if specified
     if (app.openInNewTab === true) {
         window.location.href = app.path;
         return;
     }
 
+    // Normal in-OS window behavior
     let w = document.getElementById('win-' + id);
     if(w) {
         if(w.classList.contains('minimized') || w.style.display === 'none') {
-
+            // Restore with reverse minimize animation
             w.style.display = '';
             w.classList.remove('minimized', 'minimizing');
             w.classList.add('opening');
             w.style.zIndex = ++highestZ;
-
+            // Force reflow so opening state is applied before active
             void w.offsetWidth;
             requestAnimationFrame(function() {
                 w.classList.remove('opening');
@@ -2488,6 +2552,7 @@ function openWindow(id) {
     let app = APPS[id];
     if (!app) return;
 
+    // Open in new tab if specified
     if (app.openInNewTab === true) {
         window.location.href = app.path;
         return;
@@ -2498,18 +2563,19 @@ function openWindow(id) {
         m.classList.remove('open');
         setTimeout(function(){ m.style.display='none'; }, 300);
     }
-
+    
     let layer = document.getElementById('windows-layer');
     let win = document.getElementById('win-' + id);
-
+    
     if(!win) {
         let dat = app;
         win = document.createElement('div');
         win.id = 'win-' + id;
-
+        // Start in "opening" state (scaled down near dock), then animate to active
         win.className = 'window opening';
         win.style.zIndex = ++highestZ;
-
+        
+        // Start perfectly centered on screen
         const winW = Math.min(920, window.innerWidth * 0.85);
         const winH = Math.min(620, window.innerHeight * 0.75);
         const left = Math.max(0, (window.innerWidth - winW) / 2);
@@ -2518,9 +2584,10 @@ function openWindow(id) {
         win.style.height = winH + 'px';
         win.style.left = left + 'px';
         win.style.top = top + 'px';
-
+        
         let iframeStr = dat.internal ? '<iframe id="frame-' + id + '"></iframe>' : '<iframe id="frame-' + id + '" src="' + dat.path + '"></iframe>';
-
+        
+        // macOS-style header: traffic lights on the left, title centered, refresh on the right
         win.innerHTML =
             '<div class="win-header" onmousedown="DragSystem.startWinDrag(event, \'' + id + '\')">' +
                 '<div class="win-controls">' +
@@ -2534,20 +2601,22 @@ function openWindow(id) {
                 '</button>' +
             '</div>' +
             '<div class="win-body">' + iframeStr + '</div>';
-
+        
+        // Bring to front on click
         win.addEventListener('mousedown', function() {
             this.style.zIndex = ++highestZ;
             activeWindowId = id;
         });
-
+        
         layer.appendChild(win);
-
+        
+        // Animate open: opening → active (scale up from dock)
         void win.offsetWidth;
         requestAnimationFrame(function() {
             win.classList.remove('opening');
             win.classList.add('active');
         });
-
+        
         if(dat.internal && id === 'settings') {
             let f = document.getElementById('frame-' + id);
             if(f) {
@@ -3874,7 +3943,7 @@ function openWindow(id) {
             }
         }
     } else {
-
+        // Existing window — restore with same open animation if it was minimized
         const wasHidden = win.classList.contains('minimized') || win.style.display === 'none';
         win.style.display = '';
         win.classList.remove('minimized', 'minimizing');
@@ -3890,7 +3959,7 @@ function openWindow(id) {
             win.classList.add('active');
         }
     }
-
+    
     activeWindowId = id;
     updateDockForFullscreen();
     updateOpenAppsDock();
@@ -3908,13 +3977,13 @@ function refreshWindow(id) {
     const frame = document.getElementById('frame-' + id);
     if (!frame) return;
     try {
-
+        // Prefer location.reload so same-origin iframes keep history clean
         if (frame.contentWindow && frame.contentWindow.location) {
             frame.contentWindow.location.reload();
             return;
         }
     } catch (e) {
-
+        // Cross-origin: fall back to re-assigning src
     }
     const src = frame.src;
     if (src) {
@@ -3945,6 +4014,7 @@ function minimizeWindow(id) {
     let w = document.getElementById('win-' + id);
     if (!w || w.classList.contains('minimizing') || w.classList.contains('minimized')) return;
 
+    // If this window was fullscreen, show dock again once it minimizes
     const wasMax = w.classList.contains('maximized');
     if (wasMax) {
         w.classList.remove('maximized');
@@ -3960,11 +4030,12 @@ function minimizeWindow(id) {
     w.classList.add('minimizing');
     if (activeWindowId === id) activeWindowId = null;
 
+    // After animation, fully hide
     setTimeout(function() {
         w.classList.remove('minimizing');
         w.classList.add('minimized');
         w.style.display = 'none';
-
+        // Reset transform so restore looks clean
         w.style.transform = '';
         updateDockForFullscreen();
         updateOpenAppsDock();
@@ -3977,10 +4048,10 @@ function minimizeWindow(id) {
 function toggleMaximize(id) {
     let w = document.getElementById('win-' + id);
     if (!w) return;
-
+    
     if (w.classList.contains('maximized')) {
         w.classList.remove('maximized');
-
+        // Restore previous geometry
         if (w.dataset.prevTop) {
             w.style.top = w.dataset.prevTop;
             w.style.left = w.dataset.prevLeft;
@@ -3988,14 +4059,14 @@ function toggleMaximize(id) {
             w.style.height = w.dataset.prevHeight;
         }
     } else {
-
+        // Store current geometry before maximizing
         const rect = w.getBoundingClientRect();
         w.dataset.prevTop = rect.top + 'px';
         w.dataset.prevLeft = rect.left + 'px';
         w.dataset.prevWidth = rect.width + 'px';
         w.dataset.prevHeight = rect.height + 'px';
         w.classList.add('maximized');
-
+        // Let CSS .maximized rules control size/position
         w.style.width = '';
         w.style.height = '';
         w.style.top = '';
@@ -4006,16 +4077,17 @@ function toggleMaximize(id) {
     updateDockForFullscreen();
 }
 
+// Legacy alias so any remaining calls don't break
 function toggleFullscreen(id) {
     toggleMaximize(id);
 }
 
 function startImmersiveMode(win) {
-
+    // No-op in windowed macOS mode — dock stays visible
 }
 
 function endImmersiveMode() {
-
+    // No-op
 }
 
 var desktopLayout = JSON.parse(localStorage.getItem('cine_desktop_v2')) || [];
@@ -4029,14 +4101,14 @@ function loadDesktop() {
     let c = document.getElementById('desktop-area');
     let ex = document.querySelectorAll('.desktop-app');
     for(let j=0; j<ex.length; j++) ex[j].remove();
-
+    
     desktopLayout.forEach(function(item, idx) {
         let d = document.createElement('div');
         d.className = 'desktop-app';
         d.style.left = item.x + 'px';
         d.style.top = item.y + 'px';
         d.setAttribute('data-idx', idx);
-
+        
         if(item.type === 'folder') {
             let gHTML = '<div class="d-folder-grid">';
             let mx = item.apps.slice(0, 4);
@@ -4045,7 +4117,7 @@ function loadDesktop() {
             });
             gHTML += '</div>';
             if(!item.hideName) gHTML += '<div class="d-label">' + (item.customName || 'Folder') + '</div>';
-
+            
             d.innerHTML = gHTML;
             d.onclick = function(ev) {
                 if(DragSystem.isDragMove) return;
@@ -4066,12 +4138,12 @@ function loadDesktop() {
                 d.ondblclick = function(ev) { ev.stopPropagation(); toggleApp(item.id); };
             }
         }
-
+        
         d.onmousedown = function(ev) {
             ev.stopPropagation();
             if(ev.button === 0) DragSystem.start(ev, d, 'desktop', idx);
         };
-
+        
         d.oncontextmenu = function(ev) {
     ev.preventDefault(); 
     ev.stopPropagation();
@@ -4082,14 +4154,14 @@ function loadDesktop() {
         m.setAttribute('data-target-idx', idx);
     }
 };
-
+        
         c.appendChild(d);
     });
 }
 
 function expandFolder(el, dat, idx) {
     el.classList.add('expanded-folder');
-
+    
     let h = '<div class="folder-header">' + (dat.customName || 'Folder') + ' <i class="fas fa-times" onclick="closeAllFolders(event)"></i></div>';
     h += '<div class="folder-grid-expanded">';
     for(let k=0; k<dat.apps.length; k++) {
@@ -4101,7 +4173,7 @@ function expandFolder(el, dat, idx) {
     }
     h += '</div>';
     el.innerHTML = h;
-
+    
     setTimeout(function() {
         let rect = el.getBoundingClientRect();
         let sibs = document.querySelectorAll('.desktop-app:not(.expanded-folder)');
@@ -4121,9 +4193,9 @@ function closeAllFolders(ev) {
     if(ev) ev.stopPropagation();
     let op = document.querySelectorAll('.expanded-folder');
     if(op.length === 0) return;
-
+    
     for(let i=0; i<op.length; i++) op[i].classList.remove('expanded-folder');
-
+    
     let push = document.querySelectorAll('.desktop-app[data-pushed="true"]');
     for(let j=0; j<push.length; j++) {
         push[j].style.transform = '';
@@ -4143,7 +4215,7 @@ function setupAppContextMenu() {
         <li class="ctx-separator" role="separator"></li>
         <li class="ctx-item" id="ctx-delete" role="menuitem" tabindex="0"><i class="fas fa-trash fa-fw" style="color:#aaa;" aria-hidden="true"></i> Remove</li>
     `;
-
+    
     document.getElementById('ctx-rename').onclick = function() {
         let i = m.getAttribute('data-target-idx');
         let nm = prompt("Enter new name:", desktopLayout[i].customName || "");
@@ -4153,14 +4225,14 @@ function setupAppContextMenu() {
         }
         m.style.display = 'none';
     };
-
+    
     document.getElementById('ctx-hidename').onclick = function() {
         let i = m.getAttribute('data-target-idx');
         desktopLayout[i].hideName = !desktopLayout[i].hideName;
         saveDesktop();
         m.style.display = 'none';
     };
-
+    
     document.getElementById('ctx-changeicon').onclick = function() {
         let i = m.getAttribute('data-target-idx');
         let url = prompt("Enter image URL for custom icon:");
@@ -4181,7 +4253,7 @@ function setupAppContextMenu() {
         }
         m.style.display = 'none';
     };
-
+    
     document.getElementById('ctx-delete').onclick = function() {
         let i = m.getAttribute('data-target-idx');
         desktopLayout.splice(i, 1);
@@ -4206,31 +4278,31 @@ var DragSystem = {
     dragging: false, startPos: {x:0,y:0}, sourceType: null, sourceEl: null,
     idx: null, appId: null, proxy: document.getElementById('drag-proxy'),
     pImg: document.getElementById('proxy-img'), badge: document.getElementById('folder-badge'),
-
+    
     init: function() {
         window.addEventListener('mousemove', e => this.move(e));
         window.addEventListener('mouseup', e => this.end(e));
     },
-
+    
     start: function(e, el, type, id) {
         this.startPos = {x: e.clientX, y: e.clientY};
         this.sourceType = type; this.sourceEl = el; this.isDragMove = false;
         if(type === 'drawer' || type === 'dock') this.appId = id;
         else if(type === 'desktop') { this.idx = id; this.sourceEl.style.opacity = '0.5'; }
     },
-
+    
     startWinDrag: function(e, id) {
-
+        // Don't drag when clicking traffic-light buttons or refresh
         if (e.target.closest('.win-btn') || e.target.closest('.win-refresh')) return;
         const win = document.getElementById('win-' + id);
         if (!win || win.classList.contains('maximized')) return;
-
+        
         this.startPos = {x: e.clientX, y: e.clientY};
         this.sourceType = 'window';
         this.sourceEl = win;
         this.isDragMove = false;
         this.draggingWinId = id;
-
+        
         const rect = win.getBoundingClientRect();
         this.winOffset = {
             x: e.clientX - rect.left,
@@ -4239,17 +4311,18 @@ var DragSystem = {
         win.style.zIndex = ++highestZ;
         activeWindowId = id;
     },
-
+    
     move: function(e) {
         if(!this.sourceEl) return;
         let dx = Math.abs(e.clientX - this.startPos.x);
         let dy = Math.abs(e.clientY - this.startPos.y);
-
+        
         if(dx > 3 || dy > 3) {
             this.dragging = true; this.isDragMove = true;
-
+            
             if (this.sourceType === 'window') {
-
+                // Disable pointer events on the iframe so fast drags
+                // don't get captured when the cursor enters the iframe
                 if (!this._iframePointerDisabled) {
                     const frame = this.sourceEl.querySelector('iframe');
                     if (frame) {
@@ -4259,20 +4332,20 @@ var DragSystem = {
                 }
                 const newLeft = e.clientX - this.winOffset.x;
                 const newTop = e.clientY - this.winOffset.y;
-
+                // Keep window mostly on-screen
                 const maxL = window.innerWidth - 80;
                 const maxT = window.innerHeight - 60;
                 this.sourceEl.style.left = Math.max(-this.sourceEl.offsetWidth + 100, Math.min(newLeft, maxL)) + 'px';
                 this.sourceEl.style.top = Math.max(0, Math.min(newTop, maxT)) + 'px';
                 return;
             }
-
+            
             if(this.sourceType === 'desktop' || this.sourceType === 'drawer' || this.sourceType === 'dock') {
                 if(this.sourceType === 'drawer') toggleAppDrawer();
                 this.proxy.style.display = 'block';
                 this.proxy.style.left = (e.clientX - 25) + 'px';
                 this.proxy.style.top = (e.clientY - 25) + 'px';
-
+                
                 if(this.sourceType === 'drawer' || this.sourceType === 'dock') {
                     if(APPS[this.appId]) this.pImg.src = APPS[this.appId].icon;
                 } else {
@@ -4288,14 +4361,14 @@ var DragSystem = {
             }
         }
     },
-
+    
     end: function(e) {
         if(!this.sourceEl) return;
         if(!this.isDragMove && this.sourceType === 'desktop') { this.reset(); return; }
         if(!this.dragging) { this.reset(); return; }
-
+        
         if (this.sourceType === 'window') {
-
+            // Restore iframe pointer events after drag
             if (this._iframePointerDisabled && this.sourceEl) {
                 const frame = this.sourceEl.querySelector('iframe');
                 if (frame) frame.style.pointerEvents = '';
@@ -4304,11 +4377,11 @@ var DragSystem = {
             this.reset();
             return;
         }
-
+        
         if(this.sourceType === 'desktop' || this.sourceType === 'drawer' || this.sourceType === 'dock') {
             let nx = Math.round((e.clientX - 40) / 90) * 90;
             let ny = Math.round((e.clientY - 40) / 100) * 100;
-
+            
             if(e.clientY > window.innerHeight - 80) {
                 if(this.sourceType === 'desktop') desktopLayout.splice(this.idx, 1);
             } else {
@@ -4320,11 +4393,11 @@ var DragSystem = {
                         if(e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom) tIdx = aAll[i].dataset.idx;
                     }
                 }
-
+                
                 if(tIdx > -1) {
                     let targ = desktopLayout[tIdx];
                     let drp = (this.sourceType === 'drawer' || this.sourceType === 'dock') ? [this.appId] : (desktopLayout[this.idx].type === 'app' ? [desktopLayout[this.idx].id] : desktopLayout[this.idx].apps);
-
+                    
                     if(targ.type === 'app') {
                         targ.type = 'folder';
                         targ.apps = [targ.id].concat(drp);
@@ -4346,9 +4419,9 @@ var DragSystem = {
         }
         this.reset();
     },
-
+    
     reset: function() {
-
+        // Safety: restore iframe pointer-events if still disabled
         if (this._iframePointerDisabled && this.sourceEl) {
             const frame = this.sourceEl.querySelector('iframe');
             if (frame) frame.style.pointerEvents = '';
@@ -4377,27 +4450,27 @@ window.wpMode = 'both';
 function setWallpaper(k, noti=false) {
     let d = wallpaperRegistry[k];
     if(!d) return;
-
+    
     if(noti && d.locked && !unlockedWallpapers.includes(d.id)) {
         unlockedWallpapers.push(d.id);
         localStorage.setItem('cine_unlocked_wp', JSON.stringify(unlockedWallpapers));
         alert("Wallpaper: [ " + d.name + " ] Unlocked.");
     }
-
+    
     if(window.wpMode === 'home' || window.wpMode === 'both') {
         let bV = document.getElementById('bg-video');
         let bI = document.getElementById('bg-img');
         applyMediaToElements(d.url, bV, bI, true);
         updateSysSetting('homeWallpaper', k);
     }
-
+    
     if(window.wpMode === 'lock' || window.wpMode === 'both') {
         let lV = document.getElementById('lock-video');
         let lI = document.getElementById('lock-img');
         applyMediaToElements(d.url, lV, lI, false);
         updateSysSetting('lockWallpaper', k);
     }
-
+    
     updateWallpaperLoop();
     openWallpaperMenu();
 }
@@ -4407,23 +4480,25 @@ function openWallpaperMenu() {
     let gu = document.getElementById('wp-grid-unlocked');
     let gl = document.getElementById('wp-grid-locked');
     if(!m) return;
-
+    
+    // Non-modal open only — showModal() puts the dialog in the browser top layer,
+    // which hides our fixed context menus and blocks the default menu after preventDefault.
     try { if (typeof m.close === 'function' && m.open) m.close(); } catch (e) {}
     m.style.display = 'flex';
     m.classList.add('open');
-
+    
     gu.innerHTML = '';
     gl.innerHTML = '';
-
+    
     for(let k in wallpaperRegistry) {
         let d = wallpaperRegistry[k];
         let ul = !d.locked || unlockedWallpapers.includes(d.id);
         let c = document.createElement('div');
         c.className = "wp-card " + (ul ? "" : "wp-locked");
-
+        
         if(ul) {
             let mHtml = "";
-
+            // Use cache-bust src if this wallpaper was recently refreshed
             var previewSrc = d.url;
             var fr = (typeof window._wpGetForce === 'function') ? window._wpGetForce(d.url) : null;
             if (fr && typeof window._wpBustUrl === 'function') {
@@ -4431,7 +4506,7 @@ function openWallpaperMenu() {
             }
             if(d.url.match(/\.(png|jpg|jpeg|gif)$/i)) mHtml = '<img src="' + previewSrc + '" alt="wp" draggable="false">';
             else mHtml = '<video src="' + previewSrc + '" preload="auto" playsinline muted loop draggable="false" onmouseover="this.play()" onmouseout="this.pause()"></video>';
-
+            
             c.innerHTML = mHtml + '<div class="wp-info">' + d.name + '</div>';
             c.setAttribute('data-key', k);
             c.onclick = function() {
@@ -4446,7 +4521,7 @@ function openWallpaperMenu() {
             gl.appendChild(c);
         }
     }
-
+    
     let chk = document.getElementById('wp-loop-chk');
     if(chk) {
         chk.checked = sysConfig.wpLoop;
@@ -4454,10 +4529,11 @@ function openWallpaperMenu() {
     }
 }
 
+// Capture-phase: right-click on any wallpaper card (or its img/video child)
 document.addEventListener('contextmenu', function(ev) {
     var card = ev.target && ev.target.closest ? ev.target.closest('.wp-card') : null;
     if (!card || !card.getAttribute('data-key')) return;
-
+    // Only unlocked cards (locked have no data-key interaction / wp-locked)
     if (card.classList.contains('wp-locked')) return;
     var menuEl = document.getElementById('wallpaper-menu');
     if (!menuEl || !menuEl.classList.contains('open')) return;
@@ -4472,6 +4548,8 @@ document.addEventListener('contextmenu', function(ev) {
     }
 }, true);
 
+/** Clear Seamless SW cache for a wallpaper URL, re-fetch it, and force-reload
+ *  any media elements currently using it (home / lock / menu preview). */
 function refreshWallpaper(key) {
     let d = wallpaperRegistry[key];
     if (!d || !d.url) {
@@ -4482,14 +4560,15 @@ function refreshWallpaper(key) {
     showNotification('Wallpaper', 'Refreshing "' + d.name + '"…');
 
     var finish = function(ok) {
-
+        // Force-flag is already set by seamlessCacheRefresh; applyMediaToElements
+        // will load with ?_cb= and re-seed the SW cache from network.
         if (sysConfig.homeWallpaper === key) {
             applyMediaToElements(url, document.getElementById('bg-video'), document.getElementById('bg-img'), true);
         }
         if (sysConfig.lockWallpaper === key) {
             applyMediaToElements(url, document.getElementById('lock-video'), document.getElementById('lock-img'), false);
         }
-
+        // Refresh preview cards without rebuilding the whole menu
         var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
         var bust = force && typeof window._wpBustUrl === 'function'
             ? window._wpBustUrl(url, force.token)
@@ -4530,6 +4609,7 @@ function refreshWallpaper(key) {
     }
 }
 
+// Wire wallpaper context menu action (once)
 (function setupWpContextMenu() {
     var btn = document.getElementById('ctx-wp-refresh');
     if (!btn) return;
@@ -4586,10 +4666,10 @@ if(cvsSnow) {
     var ctxSnow = cvsSnow.getContext('2d');
     var sW = window.innerWidth, sH = window.innerHeight;
     cvsSnow.width = sW; cvsSnow.height = sH;
-
+    
     var flakes = [];
     for(var f=0; f<30; f++) flakes.push({x: Math.random()*sW, y: Math.random()*sH, r: Math.random()*2, s: Math.random()+0.5});
-
+    
     function drawSnow() {
         if(isDesktopActive) {
             ctxSnow.clearRect(0, 0, sW, sH);
@@ -4740,7 +4820,7 @@ setInterval(function() {
         let m = md[i];
         if(!m.paused && !m.muted && m.volume > 0 && !['bg-video', 'lock-video', 'boot-video'].includes(m.id)) fnd = m;
     }
-
+    
     let ifr = document.querySelectorAll('iframe');
     for(let j=0; j<ifr.length; j++) {
         try {
@@ -4753,13 +4833,13 @@ setInterval(function() {
             }
         } catch(e) {}
     }
-
+    
     isMediaPlaying = !!fnd;
     if(fnd !== aMedia) {
         if(fnd) { aMedia = fnd; setupM(); showNoti(); }
         else { aMedia = null; hideNoti(); }
     }
-
+    
     if(aMedia) {
         let ct = document.getElementById('current-time');
         if(ct) ct.textContent = fmtT(aMedia.currentTime);
@@ -4776,10 +4856,10 @@ function setupM() {
     if(!aMedia) return;
     let nt = document.getElementById('noti-title');
     if(nt) nt.innerText = aMedia.title || "Web Media Playing";
-
+    
     let pp = document.getElementById('play-pause');
     if(pp) pp.onclick = function() { aMedia.paused ? aMedia.play() : aMedia.pause(); resetNH(); };
-
+    
     aMedia.addEventListener('play', function() {
         let iPl = document.getElementById('icon-play');
         let iPa = document.getElementById('icon-pause');
@@ -4787,20 +4867,20 @@ function setupM() {
         if(iPa) iPa.classList.add('visible-svg');
         showNoti();
     });
-
+    
     aMedia.addEventListener('pause', function() {
         let iPl = document.getElementById('icon-play');
         let iPa = document.getElementById('icon-pause');
         if(iPl) { iPl.classList.remove('hidden-svg'); iPl.classList.add('visible-svg'); }
         if(iPa) { iPa.classList.remove('visible-svg'); iPa.classList.add('hidden-svg'); }
     });
-
+    
     let sb = document.getElementById('skip-back');
     if(sb) sb.onclick = function() { if(isFinite(aMedia.currentTime)) aMedia.currentTime = Math.max(0, aMedia.currentTime - 15); resetNH(); };
-
+    
     let sf = document.getElementById('skip-forward');
     if(sf) sf.onclick = function() { if(isFinite(aMedia.duration) && aMedia.duration > 0) aMedia.currentTime = Math.min(aMedia.duration, aMedia.currentTime + 15); resetNH(); };
-
+    
     let pha = document.getElementById('progress-hit-area');
     if(pha) pha.onclick = function(e) {
         if(isFinite(aMedia.duration) && aMedia.duration > 0) {
@@ -4824,15 +4904,15 @@ function drawFV() {
     let cv = document.getElementById('visualizer');
     if(!cv) return;
     let cx = cv.getContext('2d');
-
+    
     cv.width = cv.parentElement.clientWidth;
     cv.height = 14;
-
+    
     let bL = 32;
     cx.clearRect(0, 0, cv.width, cv.height);
     let bW = (cv.width / bL) * 2;
     let xP = 0;
-
+    
     for(let i=0; i<bL; i++) {
         let bH = aMedia && !aMedia.paused ? (Math.random() * cv.height) : 2;
         cx.fillStyle = "#fff";
@@ -4870,7 +4950,7 @@ function chkFps() {
         } else {
             fLC = 0;
         }
-
+        
         fFr = 0;
         fLT = nw;
     }
