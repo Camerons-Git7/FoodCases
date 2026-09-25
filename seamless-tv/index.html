@@ -651,9 +651,6 @@ async function loadSeason(tvId, seasonNum, autoplayEpisode) {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   INLINED script.js (Go WASM glue) — was previously fetched from disk
-   ═══════════════════════════════════════════════════════════════════ */
 const SCRIPT_JS_SOURCE = String.raw`
 "use strict";
 
@@ -1051,9 +1048,16 @@ const SCRIPT_JS_SOURCE = String.raw`
 })();
 `;
 
-/* ═══════════════════════════════════════════════════════════════════
-   WASM BOOT — evals inlined glue, fetches only fu.wasm externally
-   ═══════════════════════════════════════════════════════════════════ */
+async function waitForGetAdv(timeoutMs = 8000) {
+  const start = Date.now();
+  while (typeof globalThis.getAdv !== 'function') {
+    if (Date.now() - start > timeoutMs) {
+      throw new Error('getAdv never became available after ' + timeoutMs + 'ms');
+    }
+    await new Promise(r => setTimeout(r, 50));
+  }
+}
+
 function bootWasm() {
   if (wasmBootPromise) return wasmBootPromise;
   wasmBootPromise = (async () => {
@@ -1083,8 +1087,7 @@ function bootWasm() {
     const { instance } = await WebAssembly.instantiate(wasmBuf, go.importObject);
     go.run(instance);
 
-    await new Promise(r => setTimeout(r, 500));
-    if (typeof globalThis.getAdv !== 'function') throw new Error('getAdv not found');
+    await waitForGetAdv(8000);
     wasmBooted = true;
   })();
   return wasmBootPromise;
@@ -1092,12 +1095,28 @@ function bootWasm() {
 
 async function resolveStreamUrl(id, season, episode) {
   await bootWasm();
-  const token = globalThis.getAdv(String(id));
-  if (!token) throw new Error('getAdv returned null');
+
+  console.log('[resolveStreamUrl] calling getAdv', { id: String(id), type: typeof globalThis.getAdv });
+
+  let token;
+  try {
+    token = globalThis.getAdv(String(id));
+  } catch (e) {
+    console.error('[resolveStreamUrl] getAdv threw:', e);
+    throw new Error('getAdv threw: ' + e.message);
+  }
+
+  console.log('[resolveStreamUrl] getAdv returned:', JSON.stringify(token));
+
+  if (!token || token === '' || token === 'null') {
+    throw new Error('getAdv returned null for TMDB id ' + id + ' — this id is not in the vidlink database, or getAdv expects a different argument shape');
+  }
 
   const apiUrl = season
     ? `https://vidlink.pro/api/b/tv/${token}/${season}/${episode || 1}?multiLang=0`
     : `https://vidlink.pro/api/b/movie/${token}?multiLang=0`;
+
+  console.log('[resolveStreamUrl] fetching', apiUrl);
 
   const res = await fetch(apiUrl, {
     headers: {
@@ -1108,14 +1127,12 @@ async function resolveStreamUrl(id, season, episode) {
   });
   if (!res.ok) throw new Error(`vidlink returned ${res.status}`);
   const data = await res.json();
+  console.log('[resolveStreamUrl] vidlink response:', data);
   const playlist = data?.stream?.playlist;
-  if (!playlist) throw new Error('No playlist in response');
+  if (!playlist) throw new Error('No playlist in response: ' + JSON.stringify(data).slice(0, 200));
   return playlist;
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   PLAYER
-   ═══════════════════════════════════════════════════════════════════ */
 async function playStream(id, type, season, episode) {
   closePlayer();
   showLoader('Resolving stream...');
@@ -1177,9 +1194,6 @@ function closePlayer() {
   if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   /api INTERCEPT — same as before
-   ═══════════════════════════════════════════════════════════════════ */
 function rewriteM3u8(body, url) {
   const base = url.split('?')[0];
   const baseDir = base.substring(0, base.lastIndexOf('/') + 1);
@@ -1254,9 +1268,6 @@ window.fetch = function(input, init) {
   return originalFetch.apply(this, arguments);
 };
 
-/* ═══════════════════════════════════════════════════════════════════
-   ROUTER
-   ═══════════════════════════════════════════════════════════════════ */
 async function route() {
   const { id, s, e, type, q } = getParams();
 
