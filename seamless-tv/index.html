@@ -3,142 +3,848 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Stream</title>
+  <title>Zenith</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; background: #000; font-family: system-ui, sans-serif; color: #fff; overflow: hidden; }
+    html, body { width: 100%; height: 100%; background: #0a0a0a; font-family: system-ui, -apple-system, sans-serif; color: #fff; overflow-x: hidden; }
 
+    /* ── Header ─────────────────────────────────────────────────────── */
+    #header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 14px 22px;
+      display: flex; align-items: center; gap: 14px;
+      background: linear-gradient(to bottom, rgba(0,0,0,.92), transparent);
+      transition: background .3s;
+    }
+    #header.solid { background: rgba(10,10,10,.97); backdrop-filter: blur(10px); }
+    #logo {
+      font-size: 1.35rem; font-weight: 800; letter-spacing: -.02em;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      cursor: pointer; user-select: none;
+    }
+    #search-wrap { flex: 1; max-width: 520px; position: relative; }
+    #search {
+      width: 100%; padding: 10px 16px 10px 40px;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px; color: #fff; font-size: .92rem; outline: none;
+      transition: border-color .2s, background .2s;
+    }
+    #search:focus { border-color: rgba(96,165,250,.6); background: rgba(255,255,255,.1); }
+    #search::placeholder { color: rgba(255,255,255,.4); }
+    #search-icon {
+      position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+      color: rgba(255,255,255,.4); pointer-events: none; font-size: 1rem;
+    }
+    #back-btn {
+      display: none; padding: 8px 14px; border-radius: 8px;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
+      color: #fff; font-size: .85rem; cursor: pointer; white-space: nowrap;
+    }
+    #back-btn:hover { background: rgba(255,255,255,.14); }
+
+    /* ── Search results dropdown ────────────────────────────────────── */
+    #search-results {
+      position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+      background: #141414; border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px; overflow: hidden; display: none;
+      max-height: 70vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.7);
+    }
+    #search-results.open { display: block; }
+    .sr-item {
+      display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+      cursor: pointer; transition: background .15s;
+    }
+    .sr-item:hover { background: rgba(255,255,255,.06); }
+    .sr-poster {
+      width: 40px; height: 60px; border-radius: 6px; object-fit: cover;
+      background: #222; flex-shrink: 0;
+    }
+    .sr-info { min-width: 0; }
+    .sr-title { font-size: .9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sr-meta { font-size: .75rem; color: rgba(255,255,255,.5); margin-top: 2px; }
+
+    /* ── Main content ───────────────────────────────────────────────── */
+    #main { padding: 0 0 60px; }
+
+    /* Hero / detail view */
+    #detail { display: none; }
+    #detail.open { display: block; }
+    #hero {
+      position: relative; height: 62vh; min-height: 420px;
+      background-size: cover; background-position: center top;
+    }
+    #hero::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to top, #0a0a0a 5%, rgba(10,10,10,.55) 45%, rgba(10,10,10,.3) 100%);
+    }
+    #hero-content {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 2;
+      padding: 0 44px 36px; max-width: 900px;
+    }
+    #hero-title { font-size: 3rem; font-weight: 800; line-height: 1.05; margin-bottom: 12px; text-shadow: 0 2px 20px rgba(0,0,0,.6); }
+    #hero-meta { display: flex; gap: 14px; flex-wrap: wrap; font-size: .88rem; color: rgba(255,255,255,.75); margin-bottom: 16px; }
+    #hero-meta span { display: flex; align-items: center; gap: 5px; }
+    #hero-overview { font-size: .95rem; line-height: 1.6; color: rgba(255,255,255,.8); max-width: 660px; margin-bottom: 22px; }
+    #hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      padding: 12px 26px; border-radius: 10px; font-size: .95rem; font-weight: 600;
+      border: none; cursor: pointer; transition: transform .15s, background .2s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: #fff; color: #000; }
+    .btn-primary:hover { background: #e5e5e5; }
+    .btn-ghost { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.15); }
+    .btn-ghost:hover { background: rgba(255,255,255,.2); }
+
+    /* Seasons / episodes */
+    #seasons-bar {
+      padding: 28px 44px 8px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    #seasons-bar label { font-size: .82rem; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .1em; }
+    #season-select {
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+      color: #fff; padding: 8px 14px; border-radius: 8px; font-size: .9rem; outline: none;
+      cursor: pointer;
+    }
+    #season-select option { background: #141414; }
+
+    #episodes {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px; padding: 16px 44px 40px;
+    }
+    .ep-card {
+      display: flex; gap: 12px; padding: 12px; border-radius: 12px;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
+      cursor: pointer; transition: background .15s, border-color .15s, transform .15s;
+    }
+    .ep-card:hover { background: rgba(255,255,255,.08); border-color: rgba(96,165,250,.4); transform: translateY(-2px); }
+    .ep-thumb {
+      width: 100px; height: 60px; border-radius: 8px; object-fit: cover;
+      background: #1a1a1a; flex-shrink: 0;
+    }
+    .ep-info { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .ep-num { font-size: .72rem; color: rgba(96,165,250,.9); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .ep-name { font-size: .88rem; font-weight: 600; margin: 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ep-overview { font-size: .75rem; color: rgba(255,255,255,.5); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+    /* Browse / trending rows */
+    #browse { padding: 90px 0 40px; }
+    .row-section { margin-bottom: 34px; }
+    .row-title { font-size: 1.15rem; font-weight: 700; padding: 0 44px 14px; letter-spacing: -.01em; }
+    .row-scroll {
+      display: flex; gap: 14px; overflow-x: auto; padding: 4px 44px 14px;
+      scroll-behavior: smooth; scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,.2) transparent;
+    }
+    .row-scroll::-webkit-scrollbar { height: 6px; }
+    .row-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 3px; }
+    .card {
+      flex-shrink: 0; width: 155px; cursor: pointer;
+      transition: transform .2s;
+    }
+    .card:hover { transform: translateY(-4px); }
+    .card-poster {
+      width: 155px; height: 232px; border-radius: 10px; object-fit: cover;
+      background: #1a1a1a; display: block;
+      box-shadow: 0 6px 20px rgba(0,0,0,.5);
+    }
+    .card-title { font-size: .82rem; font-weight: 600; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-year { font-size: .72rem; color: rgba(255,255,255,.45); margin-top: 2px; }
+
+    /* ── Player overlay ─────────────────────────────────────────────── */
+    #player-overlay {
+      position: fixed; inset: 0; z-index: 200; background: #000;
+      display: none; flex-direction: column;
+    }
+    #player-overlay.open { display: flex; }
+    #player-head {
+      display: flex; align-items: center; gap: 12px; padding: 12px 18px;
+      background: rgba(0,0,0,.85);
+    }
+    #player-head button {
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12);
+      color: #fff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: .85rem;
+    }
+    #player-head button:hover { background: rgba(255,255,255,.18); }
+    #player-title { font-size: .9rem; font-weight: 600; color: rgba(255,255,255,.85); }
+    #player-video-wrap { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; }
+    #v { width: 100%; height: 100%; max-height: 100%; display: block; }
+
+    /* ── Loader / error ─────────────────────────────────────────────── */
     #loader {
-      position: fixed; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 28px; background: #000;
+      position: fixed; inset: 0; z-index: 300; display: none;
+      flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+      background: rgba(0,0,0,.92);
     }
-    #loader-bg {
-      position: absolute; inset: 0;
-      background-size: cover; background-position: center;
-      transition: opacity .6s ease; opacity: 0;
-    }
+    #loader.open { display: flex; }
     .spinner {
-      position: relative; z-index: 1;
-      width: 72px; height: 72px;
-      border: 5px solid rgba(255,255,255,.15);
-      border-top-color: #fff; border-radius: 50%;
+      width: 60px; height: 60px;
+      border: 4px solid rgba(255,255,255,.15);
+      border-top-color: #60a5fa; border-radius: 50%;
       animation: spin .9s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #loader-text { position: relative; z-index: 1; font-size: .95rem; color: rgba(255,255,255,.6); letter-spacing: .04em; text-shadow: 0 1px 4px #000; }
-
-    #player { position: fixed; inset: 0; display: none; background: #000; }
-    video { width: 100%; height: 100%; display: block; }
-
-    #usage {
-      position: fixed; inset: 0; display: none; flex-direction: column;
-      align-items: center; justify-content: center; text-align: center;
-      background: #000; gap: 10px;
-    }
-    #usage p { font-size: 1.05rem; color: rgba(255,255,255,.65); line-height: 2; }
+    #loader-text { font-size: .9rem; color: rgba(255,255,255,.6); letter-spacing: .04em; }
 
     #err {
-      position: fixed; inset: 0; display: none; flex-direction: column;
-      align-items: center; justify-content: center; text-align: center; background: #000;
+      position: fixed; inset: 0; z-index: 310; display: none;
+      flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; background: rgba(0,0,0,.95); padding: 20px;
     }
-    #err-title { font-size: 2.4rem; font-weight: 700; color: #fff; margin-bottom: 18px; }
-    #err-link { font-size: 1.1rem; color: #60a5fa; text-decoration: underline; cursor: pointer; }
-    #err-link:hover { color: #93c5fd; }
+    #err.open { display: flex; }
+    #err-title { font-size: 2rem; font-weight: 700; margin-bottom: 14px; }
+    #err-msg { font-size: .9rem; color: rgba(255,255,255,.6); max-width: 600px; margin-bottom: 22px; }
+    #err-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
     #err-detail {
-      position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
-      font-size: .78rem; color: rgba(255,255,255,.35); white-space: nowrap;
-      max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      font-size: .75rem; color: rgba(255,255,255,.3); max-width: 90vw;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────────── */
+    @media (max-width: 720px) {
+      #hero-content { padding: 0 20px 26px; }
+      #hero-title { font-size: 2rem; }
+      #hero { height: 52vh; min-height: 340px; }
+      .row-title, .row-scroll { padding-left: 20px; padding-right: 20px; }
+      #episodes { padding: 16px 20px 40px; }
+      #seasons-bar { padding: 22px 20px 6px; }
+      .card, .card-poster { width: 130px; }
+      .card-poster { height: 195px; }
+      #header { padding: 12px 16px; }
+      #logo { font-size: 1.15rem; }
+      #search-wrap { max-width: none; }
     }
   </style>
 </head>
 <body>
 
+<!-- ═══ Header ═══════════════════════════════════════════════════════ -->
+<div id="header">
+  <button id="back-btn">← Back</button>
+  <div id="logo" onclick="goHome()">Zenith</div>
+  <div id="search-wrap">
+    <span id="search-icon">⌕</span>
+    <input id="search" type="text" placeholder="Search movies and TV shows..." autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+</div>
+
+<!-- ═══ Main ═════════════════════════════════════════════════════════ -->
+<div id="main">
+
+  <!-- Browse view (trending rows) -->
+  <div id="browse">
+    <div class="row-section">
+      <div class="row-title">Trending Movies</div>
+      <div class="row-scroll" id="row-trending-movies"></div>
+    </div>
+    <div class="row-section">
+      <div class="row-title">Trending TV Shows</div>
+      <div class="row-scroll" id="row-trending-tv"></div>
+    </div>
+    <div class="row-section">
+      <div class="row-title">Popular Movies</div>
+      <div class="row-scroll" id="row-popular-movies"></div>
+    </div>
+    <div class="row-section">
+      <div class="row-title">Popular TV Shows</div>
+      <div class="row-scroll" id="row-popular-tv"></div>
+    </div>
+    <div class="row-section">
+      <div class="row-title">Top Rated Movies</div>
+      <div class="row-scroll" id="row-top-movies"></div>
+    </div>
+    <div class="row-section">
+      <div class="row-title">Top Rated TV Shows</div>
+      <div class="row-scroll" id="row-top-tv"></div>
+    </div>
+  </div>
+
+  <!-- Detail view -->
+  <div id="detail">
+    <div id="hero">
+      <div id="hero-content">
+        <div id="hero-title"></div>
+        <div id="hero-meta"></div>
+        <div id="hero-overview"></div>
+        <div id="hero-actions">
+          <button class="btn btn-primary" id="play-btn">▶ Play</button>
+        </div>
+      </div>
+    </div>
+    <div id="seasons-bar" style="display:none">
+      <label>Season</label>
+      <select id="season-select"></select>
+    </div>
+    <div id="episodes"></div>
+  </div>
+
+</div>
+
+<!-- ═══ Player overlay ══════════════════════════════════════════════ -->
+<div id="player-overlay">
+  <div id="player-head">
+    <button onclick="closePlayer()">✕ Close</button>
+    <div id="player-title"></div>
+  </div>
+  <div id="player-video-wrap">
+    <video id="v" controls autoplay playsinline></video>
+  </div>
+</div>
+
+<!-- ═══ Loader ══════════════════════════════════════════════════════ -->
 <div id="loader">
-  <div id="loader-bg"></div>
   <div class="spinner"></div>
-  <div id="loader-text">Loading stream...</div>
+  <div id="loader-text">Loading...</div>
 </div>
 
-<div id="usage">
-  <p>
-    <span style="color:#fff;font-size:1.2rem">Stream</span><br><br>
-    <code style="color:rgba(255,255,255,.8)">?id=550</code> &nbsp;— movie<br>
-    <code style="color:rgba(255,255,255,.8)">?id=456&amp;s=1&amp;e=1</code> &nbsp;— TV episode
-  </p>
-</div>
-
+<!-- ═══ Error ═══════════════════════════════════════════════════════ -->
 <div id="err">
-  <div id="err-title">Error Occurred</div>
-  <a id="err-link" href="#">Try vidsrc.xyz instead?</a>
+  <div id="err-title">Playback Error</div>
+  <div id="err-msg"></div>
+  <div id="err-actions">
+    <button class="btn btn-ghost" onclick="closeErr()">Dismiss</button>
+    <a id="err-vidsrc" class="btn btn-ghost" target="_blank" rel="noopener">Try vidsrc.xyz</a>
+  </div>
   <div id="err-detail"></div>
 </div>
 
-<div id="player">
-  <video id="v" controls autoplay playsinline></video>
-</div>
-
 <script>
-var TMDB_KEY = '3a73619bbb8fc6d47742d1b5b2b707b5';
+/* ═══════════════════════════════════════════════════════════════════
+   CONFIG
+   ═══════════════════════════════════════════════════════════════════ */
+const TMDB_KEY = '3a73619bbb8fc6d47742d1b5b2b707b5';
+const TMDB     = 'https://api.themoviedb.org/3';
+const IMG      = 'https://image.tmdb.org/t/p';
+const WASM_URL = 'https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/seamless-tv/fu.wasm';
 
-var MESSAGES = [
-  'Loading stream...', 'Contacting the mothership...', 'Bribing the servers...',
-  'Untangling the cables...', 'Asking nicely...', 'Decoding the matrix...',
-  'Warming up the hamsters...', 'Negotiating with the cloud...', 'Almost there...',
-  'Convincing pixels to move...', 'Poking the API...', 'Summoning bandwidth...',
-  'Greasing the pipes...', 'Waking up the interns...', 'Stealing the stream (legally)...'
+const LOADER_MSGS = [
+  'Contacting the mothership...', 'Bribing the servers...', 'Untangling the cables...',
+  'Asking nicely...', 'Decoding the matrix...', 'Warming up the hamsters...',
+  'Negotiating with the cloud...', 'Almost there...', 'Convincing pixels to move...',
+  'Poking the API...', 'Summoning bandwidth...', 'Greasing the pipes...',
+  'Waking up the interns...'
 ];
-var msgEl = document.getElementById('loader-text');
-var msgIdx = 0;
-var msgTimer = setInterval(function() {
-  msgIdx = (msgIdx + 1) % MESSAGES.length;
-  msgEl.textContent = MESSAGES[msgIdx];
-}, 2200);
 
-var p = new URLSearchParams(location.search);
-var id = p.get('id'), s = p.get('s'), e = p.get('e');
+/* ═══════════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════════ */
+let currentItem   = null;   // { id, type:'movie'|'tv', title, ... }
+let currentSeason = null;
+let hlsInstance   = null;
+let loaderTimer   = null;
+let wasmBooted    = false;
+let wasmBootPromise = null;
 
-function showPlayer() {
-  clearInterval(msgTimer);
-  document.getElementById('loader').style.display = 'none';
-  document.getElementById('player').style.display = 'block';
+/* ═══════════════════════════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════════════════════════ */
+function $(s) { return document.querySelector(s); }
+function el(tag, attrs = {}, ...children) {
+  const n = document.createElement(tag);
+  for (const k in attrs) {
+    if (k === 'class') n.className = attrs[k];
+    else if (k === 'style') n.style.cssText = attrs[k];
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), attrs[k]);
+    else if (k === 'html') n.innerHTML = attrs[k];
+    else n.setAttribute(k, attrs[k]);
+  }
+  for (const c of children) {
+    if (c == null) continue;
+    n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  }
+  return n;
 }
 
-function showErr(msg) {
-  clearInterval(msgTimer);
-  document.getElementById('loader').style.display = 'none';
-  document.getElementById('err').style.display = 'flex';
-  document.getElementById('err-detail').textContent = msg || '';
-  var vidsrcUrl = s
-    ? 'https://vidsrc.xyz/embed/tv?tmdb=' + id + '&season=' + s + '&episode=' + (e || '1')
-    : 'https://vidsrc.xyz/embed/movie?tmdb=' + id;
-  document.getElementById('err-link').href = vidsrcUrl;
+function tmdbUrl(path, params = {}) {
+  const u = new URL(TMDB + path);
+  u.searchParams.set('api_key', TMDB_KEY);
+  for (const k in params) u.searchParams.set(k, params[k]);
+  return u.toString();
 }
 
-function loadBackdrop(id, isTv) {
-  var type = isTv ? 'tv' : 'movie';
-  fetch('https://api.themoviedb.org/3/' + type + '/' + id + '?api_key=' + TMDB_KEY)
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      var img = d.backdrop_path || d.poster_path;
-      if (!img) return;
-      var url = 'https://wsrv.nl/?url=' + encodeURIComponent('https://image.tmdb.org/t/p/w1280' + img) + '&bg=black&blur=3';
-      var bg = document.getElementById('loader-bg');
-      var preload = new Image();
-      preload.onload = function() { bg.style.backgroundImage = 'url(' + url + ')'; bg.style.opacity = '1'; };
-      preload.src = url;
-    })
-    .catch(function() {});
+function posterUrl(path, size = 'w342') {
+  return path ? `${IMG}/${size}${path}` : '';
 }
 
-const API_BASE = '/api';
+function yearOf(dateStr) {
+  return dateStr ? dateStr.slice(0, 4) : '';
+}
 
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LOADER
+   ═══════════════════════════════════════════════════════════════════ */
+function showLoader(text) {
+  const l = $('#loader');
+  l.classList.add('open');
+  $('#loader-text').textContent = text || LOADER_MSGS[0];
+  let i = 0;
+  clearInterval(loaderTimer);
+  loaderTimer = setInterval(() => {
+    i = (i + 1) % LOADER_MSGS.length;
+    $('#loader-text').textContent = LOADER_MSGS[i];
+  }, 2200);
+}
+function hideLoader() {
+  clearInterval(loaderTimer);
+  $('#loader').classList.remove('open');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ERROR
+   ═══════════════════════════════════════════════════════════════════ */
+function showErr(msg, detail) {
+  hideLoader();
+  $('#err').classList.add('open');
+  $('#err-msg').textContent = msg || 'Something went wrong.';
+  $('#err-detail').textContent = detail || '';
+  if (currentItem) {
+    const { id, type, season, episode } = currentItem;
+    $('#err-vidsrc').href = type === 'tv'
+      ? `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${season || 1}&episode=${episode || 1}`
+      : `https://vidsrc.xyz/embed/movie?tmdb=${id}`;
+  }
+}
+function closeErr() { $('#err').classList.remove('open'); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   URL ROUTING
+   ?id=550                     → movie
+   ?id=456&s=1&e=1             → TV episode
+   ?id=456                     → TV show detail (season 1)
+   ?q=inception                → search
+   ═══════════════════════════════════════════════════════════════════ */
+function getParams() {
+  const p = new URLSearchParams(location.search);
+  return {
+    id: p.get('id'),
+    s: p.get('s') ? parseInt(p.get('s'), 10) : null,
+    e: p.get('e') ? parseInt(p.get('e'), 10) : null,
+    type: p.get('type') || null,
+    q: p.get('q') || null
+  };
+}
+
+function pushState(params) {
+  const p = new URLSearchParams();
+  if (params.id) p.set('id', params.id);
+  if (params.s)  p.set('s', params.s);
+  if (params.e)  p.set('e', params.e);
+  if (params.type) p.set('type', params.type);
+  if (params.q)  p.set('q', params.q);
+  const qs = p.toString();
+  history.pushState(params, '', qs ? '?' + qs : location.pathname);
+}
+
+function replaceState(params) {
+  const p = new URLSearchParams();
+  if (params.id) p.set('id', params.id);
+  if (params.s)  p.set('s', params.s);
+  if (params.e)  p.set('e', params.e);
+  if (params.type) p.set('type', params.type);
+  if (params.q)  p.set('q', params.q);
+  const qs = p.toString();
+  history.replaceState(params, '', qs ? '?' + qs : location.pathname);
+}
+
+function goHome() {
+  pushState({});
+  showBrowse();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIEWS
+   ═══════════════════════════════════════════════════════════════════ */
+function showBrowse() {
+  $('#browse').style.display = 'block';
+  $('#detail').classList.remove('open');
+  $('#back-btn').style.display = 'none';
+  window.scrollTo(0, 0);
+  loadBrowseRows();
+}
+
+function showDetail() {
+  $('#browse').style.display = 'none';
+  $('#detail').classList.add('open');
+  $('#back-btn').style.display = 'inline-block';
+  window.scrollTo(0, 0);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BROWSE ROWS
+   ═══════════════════════════════════════════════════════════════════ */
+const BROWSE_ROWS = [
+  { el: '#row-trending-movies', path: '/trending/movie/week', type: 'movie' },
+  { el: '#row-trending-tv',     path: '/trending/tv/week',    type: 'tv' },
+  { el: '#row-popular-movies',  path: '/movie/popular',       type: 'movie' },
+  { el: '#row-popular-tv',      path: '/tv/popular',          type: 'tv' },
+  { el: '#row-top-movies',      path: '/movie/top_rated',     type: 'movie' },
+  { el: '#row-top-tv',          path: '/tv/top_rated',        type: 'tv' },
+];
+
+async function loadBrowseRows() {
+  for (const row of BROWSE_ROWS) {
+    const container = $(row.el);
+    if (container.dataset.loaded) continue;
+    container.dataset.loaded = '1';
+    try {
+      const r = await fetch(tmdbUrl(row.path));
+      const d = await r.json();
+      renderRow(container, d.results || [], row.type);
+    } catch (e) { /* silent */ }
+  }
+}
+
+function renderRow(container, items, type) {
+  container.innerHTML = '';
+  for (const item of items) {
+    const title = item.title || item.name || '';
+    const date  = item.release_date || item.first_air_date || '';
+    const card = el('div', { class: 'card', onclick: () => openDetail(item.id, type) },
+      el('img', {
+        class: 'card-poster',
+        src: posterUrl(item.poster_path),
+        alt: title,
+        loading: 'lazy',
+        onerror: function() { this.style.opacity = '0.2'; }
+      }),
+      el('div', { class: 'card-title' }, title),
+      el('div', { class: 'card-year' }, yearOf(date))
+    );
+    container.appendChild(card);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SEARCH
+   ═══════════════════════════════════════════════════════════════════ */
+const searchInput = $('#search');
+const searchResults = $('#search-results');
+
+const doSearch = debounce(async (q) => {
+  if (!q || q.length < 2) { searchResults.classList.remove('open'); return; }
+  try {
+    const r = await fetch(tmdbUrl('/search/multi', { query: q, include_adult: 'false' }));
+    const d = await r.json();
+    const items = (d.results || []).filter(x => x.media_type === 'movie' || x.media_type === 'tv');
+    renderSearchResults(items);
+  } catch (e) { /* silent */ }
+}, 280);
+
+searchInput.addEventListener('input', (e) => {
+  const q = e.target.value.trim();
+  doSearch(q);
+  replaceState({ q: q || undefined });
+});
+
+searchInput.addEventListener('focus', () => {
+  if (searchResults.children.length) searchResults.classList.add('open');
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#search-wrap')) searchResults.classList.remove('open');
+});
+
+function renderSearchResults(items) {
+  searchResults.innerHTML = '';
+  if (!items.length) { searchResults.classList.remove('open'); return; }
+  for (const item of items.slice(0, 12)) {
+    const title = item.title || item.name || '';
+    const date  = item.release_date || item.first_air_date || '';
+    const type  = item.media_type;
+    const row = el('div', {
+      class: 'sr-item',
+      onclick: () => {
+        searchResults.classList.remove('open');
+        searchInput.value = '';
+        openDetail(item.id, type);
+      }
+    },
+      el('img', {
+        class: 'sr-poster',
+        src: posterUrl(item.poster_path, 'w92'),
+        alt: title,
+        onerror: function() { this.style.opacity = '0.2'; }
+      }),
+      el('div', { class: 'sr-info' },
+        el('div', { class: 'sr-title' }, title),
+        el('div', { class: 'sr-meta' }, `${type === 'tv' ? 'TV' : 'Movie'} · ${yearOf(date)}`)
+      )
+    );
+    searchResults.appendChild(row);
+  }
+  searchResults.classList.add('open');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DETAIL VIEW
+   ═══════════════════════════════════════════════════════════════════ */
+async function openDetail(id, type, opts = {}) {
+  showDetail();
+  showLoader('Loading details...');
+  try {
+    const r = await fetch(tmdbUrl(`/${type}/${id}`));
+    const d = await r.json();
+    if (d.success === false) throw new Error(d.status_message || 'Not found');
+    currentItem = { id, type, title: d.title || d.name, ...d };
+    renderDetail(d, type);
+
+    if (!opts.skipUrl) {
+      const params = { id, type };
+      if (type === 'tv' && opts.season) params.s = opts.season;
+      if (type === 'tv' && opts.episode) params.e = opts.episode;
+      pushState(params);
+    }
+
+    if (type === 'tv') {
+      const season = opts.season || 1;
+      await loadSeason(id, season, opts.episode);
+    }
+  } catch (e) {
+    showErr('Could not load details', e.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+function renderDetail(d, type) {
+  const title = d.title || d.name || '';
+  const date  = d.release_date || d.first_air_date || '';
+  const bg    = d.backdrop_path ? posterUrl(d.backdrop_path, 'w1280') : '';
+
+  const hero = $('#hero');
+  hero.style.backgroundImage = bg ? `url(${bg})` : '';
+
+  $('#hero-title').textContent = title;
+
+  const meta = $('#hero-meta');
+  meta.innerHTML = '';
+  if (yearOf(date)) meta.appendChild(el('span', {}, '📅 ' + yearOf(date)));
+  if (d.vote_average) meta.appendChild(el('span', {}, '⭐ ' + d.vote_average.toFixed(1)));
+  if (d.runtime) meta.appendChild(el('span', {}, '⏱ ' + d.runtime + ' min'));
+  if (type === 'tv' && d.number_of_seasons) {
+    meta.appendChild(el('span', {}, '📺 ' + d.number_of_seasons + ' season' + (d.number_of_seasons > 1 ? 's' : '')));
+  }
+  if (d.genres && d.genres.length) {
+    meta.appendChild(el('span', {}, d.genres.map(g => g.name).join(' · ')));
+  }
+
+  $('#hero-overview').textContent = d.overview || '';
+
+  const playBtn = $('#play-btn');
+  playBtn.onclick = () => {
+    if (type === 'tv') {
+      const season = currentSeason || 1;
+      loadEpisodesAndPlay(d.id, season, 1);
+    } else {
+      playStream(d.id, 'movie');
+    }
+  };
+
+  if (type === 'tv') {
+    $('#seasons-bar').style.display = 'flex';
+    const sel = $('#season-select');
+    sel.innerHTML = '';
+    const count = d.number_of_seasons || 1;
+    for (let i = 1; i <= count; i++) {
+      sel.appendChild(el('option', { value: i }, 'Season ' + i));
+    }
+    sel.onchange = () => loadSeason(d.id, parseInt(sel.value, 10));
+  } else {
+    $('#seasons-bar').style.display = 'none';
+    $('#episodes').innerHTML = '';
+  }
+}
+
+async function loadSeason(tvId, seasonNum, autoplayEpisode) {
+  currentSeason = seasonNum;
+  $('#season-select').value = seasonNum;
+  const wrap = $('#episodes');
+  wrap.innerHTML = '<div style="color:rgba(255,255,255,.4);padding:20px 0">Loading episodes...</div>';
+  try {
+    const r = await fetch(tmdbUrl(`/tv/${tvId}/season/${seasonNum}`));
+    const d = await r.json();
+    const eps = d.episodes || [];
+    wrap.innerHTML = '';
+    if (!eps.length) {
+      wrap.innerHTML = '<div style="color:rgba(255,255,255,.4);padding:20px 0">No episodes found.</div>';
+      return;
+    }
+    for (const ep of eps) {
+      const card = el('div', {
+        class: 'ep-card',
+        onclick: () => playStream(tvId, 'tv', seasonNum, ep.episode_number)
+      },
+        el('img', {
+          class: 'ep-thumb',
+          src: posterUrl(ep.still_path, 'w300'),
+          alt: ep.name || '',
+          loading: 'lazy',
+          onerror: function() { this.style.opacity = '0.2'; }
+        }),
+        el('div', { class: 'ep-info' },
+          el('div', { class: 'ep-num' }, 'S' + seasonNum + ' · E' + ep.episode_number),
+          el('div', { class: 'ep-name' }, ep.name || 'Episode ' + ep.episode_number),
+          el('div', { class: 'ep-overview' }, ep.overview || '')
+        )
+      );
+      wrap.appendChild(card);
+    }
+    if (autoplayEpisode) {
+      const target = eps.find(e => e.episode_number === autoplayEpisode);
+      if (target) playStream(tvId, 'tv', seasonNum, autoplayEpisode);
+    }
+  } catch (e) {
+    wrap.innerHTML = '<div style="color:rgba(255,255,255,.4);padding:20px 0">Failed to load episodes.</div>';
+  }
+}
+
+async function loadEpisodesAndPlay(tvId, seasonNum, epNum) {
+  await loadSeason(tvId, seasonNum, epNum);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   WASM + STREAM RESOLUTION
+   ═══════════════════════════════════════════════════════════════════ */
+function bootWasm() {
+  if (wasmBootPromise) return wasmBootPromise;
+  wasmBootPromise = (async () => {
+    const scriptResp = await fetch('/script.js');
+    if (!scriptResp.ok) throw new Error('Could not load script.js');
+    const scriptText = await scriptResp.text();
+    (0, eval)(scriptText);
+
+    const wasmResp = await fetch(WASM_URL);
+    if (!wasmResp.ok) throw new Error('Could not load fu.wasm');
+    const wasmBuf = await wasmResp.arrayBuffer();
+
+    const go = new globalThis.Dm();
+    const { instance } = await WebAssembly.instantiate(wasmBuf, go.importObject);
+    go.run(instance);
+
+    await new Promise(r => setTimeout(r, 500));
+    if (typeof globalThis.getAdv !== 'function') throw new Error('getAdv not found');
+    wasmBooted = true;
+  })();
+  return wasmBootPromise;
+}
+
+async function resolveStreamUrl(id, season, episode) {
+  await bootWasm();
+  const token = globalThis.getAdv(String(id));
+  if (!token) throw new Error('getAdv returned null');
+
+  const apiUrl = season
+    ? `https://vidlink.pro/api/b/tv/${token}/${season}/${episode || 1}?multiLang=0`
+    : `https://vidlink.pro/api/b/movie/${token}?multiLang=0`;
+
+  const res = await fetch(apiUrl, {
+    headers: {
+      'Referer': 'https://vidlink.pro/',
+      'Origin': 'https://vidlink.pro',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124'
+    }
+  });
+  if (!res.ok) throw new Error(`vidlink returned ${res.status}`);
+  const data = await res.json();
+  const playlist = data?.stream?.playlist;
+  if (!playlist) throw new Error('No playlist in response');
+  return playlist;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PLAYER
+   ═══════════════════════════════════════════════════════════════════ */
+async function playStream(id, type, season, episode) {
+  closePlayer();
+  showLoader('Resolving stream...');
+  $('#player-overlay').classList.add('open');
+
+  let title = '';
+  if (type === 'tv') {
+    title = `S${season} · E${episode}`;
+    currentItem = { ...currentItem, season, episode, type };
+    pushState({ id, type, s: season, e: episode });
+  } else {
+    pushState({ id, type });
+  }
+  if (currentItem && currentItem.title) {
+    title = currentItem.title + (title ? ' — ' + title : '');
+  }
+  $('#player-title').textContent = title;
+
+  try {
+    const rawUrl = await resolveStreamUrl(id, season, episode);
+    playHls(rawUrl);
+  } catch (err) {
+    hideLoader();
+    showErr('Could not resolve stream', err.message);
+  }
+}
+
+function playHls(rawUrl) {
+  const v = $('#v');
+  const src = '/api?url=' + encodeURIComponent(rawUrl);
+
+  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+
+  if (window.Hls && Hls.isSupported()) {
+    hlsInstance = new Hls({ enableWorker: true });
+    hlsInstance.loadSource(src);
+    hlsInstance.attachMedia(v);
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+      hideLoader();
+      v.play().catch(() => {});
+    });
+    hlsInstance.on(Hls.Events.ERROR, (_, d) => {
+      if (d.fatal) showErr('HLS playback error', d.details || '');
+    });
+  } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+    v.src = src;
+    v.addEventListener('canplay', () => { hideLoader(); v.play().catch(() => {}); }, { once: true });
+  } else {
+    showErr('HLS not supported in this browser', '');
+  }
+}
+
+function closePlayer() {
+  $('#player-overlay').classList.remove('open');
+  const v = $('#v');
+  v.pause();
+  v.removeAttribute('src');
+  v.load();
+  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MONKEY-PATCH FETCH FOR /api
+   ═══════════════════════════════════════════════════════════════════ */
 window.globalThis = window;
 window.self = window;
-window.document = document;
 window.process = { getuid: () => -1, getgid: () => -1, geteuid: () => -1, getegid: () => -1 };
 window.crypto = window.crypto || { getRandomValues: (arr) => { for (let i = 0; i < arr.length; i++) arr[i] = Math.floor(Math.random() * 256); return arr; } };
 window.performance = window.performance || { now: () => Date.now() };
+
+function rewriteM3u8(body, url) {
+  const base = url.split('?')[0];
+  const baseDir = base.substring(0, base.lastIndexOf('/') + 1);
+  const origin = new URL(url).origin;
+  return body.split('\n').map(line => {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) return line;
+    const abs = t.startsWith('http') ? t : t.startsWith('/') ? origin + t : baseDir + t;
+    return '/api?url=' + encodeURIComponent(abs);
+  }).join('\n');
+}
 
 async function handleApiRequest(request) {
   const url = new URL(request.url, window.location.origin);
@@ -155,25 +861,21 @@ async function handleApiRequest(request) {
           'Accept': '*/*'
         }
       });
-
       const contentType = (response.headers.get('content-type') || '').toLowerCase();
       const isM3u8 = contentType.includes('mpegurl') || contentType.includes('m3u8') ||
                      /\.m3u8?(\?|$)/i.test(targetUrl.split('?')[0]);
-
       if (isM3u8) {
         const text = await response.text();
-        const rewritten = rewriteM3u8(text, targetUrl);
-        return new Response(rewritten, {
+        return new Response(rewriteM3u8(text, targetUrl), {
           status: response.status,
           headers: { 'Content-Type': 'application/vnd.apple.mpegurl' }
         });
-      } else {
-        const blob = await response.blob();
-        return new Response(blob, {
-          status: response.status,
-          headers: { 'Content-Type': contentType || 'application/octet-stream' }
-        });
       }
+      const blob = await response.blob();
+      return new Response(blob, {
+        status: response.status,
+        headers: { 'Content-Type': contentType || 'application/octet-stream' }
+      });
     } catch (err) {
       return new Response(err.message, { status: 502 });
     }
@@ -181,142 +883,84 @@ async function handleApiRequest(request) {
 
   if (!q.id) {
     return new Response(JSON.stringify({ error: 'missing id' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
+      status: 400, headers: { 'Content-Type': 'application/json' }
     });
   }
-
   try {
-    const streamUrl = await getStream(q.id, q.s, q.e);
+    const streamUrl = await resolveStreamUrl(q.id, q.s, q.e);
     return new Response(JSON.stringify({ url: streamUrl }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      status: 200, headers: { 'Content-Type': 'application/json' }
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      status: 500, headers: { 'Content-Type': 'application/json' }
     });
   }
-}
-
-function rewriteM3u8(body, url) {
-  const base = url.split('?')[0];
-  const baseDir = base.substring(0, base.lastIndexOf('/') + 1);
-  const origin = new URL(url).origin;
-  return body.split('\n').map(line => {
-    const t = line.trim();
-    if (!t || t.startsWith('#')) return line;
-    const abs = t.startsWith('http') ? t : t.startsWith('/') ? origin + t : baseDir + t;
-    return '/api?url=' + encodeURIComponent(abs);
-  }).join('\n');
-}
-
-let wasmReady = false;
-let bootPromise = null;
-
-// wasm and gif references kept external
-async function bootWasm() {
-  if (bootPromise) return bootPromise;
-  bootPromise = (async () => {
-    const scriptResp = await fetch('/script.js');
-    const scriptText = await scriptResp.text();
-
-    (0, eval)(scriptText);
-
-    const wasmResp = await fetch('https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/seamless-tv/fu.wasm');
-    const wasmBuf = await wasmResp.arrayBuffer();
-
-    const go = new globalThis.Dm();
-    const { instance } = await WebAssembly.instantiate(wasmBuf, go.importObject);
-    go.run(instance);
-
-    await new Promise(r => setTimeout(r, 500));
-    if (typeof globalThis.getAdv !== 'function') throw new Error('getAdv not found after WASM boot');
-    wasmReady = true;
-  })();
-  return bootPromise;
-}
-
-async function getStream(id, season, episode) {
-  await bootWasm();
-  const token = globalThis.getAdv(String(id));
-  if (!token) throw new Error('getAdv returned null');
-
-  const apiUrl = season
-    ? `https://vidlink.pro/api/b/tv/${token}/${season}/${episode || 1}?multiLang=0`
-    : `https://vidlink.pro/api/b/movie/${token}?multiLang=0`;
-
-  const res = await fetch(apiUrl, {
-    headers: {
-      Referer: 'https://vidlink.pro/',
-      Origin: 'https://vidlink.pro',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124'
-    }
-  });
-  if (!res.ok) throw new Error(`vidlink API returned ${res.status}`);
-  const data = await res.json();
-  const playlist = data?.stream?.playlist;
-  if (!playlist) throw new Error('No playlist in response');
-  return playlist;
 }
 
 const originalFetch = window.fetch;
 window.fetch = function(input, init) {
-  const url = typeof input === 'string' ? input : input.url;
+  const url = typeof input === 'string' ? input : (input && input.url);
   if (url && (url.startsWith('/api') || url.startsWith(window.location.origin + '/api'))) {
-    let request;
-    if (input instanceof Request) {
-      request = input;
-    } else {
-      request = new Request(url, init);
-    }
+    const request = (input instanceof Request) ? input : new Request(url, init);
     return handleApiRequest(request);
   }
   return originalFetch.apply(this, arguments);
 };
 
-if (!id) {
-  clearInterval(msgTimer);
-  document.getElementById('loader').style.display = 'none';
-  document.getElementById('usage').style.display = 'flex';
-} else {
-  // use example.gif as fallback background while TMDB loads
-  var loaderBg = document.getElementById('loader-bg');
-  loaderBg.style.backgroundImage = 'url(https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/seamless-tv/example.gif)';
-  loaderBg.style.opacity = '1';
+/* ═══════════════════════════════════════════════════════════════════
+   ROUTER — reads URL params on load & popstate
+   ═══════════════════════════════════════════════════════════════════ */
+async function route() {
+  const { id, s, e, type, q } = getParams();
 
-  loadBackdrop(id, !!s);
-  var api = '/api?' + (s ? 'id='+id+'&s='+s+'&e='+(e||'1') : 'id='+id);
-  fetch(api)
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.error) return showErr(d.error);
-      play(d.url);
-    })
-    .catch(function(err) { showErr(err.message); });
-}
+  if (q) {
+    searchInput.value = q;
+    showBrowse();
+    doSearch(q);
+    return;
+  }
 
-function play(rawUrl) {
-  var src = '/api?url=' + encodeURIComponent(rawUrl);
-  var v = document.getElementById('v');
-  if (Hls.isSupported()) {
-    var hls = new Hls({ enableWorker: true });
-    hls.loadSource(src);
-    hls.attachMedia(v);
-    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-      showPlayer();
-      v.play().catch(function(){});
-    });
-    hls.on(Hls.Events.ERROR, function(_, d) {
-      if (d.fatal) showErr(d.details || 'HLS fatal error');
-    });
-  } else {
-    v.src = src;
-    v.addEventListener('canplay', showPlayer, { once: true });
-    v.play().catch(function(err) { showErr(err.message); });
+  if (!id) {
+    showBrowse();
+    return;
+  }
+
+  let resolvedType = type;
+  if (!resolvedType) {
+    // Try movie first, fall back to tv
+    try {
+      const r = await fetch(tmdbUrl(`/movie/${id}`));
+      const d = await r.json();
+      resolvedType = (d.success === false || d.status_message) ? 'tv' : 'movie';
+    } catch { resolvedType = 'movie'; }
+  }
+
+  await openDetail(id, resolvedType, {
+    season: s || undefined,
+    episode: e || undefined,
+    skipUrl: true
+  });
+
+  if (resolvedType === 'tv' && s && e) {
+    // auto-play the requested episode
+    playStream(id, 'tv', s, e);
   }
 }
+
+window.addEventListener('popstate', route);
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCROLL EFFECT FOR HEADER
+   ═══════════════════════════════════════════════════════════════════ */
+window.addEventListener('scroll', () => {
+  $('#header').classList.toggle('solid', window.scrollY > 30);
+}, { passive: true });
+
+/* ═══════════════════════════════════════════════════════════════════
+   BOOT
+   ═══════════════════════════════════════════════════════════════════ */
+route();
 </script>
 </body>
 </html>
