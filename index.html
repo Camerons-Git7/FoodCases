@@ -1324,9 +1324,10 @@ var _devBuildVer = "3.0.1";
       console.warn('[Seamless Cache] SW registration failed (normal on file://):', err);
     });
 
-  // URLs that must bypass cache for a short window after "Refresh Wallpaper"
-  // map: normalizedPath -> { token: number, until: timestamp }
-  window._wpForceReload = window._wpForceReload || {};
+  // Persistent per-wallpaper cache-bust tokens (survive page reload).
+  // Stored in localStorage under "cine_wp_bust". When a wallpaper is refreshed,
+  // its token changes so all loads use a new ?v= URL (SW ignoreSearch:false → network).
+  var WP_BUST_KEY = 'cine_wp_bust';
 
   function _wpNormPath(u) {
     try {
@@ -1337,60 +1338,82 @@ var _devBuildVer = "3.0.1";
     }
   }
 
-  function _wpMarkForce(url, token) {
-    var p = _wpNormPath(url);
-    window._wpForceReload[p] = { token: token || Date.now(), until: Date.now() + 120000 };
-    window._wpForceReload[url] = window._wpForceReload[p];
+  function _wpLoadBustMap() {
+    try { return JSON.parse(localStorage.getItem(WP_BUST_KEY) || '{}') || {}; }
+    catch (e) { return {}; }
   }
 
-  function _wpGetForce(url) {
+  function _wpSaveBustMap(map) {
+    try { localStorage.setItem(WP_BUST_KEY, JSON.stringify(map)); } catch (e) {}
+  }
+
+  function _wpGetBustToken(url) {
+    var map = _wpLoadBustMap();
     var p = _wpNormPath(url);
-    var e = window._wpForceReload[p] || window._wpForceReload[url];
-    if (!e) return null;
-    if (Date.now() > e.until) {
-      delete window._wpForceReload[p];
-      delete window._wpForceReload[url];
-      return null;
-    }
-    return e;
+    return map[p] || map[url] || null;
+  }
+
+  function _wpSetBustToken(url, token) {
+    var map = _wpLoadBustMap();
+    var p = _wpNormPath(url);
+    token = token || Date.now();
+    map[p] = token;
+    map[url] = token;
+    _wpSaveBustMap(map);
+    return token;
+  }
+
+  // Resolve wallpaper URL with persistent bust query when present
+  function _wpResolveUrl(url) {
+    if (!url) return url;
+    var token = _wpGetBustToken(url);
+    if (!token) return url;
+    var base = String(url).split('?')[0].split('#')[0];
+    return base + '?v=' + token;
   }
 
   function _wpBustUrl(url, token) {
     var base = String(url).split('?')[0].split('#')[0];
-    return base + '?_cb=' + (token || Date.now());
+    return base + '?v=' + (token || Date.now());
   }
 
   // Helper so the main page can force-cache any URL it discovers
   window.seamlessCacheAdd = function(url, opts) {
     if (!url || typeof url !== 'string') return;
     opts = opts || {};
-    // Never overwrite a just-refreshed entry with a possibly-stale no-cors fetch
-    if (!opts.force && _wpGetForce(url)) return;
+    var resolved = _wpResolveUrl(url);
     caches.open(CACHE_NAME).then(cache => {
       var fetchOpts = opts.force
         ? { cache: 'reload', mode: 'cors', credentials: 'same-origin' }
         : { mode: 'no-cors' };
-      var reqUrl = opts.force ? _wpBustUrl(url, opts.token || Date.now()) : url;
+      // Always fetch the resolved (possibly busted) URL
+      var reqUrl = opts.force ? _wpBustUrl(url, opts.token || _wpGetBustToken(url) || Date.now()) : resolved;
       fetch(reqUrl, fetchOpts).then(res => {
         if (!res) return;
-        // Store under clean key(s) so normal loads hit the fresh body
-        var puts = [cache.put(url, res.clone())];
+        // Store under resolved key + clean key + absolute forms
+        var puts = [cache.put(resolved, res.clone())];
+        if (resolved !== url) puts.push(cache.put(url, res.clone()));
         try {
           var abs = new URL(url, self.location.href).href;
-          if (abs !== url) puts.push(cache.put(abs, res.clone()));
+          if (abs !== url && abs !== resolved) puts.push(cache.put(abs, res.clone()));
+          var absR = new URL(resolved, self.location.href).href;
+          if (absR !== resolved) puts.push(cache.put(absR, res.clone()));
         } catch (e) {}
         return Promise.all(puts.map(function(p) { return p.catch(function(){}); }));
       }).catch(() => {
         if (opts.force) {
-          fetch(url, { mode: 'no-cors', cache: 'reload' }).then(function(r2) {
-            if (r2) cache.put(url, r2).catch(function(){});
+          fetch(reqUrl, { mode: 'no-cors', cache: 'reload' }).then(function(r2) {
+            if (r2) {
+              cache.put(resolved, r2.clone()).catch(function(){});
+              cache.put(url, r2).catch(function(){});
+            }
           }).catch(function(){});
         }
       });
     }).catch(() => {});
   };
 
-  // Delete a specific URL (and any absolute / path variants) from the Seamless cache
+  // Delete a specific URL (and any absolute / path / busted variants) from the Seamless cache
   window.seamlessCacheDelete = function(url) {
     if (!url || typeof url !== 'string' || !('caches' in window)) return Promise.resolve(false);
     return caches.open(CACHE_NAME).then(async cache => {
@@ -1419,46 +1442,51 @@ var _devBuildVer = "3.0.1";
     }).catch(() => false);
   };
 
-  // Clear cache entry then re-fetch from network and re-store under clean keys
+  // Bump persistent token, clear old cache entries, fetch network, store under new keys
   window.seamlessCacheRefresh = function(url) {
     if (!url || typeof url !== 'string') return Promise.resolve(false);
-    var token = Date.now();
-    _wpMarkForce(url, token);
+    var token = _wpSetBustToken(url, Date.now());
+    var resolved = _wpBustUrl(url, token);
     return window.seamlessCacheDelete(url).then(function() {
       return caches.open(CACHE_NAME).then(function(cache) {
-        var bust = _wpBustUrl(url, token);
         function store(res) {
           if (!res) return Promise.resolve(false);
-          var clones = [];
-          try { clones.push(res.clone()); } catch (e) { return Promise.resolve(false); }
-          var puts = [cache.put(url, res.clone())];
+          var puts = [
+            cache.put(resolved, res.clone()),
+            cache.put(url, res.clone())
+          ];
           try {
             var abs = new URL(url, self.location.href).href;
             if (abs !== url) puts.push(cache.put(abs, res.clone()));
+            var absR = new URL(resolved, self.location.href).href;
+            if (absR !== resolved) puts.push(cache.put(absR, res.clone()));
           } catch (e) {}
           return Promise.all(puts.map(function(p) { return p.catch(function(){}); }))
             .then(function() { return true; });
         }
-        return fetch(bust, { cache: 'reload', mode: 'cors', credentials: 'same-origin' })
+        return fetch(resolved, { cache: 'reload', mode: 'cors', credentials: 'same-origin' })
           .then(function(res) {
             if (res && (res.ok || res.type === 'opaque')) return store(res);
-            return fetch(url, { cache: 'reload', mode: 'cors', credentials: 'same-origin' })
-              .then(store)
-              .catch(function() {
-                return fetch(url, { mode: 'no-cors', cache: 'reload' }).then(store);
-              });
+            return fetch(resolved, { mode: 'no-cors', cache: 'reload' }).then(store);
           })
           .catch(function() {
-            return fetch(url, { mode: 'no-cors', cache: 'reload' }).then(store).catch(function() { return false; });
+            return fetch(resolved, { mode: 'no-cors', cache: 'reload' }).then(store).catch(function() { return false; });
           });
       });
     }).catch(function() { return false; });
   };
 
   window._wpBustUrl = _wpBustUrl;
-  window._wpGetForce = _wpGetForce;
-  window._wpMarkForce = _wpMarkForce;
+  window._wpResolveUrl = _wpResolveUrl;
+  window._wpGetBustToken = _wpGetBustToken;
+  window._wpSetBustToken = _wpSetBustToken;
   window._wpNormPath = _wpNormPath;
+  // Back-compat aliases used by earlier refresh code
+  window._wpGetForce = function(url) {
+    var t = _wpGetBustToken(url);
+    return t ? { token: t, until: Infinity } : null;
+  };
+  window._wpMarkForce = function(url, token) { return _wpSetBustToken(url, token); };
 })();
 
 var APPS = {
@@ -1767,8 +1795,7 @@ var wallpaperRegistry = {
     "Windows": { id: "Windows", name: "Windows", url: "cine-os/Videos/wallpaper.png", locked: false },
     "Dexter-Morgan": { id: "DexterMorgan", name: "Dexter", url: "cine-os/Videos/dexter-morgan.jpg", locked: false },
     "Dexter": { id: "Dexter", name: "Dexter", url: "cine-os/Videos/dexter.jpg", locked: false },
-    "Breaking-Bad": { id: "BreakingBad", name: "Breaking Bad", url: "cine-os/Videos/breaking-bad.jpg", locked: false },
-    "Jane-Patrick": { id: "JanePatrick", name: "Jane Patrick", url: "cine-os/Videos/jane-patrick.jpg", locked: false }
+    "Breaking-Bad": { id: "BreakingBad", name: "Breaking Bad", url: "cine-os/Videos/breaking-bad.jpg", locked: false }
 };
 
 var sysConfig = JSON.parse(localStorage.getItem('cine_sys_config')) || {};
@@ -2254,19 +2281,16 @@ window.unlockSystem = function() {
 
 function applyMediaToElements(url, vidEl, imgEl, isBg) {
     if(!url) return;
-    // If this URL was just refreshed, load via cache-bust so media/HTTP cache
-    // cannot serve the old file; also re-seed SW cache from network (force).
-    var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
-    var loadUrl = url;
-    if (force) {
-        loadUrl = (typeof window._wpBustUrl === 'function')
-            ? window._wpBustUrl(url, force.token)
-            : (url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cb=' + force.token);
-        if (typeof window.seamlessCacheAdd === 'function') {
-            window.seamlessCacheAdd(url, { force: true, token: force.token });
+    // Always honor persistent bust token so refreshed wallpapers stay fresh after reload
+    var loadUrl = (typeof window._wpResolveUrl === 'function') ? window._wpResolveUrl(url) : url;
+    var hasBust = loadUrl !== url;
+    if (typeof window.seamlessCacheAdd === 'function') {
+        if (hasBust) {
+            var tok = (typeof window._wpGetBustToken === 'function') ? window._wpGetBustToken(url) : null;
+            window.seamlessCacheAdd(url, { force: true, token: tok });
+        } else {
+            window.seamlessCacheAdd(url);
         }
-    } else if (typeof window.seamlessCacheAdd === 'function') {
-        window.seamlessCacheAdd(url);
     }
     let isImg = url.match(/\.(png|jpg|jpeg|gif)$/i);
     if(isImg) {
@@ -4431,12 +4455,8 @@ function openWallpaperMenu() {
         
         if(ul) {
             let mHtml = "";
-            // Use cache-bust src if this wallpaper was recently refreshed
-            var previewSrc = d.url;
-            var fr = (typeof window._wpGetForce === 'function') ? window._wpGetForce(d.url) : null;
-            if (fr && typeof window._wpBustUrl === 'function') {
-                previewSrc = window._wpBustUrl(d.url, fr.token);
-            }
+            // Honor persistent bust token so previews match desktop after reload
+            var previewSrc = (typeof window._wpResolveUrl === 'function') ? window._wpResolveUrl(d.url) : d.url;
             if(d.url.match(/\.(png|jpg|jpeg|gif)$/i)) mHtml = '<img src="' + previewSrc + '" alt="wp" draggable="false">';
             else mHtml = '<video src="' + previewSrc + '" preload="auto" playsinline muted loop draggable="false" onmouseover="this.play()" onmouseout="this.pause()"></video>';
             
@@ -4493,19 +4513,14 @@ function refreshWallpaper(key) {
     showNotification('Wallpaper', 'Refreshing "' + d.name + '"…');
 
     var finish = function(ok) {
-        // Force-flag is already set by seamlessCacheRefresh; applyMediaToElements
-        // will load with ?_cb= and re-seed the SW cache from network.
+        // Token is persisted in localStorage by seamlessCacheRefresh — survives page reload
         if (sysConfig.homeWallpaper === key) {
             applyMediaToElements(url, document.getElementById('bg-video'), document.getElementById('bg-img'), true);
         }
         if (sysConfig.lockWallpaper === key) {
             applyMediaToElements(url, document.getElementById('lock-video'), document.getElementById('lock-img'), false);
         }
-        // Refresh preview cards without rebuilding the whole menu
-        var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
-        var bust = force && typeof window._wpBustUrl === 'function'
-            ? window._wpBustUrl(url, force.token)
-            : (url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cb=' + Date.now());
+        var bust = (typeof window._wpResolveUrl === 'function') ? window._wpResolveUrl(url) : url;
         var cards = document.querySelectorAll('.wp-card[data-key="' + key + '"]');
         cards.forEach(function(card) {
             var media = card.querySelector('video, img');
