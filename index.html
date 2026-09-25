@@ -1107,6 +1107,11 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   <li class="ctx-item" role="menuitem" tabindex="0" onclick="location.reload()"><i class="fas fa-sync fa-fw"></i> Refresh System</li>
 </menu>
 
+<!-- Context menu for wallpaper cards -->
+<menu id="wp-context-menu" class="os-context-menu" role="menu">
+  <li class="ctx-item" id="ctx-wp-refresh" role="menuitem" tabindex="0"><i class="fas fa-sync fa-fw" aria-hidden="true"></i> Refresh Wallpaper</li>
+</menu>
+
 <div id="toast-container" aria-live="polite"></div>
 
 <!-- Assistant -->
@@ -1327,6 +1332,50 @@ var _devBuildVer = "3.0.1";
         if (res) cache.put(url, res).catch(() => {});
       }).catch(() => {});
     }).catch(() => {});
+  };
+
+  // Delete a specific URL (and any absolute variants) from the Seamless cache
+  window.seamlessCacheDelete = function(url) {
+    if (!url || typeof url !== 'string' || !('caches' in window)) return Promise.resolve(false);
+    return caches.open(CACHE_NAME).then(async cache => {
+      const keys = await cache.keys();
+      let deleted = false;
+      let abs = url;
+      try { abs = new URL(url, self.location.href).href; } catch (e) {}
+      for (const req of keys) {
+        const ru = req.url;
+        if (ru === url || ru === abs || ru.endsWith('/' + url.replace(/^\.\//, '')) ||
+            ru.indexOf(url) !== -1) {
+          const ok = await cache.delete(req);
+          if (ok) deleted = true;
+        }
+      }
+      return deleted;
+    }).catch(() => false);
+  };
+
+  // Clear cache entry then re-fetch + re-store (cache-bust network)
+  window.seamlessCacheRefresh = function(url) {
+    if (!url || typeof url !== 'string') return Promise.resolve(false);
+    return window.seamlessCacheDelete(url).then(function() {
+      return caches.open(CACHE_NAME).then(function(cache) {
+        var bust = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cb=' + Date.now();
+        return fetch(bust, { cache: 'reload', mode: 'cors' }).then(function(res) {
+          if (res && (res.ok || res.type === 'opaque')) {
+            return cache.put(url, res.clone()).then(function() { return true; }).catch(function() { return true; });
+          }
+          return fetch(url, { mode: 'no-cors', cache: 'reload' }).then(function(r2) {
+            if (r2) return cache.put(url, r2).then(function() { return true; }).catch(function() { return true; });
+            return false;
+          }).catch(function() { return false; });
+        }).catch(function() {
+          return fetch(url, { mode: 'no-cors', cache: 'reload' }).then(function(r2) {
+            if (r2) return cache.put(url, r2).then(function() { return true; }).catch(function() { return true; });
+            return false;
+          }).catch(function() { return false; });
+        });
+      });
+    }).catch(function() { return false; });
   };
 })();
 
@@ -1944,7 +1993,7 @@ document.getElementById('ctx-copylink-dock').onclick = function() {
 };
 
 function hideAllCtx() {
-    let menus = ['app-context-menu','desktop-context-menu','drawer-ctx-menu','dock-ctx-menu','dock-open-ctx-menu'];
+    let menus = ['app-context-menu','desktop-context-menu','drawer-ctx-menu','dock-ctx-menu','dock-open-ctx-menu','wp-context-menu'];
     for(let i=0; i<menus.length; i++) {
         let m = document.getElementById(menus[i]);
         if(m) m.style.display = 'none';
@@ -4294,6 +4343,17 @@ function openWallpaperMenu() {
                 for(let j=0; j<crds.length; j++) crds[j].classList.remove('active-wp');
                 this.classList.add('active-wp');
             };
+            // Right-click → Refresh Wallpaper context menu
+            c.oncontextmenu = function(ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                hideAllCtx();
+                let ctx = document.getElementById('wp-context-menu');
+                if (ctx) {
+                    ctx.setAttribute('data-wp-key', this.getAttribute('data-key'));
+                    positionContextMenu(ctx, ev);
+                }
+            };
             gu.appendChild(c);
         } else {
             c.innerHTML = '<div class="wp-info"><i class="fas fa-lock"></i></div>';
@@ -4307,6 +4367,108 @@ function openWallpaperMenu() {
         chk.onchange = e => updateSysSetting('wpLoop', e.target.checked);
     }
 }
+
+/** Clear Seamless SW cache for a wallpaper URL, re-fetch it, and force-reload
+ *  any media elements currently using it (home / lock / menu preview). */
+function refreshWallpaper(key) {
+    let d = wallpaperRegistry[key];
+    if (!d || !d.url) {
+        showNotification('Wallpaper', 'Unknown wallpaper.');
+        return;
+    }
+    let url = d.url;
+    showNotification('Wallpaper', 'Refreshing "' + d.name + '"…');
+
+    var doReloadMedia = function() {
+        var bust = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cb=' + Date.now();
+        var els = [
+            document.getElementById('bg-video'),
+            document.getElementById('bg-img'),
+            document.getElementById('lock-video'),
+            document.getElementById('lock-img')
+        ];
+        els.forEach(function(el) {
+            if (!el) return;
+            var cur = el.getAttribute('src') || el.src || '';
+            if (cur && (cur === url || cur.indexOf(url) !== -1 || (url && cur.endsWith(url.replace(/^\.\//, ''))))) {
+                if (el.tagName === 'VIDEO') {
+                    el.pause();
+                    el.removeAttribute('src');
+                    el.load();
+                    el.src = bust;
+                    el.load();
+                    if (el.id === 'bg-video' && isDesktopActive && !sysConfig.optBg) {
+                        el.play().catch(function(){});
+                    }
+                    if (el.id === 'lock-video' && document.getElementById('lock-screen') &&
+                        document.getElementById('lock-screen').classList.contains('active')) {
+                        el.play().catch(function(){});
+                    }
+                } else {
+                    el.removeAttribute('src');
+                    el.src = bust;
+                }
+            }
+        });
+
+        var cards = document.querySelectorAll('.wp-card[data-key="' + key + '"]');
+        cards.forEach(function(card) {
+            var media = card.querySelector('video, img');
+            if (!media) return;
+            if (media.tagName === 'VIDEO') {
+                media.pause();
+                media.src = bust;
+                media.load();
+            } else {
+                media.src = bust;
+            }
+        });
+    };
+
+    var finish = function(ok) {
+        doReloadMedia();
+        setTimeout(function() {
+            if (sysConfig.homeWallpaper === key || sysConfig.lockWallpaper === key) {
+                if (sysConfig.homeWallpaper === key) {
+                    var bV = document.getElementById('bg-video');
+                    var bI = document.getElementById('bg-img');
+                    applyMediaToElements(url, bV, bI, true);
+                }
+                if (sysConfig.lockWallpaper === key) {
+                    var lV = document.getElementById('lock-video');
+                    var lI = document.getElementById('lock-img');
+                    applyMediaToElements(url, lV, lI, false);
+                }
+            }
+            showNotification('Wallpaper', ok
+                ? '"' + d.name + '" cache cleared & reloaded.'
+                : '"' + d.name + '" reloaded (cache may be unavailable).');
+        }, 150);
+    };
+
+    if (typeof window.seamlessCacheRefresh === 'function') {
+        window.seamlessCacheRefresh(url).then(function(ok) { finish(!!ok); }).catch(function() { finish(false); });
+    } else if (typeof window.seamlessCacheDelete === 'function') {
+        window.seamlessCacheDelete(url).then(function() {
+            if (typeof window.seamlessCacheAdd === 'function') window.seamlessCacheAdd(url);
+            finish(true);
+        }).catch(function() { finish(false); });
+    } else {
+        finish(false);
+    }
+}
+
+// Wire wallpaper context menu action (once)
+(function setupWpContextMenu() {
+    var btn = document.getElementById('ctx-wp-refresh');
+    if (!btn) return;
+    btn.onclick = function() {
+        var ctx = document.getElementById('wp-context-menu');
+        var key = ctx ? ctx.getAttribute('data-wp-key') : null;
+        hideAllCtx();
+        if (key) refreshWallpaper(key);
+    };
+})();
 
 var sInp = document.getElementById('start-search-input');
 if(sInp) {
