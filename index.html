@@ -1517,6 +1517,305 @@ var _devBuildVer = "3.0.1";
   window._wpSetVersion = _wpSetVersion;
 })();
 
+/* ============================================================
+   WALLPAPER PREVIEW CACHE
+   Stores small JPEG thumbnails of each wallpaper so the menu
+   does not re-fetch full MP4/PNG every open — same idea as
+   seamlessCacheAdd for the real wallpaper media.
+   Storage: IndexedDB (primary) + in-memory map; falls back to
+   versioned media URL from Seamless SW cache when no thumb yet.
+   ============================================================ */
+var WpPreviewCache = (function() {
+  var DB_NAME = 'seamless-wp-previews';
+  var DB_VER = 1;
+  var STORE = 'thumbs';
+  var mem = Object.create(null); // url -> dataURL
+  var dbPromise = null;
+  var generating = Object.create(null);
+
+  function openDb() {
+    if (dbPromise) return dbPromise;
+    if (!window.indexedDB) {
+      dbPromise = Promise.resolve(null);
+      return dbPromise;
+    }
+    dbPromise = new Promise(function(resolve) {
+      try {
+        var req = indexedDB.open(DB_NAME, DB_VER);
+        req.onupgradeneeded = function(e) {
+          var db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE)) {
+            db.createObjectStore(STORE, { keyPath: 'url' });
+          }
+        };
+        req.onsuccess = function(e) { resolve(e.target.result); };
+        req.onerror = function() { resolve(null); };
+      } catch (err) {
+        resolve(null);
+      }
+    });
+    return dbPromise;
+  }
+
+  function idbGet(url) {
+    return openDb().then(function(db) {
+      if (!db) return null;
+      return new Promise(function(resolve) {
+        try {
+          var tx = db.transaction(STORE, 'readonly');
+          var req = tx.objectStore(STORE).get(url);
+          req.onsuccess = function() {
+            var row = req.result;
+            resolve(row && row.dataUrl ? row.dataUrl : null);
+          };
+          req.onerror = function() { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+    });
+  }
+
+  function idbPut(url, dataUrl, token) {
+    return openDb().then(function(db) {
+      if (!db || !dataUrl) return false;
+      return new Promise(function(resolve) {
+        try {
+          var tx = db.transaction(STORE, 'readwrite');
+          tx.objectStore(STORE).put({
+            url: url,
+            dataUrl: dataUrl,
+            token: token || null,
+            ts: Date.now()
+          });
+          tx.oncomplete = function() { resolve(true); };
+          tx.onerror = function() { resolve(false); };
+        } catch (e) { resolve(false); }
+      });
+    });
+  }
+
+  function idbDelete(url) {
+    return openDb().then(function(db) {
+      if (!db) return false;
+      return new Promise(function(resolve) {
+        try {
+          var tx = db.transaction(STORE, 'readwrite');
+          tx.objectStore(STORE).delete(url);
+          tx.oncomplete = function() { resolve(true); };
+          tx.onerror = function() { resolve(false); };
+        } catch (e) { resolve(false); }
+      });
+    });
+  }
+
+  function mediaSrc(url) {
+    var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
+    if (force && typeof window._wpBustUrl === 'function') {
+      return window._wpBustUrl(url, force.token);
+    }
+    return url;
+  }
+
+  /** Resolve a display src for the menu card: thumb dataURL if any, else media URL (cache-busted). */
+  function getPreviewSrc(url) {
+    if (!url) return Promise.resolve(null);
+    if (mem[url]) return Promise.resolve({ type: 'thumb', src: mem[url] });
+    return idbGet(url).then(function(dataUrl) {
+      if (dataUrl) {
+        mem[url] = dataUrl;
+        return { type: 'thumb', src: dataUrl };
+      }
+      return { type: 'media', src: mediaSrc(url) };
+    });
+  }
+
+  function captureFromVideo(url, loadUrl) {
+    return new Promise(function(resolve) {
+      var v = document.createElement('video');
+      v.muted = true;
+      v.playsInline = true;
+      v.preload = 'auto';
+      v.crossOrigin = 'anonymous';
+      var done = false;
+      function finish(dataUrl) {
+        if (done) return;
+        done = true;
+        try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {}
+        try { if (v.parentNode) v.parentNode.removeChild(v); } catch (e) {}
+        resolve(dataUrl || null);
+      }
+      v.onerror = function() { finish(null); };
+      v.onloadeddata = function() {
+        try {
+          var t = Math.min(0.35, (v.duration && isFinite(v.duration) ? v.duration * 0.08 : 0.35));
+          if (t > 0 && isFinite(v.duration)) {
+            v.currentTime = t;
+          } else {
+            snap();
+          }
+        } catch (e) { snap(); }
+      };
+      v.onseeked = function() { snap(); };
+      function snap() {
+        try {
+          var w = v.videoWidth || 0;
+          var h = v.videoHeight || 0;
+          if (!w || !h) { finish(null); return; }
+          var maxW = 320;
+          var scale = Math.min(1, maxW / w);
+          var cw = Math.max(1, Math.round(w * scale));
+          var ch = Math.max(1, Math.round(h * scale));
+          var c = document.createElement('canvas');
+          c.width = cw;
+          c.height = ch;
+          var ctx = c.getContext('2d');
+          ctx.drawImage(v, 0, 0, cw, ch);
+          finish(c.toDataURL('image/jpeg', 0.72));
+        } catch (e) {
+          finish(null);
+        }
+      }
+      v.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+      document.body.appendChild(v);
+      v.src = loadUrl;
+      try { v.load(); } catch (e) {}
+      setTimeout(function() { if (!done) finish(null); }, 12000);
+    });
+  }
+
+  function captureFromImage(url, loadUrl) {
+    return new Promise(function(resolve) {
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      var done = false;
+      function finish(dataUrl) {
+        if (done) return;
+        done = true;
+        resolve(dataUrl || null);
+      }
+      img.onerror = function() { finish(null); };
+      img.onload = function() {
+        try {
+          var w = img.naturalWidth || img.width || 0;
+          var h = img.naturalHeight || img.height || 0;
+          if (!w || !h) { finish(null); return; }
+          var maxW = 320;
+          var scale = Math.min(1, maxW / w);
+          var cw = Math.max(1, Math.round(w * scale));
+          var ch = Math.max(1, Math.round(h * scale));
+          var c = document.createElement('canvas');
+          c.width = cw;
+          c.height = ch;
+          var ctx = c.getContext('2d');
+          ctx.drawImage(img, 0, 0, cw, ch);
+          finish(c.toDataURL('image/jpeg', 0.72));
+        } catch (e) {
+          finish(null);
+        }
+      };
+      img.src = loadUrl;
+      setTimeout(function() { if (!done) finish(null); }, 10000);
+    });
+  }
+
+  /** Generate (or refresh) a thumbnail for one wallpaper URL and persist it. */
+  function ensure(url, opts) {
+    opts = opts || {};
+    if (!url) return Promise.resolve(null);
+    if (!opts.force && mem[url]) return Promise.resolve(mem[url]);
+    if (!opts.force && generating[url]) return generating[url];
+
+    var loadUrl = mediaSrc(url);
+    if (typeof window.seamlessCacheAdd === 'function') {
+      try {
+        if (opts.force) {
+          var tok = (typeof window._wpGetForce === 'function' && window._wpGetForce(url))
+            ? window._wpGetForce(url).token : Date.now();
+          window.seamlessCacheAdd(url, { force: true, token: tok });
+        } else {
+          window.seamlessCacheAdd(url);
+        }
+      } catch (e) {}
+    }
+
+    var isImg = /\.(png|jpg|jpeg|gif|webp)$/i.test(url);
+    var job = (isImg ? captureFromImage(url, loadUrl) : captureFromVideo(url, loadUrl))
+      .then(function(dataUrl) {
+        delete generating[url];
+        if (!dataUrl) return null;
+        mem[url] = dataUrl;
+        var token = null;
+        try {
+          var fr = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
+          if (fr) token = fr.token;
+        } catch (e) {}
+        return idbPut(url, dataUrl, token).then(function() { return dataUrl; });
+      })
+      .catch(function() {
+        delete generating[url];
+        return null;
+      });
+
+    generating[url] = job;
+    return job;
+  }
+
+  /** Invalidate thumb (e.g. after Refresh Wallpaper) so a new one is generated. */
+  function invalidate(url) {
+    if (!url) return Promise.resolve();
+    delete mem[url];
+    delete generating[url];
+    return idbDelete(url);
+  }
+
+  /** Background: ensure thumbs for every registry entry (staggered). */
+  function warmAll(registry) {
+    if (!registry) return;
+    var keys = Object.keys(registry);
+    var i = 0;
+    function next() {
+      if (i >= keys.length) return;
+      var k = keys[i++];
+      var d = registry[k];
+      if (!d || !d.url) { next(); return; }
+      if (mem[d.url]) { setTimeout(next, 40); return; }
+      idbGet(d.url).then(function(existing) {
+        if (existing) {
+          mem[d.url] = existing;
+          setTimeout(next, 40);
+          return;
+        }
+        ensure(d.url).finally(function() {
+          setTimeout(next, 350);
+        });
+      });
+    }
+    setTimeout(next, 2500);
+  }
+
+  openDb().then(function(db) {
+    if (!db) return;
+    try {
+      var tx = db.transaction(STORE, 'readonly');
+      var req = tx.objectStore(STORE).openCursor();
+      req.onsuccess = function(e) {
+        var cursor = e.target.result;
+        if (!cursor) return;
+        var row = cursor.value;
+        if (row && row.url && row.dataUrl) mem[row.url] = row.dataUrl;
+        cursor.continue();
+      };
+    } catch (e) {}
+  });
+
+  return {
+    getPreviewSrc: getPreviewSrc,
+    ensure: ensure,
+    invalidate: invalidate,
+    warmAll: warmAll,
+    mediaSrc: mediaSrc
+  };
+})();
+
 var APPS = {
   '1on1soccer': {title: 'Soccer', path: 'https://menist.free.nf/core/1on1soccer/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-wDyrUDPQKy5G-nNTUNM0UzoRldrqqPXWvQ&s', pinned: false, openInNewTab: false},
   '1on1tennis': {title: 'Tennis', path: 'https://menist.free.nf/core/1on1tennis/', icon: 'https://igre.games/wp-content/uploads/thumbs/custom/0-9/1-On-1-Tennis.jpg', pinned: false, openInNewTab: false},
@@ -1796,7 +2095,6 @@ var wallpaperRegistry = {
     "45E33": {id: "45E33", name: "45E33", url: "cine-os/Videos/45E33.mp4", locked: false},
     "55Cine": {id: "55Cine", name: "Cine 55", url: "cine-os/Videos/55Cine.PNG", locked: false},
     "99Med": {id: "99Med", name: "99 Med", url: "cine-os/Videos/99Med.mp4", locked: false},
-    "Brother": {id: "Brother", name: "Brother", url: "cine-os/Videos/Brother.mp4", locked: false},
     "F-1": {id: "F-1", name: "F-1 Formula", url: "cine-os/Videos/F-1.mp4", locked: false},
     "Gojo-Sukuna": {id: "Gojo-Sukuna", name: "Gojo vs Sukuna", url: "cine-os/Videos/Gojo-Sukuna.mp4", locked: false},
     "Hunt": {id: "Hunt", name: "Hunt Showdown 2", url: "cine-os/Videos/Hunt.mp4", locked: false},
@@ -2383,6 +2681,11 @@ function initWallpapers() {
                 }
             }
         }, 4000);
+    }
+    // Also generate & persist small JPEG previews (IndexedDB) so the wallpaper
+    // menu never re-downloads full videos just for the grid cards.
+    if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.warmAll) {
+        WpPreviewCache.warmAll(wallpaperRegistry);
     }
 }
 
@@ -4471,6 +4774,11 @@ function setWallpaper(k, noti=false) {
         updateSysSetting('lockWallpaper', k);
     }
     
+    // Ensure a stored preview exists for this wallpaper (same cache path as real media)
+    if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.ensure) {
+        WpPreviewCache.ensure(d.url);
+    }
+    
     updateWallpaperLoop();
     openWallpaperMenu();
 }
@@ -4497,17 +4805,8 @@ function openWallpaperMenu() {
         c.className = "wp-card " + (ul ? "" : "wp-locked");
         
         if(ul) {
-            let mHtml = "";
-            // Use cache-bust src if this wallpaper was recently refreshed
-            var previewSrc = d.url;
-            var fr = (typeof window._wpGetForce === 'function') ? window._wpGetForce(d.url) : null;
-            if (fr && typeof window._wpBustUrl === 'function') {
-                previewSrc = window._wpBustUrl(d.url, fr.token);
-            }
-            if(d.url.match(/\.(png|jpg|jpeg|gif)$/i)) mHtml = '<img src="' + previewSrc + '" alt="wp" draggable="false">';
-            else mHtml = '<video src="' + previewSrc + '" preload="auto" playsinline muted loop draggable="false" onmouseover="this.play()" onmouseout="this.pause()"></video>';
-            
-            c.innerHTML = mHtml + '<div class="wp-info">' + d.name + '</div>';
+            // Placeholder until cached preview resolves (thumb from IndexedDB, or SW-cached media)
+            c.innerHTML = '<div class="wp-info">' + d.name + '</div>';
             c.setAttribute('data-key', k);
             c.onclick = function() {
                 setWallpaper(this.getAttribute('data-key'));
@@ -4516,6 +4815,45 @@ function openWallpaperMenu() {
                 this.classList.add('active-wp');
             };
             gu.appendChild(c);
+
+            (function(card, entry, key) {
+                function applySrc(info) {
+                    if (!info || !info.src) return;
+                    var mHtml;
+                    if (info.type === 'thumb') {
+                        mHtml = '<img src="' + info.src + '" alt="wp" draggable="false">';
+                    } else if (entry.url.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
+                        mHtml = '<img src="' + info.src + '" alt="wp" draggable="false">';
+                    } else {
+                        mHtml = '<video src="' + info.src + '" preload="metadata" playsinline muted loop draggable="false" onmouseover="this.play()" onmouseout="this.pause()"></video>';
+                    }
+                    var infoEl = card.querySelector('.wp-info');
+                    card.innerHTML = mHtml + (infoEl ? infoEl.outerHTML : '<div class="wp-info">' + entry.name + '</div>');
+                }
+
+                if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.getPreviewSrc) {
+                    WpPreviewCache.getPreviewSrc(entry.url).then(function(info) {
+                        applySrc(info);
+                        if (info && info.type === 'media' && WpPreviewCache.ensure) {
+                            WpPreviewCache.ensure(entry.url).then(function(dataUrl) {
+                                if (dataUrl && card.isConnected) {
+                                    applySrc({ type: 'thumb', src: dataUrl });
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    var previewSrc = entry.url;
+                    var fr = (typeof window._wpGetForce === 'function') ? window._wpGetForce(entry.url) : null;
+                    if (fr && typeof window._wpBustUrl === 'function') {
+                        previewSrc = window._wpBustUrl(entry.url, fr.token);
+                    }
+                    applySrc({
+                        type: entry.url.match(/\.(png|jpg|jpeg|gif|webp)$/i) ? 'thumb' : 'media',
+                        src: previewSrc
+                    });
+                }
+            })(c, d, k);
         } else {
             c.innerHTML = '<div class="wp-info"><i class="fas fa-lock"></i></div>';
             gl.appendChild(c);
@@ -4568,28 +4906,53 @@ function refreshWallpaper(key) {
         if (sysConfig.lockWallpaper === key) {
             applyMediaToElements(url, document.getElementById('lock-video'), document.getElementById('lock-img'), false);
         }
-        // Refresh preview cards without rebuilding the whole menu
-        var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
-        var bust = force && typeof window._wpBustUrl === 'function'
-            ? window._wpBustUrl(url, force.token)
-            : (url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cb=' + Date.now());
-        var cards = document.querySelectorAll('.wp-card[data-key="' + key + '"]');
-        cards.forEach(function(card) {
-            var media = card.querySelector('video, img');
-            if (!media) return;
-            if (media.tagName === 'VIDEO') {
-                try { media.pause(); } catch (e) {}
-                media.removeAttribute('src');
-                media.src = bust;
-                media.load();
-            } else {
-                media.removeAttribute('src');
-                media.src = bust;
-            }
-        });
-        showNotification('Wallpaper', ok
-            ? '"' + d.name + '" cache cleared & reloaded.'
-            : '"' + d.name + '" reloaded (cache may be unavailable).');
+        // Invalidate stored preview thumb, regenerate, then update open menu cards
+        var afterPreview = function(thumbSrc) {
+            var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
+            var bust = force && typeof window._wpBustUrl === 'function'
+                ? window._wpBustUrl(url, force.token)
+                : (url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cb=' + Date.now());
+            var cards = document.querySelectorAll('.wp-card[data-key="' + key + '"]');
+            cards.forEach(function(card) {
+                var infoEl = card.querySelector('.wp-info');
+                var label = infoEl ? infoEl.outerHTML : '<div class="wp-info">' + d.name + '</div>';
+                if (thumbSrc) {
+                    card.innerHTML = '<img src="' + thumbSrc + '" alt="wp" draggable="false">' + label;
+                } else {
+                    var media = card.querySelector('video, img');
+                    if (!media) {
+                        if (url.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
+                            card.innerHTML = '<img src="' + bust + '" alt="wp" draggable="false">' + label;
+                        } else {
+                            card.innerHTML = '<video src="' + bust + '" preload="metadata" playsinline muted loop draggable="false" onmouseover="this.play()" onmouseout="this.pause()"></video>' + label;
+                        }
+                    } else if (media.tagName === 'VIDEO') {
+                        try { media.pause(); } catch (e) {}
+                        media.removeAttribute('src');
+                        media.src = bust;
+                        media.load();
+                    } else {
+                        media.removeAttribute('src');
+                        media.src = thumbSrc || bust;
+                    }
+                }
+            });
+            showNotification('Wallpaper', ok
+                ? '"' + d.name + '" cache cleared & reloaded.'
+                : '"' + d.name + '" reloaded (cache may be unavailable).');
+        };
+
+        if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.invalidate) {
+            WpPreviewCache.invalidate(url).then(function() {
+                return WpPreviewCache.ensure(url, { force: true });
+            }).then(function(dataUrl) {
+                afterPreview(dataUrl || null);
+            }).catch(function() {
+                afterPreview(null);
+            });
+        } else {
+            afterPreview(null);
+        }
     };
 
     if (typeof window.seamlessCacheRefresh === 'function') {
