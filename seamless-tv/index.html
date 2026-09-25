@@ -1,92 +1,317 @@
-<!doctype html>
-<html lang="en" dir="ltr">
-  <!--https://www.youtube.com/watch?v=dQw4w9WgXcQ -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stream</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #000; font-family: system-ui, sans-serif; color: #fff; overflow: hidden; }
 
-  <head>
-    <base href="/seamless-tv/" />
-    <meta charset="utf-8" />
-    <link rel="icon" href="./favicon.ico?v=2" />
-    <meta itemprop="image" content="./android-chrome-192x192.png?v=2" />
-    <!-- <meta property="og:image" content="./android-chrome-192x192.png?v=2"> -->
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"
-    />
-    <meta
-      name="description"
-      content="Watch your favorite shows and movies for free! (っ'ヮ'c)"
-    />
+    #loader {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 28px; background: #000;
+    }
+    #loader-bg {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+      transition: opacity .6s ease; opacity: 0;
+    }
+    .spinner {
+      position: relative; z-index: 1;
+      width: 72px; height: 72px;
+      border: 5px solid rgba(255,255,255,.15);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loader-text { position: relative; z-index: 1; font-size: .95rem; color: rgba(255,255,255,.6); letter-spacing: .04em; text-shadow: 0 1px 4px #000; }
 
-    <link
-      rel="apple-touch-icon"
-      sizes="180x180"
-      href="./apple-touch-icon.png?v=2"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="32x32"
-      href="./favicon-32x32.png?v=2"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="16x16"
-      href="./favicon-16x16.png?v=2"
-    />
-    <link rel="mask-icon" href="./safari-pinned-tab.svg" color="#120f1d" />
-    <meta name="msapplication-TileColor" content="#120f1d" />
-    <meta name="theme-color" content="#000000" />
+    #player { position: fixed; inset: 0; display: none; background: #000; }
+    video { width: 100%; height: 100%; display: block; }
 
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+    #usage {
+      position: fixed; inset: 0; display: none; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center;
+      background: #000; gap: 10px;
+    }
+    #usage p { font-size: 1.05rem; color: rgba(255,255,255,.65); line-height: 2; }
 
-    <!-- Z-Stream Preview Embed -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:image" content="./embed-preview.png" />
-    <meta property="og:image" content="./embed-preview.png" />
+    #err {
+      position: fixed; inset: 0; display: none; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center; background: #000;
+    }
+    #err-title { font-size: 2.4rem; font-weight: 700; color: #fff; margin-bottom: 18px; }
+    #err-link { font-size: 1.1rem; color: #60a5fa; text-decoration: underline; cursor: pointer; }
+    #err-link:hover { color: #93c5fd; }
+    #err-detail {
+      position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+      font-size: .78rem; color: rgba(255,255,255,.35); white-space: nowrap;
+      max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
 
-    <!-- prevent darkreader extension from messing with our already dark site -->
-    <meta name="darkreader-lock" />
+<div id="loader">
+  <div id="loader-bg"></div>
+  <div class="spinner"></div>
+  <div id="loader-text">Loading stream...</div>
+</div>
 
-    <!-- disabling referrer can fix some provider problems -->
-    <!-- <meta name="referrer" content="no-referrer" /> -->
-    <meta name="referrer" content="always" />
+<div id="usage">
+  <p>
+    <span style="color:#fff;font-size:1.2rem">Stream</span><br><br>
+    <code style="color:rgba(255,255,255,.8)">?id=550</code> &nbsp;— movie<br>
+    <code style="color:rgba(255,255,255,.8)">?id=456&amp;s=1&amp;e=1</code> &nbsp;— TV episode
+  </p>
+</div>
 
-    <title>Z-Stream</title>
+<div id="err">
+  <div id="err-title">Error Occurred</div>
+  <a id="err-link" href="#">Try vidsrc.xyz instead?</a>
+  <div id="err-detail"></div>
+</div>
 
-    <script src="./config.js"></script>
-    
-    <script type="module" crossorigin src="./assets/index-DHlqN2di.js"></script>
-    <link rel="modulepreload" crossorigin href="./assets/auth-Lmk0qDJT.js">
-    <link rel="modulepreload" crossorigin href="./assets/caption-parsing-BCNX2d0I.js">
-    <link rel="modulepreload" crossorigin href="./assets/vendor-OF3PsrH1.js">
-    <link rel="modulepreload" crossorigin href="./assets/locales-vuoqPj4c.js">
-    <link rel="modulepreload" crossorigin href="./assets/language-db-D3-9JP3D.js">
-    <link rel="modulepreload" crossorigin href="./assets/Icons-CwBT1VS2.js">
-    <link rel="modulepreload" crossorigin href="./assets/react-dom-e_Zz79ET.js">
-    <link rel="modulepreload" crossorigin href="./assets/hls-vlzM2V9g.js">
-    <link rel="stylesheet" crossorigin href="./assets/Icons-ybeVSQkp.css">
-    <link rel="stylesheet" crossorigin href="./assets/index-DR7Yl18U.css">
-  </head>
+<div id="player">
+  <video id="v" controls autoplay playsinline></video>
+</div>
 
-  <body>
-    <noscript>
-      <h1>Z-Stream</h1>
-      <p>
-        Z-Stream is a free movie and TV show streaming site. Continuation of
-        P-Stream — the same project, new home at zstream.mov. Formerly hosted
-        at pstream.net. No ads, no signup, just watch.
-      </p>
-      <p>
-        If you were looking for P-Stream, pstream, or pstream.net — you are
-        in the right place. Z-Stream is the successor. Enable
-        JavaScript to load the site.
-      </p>
-    </noscript>
-    <div id="root"></div>
-  </body>
+<script>
+var TMDB_KEY = '3a73619bbb8fc6d47742d1b5b2b707b5';
+
+var MESSAGES = [
+  'Loading stream...', 'Contacting the mothership...', 'Bribing the servers...',
+  'Untangling the cables...', 'Asking nicely...', 'Decoding the matrix...',
+  'Warming up the hamsters...', 'Negotiating with the cloud...', 'Almost there...',
+  'Convincing pixels to move...', 'Poking the API...', 'Summoning bandwidth...',
+  'Greasing the pipes...', 'Waking up the interns...', 'Stealing the stream (legally)...'
+];
+var msgEl = document.getElementById('loader-text');
+var msgIdx = 0;
+var msgTimer = setInterval(function() {
+  msgIdx = (msgIdx + 1) % MESSAGES.length;
+  msgEl.textContent = MESSAGES[msgIdx];
+}, 2200);
+
+var p = new URLSearchParams(location.search);
+var id = p.get('id'), s = p.get('s'), e = p.get('e');
+
+function showPlayer() {
+  clearInterval(msgTimer);
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('player').style.display = 'block';
+}
+
+function showErr(msg) {
+  clearInterval(msgTimer);
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('err').style.display = 'flex';
+  document.getElementById('err-detail').textContent = msg || '';
+  var vidsrcUrl = s
+    ? 'https://vidsrc.xyz/embed/tv?tmdb=' + id + '&season=' + s + '&episode=' + (e || '1')
+    : 'https://vidsrc.xyz/embed/movie?tmdb=' + id;
+  document.getElementById('err-link').href = vidsrcUrl;
+}
+
+function loadBackdrop(id, isTv) {
+  var type = isTv ? 'tv' : 'movie';
+  fetch('https://api.themoviedb.org/3/' + type + '/' + id + '?api_key=' + TMDB_KEY)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var img = d.backdrop_path || d.poster_path;
+      if (!img) return;
+      var url = 'https://wsrv.nl/?url=' + encodeURIComponent('https://image.tmdb.org/t/p/w1280' + img) + '&bg=black&blur=3';
+      var bg = document.getElementById('loader-bg');
+      var preload = new Image();
+      preload.onload = function() { bg.style.backgroundImage = 'url(' + url + ')'; bg.style.opacity = '1'; };
+      preload.src = url;
+    })
+    .catch(function() {});
+}
+
+const API_BASE = '/api';
+
+window.globalThis = window;
+window.self = window;
+window.document = document;
+window.process = { getuid: () => -1, getgid: () => -1, geteuid: () => -1, getegid: () => -1 };
+window.crypto = window.crypto || { getRandomValues: (arr) => { for (let i = 0; i < arr.length; i++) arr[i] = Math.floor(Math.random() * 256); return arr; } };
+window.performance = window.performance || { now: () => Date.now() };
+
+async function handleApiRequest(request) {
+  const url = new URL(request.url, window.location.origin);
+  const q = Object.fromEntries(url.searchParams);
+
+  if (q.url) {
+    const targetUrl = decodeURIComponent(q.url);
+    try {
+      const response = await fetch(targetUrl, {
+        headers: {
+          'Referer': 'https://vidlink.pro/',
+          'Origin': 'https://vidlink.pro',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124',
+          'Accept': '*/*'
+        }
+      });
+
+      const contentType = (response.headers.get('content-type') || '').toLowerCase();
+      const isM3u8 = contentType.includes('mpegurl') || contentType.includes('m3u8') ||
+                     /\.m3u8?(\?|$)/i.test(targetUrl.split('?')[0]);
+
+      if (isM3u8) {
+        const text = await response.text();
+        const rewritten = rewriteM3u8(text, targetUrl);
+        return new Response(rewritten, {
+          status: response.status,
+          headers: { 'Content-Type': 'application/vnd.apple.mpegurl' }
+        });
+      } else {
+        const blob = await response.blob();
+        return new Response(blob, {
+          status: response.status,
+          headers: { 'Content-Type': contentType || 'application/octet-stream' }
+        });
+      }
+    } catch (err) {
+      return new Response(err.message, { status: 502 });
+    }
+  }
+
+  if (!q.id) {
+    return new Response(JSON.stringify({ error: 'missing id' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const streamUrl = await getStream(q.id, q.s, q.e);
+    return new Response(JSON.stringify({ url: streamUrl }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+function rewriteM3u8(body, url) {
+  const base = url.split('?')[0];
+  const baseDir = base.substring(0, base.lastIndexOf('/') + 1);
+  const origin = new URL(url).origin;
+  return body.split('\n').map(line => {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) return line;
+    const abs = t.startsWith('http') ? t : t.startsWith('/') ? origin + t : baseDir + t;
+    return '/api?url=' + encodeURIComponent(abs);
+  }).join('\n');
+}
+
+let wasmReady = false;
+let bootPromise = null;
+
+// wasm and gif references kept external
+async function bootWasm() {
+  if (bootPromise) return bootPromise;
+  bootPromise = (async () => {
+    const scriptResp = await fetch('/script.js');
+    const scriptText = await scriptResp.text();
+
+    (0, eval)(scriptText);
+
+    const wasmResp = await fetch('/fu.wasm');
+    const wasmBuf = await wasmResp.arrayBuffer();
+
+    const go = new globalThis.Dm();
+    const { instance } = await WebAssembly.instantiate(wasmBuf, go.importObject);
+    go.run(instance);
+
+    await new Promise(r => setTimeout(r, 500));
+    if (typeof globalThis.getAdv !== 'function') throw new Error('getAdv not found after WASM boot');
+    wasmReady = true;
+  })();
+  return bootPromise;
+}
+
+async function getStream(id, season, episode) {
+  await bootWasm();
+  const token = globalThis.getAdv(String(id));
+  if (!token) throw new Error('getAdv returned null');
+
+  const apiUrl = season
+    ? `https://vidlink.pro/api/b/tv/${token}/${season}/${episode || 1}?multiLang=0`
+    : `https://vidlink.pro/api/b/movie/${token}?multiLang=0`;
+
+  const res = await fetch(apiUrl, {
+    headers: {
+      Referer: 'https://vidlink.pro/',
+      Origin: 'https://vidlink.pro',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124'
+    }
+  });
+  if (!res.ok) throw new Error(`vidlink API returned ${res.status}`);
+  const data = await res.json();
+  const playlist = data?.stream?.playlist;
+  if (!playlist) throw new Error('No playlist in response');
+  return playlist;
+}
+
+const originalFetch = window.fetch;
+window.fetch = function(input, init) {
+  const url = typeof input === 'string' ? input : input.url;
+  if (url && (url.startsWith('/api') || url.startsWith(window.location.origin + '/api'))) {
+    let request;
+    if (input instanceof Request) {
+      request = input;
+    } else {
+      request = new Request(url, init);
+    }
+    return handleApiRequest(request);
+  }
+  return originalFetch.apply(this, arguments);
+};
+
+if (!id) {
+  clearInterval(msgTimer);
+  document.getElementById('loader').style.display = 'none';
+  document.getElementById('usage').style.display = 'flex';
+} else {
+  loadBackdrop(id, !!s);
+  var api = '/api?' + (s ? 'id='+id+'&s='+s+'&e='+(e||'1') : 'id='+id);
+  fetch(api)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.error) return showErr(d.error);
+      play(d.url);
+    })
+    .catch(function(err) { showErr(err.message); });
+}
+
+function play(rawUrl) {
+  var src = '/api?url=' + encodeURIComponent(rawUrl);
+  var v = document.getElementById('v');
+  if (Hls.isSupported()) {
+    var hls = new Hls({ enableWorker: true });
+    hls.loadSource(src);
+    hls.attachMedia(v);
+    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+      showPlayer();
+      v.play().catch(function(){});
+    });
+    hls.on(Hls.Events.ERROR, function(_, d) {
+      if (d.fatal) showErr(d.details || 'HLS fatal error');
+    });
+  } else {
+    v.src = src;
+    v.addEventListener('canplay', showPlayer, { once: true });
+    v.play().catch(function(err) { showErr(err.message); });
+  }
+}
+</script>
+</body>
 </html>
