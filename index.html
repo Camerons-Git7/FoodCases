@@ -1717,7 +1717,10 @@ var WpPreviewCache = (function() {
     });
   }
 
-  /** Generate (or refresh) a thumbnail for one wallpaper URL and persist it. */
+  /** Generate (or refresh) a thumbnail for one wallpaper URL and persist it.
+   *  Does NOT install the full wallpaper as home/lock media — only captures a
+   *  small JPEG preview. Full media is loaded solely for the selected screens
+   *  via applyMediaToElements / seamlessCacheAdd on setWallpaper. */
   function ensure(url, opts) {
     opts = opts || {};
     if (!url) return Promise.resolve(null);
@@ -1725,15 +1728,13 @@ var WpPreviewCache = (function() {
     if (!opts.force && generating[url]) return generating[url];
 
     var loadUrl = mediaSrc(url);
-    if (typeof window.seamlessCacheAdd === 'function') {
+    // On explicit refresh only, re-seed SW with full media. Normal preview
+    // generation must not bulk-cache every wallpaper file.
+    if (opts.force && typeof window.seamlessCacheAdd === 'function') {
       try {
-        if (opts.force) {
-          var tok = (typeof window._wpGetForce === 'function' && window._wpGetForce(url))
-            ? window._wpGetForce(url).token : Date.now();
-          window.seamlessCacheAdd(url, { force: true, token: tok });
-        } else {
-          window.seamlessCacheAdd(url);
-        }
+        var tok = (typeof window._wpGetForce === 'function' && window._wpGetForce(url))
+          ? window._wpGetForce(url).token : Date.now();
+        window.seamlessCacheAdd(url, { force: true, token: tok });
       } catch (e) {}
     }
 
@@ -1768,28 +1769,46 @@ var WpPreviewCache = (function() {
   }
 
   /** Background: ensure thumbs for every registry entry (staggered). */
+  /** Eagerly load every wallpaper PREVIEW as soon as the site opens.
+   *  Parallel (limited concurrency). Does not apply full wallpapers to
+   *  home/lock — only selected ones are applied via initWallpapers. */
   function warmAll(registry) {
     if (!registry) return;
     var keys = Object.keys(registry);
-    var i = 0;
-    function next() {
-      if (i >= keys.length) return;
-      var k = keys[i++];
-      var d = registry[k];
-      if (!d || !d.url) { next(); return; }
-      if (mem[d.url]) { setTimeout(next, 40); return; }
-      idbGet(d.url).then(function(existing) {
-        if (existing) {
-          mem[d.url] = existing;
-          setTimeout(next, 40);
-          return;
-        }
-        ensure(d.url).finally(function() {
-          setTimeout(next, 350);
-        });
-      });
+    var queue = [];
+    for (var ki = 0; ki < keys.length; ki++) {
+      var d = registry[keys[ki]];
+      if (d && d.url) queue.push(d.url);
     }
-    setTimeout(next, 2500);
+    var CONCURRENCY = 4;
+    var active = 0;
+    var idx = 0;
+
+    function pump() {
+      while (active < CONCURRENCY && idx < queue.length) {
+        (function(url) {
+          active++;
+          var done = function() {
+            active--;
+            pump();
+          };
+          if (mem[url]) {
+            done();
+            return;
+          }
+          idbGet(url).then(function(existing) {
+            if (existing) {
+              mem[url] = existing;
+              done();
+              return;
+            }
+            ensure(url).then(done, done);
+          }, done);
+        })(queue[idx++]);
+      }
+    }
+    // Start immediately — no artificial delay
+    pump();
   }
 
   openDb().then(function(db) {
@@ -2672,18 +2691,12 @@ function initWallpapers() {
     let wChk = document.getElementById('wp-loop-chk');
     if(wChk) wChk.checked = sysConfig.wpLoop;
 
-    // Background-cache every wallpaper so switching later is instant
-    if (typeof window.seamlessCacheAdd === 'function') {
-        setTimeout(function() {
-            for (let key in wallpaperRegistry) {
-                if (wallpaperRegistry[key] && wallpaperRegistry[key].url) {
-                    window.seamlessCacheAdd(wallpaperRegistry[key].url);
-                }
-            }
-        }, 4000);
-    }
-    // Also generate & persist small JPEG previews (IndexedDB) so the wallpaper
-    // menu never re-downloads full videos just for the grid cards.
+    // Full wallpaper media is only applied above for the selected home/lock
+    // screens (applyMediaToElements → seamlessCacheAdd). Do NOT bulk-cache
+    // every wallpaper file here.
+
+    // Eagerly generate & load all PREVIEW thumbnails as soon as the site opens
+    // (not when the menu opens, not lazy).
     if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.warmAll) {
         WpPreviewCache.warmAll(wallpaperRegistry);
     }
