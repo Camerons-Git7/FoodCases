@@ -224,7 +224,7 @@ async function bootWasm() {
 
     (0, eval)(scriptText);
 
-    const wasmResp = await fetch('/fu.wasm');
+    const wasmResp = await fetch('https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/seamless-tv/fu.wasm');
     const wasmBuf = await wasmResp.arrayBuffer();
 
     const go = new globalThis.Dm();
@@ -281,6 +281,11 @@ if (!id) {
   document.getElementById('loader').style.display = 'none';
   document.getElementById('usage').style.display = 'flex';
 } else {
+  // use example.gif as fallback background while TMDB loads
+  var loaderBg = document.getElementById('loader-bg');
+  loaderBg.style.backgroundImage = 'url(https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/seamless-tv/example.gif)';
+  loaderBg.style.opacity = '1';
+
   loadBackdrop(id, !!s);
   var api = '/api?' + (s ? 'id='+id+'&s='+s+'&e='+(e||'1') : 'id='+id);
   fetch(api)
