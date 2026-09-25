@@ -1834,6 +1834,265 @@ var WpPreviewCache = (function() {
     mediaSrc: mediaSrc
   };
 })();
+/* ============================================================
+   APP ICON CACHE
+   Persist icons in IndexedDB so desktop / dock / drawer icons
+   do not blank out when external CDNs fail or change on reload.
+   ============================================================ */
+var IconCache = (function() {
+  var DB_NAME = 'seamless-icon-cache';
+  var DB_VER = 1;
+  var STORE = 'icons';
+  var mem = Object.create(null);
+  var dbPromise = null;
+  var pending = Object.create(null);
+  var PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' +
+    '<rect width="64" height="64" rx="14" fill="#222"/>' +
+    '<text x="32" y="38" text-anchor="middle" fill="#888" font-size="22" font-family="sans-serif">?</text></svg>'
+  );
+
+  function openDb() {
+    if (dbPromise) return dbPromise;
+    if (!window.indexedDB) {
+      dbPromise = Promise.resolve(null);
+      return dbPromise;
+    }
+    dbPromise = new Promise(function(resolve) {
+      try {
+        var req = indexedDB.open(DB_NAME, DB_VER);
+        req.onupgradeneeded = function(e) {
+          var db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE)) {
+            db.createObjectStore(STORE, { keyPath: 'url' });
+          }
+        };
+        req.onsuccess = function(e) { resolve(e.target.result); };
+        req.onerror = function() { resolve(null); };
+      } catch (err) {
+        resolve(null);
+      }
+    });
+    return dbPromise;
+  }
+
+  function idbGet(url) {
+    return openDb().then(function(db) {
+      if (!db) return null;
+      return new Promise(function(resolve) {
+        try {
+          var tx = db.transaction(STORE, 'readonly');
+          var req = tx.objectStore(STORE).get(url);
+          req.onsuccess = function() {
+            var row = req.result;
+            resolve(row && row.dataUrl ? row.dataUrl : null);
+          };
+          req.onerror = function() { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+    });
+  }
+
+  function idbPut(url, dataUrl) {
+    return openDb().then(function(db) {
+      if (!db || !dataUrl) return false;
+      return new Promise(function(resolve) {
+        try {
+          var tx = db.transaction(STORE, 'readwrite');
+          tx.objectStore(STORE).put({ url: url, dataUrl: dataUrl, ts: Date.now() });
+          tx.oncomplete = function() { resolve(true); };
+          tx.onerror = function() { resolve(false); };
+        } catch (e) { resolve(false); }
+      });
+    });
+  }
+
+  function getSync(url) {
+    if (!url) return null;
+    return mem[url] || null;
+  }
+
+  function toDataUrl(blob) {
+    return new Promise(function(resolve) {
+      try {
+        var fr = new FileReader();
+        fr.onload = function() { resolve(fr.result || null); };
+        fr.onerror = function() { resolve(null); };
+        fr.readAsDataURL(blob);
+      } catch (e) { resolve(null); }
+    });
+  }
+
+  function fetchAsDataUrl(url) {
+    return fetch(url, { mode: 'cors', credentials: 'omit', cache: 'force-cache' })
+      .then(function(res) {
+        if (!res || !res.ok) throw new Error('fetch failed');
+        return res.blob();
+      })
+      .then(function(blob) {
+        return toDataUrl(blob);
+      })
+      .catch(function() {
+        return new Promise(function(resolve) {
+          var img = new Image();
+          img.crossOrigin = 'anonymous';
+          var done = false;
+          function finish(v) {
+            if (done) return;
+            done = true;
+            resolve(v || null);
+          }
+          img.onload = function() {
+            try {
+              var w = img.naturalWidth || 64;
+              var h = img.naturalHeight || 64;
+              var max = 128;
+              var scale = Math.min(1, max / Math.max(w, h));
+              var c = document.createElement('canvas');
+              c.width = Math.max(1, Math.round(w * scale));
+              c.height = Math.max(1, Math.round(h * scale));
+              var ctx = c.getContext('2d');
+              ctx.drawImage(img, 0, 0, c.width, c.height);
+              finish(c.toDataURL('image/png'));
+            } catch (e) {
+              finish(null);
+            }
+          };
+          img.onerror = function() { finish(null); };
+          img.src = url;
+          setTimeout(function() { if (!done) finish(null); }, 12000);
+        });
+      });
+  }
+
+  function ensure(url) {
+    if (!url) return Promise.resolve(null);
+    if (mem[url]) return Promise.resolve(mem[url]);
+    if (pending[url]) return pending[url];
+
+    var job = idbGet(url).then(function(existing) {
+      if (existing) {
+        mem[url] = existing;
+        return existing;
+      }
+      return fetchAsDataUrl(url).then(function(dataUrl) {
+        if (dataUrl) {
+          mem[url] = dataUrl;
+          idbPut(url, dataUrl);
+          if (typeof window.seamlessCacheAdd === 'function') {
+            try { window.seamlessCacheAdd(url); } catch (e) {}
+          }
+          return dataUrl;
+        }
+        return null;
+      });
+    }).finally(function() {
+      delete pending[url];
+    });
+
+    pending[url] = job;
+    return job;
+  }
+
+  function resolve(url) {
+    if (!url) return PLACEHOLDER;
+    var cached = getSync(url);
+    if (cached) return cached;
+    ensure(url).then(function(dataUrl) {
+      if (!dataUrl) return;
+      try {
+        var imgs = document.querySelectorAll('img');
+        for (var i = 0; i < imgs.length; i++) {
+          var attr = imgs[i].getAttribute('src');
+          if (attr === url) imgs[i].src = dataUrl;
+        }
+      } catch (e) {}
+    });
+    return url;
+  }
+
+  function warmAllApps(apps) {
+    if (!apps) return;
+    var urls = [];
+    var seen = Object.create(null);
+    for (var id in apps) {
+      if (!Object.prototype.hasOwnProperty.call(apps, id)) continue;
+      var u = apps[id] && apps[id].icon;
+      if (u && !seen[u]) {
+        seen[u] = true;
+        urls.push(u);
+      }
+    }
+    var CONCURRENCY = 6;
+    var active = 0;
+    var idx = 0;
+    function pump() {
+      while (active < CONCURRENCY && idx < urls.length) {
+        (function(u) {
+          active++;
+          ensure(u).then(function() { active--; pump(); }, function() { active--; pump(); });
+        })(urls[idx++]);
+      }
+    }
+    openDb().then(function(db) {
+      if (!db) { pump(); return; }
+      try {
+        var tx = db.transaction(STORE, 'readonly');
+        var req = tx.objectStore(STORE).openCursor();
+        req.onsuccess = function(e) {
+          var cursor = e.target.result;
+          if (!cursor) { pump(); return; }
+          var row = cursor.value;
+          if (row && row.url && row.dataUrl) mem[row.url] = row.dataUrl;
+          cursor.continue();
+        };
+        req.onerror = function() { pump(); };
+      } catch (e) { pump(); }
+    });
+  }
+
+  openDb().then(function(db) {
+    if (!db) return;
+    try {
+      var tx = db.transaction(STORE, 'readonly');
+      var req = tx.objectStore(STORE).openCursor();
+      req.onsuccess = function(e) {
+        var cursor = e.target.result;
+        if (!cursor) return;
+        var row = cursor.value;
+        if (row && row.url && row.dataUrl) mem[row.url] = row.dataUrl;
+        cursor.continue();
+      };
+    } catch (e) {}
+  });
+
+  return {
+    getSync: getSync,
+    ensure: ensure,
+    resolve: resolve,
+    warmAllApps: warmAllApps,
+    PLACEHOLDER: PLACEHOLDER
+  };
+})();
+
+function iconSrc(url) {
+  if (typeof IconCache !== 'undefined' && IconCache.resolve) return IconCache.resolve(url);
+  return url || '';
+}
+window.__iconErr = function(img) {
+  if (!img) return;
+  img.onerror = null;
+  var orig = img.getAttribute('data-orig') || img.getAttribute('src');
+  if (typeof IconCache !== 'undefined' && IconCache.ensure && orig && orig.indexOf('data:') !== 0) {
+    IconCache.ensure(orig).then(function(dataUrl) {
+      if (dataUrl) img.src = dataUrl;
+      else img.src = IconCache.PLACEHOLDER;
+    });
+  } else if (typeof IconCache !== 'undefined') {
+    img.src = IconCache.PLACEHOLDER;
+  }
+};
+
 
 var APPS = {
   '1on1soccer': {title: 'Soccer', path: 'https://menist.free.nf/core/1on1soccer/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-wDyrUDPQKy5G-nNTUNM0UzoRldrqqPXWvQ&s', pinned: false, openInNewTab: false},
@@ -2203,6 +2462,9 @@ async function loadDynamicResources() {
 document.addEventListener("DOMContentLoaded", function() {
     loadDynamicResources();
     document.getElementById('boot-layer').style.display = 'block';
+    if (typeof IconCache !== 'undefined' && IconCache.warmAllApps) {
+        try { IconCache.warmAllApps(APPS); } catch (e) {}
+    }
     loadDesktop();
 });
 
@@ -2239,7 +2501,7 @@ function renderUI() {
     
     for(let id in APPS) {
         if(APPS[id].pinned) {
-            dHTML += '<div class="dock-item" data-id="'+id+'" data-dock-type="pinned" onmousedown="DragSystem.start(event,this,\'dock\',\''+id+'\')" onclick="toggleApp(\''+id+'\')" oncontextmenu="openDockCtx(event, \''+id+'\')"><img src="'+APPS[id].icon+'"></div>';
+            dHTML += '<div class="dock-item" data-id="'+id+'" data-dock-type="pinned" onmousedown="DragSystem.start(event,this,\'dock\',\''+id+'\')" onclick="toggleApp(\''+id+'\')" oncontextmenu="openDockCtx(event, \''+id+'\')"><img src="'+iconSrc(APPS[id].icon)+'"></div>';
         }
     }
     
@@ -2252,9 +2514,9 @@ function renderUI() {
     // Fancy Time + Date on the right
     dHTML += `
         <div class="dock-sep"></div>
-        <div id="dock-time" style="padding: 0 14px; font-size: 13px; font-weight: 600; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; min-width: 78px; user-select: none; pointer-events: none; height: 100%;">
-            <div id="dock-time-main" style="letter-spacing: 0.3px;"></div>
-            <div id="dock-date-small" style="font-size: 10.8px; color: #aaa; margin-top: 1px;"></div>
+        <div id="dock-time" style="padding: 0 12px; font-size: 12px; font-weight: 600; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; min-width: 108px; user-select: none; pointer-events: none; height: 100%; white-space: nowrap; flex-shrink: 0;">
+            <div id="dock-time-main" style="letter-spacing: 0.2px; white-space: nowrap; display: inline-flex; align-items: baseline; gap: 4px; flex-shrink: 0;"></div>
+            <div id="dock-date-small" style="font-size: 10px; color: #aaa; margin-top: 1px; white-space: nowrap;"></div>
         </div>
     `;
     
@@ -2264,7 +2526,7 @@ function renderUI() {
     let pHTML = '';
     for(let id in APPS) {
         if(APPS[id].pinned) {
-            pHTML += '<div class="pinned-item" onclick="toggleApp(\''+id+'\')"><img src="'+APPS[id].icon+'"><span>'+APPS[id].title+'</span></div>';
+            pHTML += '<div class="pinned-item" onclick="toggleApp(\''+id+'\')"><img src="'+iconSrc(APPS[id].icon)+'"><span>'+APPS[id].title+'</span></div>';
         }
     }
     pGrid.innerHTML = pHTML;
@@ -2290,7 +2552,7 @@ function updateOpenAppsDock() {
         if (!app) return;
         const minimized = isWindowMinimized(id);
         const cls = 'dock-item open-app' + (minimized ? ' minimized-app' : ' running');
-        html += '<div class="' + cls + '" data-id="' + id + '" data-dock-type="open" onclick="toggleApp(\'' + id + '\')" oncontextmenu="openDockOpenCtx(event, \'' + id + '\')"><img src="' + app.icon + '"></div>';
+        html += '<div class="' + cls + '" data-id="' + id + '" data-dock-type="open" onclick="toggleApp(\'' + id + '\')" oncontextmenu="openDockOpenCtx(event, \'' + id + '\')"><img src="' + iconSrc(app.icon) + '"></div>';
     });
     openWrap.innerHTML = html;
 
@@ -2751,8 +3013,11 @@ function updateDockTime() {
     const timeMain = document.getElementById('dock-time-main');
     const dateSmall = document.getElementById('dock-date-small');
     
-    if(timeMain) timeMain.textContent = `${hrs}:${min}:${sec} ${ampm}`;
-    if(dateSmall) dateSmall.textContent = `${month}/${day}/${year}`;
+    if(timeMain) {
+        // Full clock with seconds; container is wide enough for "12:59:59 PM"
+        timeMain.innerHTML = '<span>' + hrs + ':' + min + ':' + sec + '</span><span style="font-size:10px;opacity:0.9;font-weight:700;letter-spacing:0.4px;">' + ampm + '</span>';
+    }
+    if(dateSmall) dateSmall.textContent = month + '/' + day + '/' + year;
 }
 
 var idleTime = 0;
@@ -2789,7 +3054,7 @@ function populateDrawer() {
         let d = document.createElement('div');
         d.className = 'drawer-item';
         d.dataset.id = key;
-        d.innerHTML = '<img src="' + a.icon + '" style="pointer-events:none;"><span>' + a.title + '</span>';
+        d.innerHTML = '<img src="' + iconSrc(a.icon) + '" style="pointer-events:none;"><span>' + a.title + '</span>';
         
         d.onmousedown = function(e) { DragSystem.start(e, this, 'drawer', this.dataset.id); };
         d.onclick = function(e) {
@@ -4429,7 +4694,7 @@ function loadDesktop() {
             let gHTML = '<div class="d-folder-grid">';
             let mx = item.apps.slice(0, 4);
             mx.forEach(function(a) {
-                if(APPS[a]) gHTML += '<img src="' + APPS[a].icon + '">';
+                if(APPS[a]) gHTML += '<img src="' + iconSrc(APPS[a].icon) + '">';
             });
             gHTML += '</div>';
             if(!item.hideName) gHTML += '<div class="d-label">' + (item.customName || 'Folder') + '</div>';
@@ -4448,7 +4713,7 @@ function loadDesktop() {
             if(a) {
                 let iSrc = item.customIcon || a.icon;
                 let lbl = item.customName || a.title;
-                let h = '<img src="' + iSrc + '" class="d-icon">';
+                let h = '<img src="' + iconSrc(iSrc) + '" class="d-icon" loading="eager" decoding="async" onerror="window.__iconErr&&window.__iconErr(this)">';
                 if(!item.hideName) h += '<div class="d-label">' + lbl + '</div>';
                 d.innerHTML = h;
                 d.ondblclick = function(ev) { ev.stopPropagation(); toggleApp(item.id); };
@@ -4484,7 +4749,7 @@ function expandFolder(el, dat, idx) {
         let aId = dat.apps[k];
         let info = APPS[aId];
         if(info) {
-            h += '<div class="f-app" onclick="event.stopPropagation(); toggleApp(\'' + aId + '\')"><img src="' + info.icon + '"><span>' + info.title + '</span></div>';
+            h += '<div class="f-app" onclick="event.stopPropagation(); toggleApp(\'' + aId + '\')"><img src="' + iconSrc(info.icon) + '"><span>' + info.title + '</span></div>';
         }
     }
     h += '</div>';
@@ -4663,11 +4928,11 @@ var DragSystem = {
                 this.proxy.style.top = (e.clientY - 25) + 'px';
                 
                 if(this.sourceType === 'drawer' || this.sourceType === 'dock') {
-                    if(APPS[this.appId]) this.pImg.src = APPS[this.appId].icon;
+                    if(APPS[this.appId]) this.pImg.src = iconSrc(APPS[this.appId].icon);
                 } else {
                     let itm = desktopLayout[this.idx];
                     if(itm.type === 'app') {
-                        if(APPS[itm.id]) this.pImg.src = APPS[itm.id].icon;
+                        if(APPS[itm.id]) this.pImg.src = iconSrc(APPS[itm.id].icon);
                     } else {
                         this.pImg.src = '';
                         this.badge.style.display = 'flex';
