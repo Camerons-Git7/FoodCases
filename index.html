@@ -1013,7 +1013,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 <dialog id="wallpaper-menu" aria-label="Wallpaper Settings">
   <header class="wp-modal-header">
     <h2>WALLPAPER PROTOCOLS</h2>
-    <i class="fas fa-times close-icon" role="button" tabindex="0" onclick="var menu = document.getElementById('wallpaper-menu'); menu.classList.remove('open'); if (menu.close) { menu.close(); }"></i>
+    <i class="fas fa-times close-icon" role="button" tabindex="0" onclick="var menu = document.getElementById('wallpaper-menu'); menu.classList.remove('open'); menu.style.display='none'; try { if (menu.close) menu.close(); } catch(e){}"></i>
   </header>
   
   <div class="wp-controls-row">
@@ -4317,8 +4317,10 @@ function openWallpaperMenu() {
     let gl = document.getElementById('wp-grid-locked');
     if(!m) return;
     
-    if(m.showModal) m.showModal();
-    else m.style.display = 'flex';
+    // Non-modal open only — showModal() puts the dialog in the browser top layer,
+    // which hides our fixed context menus and blocks the default menu after preventDefault.
+    try { if (typeof m.close === 'function' && m.open) m.close(); } catch (e) {}
+    m.style.display = 'flex';
     m.classList.add('open');
     
     gu.innerHTML = '';
@@ -4332,8 +4334,8 @@ function openWallpaperMenu() {
         
         if(ul) {
             let mHtml = "";
-            if(d.url.match(/\.(png|jpg|jpeg|gif)$/i)) mHtml = '<img src="' + d.url + '" alt="wp">';
-            else mHtml = '<video src="' + d.url + '" preload="auto" playsinline muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>';
+            if(d.url.match(/\.(png|jpg|jpeg|gif)$/i)) mHtml = '<img src="' + d.url + '" alt="wp" draggable="false">';
+            else mHtml = '<video src="' + d.url + '" preload="auto" playsinline muted loop draggable="false" onmouseover="this.play()" onmouseout="this.pause()"></video>';
             
             c.innerHTML = mHtml + '<div class="wp-info">' + d.name + '</div>';
             c.setAttribute('data-key', k);
@@ -4342,17 +4344,6 @@ function openWallpaperMenu() {
                 let crds = document.querySelectorAll('.wp-card');
                 for(let j=0; j<crds.length; j++) crds[j].classList.remove('active-wp');
                 this.classList.add('active-wp');
-            };
-            // Right-click → Refresh Wallpaper context menu
-            c.oncontextmenu = function(ev) {
-                ev.preventDefault();
-                ev.stopPropagation();
-                hideAllCtx();
-                let ctx = document.getElementById('wp-context-menu');
-                if (ctx) {
-                    ctx.setAttribute('data-wp-key', this.getAttribute('data-key'));
-                    positionContextMenu(ctx, ev);
-                }
             };
             gu.appendChild(c);
         } else {
@@ -4367,6 +4358,25 @@ function openWallpaperMenu() {
         chk.onchange = e => updateSysSetting('wpLoop', e.target.checked);
     }
 }
+
+// Capture-phase: right-click on any wallpaper card (or its img/video child)
+document.addEventListener('contextmenu', function(ev) {
+    var card = ev.target && ev.target.closest ? ev.target.closest('.wp-card') : null;
+    if (!card || !card.getAttribute('data-key')) return;
+    // Only unlocked cards (locked have no data-key interaction / wp-locked)
+    if (card.classList.contains('wp-locked')) return;
+    var menuEl = document.getElementById('wallpaper-menu');
+    if (!menuEl || !menuEl.classList.contains('open')) return;
+
+    ev.preventDefault();
+    ev.stopPropagation();
+    hideAllCtx();
+    var ctx = document.getElementById('wp-context-menu');
+    if (ctx) {
+        ctx.setAttribute('data-wp-key', card.getAttribute('data-key'));
+        positionContextMenu(ctx, ev);
+    }
+}, true);
 
 /** Clear Seamless SW cache for a wallpaper URL, re-fetch it, and force-reload
  *  any media elements currently using it (home / lock / menu preview). */
