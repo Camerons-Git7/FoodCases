@@ -1227,143 +1227,25 @@ var _devBuildVer = "3.0.1";
    Strategy: Cache-first + background update
    ============================================================ */
 (function registerSeamlessCache() {
-  const CACHE_NAME = 'seamless-os-cache-v3.0.1';
-  const WP_BUST_KEY = 'cine_wp_bust';
-  // One-time wipe of bust tokens from earlier broken builds
-  try {
-    if (localStorage.getItem('cine_wp_bust_ver') !== '2') {
-      localStorage.removeItem(WP_BUST_KEY);
-      localStorage.setItem('cine_wp_bust_ver', '2');
-    }
-  } catch (e) {}
-
-  // --- Wallpaper URL helpers (always available, even without SW) ---
-  function _wpNormPath(u) {
-    try {
-      return new URL(u, location.href).pathname.replace(/\/+/g, '/');
-    } catch (e) {
-      return String(u || '').split('?')[0].split('#')[0];
-    }
-  }
-  function _wpLoadBustMap() {
-    try { return JSON.parse(localStorage.getItem(WP_BUST_KEY) || '{}') || {}; }
-    catch (e) { return {}; }
-  }
-  function _wpSaveBustMap(map) {
-    try { localStorage.setItem(WP_BUST_KEY, JSON.stringify(map)); } catch (e) {}
-  }
-  function _wpGetBustToken(url) {
-    var map = _wpLoadBustMap();
-    var p = _wpNormPath(url);
-    return map[p] || map[url] || null;
-  }
-  function _wpSetBustToken(url, token) {
-    var map = _wpLoadBustMap();
-    var p = _wpNormPath(url);
-    token = token || Date.now();
-    map[p] = token;
-    map[String(url)] = token;
-    _wpSaveBustMap(map);
-    return token;
-  }
-  function _wpResolveUrl(url) {
-    if (!url) return url;
-    var token = _wpGetBustToken(url);
-    if (!token) return url;
-    return String(url).split('?')[0].split('#')[0] + '?v=' + token;
-  }
-  function _wpBustUrl(url, token) {
-    return String(url).split('?')[0].split('#')[0] + '?v=' + (token || Date.now());
-  }
-
-  window._wpResolveUrl = _wpResolveUrl;
-  window._wpBustUrl = _wpBustUrl;
-  window._wpGetBustToken = _wpGetBustToken;
-  window._wpSetBustToken = _wpSetBustToken;
-  window._wpNormPath = _wpNormPath;
-  window._wpGetForce = function(url) {
-    var t = _wpGetBustToken(url);
-    return t ? { token: t } : null;
-  };
-  window._wpMarkForce = function(url, token) { return _wpSetBustToken(url, token); };
-
-  // --- Cache helpers ---
-  window.seamlessCacheAdd = function(url) {
-    if (!url || typeof url !== 'string' || !('caches' in window)) return;
-    var resolved = _wpResolveUrl(url);
-    caches.open(CACHE_NAME).then(function(cache) {
-      fetch(resolved, { mode: 'no-cors' }).then(function(res) {
-        if (!res) return;
-        cache.put(resolved, res.clone()).catch(function(){});
-        if (resolved !== url) cache.put(url, res.clone()).catch(function(){});
-      }).catch(function(){});
-    }).catch(function(){});
-  };
-
-  window.seamlessCacheDelete = function(url) {
-    if (!url || typeof url !== 'string' || !('caches' in window)) return Promise.resolve(false);
-    return caches.open(CACHE_NAME).then(function(cache) {
-      return cache.keys().then(function(keys) {
-        var path = _wpNormPath(url);
-        var baseName = path.split('/').pop();
-        var abs = url;
-        try { abs = new URL(url, location.href).href; } catch (e) {}
-        return Promise.all(keys.map(function(req) {
-          var ru = req.url;
-          var rpath = ru;
-          try { rpath = new URL(ru).pathname; } catch (e) {}
-          if (
-            ru === url || ru === abs ||
-            rpath === path ||
-            (baseName && rpath.indexOf(baseName) !== -1) ||
-            ru.indexOf(path) !== -1
-          ) {
-            return cache.delete(req);
-          }
-          return false;
-        })).then(function(results) {
-          return results.some(Boolean);
-        });
-      });
-    }).catch(function() { return false; });
-  };
-
-  window.seamlessCacheRefresh = function(url) {
-    if (!url || typeof url !== 'string') return Promise.resolve(false);
-    var token = _wpSetBustToken(url, Date.now());
-    var resolved = _wpBustUrl(url, token);
-    var del = window.seamlessCacheDelete(url);
-    return del.then(function() {
-      if (!('caches' in window)) return true;
-      return caches.open(CACHE_NAME).then(function(cache) {
-        return fetch(resolved, { cache: 'reload', credentials: 'same-origin' })
-          .then(function(res) {
-            if (res && (res.ok || res.type === 'opaque')) {
-              return Promise.all([
-                cache.put(resolved, res.clone()).catch(function(){}),
-                cache.put(url, res.clone()).catch(function(){})
-              ]).then(function() { return true; });
-            }
-            return true;
-          })
-          .catch(function() { return true; });
-      });
-    }).catch(function() { return true; });
-  };
-
-  // --- Service worker registration (optional) ---
   if (!('serviceWorker' in navigator) || !('caches' in window)) return;
+
+  const CACHE_NAME = 'seamless-os-cache-v3.0.2';
 
   const swSource = `
     const CACHE_NAME = '${CACHE_NAME}';
+
     self.addEventListener('install', event => {
       self.skipWaiting();
       event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-          return cache.addAll(['./', 'favicon.ico']).catch(() => {});
+          return cache.addAll([
+            './',
+            'favicon.ico'
+          ]).catch(() => {});
         })
       );
     });
+
     self.addEventListener('activate', event => {
       event.waitUntil(
         caches.keys().then(keys =>
@@ -1374,27 +1256,44 @@ var _devBuildVer = "3.0.1";
         ).then(() => self.clients.claim())
       );
     });
+
     self.addEventListener('fetch', event => {
       const req = event.request;
       if (req.method !== 'GET') return;
       const url = new URL(req.url);
       if (url.protocol === 'chrome-extension:' || url.protocol === 'data:' || url.protocol === 'blob:') return;
+
+      // Skip iframe game hosts – only cache main-page assets
       const path = url.pathname.toLowerCase();
       if (
-        path.includes('/core/') || path.includes('/big/') || path.includes('/peak/') ||
-        path.includes('/seamless-') || path.includes('/word-bomb') || path.includes('/uno/') ||
-        path.includes('/youtube/') || path.includes('/call-of-duty') || path.includes('/black-jack') ||
-        path.includes('/buildnow') || path.includes('/dean-withers')
-      ) return;
+        path.includes('/core/') ||
+        path.includes('/big/')  ||
+        path.includes('/peak/') ||
+        path.includes('/seamless-') ||
+        path.includes('/word-bomb') ||
+        path.includes('/uno/') ||
+        path.includes('/youtube/') ||
+        path.includes('/call-of-duty') ||
+        path.includes('/black-jack') ||
+        path.includes('/buildnow') ||
+        path.includes('/dean-withers')
+      ) {
+        return;
+      }
+
       event.respondWith(
         caches.open(CACHE_NAME).then(async cache => {
           const cached = await cache.match(req, { ignoreSearch: false });
           if (cached) {
+            // Stale-while-revalidate
             fetch(req).then(networkRes => {
-              if (networkRes && networkRes.ok) cache.put(req, networkRes.clone());
+              if (networkRes && networkRes.ok) {
+                cache.put(req, networkRes.clone());
+              }
             }).catch(() => {});
             return cached;
           }
+
           try {
             const networkRes = await fetch(req);
             if (networkRes && (networkRes.ok || networkRes.type === 'opaque')) {
@@ -1413,13 +1312,209 @@ var _devBuildVer = "3.0.1";
     });
   `;
 
+  const blob = new Blob([swSource], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+
+  navigator.serviceWorker.register(swUrl, { scope: './' })
+    .then(reg => {
+      console.log('[Seamless Cache] Service Worker registered, scope:', reg.scope);
+      reg.update();
+    })
+    .catch(err => {
+      console.warn('[Seamless Cache] SW registration failed (normal on file://):', err);
+    });
+
+  // Persistent per-URL content versions (survive full page reload).
+  // After "Refresh Wallpaper", media always loads with ?_v=<token> so browser + SW
+  // cannot serve the previous body under the clean key.
   try {
-    const blob = new Blob([swSource], { type: 'application/javascript' });
-    const swUrl = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(swUrl, { scope: './' })
-      .then(reg => { try { reg.update(); } catch (e) {} })
-      .catch(function() {});
-  } catch (e) {}
+    window._wpVersions = JSON.parse(localStorage.getItem('cine_wp_versions') || '{}') || {};
+  } catch (e) {
+    window._wpVersions = {};
+  }
+  // Short-lived in-memory force (same session) — versions are the durable source of truth
+  window._wpForceReload = window._wpForceReload || {};
+
+  function _wpNormPath(u) {
+    try {
+      var abs = new URL(u, self.location.href);
+      return abs.pathname.replace(/\/+/g, '/');
+    } catch (e) {
+      return String(u).split('?')[0].split('#')[0];
+    }
+  }
+
+  function _wpSaveVersions() {
+    try {
+      localStorage.setItem('cine_wp_versions', JSON.stringify(window._wpVersions || {}));
+    } catch (e) {}
+  }
+
+  function _wpGetVersion(url) {
+    var p = _wpNormPath(url);
+    var v = (window._wpVersions && (window._wpVersions[p] || window._wpVersions[url])) || null;
+    return v || null;
+  }
+
+  function _wpSetVersion(url, token) {
+    var p = _wpNormPath(url);
+    var t = token || Date.now();
+    if (!window._wpVersions) window._wpVersions = {};
+    window._wpVersions[p] = t;
+    window._wpVersions[url] = t;
+    _wpSaveVersions();
+    return t;
+  }
+
+  function _wpMarkForce(url, token) {
+    var p = _wpNormPath(url);
+    var t = token || Date.now();
+    // Persist version so page refresh still uses the busted URL
+    _wpSetVersion(url, t);
+    window._wpForceReload[p] = { token: t, until: Date.now() + 120000 };
+    window._wpForceReload[url] = window._wpForceReload[p];
+  }
+
+  function _wpGetForce(url) {
+    // Prefer durable version (survives reload)
+    var ver = _wpGetVersion(url);
+    if (ver) return { token: ver, until: Number.MAX_SAFE_INTEGER };
+    var p = _wpNormPath(url);
+    var e = window._wpForceReload[p] || window._wpForceReload[url];
+    if (!e) return null;
+    if (Date.now() > e.until) {
+      delete window._wpForceReload[p];
+      delete window._wpForceReload[url];
+      return null;
+    }
+    return e;
+  }
+
+  function _wpBustUrl(url, token) {
+    var base = String(url).split('?')[0].split('#')[0];
+    return base + '?_v=' + (token || Date.now());
+  }
+
+  // Helper so the main page can force-cache any URL it discovers
+  window.seamlessCacheAdd = function(url, opts) {
+    if (!url || typeof url !== 'string') return;
+    opts = opts || {};
+    var ver = _wpGetVersion(url);
+    // Never overwrite a versioned/refreshed entry with a possibly-stale no-cors fetch
+    // unless this call is itself a force refresh.
+    if (!opts.force && ver) {
+      // Warm the versioned key only (do not put under clean URL — that would fight refresh)
+      var warmUrl = _wpBustUrl(url, ver);
+      caches.open(CACHE_NAME).then(function(cache) {
+        cache.match(warmUrl).then(function(hit) {
+          if (hit) return;
+          fetch(warmUrl, { mode: 'no-cors', cache: 'reload' }).then(function(res) {
+            if (res) cache.put(warmUrl, res).catch(function(){});
+          }).catch(function(){});
+        });
+      }).catch(function(){});
+      return;
+    }
+    caches.open(CACHE_NAME).then(cache => {
+      var token = opts.token || ver || Date.now();
+      var fetchOpts = opts.force
+        ? { cache: 'reload', mode: 'cors', credentials: 'same-origin' }
+        : { mode: 'no-cors' };
+      var reqUrl = opts.force ? _wpBustUrl(url, token) : (ver ? _wpBustUrl(url, ver) : url);
+      fetch(reqUrl, fetchOpts).then(res => {
+        if (!res) return;
+        // Store under versioned key (and clean only when not versioned)
+        var puts = [];
+        if (opts.force || ver) {
+          puts.push(cache.put(_wpBustUrl(url, token), res.clone()));
+        } else {
+          puts.push(cache.put(url, res.clone()));
+          try {
+            var abs = new URL(url, self.location.href).href;
+            if (abs !== url) puts.push(cache.put(abs, res.clone()));
+          } catch (e) {}
+        }
+        return Promise.all(puts.map(function(p) { return p.catch(function(){}); }));
+      }).catch(() => {
+        if (opts.force) {
+          var bust = _wpBustUrl(url, token);
+          fetch(bust, { mode: 'no-cors', cache: 'reload' }).then(function(r2) {
+            if (r2) {
+              cache.put(bust, r2.clone()).catch(function(){});
+            }
+          }).catch(function(){});
+        }
+      });
+    }).catch(() => {});
+  };
+
+  // Delete a specific URL (and any absolute / path / versioned variants) from the Seamless cache
+  window.seamlessCacheDelete = function(url) {
+    if (!url || typeof url !== 'string' || !('caches' in window)) return Promise.resolve(false);
+    return caches.open(CACHE_NAME).then(async cache => {
+      const keys = await cache.keys();
+      let deleted = false;
+      let abs = url;
+      let path = _wpNormPath(url);
+      try { abs = new URL(url, self.location.href).href; } catch (e) {}
+      const baseName = path.split('/').pop();
+      for (const req of keys) {
+        const ru = req.url;
+        let rpath = ru;
+        try { rpath = new URL(ru).pathname; } catch (e) {}
+        if (
+          ru === url || ru === abs ||
+          rpath === path ||
+          (baseName && rpath.endsWith('/' + baseName)) ||
+          ru.indexOf(path) !== -1 ||
+          (url && ru.indexOf(url) !== -1)
+        ) {
+          const ok = await cache.delete(req);
+          if (ok) deleted = true;
+        }
+      }
+      return deleted;
+    }).catch(() => false);
+  };
+
+  // Clear cache entry then re-fetch from network and re-store under versioned keys
+  window.seamlessCacheRefresh = function(url) {
+    if (!url || typeof url !== 'string') return Promise.resolve(false);
+    var token = Date.now();
+    _wpMarkForce(url, token);
+    return window.seamlessCacheDelete(url).then(function() {
+      return caches.open(CACHE_NAME).then(function(cache) {
+        var bust = _wpBustUrl(url, token);
+        function store(res) {
+          if (!res) return Promise.resolve(false);
+          try { res.clone(); } catch (e) { return Promise.resolve(false); }
+          // Store under the versioned URL the page will actually request after reload
+          var puts = [cache.put(bust, res.clone())];
+          return Promise.all(puts.map(function(p) { return p.catch(function(){}); }))
+            .then(function() { return true; });
+        }
+        return fetch(bust, { cache: 'reload', mode: 'cors', credentials: 'same-origin' })
+          .then(function(res) {
+            if (res && (res.ok || res.type === 'opaque')) return store(res);
+            return fetch(url, { cache: 'reload', mode: 'cors', credentials: 'same-origin' })
+              .then(store)
+              .catch(function() {
+                return fetch(bust, { mode: 'no-cors', cache: 'reload' }).then(store);
+              });
+          })
+          .catch(function() {
+            return fetch(bust, { mode: 'no-cors', cache: 'reload' }).then(store).catch(function() { return false; });
+          });
+      });
+    }).catch(function() { return false; });
+  };
+
+  window._wpBustUrl = _wpBustUrl;
+  window._wpGetForce = _wpGetForce;
+  window._wpMarkForce = _wpMarkForce;
+  window._wpNormPath = _wpNormPath;
+  window._wpGetVersion = _wpGetVersion;
+  window._wpSetVersion = _wpSetVersion;
 })();
 
 var APPS = {
@@ -1728,7 +1823,8 @@ var wallpaperRegistry = {
     "Windows": { id: "Windows", name: "Windows", url: "cine-os/Videos/wallpaper.png", locked: false },
     "Dexter-Morgan": { id: "DexterMorgan", name: "Dexter", url: "cine-os/Videos/dexter-morgan.jpg", locked: false },
     "Dexter": { id: "Dexter", name: "Dexter", url: "cine-os/Videos/dexter.jpg", locked: false },
-    "Breaking-Bad": { id: "BreakingBad", name: "Breaking Bad", url: "cine-os/Videos/breaking-bad.jpg", locked: false }
+    "Breaking-Bad": { id: "BreakingBad", name: "Breaking Bad", url: "cine-os/Videos/breaking-bad.jpg", locked: false },
+    "Jane-Patrick": { id: "JanePatrick", name: "Jane Patrick", url: "cine-os/Videos/jane-patrick.jpg", locked: false }
 };
 
 var sysConfig = JSON.parse(localStorage.getItem('cine_sys_config')) || {};
@@ -2213,31 +2309,49 @@ window.unlockSystem = function() {
 };
 
 function applyMediaToElements(url, vidEl, imgEl, isBg) {
-    if (!url || !vidEl || !imgEl) return;
-    // Use persistent bust token when present (set by Refresh Wallpaper)
-    var loadUrl = (typeof window._wpResolveUrl === 'function') ? window._wpResolveUrl(url) : url;
-    if (typeof window.seamlessCacheAdd === 'function') {
-        try { window.seamlessCacheAdd(url); } catch (e) {}
+    if(!url) return;
+    // After a wallpaper refresh, a durable ?_v= token is stored in localStorage.
+    // Always load that version so a full page reload cannot fall back to the old
+    // SW / HTTP cache entry under the clean URL.
+    var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
+    var loadUrl = url;
+    if (force) {
+        loadUrl = (typeof window._wpBustUrl === 'function')
+            ? window._wpBustUrl(url, force.token)
+            : (url + (url.indexOf('?') >= 0 ? '&' : '?') + '_v=' + force.token);
+        // Only force-network-seed right after an explicit Refresh (short-lived session flag).
+        // Durable versions just use the busted URL; SW cache-first will hit the versioned key.
+        var sessionForce = false;
+        if (window._wpForceReload) {
+            var np = (typeof window._wpNormPath === 'function') ? window._wpNormPath(url) : url;
+            var sf = window._wpForceReload[np] || window._wpForceReload[url];
+            sessionForce = !!(sf && Date.now() <= sf.until);
+        }
+        if (sessionForce && typeof window.seamlessCacheAdd === 'function') {
+            window.seamlessCacheAdd(url, { force: true, token: force.token });
+        } else if (typeof window.seamlessCacheAdd === 'function') {
+            window.seamlessCacheAdd(url); // warms versioned key only
+        }
+    } else if (typeof window.seamlessCacheAdd === 'function') {
+        window.seamlessCacheAdd(url);
     }
-    var clean = String(url).split('?')[0];
-    var isImg = /\.(png|jpg|jpeg|gif|webp)$/i.test(clean);
-    if (isImg) {
-        try { vidEl.pause(); } catch (e) {}
+    let isImg = url.match(/\.(png|jpg|jpeg|gif)$/i);
+    if(isImg) {
         vidEl.style.display = 'none';
+        vidEl.pause();
         imgEl.style.display = 'block';
+        imgEl.removeAttribute('src');
         imgEl.src = loadUrl;
     } else {
         imgEl.style.display = 'none';
         vidEl.style.display = 'block';
-        vidEl.src = loadUrl;
+        try { vidEl.pause(); } catch (e) {}
+        vidEl.removeAttribute('src');
         try { vidEl.load(); } catch (e) {}
-        if (isBg && typeof isDesktopActive !== 'undefined' && isDesktopActive && !(sysConfig && sysConfig.optBg)) {
-            vidEl.play().catch(function(){});
-        }
-        var lock = document.getElementById('lock-screen');
-        if (!isBg && lock && lock.classList.contains('active')) {
-            vidEl.play().catch(function(){});
-        }
+        vidEl.src = loadUrl;
+        vidEl.load();
+        if(isBg && isDesktopActive && !sysConfig.optBg) vidEl.play().catch(function(e){});
+        if(!isBg && document.getElementById('lock-screen').classList.contains('active')) vidEl.play().catch(function(e){});
     }
 }
 
@@ -4384,10 +4498,13 @@ function openWallpaperMenu() {
         
         if(ul) {
             let mHtml = "";
-            // Honor persistent bust token so previews match desktop after reload
-            var previewSrc = (typeof window._wpResolveUrl === 'function') ? window._wpResolveUrl(d.url) : d.url;
-            var isPreviewImg = /\.(png|jpg|jpeg|gif|webp)$/i.test(String(d.url).split('?')[0]);
-            if (isPreviewImg) mHtml = '<img src="' + previewSrc + '" alt="wp" draggable="false">';
+            // Use cache-bust src if this wallpaper was recently refreshed
+            var previewSrc = d.url;
+            var fr = (typeof window._wpGetForce === 'function') ? window._wpGetForce(d.url) : null;
+            if (fr && typeof window._wpBustUrl === 'function') {
+                previewSrc = window._wpBustUrl(d.url, fr.token);
+            }
+            if(d.url.match(/\.(png|jpg|jpeg|gif)$/i)) mHtml = '<img src="' + previewSrc + '" alt="wp" draggable="false">';
             else mHtml = '<video src="' + previewSrc + '" preload="auto" playsinline muted loop draggable="false" onmouseover="this.play()" onmouseout="this.pause()"></video>';
             
             c.innerHTML = mHtml + '<div class="wp-info">' + d.name + '</div>';
@@ -4434,37 +4551,62 @@ document.addEventListener('contextmenu', function(ev) {
 /** Clear Seamless SW cache for a wallpaper URL, re-fetch it, and force-reload
  *  any media elements currently using it (home / lock / menu preview). */
 function refreshWallpaper(key) {
-    var d = wallpaperRegistry[key];
+    let d = wallpaperRegistry[key];
     if (!d || !d.url) {
         showNotification('Wallpaper', 'Unknown wallpaper.');
         return;
     }
-    var url = d.url;
+    let url = d.url;
     showNotification('Wallpaper', 'Refreshing "' + d.name + '"…');
 
-    var finish = function() {
+    var finish = function(ok) {
+        // Force-flag is already set by seamlessCacheRefresh; applyMediaToElements
+        // will load with ?_cb= and re-seed the SW cache from network.
         if (sysConfig.homeWallpaper === key) {
             applyMediaToElements(url, document.getElementById('bg-video'), document.getElementById('bg-img'), true);
         }
         if (sysConfig.lockWallpaper === key) {
             applyMediaToElements(url, document.getElementById('lock-video'), document.getElementById('lock-img'), false);
         }
-        var bust = (typeof window._wpResolveUrl === 'function') ? window._wpResolveUrl(url) : url;
-        document.querySelectorAll('.wp-card[data-key="' + key + '"]').forEach(function(card) {
+        // Refresh preview cards without rebuilding the whole menu
+        var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
+        var bust = force && typeof window._wpBustUrl === 'function'
+            ? window._wpBustUrl(url, force.token)
+            : (url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cb=' + Date.now());
+        var cards = document.querySelectorAll('.wp-card[data-key="' + key + '"]');
+        cards.forEach(function(card) {
             var media = card.querySelector('video, img');
             if (!media) return;
-            media.src = bust;
             if (media.tagName === 'VIDEO') {
-                try { media.load(); } catch (e) {}
+                try { media.pause(); } catch (e) {}
+                media.removeAttribute('src');
+                media.src = bust;
+                media.load();
+            } else {
+                media.removeAttribute('src');
+                media.src = bust;
             }
         });
-        showNotification('Wallpaper', '"' + d.name + '" cache cleared & reloaded.');
+        showNotification('Wallpaper', ok
+            ? '"' + d.name + '" cache cleared & reloaded.'
+            : '"' + d.name + '" reloaded (cache may be unavailable).');
     };
 
-    var p = (typeof window.seamlessCacheRefresh === 'function')
-        ? window.seamlessCacheRefresh(url)
-        : Promise.resolve(true);
-    p.then(finish).catch(finish);
+    if (typeof window.seamlessCacheRefresh === 'function') {
+        window.seamlessCacheRefresh(url).then(function(ok) { finish(!!ok); }).catch(function() { finish(false); });
+    } else if (typeof window.seamlessCacheDelete === 'function') {
+        var token = Date.now();
+        if (typeof window._wpMarkForce === 'function') window._wpMarkForce(url, token);
+        window.seamlessCacheDelete(url).then(function() {
+            if (typeof window.seamlessCacheAdd === 'function') {
+                window.seamlessCacheAdd(url, { force: true, token: token });
+            }
+            finish(true);
+        }).catch(function() { finish(false); });
+    } else {
+        if (typeof window._wpMarkForce === 'function') window._wpMarkForce(url, Date.now());
+        finish(false);
+    }
 }
 
 // Wire wallpaper context menu action (once)
