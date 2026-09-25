@@ -3,26 +3,11 @@
       <head>
         <meta charset="UTF-8" />
         <script>
-      // Cherri uses HASH history (see BIe in the bundle): the React location is
-      // parsed from location.hash, NOT location.search.
-      //
-      // App boot (due component):
-      //   Ne = useSearchParams().get("u") || "cherri://home"
-      //   Et(Ne)  → opens full-viewport embed (no browser UI)
-      //
-      // So the working form is:
-      //   index.html#/embed?u=https://example.com
-      //
-      // Accept legacy/real query forms and rewrite into the hash:
-      //   index.html?url=https://example.com
-      //   index.html?u=https://example.com
       (function () {
         try {
           var search = new URLSearchParams(location.search);
           var fromQuery = search.get("url") || search.get("u");
 
-          // Also accept hash already present but missing leading /
-          // e.g. #?u=... or #/embed?u=...
           var hashRaw = (location.hash || "").replace(/^#/, "");
           var hashPath = "/";
           var hashQuery = "";
@@ -47,11 +32,9 @@
           }
           window.__CHERRI_BOOT_U__ = target;
 
-          // Canonical hash: /embed route = full-viewport proxy, no browser chrome
           hashParams.set("u", target);
           var nextHash = "#/embed?u=" + encodeURIComponent(target);
 
-          // Strip url/u from the real query string so they don't linger
           search.delete("url");
           search.delete("u");
           var nextSearch = search.toString();
@@ -60,9 +43,7 @@
             (nextSearch ? "?" + nextSearch : "") +
             nextHash;
 
-          // Skip if we are already exactly there
           if (location.pathname + location.search + location.hash === next) return;
-          // Also skip if hash already has the right u and path is /
           if (!fromQuery && fromHash === target && (hashPath === "/embed" || hashPath === "embed")) return;
 
           location.replace(next);
@@ -74,7 +55,6 @@
 
 
     <script>
-      // Embed: tab favicon = proxied site (must replace SVG link, not just change href)
       (function () {
         function targetFromLocation() {
           try {
@@ -114,7 +94,6 @@
           var host = hostnameOf(rawUrl);
           if (!host) return;
 
-          // Remove every existing icon link (SVG cherri favicon fights otherwise)
           document.querySelectorAll('link[rel*="icon"], link[rel="apple-touch-icon"]').forEach(function (el) {
             el.parentNode && el.parentNode.removeChild(el);
           });
@@ -127,7 +106,6 @@
             l.rel = rel;
             if (type) l.type = type;
             l.href = href;
-            // cache-bust so browser does not keep old SVG
             l.href = href + (href.indexOf("?") >= 0 ? "&" : "?") + "cherri=" + Date.now();
             document.head.appendChild(l);
             return l;
@@ -137,7 +115,6 @@
           add("shortcut icon", primary, "image/png");
           add("apple-touch-icon", primary, null);
 
-          // Fallback if Google is blocked: swap to DuckDuckGo after error
           var img = new Image();
           img.onerror = function () {
             var fb = urls[1];
@@ -167,7 +144,6 @@
         setTimeout(apply, 200);
         setTimeout(apply, 1000);
 
-        // If React re-inserts favicon.svg later, strip it and re-apply
         new MutationObserver(function () {
           var bad = document.querySelector('link[rel*="icon"][href*="favicon.svg"]');
           if (bad) apply();
@@ -187,8 +163,6 @@
     <script>
 
 
-      // postbuild rewrites this assignment to the per-build nonce'd worker
-      // filename (lead "/" for the normal build, relative for the SVG build).
       window.__SW_FILE__ = "v6hxi5.js";
       window.__swRegistration = navigator.serviceWorker
         ? (function () {
@@ -200,11 +174,6 @@
                 return String(u);
               }
             };
-            // Every deploy renames the worker script, so a registration left
-            // over from a previous build can never update itself (its script
-            // URL now 404s) and would keep controlling the page forever — on a
-            // CDN nothing tells it to die. Drop any registration whose worker
-            // isn't THIS build's file before registering ours.
             navigator.serviceWorker
               .getRegistrations()
               .then(function (regs) {
@@ -217,14 +186,6 @@
             return navigator.serviceWorker
               .register(window.__SW_FILE__)
               .then(function (reg) {
-                // If this document loaded WITHOUT the current worker in
-                // control, the proxy sits on a 45s control-timeout before
-                // falling back. That happens on a hard reload, a first visit,
-                // or when a stale worker from a previous deploy still controls
-                // the page while ours installs. Grab control fast: give claim
-                // a short grace window, and if we're still uncontrolled — or
-                // controlled by the WRONG (stale) worker — reload ONCE
-                // (sessionStorage-guarded so we can never loop).
                 function currentControls() {
                   var c = navigator.serviceWorker.controller;
                   return !!c && base(c.scriptURL) === FILE;
@@ -323,18 +284,6 @@
 
       
     <script>
-      // Embed navigation fix (GeForce Now etc.)
-      //
-      // Problems:
-      // 1) Embed installs GSA which intercepts destination=document fetches,
-      //    returns empty HTML, and treats them as "popups" → page spins forever.
-      // 2) Full location.replace on every in-frame URL change remounts embed in
-      //    a loop when a site does multi-step redirects (GFN "Get in").
-      //
-      // Fix:
-      // - Strip GSA from createFrame plugins so real document nav works in-frame.
-      // - Soft-update the top URL (replaceState) + favicon when the frame URL
-      //   changes — no full reload.
       (function () {
         function isEmbedRoute() {
           var h = (location.hash || "").replace(/^#/, "");
@@ -386,7 +335,6 @@
           }
         }
 
-        // Soft update: change the visible URL without remounting React/embed
         function softUpdateTop(rawUrl) {
           if (!rawUrl || !isEmbedRoute()) return;
           try {
@@ -400,7 +348,6 @@
           }
         }
 
-        // --- Patch createFrame: remove GSA (blocks document navigations) ---
         function installCreateFramePatch() {
           var api = window._wdgvkq9;
           if (!api || !api.Controller || !api.Controller.prototype) return false;
@@ -415,7 +362,6 @@
             var plugins = (opts.plugins && opts.plugins.slice)
               ? opts.plugins.slice()
               : [];
-            // GSA instances expose .onPopup — they swallow document navigations
             plugins = plugins.filter(function (p) {
               return !(p && typeof p.onPopup === "function");
             });
@@ -434,7 +380,6 @@
           setTimeout(tick, 50);
         })();
 
-        // --- Watch embed iframe for URL changes (soft update only) ---
         function watchIframe(iframe) {
           if (!iframe || iframe.dataset.cherriEmbedWatch === "1") return;
           iframe.dataset.cherriEmbedWatch = "1";
@@ -467,7 +412,6 @@
             }
             if (sameUrl(t, last)) return;
             last = t;
-            // Soft only — no location.replace (avoids GFN reload loop)
             softUpdateTop(t);
           }
 
