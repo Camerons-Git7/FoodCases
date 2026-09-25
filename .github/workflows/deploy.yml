@@ -62,7 +62,7 @@ jobs:
       # ─── SECOND WEBSITE ────────────────────────────
       - name: Restore original code for Site 2
         run: git checkout .
-      - name: Replace "free.nf" with "site.je" for Site 2 deploy
+      - name: Replace "menist.free.nf" with "seamfull-os.free.je" for Site 2 deploy
         run: |
           find . -type f \
             ! -path './.git/*' \
@@ -71,7 +71,7 @@ jobs:
             ! -name '.ftp-sync-state-2.json' \
             ! -name '.ftp-sync-state-3.json' \
             -exec sed -i \
-              -e 's/free\.nf/site.je/g' \
+              -e 's/menist\.free\.nf/seamfull-os.free.je/g' \
               {} +
       - name: Replace .ico with .png in desktop/index.html for Site 2 deploy
         run: |
