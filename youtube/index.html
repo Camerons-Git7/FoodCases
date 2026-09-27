@@ -765,7 +765,7 @@
     </div>
     <button class="chrome-newtab" onclick="newTab()" title="New Tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
     <div class="chrome-window-btns">
-      <button title="Download video (720p)" onclick="downloadCurrentVideo()" id="btn-download">
+      <button title="Download Video (720p)" onclick="downloadCurrentVideo()" id="btn-download">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       </button>
       <button title="Toggle Fullscreen" onclick="toggleFullscreen()">
@@ -1541,6 +1541,158 @@
       return m2 ? m2[1] : null;
     }
 
+    // Shared robust extractor for lockupViewModel (used heavily on channel /videos pages)
+    function extractLockupMeta(lockup) {
+      const id = lockup.contentId || lockup.rendererContext?.commandContext?.onTap?.innertubeCommand?.watchEndpoint?.videoId;
+      if (!id || !/^[a-zA-Z0-9_-]{11}$/.test(id)) return null;
+
+      const lockupMeta = lockup.metadata?.lockupMetadataViewModel;
+      let title = lockupMeta?.title?.content
+        || lockup.metadata?.title?.content
+        || lockup.metadata?.metadataDetails?.title?.content
+        || lockup.rendererContext?.accessibilityContext?.label
+        || "Untitled Video";
+      if (typeof title === "string" && /\d+\s+minutes/.test(title)) {
+        title = title.replace(/\s+\d+\s+minutes.*$/, "").trim() || title;
+      }
+
+      const sources = lockup.contentImage?.thumbnailViewModel?.image?.sources || [];
+      const thumb = (sources.length ? sources[sources.length - 1].url : null) || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
+      // --- Duration (multiple possible overlay shapes) ---
+      let duration = null;
+      const overlays = lockup.contentImage?.thumbnailViewModel?.overlays || [];
+      for (const ov of overlays) {
+        // Channel /videos pages: thumbnailBottomOverlayViewModel.badges[].thumbnailBadgeViewModel.text
+        const bottomBadges = ov.thumbnailBottomOverlayViewModel?.badges || [];
+        for (const b of bottomBadges) {
+          const txt = b?.thumbnailBadgeViewModel?.text;
+          if (txt && /^\d+:\d+/.test(txt)) { duration = txt; break; }
+        }
+        if (duration) break;
+
+        // Classic badge
+        const badges = ov.thumbnailOverlayBadgeViewModel?.thumbnailBadges
+          || ov.thumbnailBadgeViewModel
+          || [];
+        const badgeList = Array.isArray(badges) ? badges : [badges];
+        for (const b of badgeList) {
+          const txt = b?.thumbnailBadgeViewModel?.text || b?.text;
+          if (txt && /^\d+:\d+/.test(txt)) { duration = txt; break; }
+        }
+        if (duration) break;
+
+        // Time status
+        const timeTxt = ov.thumbnailOverlayTimeStatusViewModel?.text
+          || ov.thumbnailOverlayTimeStatusViewModel?.simpleText
+          || ov.thumbnailOverlayTimeStatusViewModel?.style;
+        if (typeof timeTxt === "string" && /^\d+:\d+/.test(timeTxt)) {
+          duration = timeTxt;
+          break;
+        }
+        const nested = ov.thumbnailOverlayTimeStatusViewModel?.text?.content
+          || ov.thumbnailOverlayTimeStatusViewModel?.text?.simpleText;
+        if (typeof nested === "string" && /^\d+:\d+/.test(nested)) {
+          duration = nested;
+          break;
+        }
+      }
+
+      // Fallback: dig duration out of accessibility label e.g. "12 minutes, 34 seconds"
+      if (!duration) {
+        const acc = lockup.rendererContext?.accessibilityContext?.label || "";
+        const m = acc.match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
+        if (m) duration = m[1];
+      }
+
+      // --- Metadata rows (channel / views / date) ---
+      const metaRows = lockupMeta?.metadata?.contentMetadataViewModel?.metadataRows
+                    || lockup.metadata?.contentMetadataViewModel?.metadataRows
+                    || [];
+
+      const allParts = [];
+      for (const row of metaRows) {
+        for (const part of (row.metadataParts || [])) {
+          const txt = part.text?.content || part.text?.simpleText;
+          if (txt && typeof txt === "string") allParts.push(txt.trim());
+        }
+      }
+
+      let channelName = null;
+      let viewCount = null;
+      let publishedTime = null;
+
+      // Channel pages often use abbreviated counts with no "views" word: "407K", "1.2M", "12K"
+      const isView = (t) => /view/i.test(t) || /watching/i.test(t) || /^\d[\d,.]*\s*[KMB]$/i.test(t) || /^\d[\d,.]*\s*[KMB]\+?$/i.test(t);
+      const isDate = (t) => /(ago|premiered|streamed|\d+\s*(hour|day|week|month|year)s?\b|\d+[hdwmy]\s*ago)/i.test(t);
+      const isTime = (t) => /^\d+:\d+(:\d+)?$/.test(t);
+
+      for (let txt of allParts) {
+        // Split combined strings like "1.2M views • 3 days ago"
+        if (txt.includes("•") || txt.includes("·")) {
+          const bits = txt.split(/\s*[•·]\s*/);
+          for (const bit of bits) {
+            if (isView(bit) && !viewCount) viewCount = bit.trim();
+            else if (isDate(bit) && !publishedTime) publishedTime = bit.trim();
+            else if (isTime(bit) && !duration) duration = bit.trim();
+            else if (!channelName && bit.trim() && !isView(bit) && !isDate(bit)) channelName = bit.trim();
+          }
+          continue;
+        }
+
+        if (isTime(txt)) {
+          if (!duration) duration = txt;
+          continue;
+        }
+        if (isView(txt)) {
+          if (!viewCount) viewCount = txt;
+          continue;
+        }
+        if (isDate(txt)) {
+          if (!publishedTime) publishedTime = txt;
+          continue;
+        }
+        // Remaining text is likely a channel name (rare on pure channel pages)
+        if (!channelName) channelName = txt;
+      }
+
+      // Safety: never let stats leak into channelName
+      if (channelName && isView(channelName)) {
+        if (!viewCount) viewCount = channelName;
+        channelName = null;
+      }
+      if (channelName && isDate(channelName)) {
+        if (!publishedTime) publishedTime = channelName;
+        channelName = null;
+      }
+
+      // Last-resort channel from accessibility label
+      if (!channelName) {
+        const acc = lockup.rendererContext?.accessibilityContext?.label || "";
+        const m = acc.match(/\bby\s+(.+?)\s+(?:\d|No\s+views)/i);
+        if (m) channelName = m[1].trim();
+      }
+
+      let viewsAndDate = "";
+      if (viewCount) viewsAndDate += viewCount;
+      if (publishedTime) {
+        if (viewsAndDate) viewsAndDate += " • ";
+        viewsAndDate += publishedTime;
+      }
+
+      return {
+        id,
+        title: String(title).trim(),
+        thumbnail: thumb,
+        avatar: null,
+        channelName,
+        duration,
+        viewCount,
+        publishedTime,
+        viewsAndDate
+      };
+    }
+
     function parseVideos(html) {
       const videos = [];
       try {
@@ -1556,7 +1708,15 @@
               const thumbs = vr.thumbnail?.thumbnails || [];
               const thumb = thumbs[thumbs.length - 1]?.url || `https://i.ytimg.com/vi/${vr.videoId}/hqdefault.jpg`;
 
-              const duration = vr.lengthText?.simpleText || vr.lengthText?.runs?.[0]?.text || null;
+              let duration = vr.lengthText?.simpleText || vr.lengthText?.runs?.[0]?.text || null;
+              // Fallback: thumbnail overlays (common on channel grids)
+              if (!duration && vr.thumbnailOverlays) {
+                for (const ov of vr.thumbnailOverlays) {
+                  const t = ov.thumbnailOverlayTimeStatusRenderer?.text?.simpleText
+                    || ov.thumbnailOverlayTimeStatusRenderer?.text?.runs?.[0]?.text;
+                  if (t) { duration = t; break; }
+                }
+              }
 
               const channelName =
                 vr.ownerText?.runs?.[0]?.text ||
@@ -1596,94 +1756,8 @@
 
             const lockup = obj.lockupViewModel || (obj.richItemRenderer?.content?.lockupViewModel);
             if (lockup) {
-              const id = lockup.contentId || lockup.rendererContext?.commandContext?.onTap?.innertubeCommand?.watchEndpoint?.videoId;
-              if (id && /^[a-zA-Z0-9_-]{11}$/.test(id)) {
-                const lockupMeta = lockup.metadata?.lockupMetadataViewModel;
-                let title = lockupMeta?.title?.content
-                  || lockup.metadata?.title?.content
-                  || lockup.metadata?.metadataDetails?.title?.content
-                  || lockup.rendererContext?.accessibilityContext?.label
-                  || "Untitled Video";
-                if (typeof title === "string" && /\d+\s+minutes/.test(title)) {
-                  title = title.replace(/\s+\d+\s+minutes.*$/, "").trim() || title;
-                }
-                const sources = lockup.contentImage?.thumbnailViewModel?.image?.sources || [];
-                const thumb = (sources.length ? sources[sources.length - 1].url : null) || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-
-                let duration = null;
-                const overlays = lockup.contentImage?.thumbnailViewModel?.overlays || [];
-                for (const ov of overlays) {
-                  const badges = ov.thumbnailOverlayBadgeViewModel?.thumbnailBadges;
-                  if (badges) {
-                    for (const b of badges) {
-                      if (b.thumbnailBadgeViewModel?.text) { duration = b.thumbnailBadgeViewModel.text; break; }
-                    }
-                  }
-                  if (!duration && ov.thumbnailOverlayTimeStatusViewModel?.simpleText) {
-                    duration = ov.thumbnailOverlayTimeStatusViewModel.simpleText;
-                  }
-                  if (duration) break;
-                }
-
-                const metaRows = lockupMeta?.metadata?.contentMetadataViewModel?.metadataRows
-                              || lockup.metadata?.contentMetadataViewModel?.metadataRows
-                              || [];
-
-                let channelName = null;
-                let viewCount = null;
-                let publishedTime = null;
-
-                const allParts = [];
-                for (const row of metaRows) {
-                  for (const part of (row.metadataParts || [])) {
-                    const txt = part.text?.content;
-                    if (txt) allParts.push(txt);
-                  }
-                }
-
-                for (const txt of allParts) {
-                  if (/^\d+:\d+(:\d+)?$/.test(txt)) {
-                    if (!duration) duration = txt;
-                    continue;
-                  }
-                  if (/views?$/i.test(txt)) {
-                    if (!viewCount) viewCount = txt;
-                    continue;
-                  }
-                  if (/(ago|premiered|streamed)/i.test(txt)) {
-                    if (!publishedTime) publishedTime = txt;
-                    continue;
-                  }
-                  if (!channelName) channelName = txt;
-                }
-
-                if (!channelName) {
-                  const acc = lockup.rendererContext?.accessibilityContext?.label;
-                  if (acc) {
-                    const m = acc.match(/\bby\s+(.+?)\s+\d/i);
-                    if (m) channelName = m[1].trim();
-                  }
-                }
-
-                let viewsAndDate = "";
-                if (viewCount) viewsAndDate += viewCount;
-                if (publishedTime) {
-                  if (viewsAndDate) viewsAndDate += " • ";
-                  viewsAndDate += publishedTime;
-                }
-
-                videos.push({
-                  id,
-                  title: String(title).trim(),
-                  thumbnail: thumb,
-                  avatar: null,
-                  channelName,
-                  duration,
-                  viewCount,
-                  publishedTime,
-                  viewsAndDate
-                });
-              }
+              const parsed = extractLockupMeta(lockup);
+              if (parsed) videos.push(parsed);
             }
 
             Object.values(obj).forEach(recurse);
@@ -1754,7 +1828,14 @@
             || vr.channelThumbnail?.thumbnails;
           if (chThumbs?.length) avatar = chThumbs[chThumbs.length - 1].url;
 
-          const duration = vr.lengthText?.simpleText || vr.lengthText?.runs?.[0]?.text || null;
+          let duration = vr.lengthText?.simpleText || vr.lengthText?.runs?.[0]?.text || null;
+          if (!duration && vr.thumbnailOverlays) {
+            for (const ov of vr.thumbnailOverlays) {
+              const t = ov.thumbnailOverlayTimeStatusRenderer?.text?.simpleText
+                || ov.thumbnailOverlayTimeStatusRenderer?.text?.runs?.[0]?.text;
+              if (t) { duration = t; break; }
+            }
+          }
           const channelName = vr.ownerText?.runs?.[0]?.text || vr.shortBylineText?.runs?.[0]?.text || vr.longBylineText?.runs?.[0]?.text || null;
           const publishedTime = vr.publishedTimeText?.simpleText || null;
           const viewCount = vr.viewCountText?.simpleText || vr.shortViewCountText?.simpleText || null;
@@ -1770,84 +1851,8 @@
 
         const lockup = obj.lockupViewModel || (obj.richItemRenderer?.content?.lockupViewModel);
         if (lockup) {
-          const id = lockup.contentId || lockup.rendererContext?.commandContext?.onTap?.innertubeCommand?.watchEndpoint?.videoId;
-          if (id && /^[a-zA-Z0-9_-]{11}$/.test(id)) {
-            const lockupMeta = lockup.metadata?.lockupMetadataViewModel;
-            let title = lockupMeta?.title?.content
-              || lockup.metadata?.title?.content
-              || lockup.metadata?.metadataDetails?.title?.content
-              || lockup.rendererContext?.accessibilityContext?.label
-              || "Untitled";
-            if (typeof title === "string" && /\d+\s+minutes/.test(title)) {
-              title = title.replace(/\s+\d+\s+minutes.*$/, "").trim() || title;
-            }
-            const sources = lockup.contentImage?.thumbnailViewModel?.image?.sources || [];
-            const thumb = (sources.length ? sources[sources.length - 1].url : null) || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-
-            let duration = null;
-            const overlays = lockup.contentImage?.thumbnailViewModel?.overlays || [];
-            for (const ov of overlays) {
-              const badges = ov.thumbnailOverlayBadgeViewModel?.thumbnailBadges;
-              if (badges) {
-                for (const b of badges) {
-                  if (b.thumbnailBadgeViewModel?.text) { duration = b.thumbnailBadgeViewModel.text; break; }
-                }
-              }
-              if (!duration && ov.thumbnailOverlayTimeStatusViewModel?.simpleText) {
-                duration = ov.thumbnailOverlayTimeStatusViewModel.simpleText;
-              }
-              if (duration) break;
-            }
-
-            const metaRows = lockupMeta?.metadata?.contentMetadataViewModel?.metadataRows
-                          || lockup.metadata?.contentMetadataViewModel?.metadataRows
-                          || [];
-
-            let channelName = null;
-            let viewCount = null;
-            let publishedTime = null;
-
-            const allParts = [];
-            for (const row of metaRows) {
-              for (const part of (row.metadataParts || [])) {
-                const txt = part.text?.content;
-                if (txt) allParts.push(txt);
-              }
-            }
-
-            for (const txt of allParts) {
-              if (/^\d+:\d+(:\d+)?$/.test(txt)) {
-                if (!duration) duration = txt;
-                continue;
-              }
-              if (/views?$/i.test(txt)) {
-                if (!viewCount) viewCount = txt;
-                continue;
-              }
-              if (/(ago|premiered|streamed)/i.test(txt)) {
-                if (!publishedTime) publishedTime = txt;
-                continue;
-              }
-              if (!channelName) channelName = txt;
-            }
-
-            if (!channelName) {
-              const acc = lockup.rendererContext?.accessibilityContext?.label;
-              if (acc) {
-                const m = acc.match(/\bby\s+(.+?)\s+\d/i);
-                if (m) channelName = m[1].trim();
-              }
-            }
-
-            let viewsAndDate = "";
-            if (viewCount) viewsAndDate += viewCount;
-            if (publishedTime) {
-              if (viewsAndDate) viewsAndDate += " • ";
-              viewsAndDate += publishedTime;
-            }
-
-            videos.push({ id, title: String(title).trim(), thumbnail: thumb, avatar: null, channelName, duration, viewCount, publishedTime, viewsAndDate });
-          }
+          const parsed = extractLockupMeta(lockup);
+          if (parsed) videos.push(parsed);
         }
 
         Object.values(obj).forEach(recurse);
