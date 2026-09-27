@@ -88,7 +88,6 @@
       border-radius: 50%;
       flex-shrink: 0;
       color: #ff0000;
-      font-size: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -103,6 +102,10 @@
       border-radius: 50%;
       object-fit: cover;
       display: block;
+    }
+    .chrome-tab .tab-favicon svg {
+      width: 12px;
+      height: 12px;
     }
     .chrome-tab span:not(.tab-favicon) {
       flex: 1;
@@ -119,8 +122,6 @@
       border: none;
       background: transparent;
       color: #9aa0a6;
-      font-size: 14px;
-      line-height: 1;
       cursor: pointer;
       display: grid;
       place-items: center;
@@ -136,6 +137,10 @@
       background: #5f6368;
       color: #fff;
     }
+    .chrome-tab .tab-close svg {
+      width: 12px;
+      height: 12px;
+    }
 
     .chrome-newtab {
       width: 28px;
@@ -144,7 +149,6 @@
       border: none;
       background: transparent;
       color: #9aa0a6;
-      font-size: 18px;
       cursor: pointer;
       display: grid;
       place-items: center;
@@ -155,6 +159,10 @@
     .chrome-newtab:hover {
       background: #3c4043;
       color: #e8eaed;
+    }
+    .chrome-newtab svg {
+      width: 16px;
+      height: 16px;
     }
 
     .chrome-window-btns {
@@ -170,7 +178,6 @@
       border: none;
       background: transparent;
       color: #9aa0a6;
-      font-size: 14px;
       cursor: pointer;
       display: grid;
       place-items: center;
@@ -183,6 +190,10 @@
     .chrome-window-btns .chrome-close:hover {
       background: #e81123;
       color: #fff;
+    }
+    .chrome-window-btns button svg {
+      width: 15px;
+      height: 15px;
     }
 
     #chrome-toolbar {
@@ -202,7 +213,6 @@
       border: none;
       background: transparent;
       color: #9aa0a6;
-      font-size: 16px;
       cursor: pointer;
       display: grid;
       place-items: center;
@@ -215,6 +225,10 @@
     .chrome-nav-btn:disabled {
       opacity: 0.35;
       cursor: default;
+    }
+    .chrome-nav-btn svg {
+      width: 16px;
+      height: 16px;
     }
 
     #chrome-omnibox {
@@ -240,8 +254,13 @@
     }
     #chrome-omnibox .omni-icon {
       color: #9aa0a6;
-      font-size: 13px;
       flex-shrink: 0;
+      display: grid;
+      place-items: center;
+    }
+    #chrome-omnibox .omni-icon svg {
+      width: 14px;
+      height: 14px;
     }
     #chrome-omnibox input {
       flex: 1;
@@ -262,7 +281,6 @@
       border: none;
       background: transparent;
       color: #9aa0a6;
-      font-size: 15px;
       cursor: pointer;
       display: grid;
       place-items: center;
@@ -273,6 +291,14 @@
     }
     #chrome-omnibox .omni-star.bookmarked {
       color: #fbbc04;
+    }
+    #chrome-omnibox .omni-star.bookmarked svg {
+      fill: #fbbc04;
+      stroke: #fbbc04;
+    }
+    #chrome-omnibox .omni-star svg {
+      width: 15px;
+      height: 15px;
     }
 
     #chrome-bookmarks {
@@ -312,8 +338,10 @@
       place-items: center;
       flex-shrink: 0;
       color: #ff0000;
-      font-size: 10px;
-      font-weight: 700;
+    }
+    .bm-bar-item .bm-favicon svg {
+      width: 11px;
+      height: 11px;
     }
     .bm-bar-item .bm-del {
       opacity: 0;
@@ -324,7 +352,6 @@
       background: transparent;
       color: #9aa0a6;
       cursor: pointer;
-      font-size: 12px;
       display: grid;
       place-items: center;
       flex-shrink: 0;
@@ -336,6 +363,10 @@
     .bm-bar-item .bm-del:hover {
       background: #5f6368;
       color: #fff;
+    }
+    .bm-bar-item .bm-del svg {
+      width: 11px;
+      height: 11px;
     }
 
     #chrome-content {
@@ -728,27 +759,43 @@
 
   <div id="chrome-titlebar">
     <div class="chrome-tab active" id="tab-0" onclick="switchTab(0)">
-      <span class="tab-favicon">▶</span>
+      <span class="tab-favicon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
       <span>New Tab</span>
-      <button class="tab-close" onclick="event.stopPropagation(); closeTab(0)">×</button>
+      <button class="tab-close" onclick="event.stopPropagation(); closeTab(0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
-    <button class="chrome-newtab" onclick="newTab()" title="New Tab">+</button>
+    <button class="chrome-newtab" onclick="newTab()" title="New Tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
     <div class="chrome-window-btns">
-      <button title="Minimize" onclick="window.moveTo && window.moveTo(0,0)">─</button>
-      <button title="Toggle Fullscreen" onclick="toggleFullscreen()">□</button>
-      <button class="chrome-close" title="Close" onclick="window.close()">×</button>
+      <button title="Download video (720p)" onclick="downloadCurrentVideo()" id="btn-download">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button title="Toggle Fullscreen" onclick="toggleFullscreen()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+      <button class="chrome-close" title="Close" onclick="window.close()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
     </div>
   </div>
 
   <div id="chrome-toolbar">
-    <button class="chrome-nav-btn" id="btn-back" onclick="goBack()" disabled title="Back (Alt+Left)">←</button>
-    <button class="chrome-nav-btn" id="btn-fwd" onclick="goForward()" disabled title="Forward (Alt+Right)">→</button>
-    <button class="chrome-nav-btn" onclick="reloadPage()" title="Reload (Ctrl+R)">↻</button>
+    <button class="chrome-nav-btn" id="btn-back" onclick="goBack()" disabled title="Back (Alt+Left)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <button class="chrome-nav-btn" id="btn-fwd" onclick="goForward()" disabled title="Forward (Alt+Right)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+    <button class="chrome-nav-btn" onclick="reloadPage()" title="Reload (Ctrl+R)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </button>
 
     <div id="chrome-omnibox">
-      <span class="omni-icon" id="omni-secure">🔒</span>
+      <span class="omni-icon" id="omni-secure">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </span>
       <input id="omnibox-input" type="text" placeholder="Search YouTube or type a URL" />
-      <button class="omni-star" id="omni-star" onclick="starCurrent()" title="Bookmark this page (Ctrl+D)">☆</button>
+      <button class="omni-star" id="omni-star" onclick="starCurrent()" title="Bookmark this page (Ctrl+D)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </button>
     </div>
   </div>
 
@@ -798,13 +845,21 @@
 
     const JOE_MAIN_AVATAR = "https://yt3.googleusercontent.com/jbgbWg3aEZKUtuJDdckG4f1Ui9nujB_ji7F1otSJCBTBNaEF68RCQ7iPnDf8vbuZjEOqYSAxoA=s88-c-k-c0x00ffffff-no-rj";
 
+    const PLAY_SVG = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+    const CLOSE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
+
     function setTabIcon(tabId, icon) {
       const fav = document.querySelector(`#tab-${tabId} .tab-favicon`);
       if (!fav) return;
       if (icon && (icon.startsWith("http") || icon.startsWith("//"))) {
-        fav.innerHTML = `<img src="${icon}" alt="" onerror="this.parentElement.textContent='▶'">`;
+        fav.innerHTML = "";
+        const img = document.createElement("img");
+        img.src = icon;
+        img.alt = "";
+        img.onerror = () => { fav.innerHTML = PLAY_SVG; };
+        fav.appendChild(img);
       } else {
-        fav.textContent = icon || "▶";
+        fav.innerHTML = PLAY_SVG;
       }
     }
 
@@ -891,9 +946,9 @@
         item.className = "bm-bar-item";
         item.dataset.dynamic = "true";
         item.innerHTML = `
-          <div class="bm-favicon">▶</div>
+          <div class="bm-favicon">${PLAY_SVG}</div>
           <span>${escapeHtml(bm.name)}</span>
-          ${bm.deletable !== false ? `<button class="bm-del" onclick="event.stopPropagation(); deleteBookmark('${bm.id}')">×</button>` : ""}
+          ${bm.deletable !== false ? `<button class="bm-del" onclick="event.stopPropagation(); deleteBookmark('${bm.id}')">${CLOSE_SVG}</button>` : ""}
         `;
         item.onclick = () => {
           if (bm.type === "video") { playVideo(bm.videoId); }
@@ -1027,9 +1082,9 @@
       tabEl.id = "tab-" + id;
       tabEl.onclick = () => switchTab(id);
       tabEl.innerHTML = `
-        <span class="tab-favicon">▶</span>
+        <span class="tab-favicon">${PLAY_SVG}</span>
         <span>New Tab</span>
-        <button class="tab-close" onclick="event.stopPropagation(); closeTab(${id})">×</button>
+        <button class="tab-close" onclick="event.stopPropagation(); closeTab(${id})">${CLOSE_SVG}</button>
       `;
       document.getElementById("chrome-titlebar").insertBefore(tabEl, document.querySelector(".chrome-newtab"));
 
@@ -1234,9 +1289,9 @@
       t.currentChannels = [];
       t.currentBrowseTitle = "";
       document.getElementById("tab-" + activeTabId).querySelector("span:not(.tab-favicon)").textContent = "New Tab";
-      setTabIcon(activeTabId, "▶");
+      setTabIcon(activeTabId, null);
       document.getElementById("omnibox-input").value = "";
-      document.getElementById("omni-secure").textContent = "🔒";
+      document.getElementById("omni-secure").innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
       if (push) pushNav("home");
     }
 
@@ -1338,15 +1393,15 @@
       player.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1`;
       const tabTitle = title ? title : "YouTube Video";
       document.getElementById("tab-" + activeTabId).querySelector("span:not(.tab-favicon)").textContent = tabTitle;
-      setTabIcon(activeTabId, avatar || "▶");
+      setTabIcon(activeTabId, avatar || null);
       document.getElementById("omnibox-input").value = `https://www.youtube.com/watch?v=${videoId}`;
-      document.getElementById("omni-secure").textContent = "🔒";
+      document.getElementById("omni-secure").innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
       if (push) pushNav("video", videoId);
     }
 
     function getBrowseIcon(channels, title) {
-      if (!channels || channels.length === 0) return "▶";
-      if (channels[0]?.isSearch) return "▶";
+      if (!channels || channels.length === 0) return null;
+      if (channels[0]?.isSearch) return null;
       if (channels.length === 1) {
         if (channels[0].avatar) return channels[0].avatar;
         const known = defaultChannels.find(c => c.id === channels[0].id || c.url === channels[0].url);
@@ -1359,7 +1414,7 @@
         const known = defaultChannels.find(c => c.id === ch.id || c.url === ch.url);
         if (known?.avatar) return known.avatar;
       }
-      return "▶";
+      return null;
     }
 
     async function openBrowse(e, customChannels, title, push=true) {
@@ -1387,7 +1442,7 @@
         document.getElementById("tab-" + activeTabId).querySelector("span:not(.tab-favicon)").textContent = t.currentBrowseTitle;
         setTabIcon(activeTabId, getBrowseIcon(channelsToLoad, t.currentBrowseTitle));
         syncOmnibox();
-        document.getElementById("omni-secure").textContent = "🔒";
+        document.getElementById("omni-secure").innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
 
         channelsToLoad.forEach(ch => {
           const section = document.createElement("section");
@@ -1414,7 +1469,7 @@
       document.getElementById("tab-" + activeTabId).querySelector("span:not(.tab-favicon)").textContent = t.currentBrowseTitle;
       setTabIcon(activeTabId, getBrowseIcon(t.currentChannels, t.currentBrowseTitle));
       syncOmnibox();
-      document.getElementById("omni-secure").textContent = "🔒";
+      document.getElementById("omni-secure").innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
 
       t.currentChannels.forEach(ch => {
         const section = document.createElement("section");
@@ -1909,6 +1964,53 @@
       t.textContent = msg;
       t.classList.add("show");
       setTimeout(() => t.classList.remove("show"), 2200);
+    }
+
+    async function downloadCurrentVideo() {
+      const t = tabs[activeTabId];
+      if (!t || !t.currentVideoId) {
+        // Only works when a video is currently playing in the tab
+        return;
+      }
+
+      const videoId = t.currentVideoId;
+      const title = (t.currentVideoTitle || videoId).replace(/[\\/:*?"<>|]/g, "").trim() || videoId;
+      toast("Preparing Download…");
+
+      try {
+        const res = await fetch("https://gendownload.com/api/extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${videoId}` })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data.formats || !Array.isArray(data.formats)) throw new Error("No formats returned");
+
+        // Prefer exact 720p video, then any 720-ish, then best available video
+        let format = data.formats.find(f => f.type === "video" && f.label === "720p")
+          || data.formats.find(f => f.type === "video" && /720/.test(String(f.label)))
+          || data.formats.find(f => f.type === "video");
+
+        if (!format || !format.url) throw new Error("No suitable video format");
+
+        // Trigger browser download
+        const a = document.createElement("a");
+        a.href = format.url;
+        a.download = `${title}.mp4`;
+        a.rel = "noopener";
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => a.remove(), 1500);
+        toast(`Video Downloaded (${format.label || "720p"})`);
+      } catch (err) {
+        console.error("Download error:", err);
+        // Fallback: open a privacy-friendly downloader pre-filled with the video
+        toast("Direct download failed — opening alternative…");
+        const fallbackUrl = `https://cobalt.tools/?u=${encodeURIComponent("https://www.youtube.com/watch?v=" + videoId)}`;
+        window.open(fallbackUrl, "_blank", "noopener");
+      }
     }
 
     const ctxMenu = document.getElementById("context-menu");
