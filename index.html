@@ -2059,7 +2059,6 @@ var _devBuildVer = "3.0.1";
       const url = new URL(req.url);
       if (url.protocol === 'chrome-extension:' || url.protocol === 'data:' || url.protocol === 'blob:') return;
 
-      // Skip iframe game hosts – only cache main-page assets
       const path = url.pathname.toLowerCase();
       if (
         path.includes('/core/') ||
@@ -2079,10 +2078,8 @@ var _devBuildVer = "3.0.1";
 
       event.respondWith(
         caches.open(CACHE_NAME).then(async cache => {
-          // ignoreSearch: true so ?_v= tokens still hit the cached file
           let cached = await cache.match(req, { ignoreSearch: true });
           if (!cached) {
-            // Also try pathname-only match (relative vs absolute key mismatch)
             try {
               const keys = await cache.keys();
               const path = url.pathname;
@@ -2097,7 +2094,6 @@ var _devBuildVer = "3.0.1";
             } catch (e) {}
           }
           if (cached) {
-            // Background revalidate only when not a huge media file mid-play
             const ct = (cached.headers && cached.headers.get('content-type')) || '';
             const isMedia = /video|audio|image\//.test(ct) || /\.(mp4|webm|mov|png|jpe?g|gif|webp)(\?|$)/i.test(url.pathname);
             if (!isMedia) {
@@ -3230,7 +3226,6 @@ var wallpaperRegistry = {
 
 var sysConfig = JSON.parse(localStorage.getItem('cine_sys_config')) || {};
 if(sysConfig.optBg === undefined) sysConfig.optBg = false;
-if(sysConfig.shortBoot === undefined) sysConfig.shortBoot = false;
 if(sysConfig.wpLoop === undefined) sysConfig.wpLoop = false;
 if(sysConfig.idleLock === undefined) sysConfig.idleLock = false; 
 if(!sysConfig.homeWallpaper) sysConfig.homeWallpaper = 'Windows';
@@ -4272,9 +4267,6 @@ function openWindow(id) {
                         <label class="switch"><input type="checkbox" id="chk-bg" onchange="window.parent.updateSysSetting('optBg',this.checked)"><span class="slider"></span></label>
                     </div>
                     <div class="card">
-                        <div class="info"><i class="fas fa-bolt"></i><div class="txt"><b>Fast Boot</b><small>Skips the startup sequence</small></div></div>
-                        <label class="switch"><input type="checkbox" id="chk-boot" onchange="window.parent.updateSysSetting('shortBoot',this.checked)"><span class="slider"></span></label>
-                    </div>
                     <div class="card">
                         <div class="info"><i class="fas fa-lock"></i><div class="txt"><b>Idle Lock Screen</b><small>Locks system after 3 minutes of inactivity</small></div></div>
                         <label class="switch"><input type="checkbox" id="chk-idle" onchange="window.parent.updateSysSetting('idleLock',this.checked)"><span class="slider"></span></label>
@@ -4282,7 +4274,6 @@ function openWindow(id) {
                     <script>
                         var prefs = window.parent.sysConfig;
                         document.getElementById('chk-bg').checked = !!prefs.optBg;
-                        document.getElementById('chk-boot').checked = !!prefs.shortBoot;
                         document.getElementById('chk-idle').checked = !!prefs.idleLock;
                     <\/script>
                 
@@ -4506,7 +4497,6 @@ function openWindow(id) {
   </div>
 <script>
 (function() {
-  // WAN: STUN so peers behind NATs can find each other (slower ICE)
   const PEER_OPTS_WAN = {
     debug: 0,
     config: {
@@ -4521,7 +4511,6 @@ function openWindow(id) {
       rtcpMuxPolicy: 'require'
     }
   };
-  // Same Wi‑Fi / LAN: host candidates only — no STUN wait → much faster connect
   const PEER_OPTS_LAN = {
     debug: 0,
     config: {
@@ -4550,9 +4539,6 @@ function openWindow(id) {
   video.muted = true;
   try { video.disablePictureInPicture = true; } catch (e) {}
 
-  // Quality tiers: highest usable quality with minimal delay
-  // scale 1 = full res, higher = lower res; bitrate in bps
-  // WAN-oriented tiers (internet / higher RTT)
   const QUALITY_TIERS = [
     { name: 'Ultra',  scale: 1,   maxBitrate: 10000000, maxFramerate: 30 },
     { name: 'High',   scale: 1,   maxBitrate: 6000000,  maxFramerate: 30 },
@@ -4560,7 +4546,6 @@ function openWindow(id) {
     { name: 'Low',    scale: 2,   maxBitrate: 1800000,  maxFramerate: 20 },
     { name: 'Min',    scale: 3,   maxBitrate: 800000,   maxFramerate: 15 }
   ];
-  // Same Wi‑Fi / LAN: prioritize low delay over max pixels
   const LAN_QUALITY_TIERS = [
     { name: 'LAN Ultra',  scale: 1,    maxBitrate: 12000000, maxFramerate: 60 },
     { name: 'LAN High',   scale: 1,    maxBitrate: 8000000,  maxFramerate: 45 },
@@ -4578,7 +4563,6 @@ function openWindow(id) {
   let lastClickKey = '';
   let lastClickEl = null;
 
-  // Prefer lowest latency on the playout side
   function tuneReceiver(pc) {
     if (!pc) return;
     try {
@@ -4603,7 +4587,6 @@ function openWindow(id) {
     try {
       pc.getSenders().forEach(function(sender) {
         if (!sender.track || sender.track.kind !== 'video') return;
-        // detail = sharp UI; motion = lower latency bias on LAN
         try { sender.track.contentHint = isLanPath ? 'motion' : 'detail'; } catch (e) {}
         const params = sender.getParameters();
         if (!params.encodings || !params.encodings.length) params.encodings = [{}];
@@ -4659,7 +4642,6 @@ function openWindow(id) {
               const ms = s.currentRoundTripTime * 1000;
               if (rtt == null || ms < rtt) rtt = ms;
             }
-            // local/host candidate ≈ same LAN / Wi‑Fi
             if (s.localCandidateId) {
               const local = report.get(s.localCandidateId);
               if (local && (local.candidateType === 'host' || local.candidateType === 'local')) hostPair = true;
@@ -4674,7 +4656,6 @@ function openWindow(id) {
           if (typeof remoteInbound.packetsLost === 'number') loss = remoteInbound.packetsLost;
         }
 
-        // Detect same Wi‑Fi / LAN: host candidate or very low RTT
         const lanNow = hostPair || (rtt != null && rtt < 25);
         if (lanNow !== isLanPath) {
           isLanPath = lanNow;
@@ -4693,7 +4674,6 @@ function openWindow(id) {
 
         const tiers = currentTiers();
         let next = qualityIdx;
-        // Tighter thresholds on LAN (expect low delay); looser on WAN
         const highRtt = rtt != null && rtt > (isLanPath ? 40 : 120);
         const veryHighRtt = rtt != null && rtt > (isLanPath ? 80 : 220);
         const packetLoss = lossDelta >= (isLanPath ? 2 : 4);
@@ -4730,7 +4710,6 @@ function openWindow(id) {
     requestAnimationFrame(function() { fitViewportToStream(); });
   }
 
-  // True browser fullscreen (entire display), not just the app window
   async function toggleFullscreen() {
     const wrap = document.getElementById('viewportWrap') || stage;
     const doc = document;
@@ -4745,7 +4724,6 @@ function openWindow(id) {
         else if (doc.msExitFullscreen) doc.msExitFullscreen();
       }
     } catch (e) {
-      // Fallback: CSS-only expand inside the Remote Desktop window
       stage.classList.toggle('fs');
       updateFsIcon(stage.classList.contains('fs'));
       toast('Browser blocked fullscreen — expanded in-window');
@@ -4817,7 +4795,6 @@ function openWindow(id) {
     showSec('home');
   }
 
-  // Map normalized 0–1 (of captured frame) → host viewport CSS pixels
   function hostPoint(nx, ny) {
     const p = window.parent;
     const x = Math.max(0, Math.min(1, nx)) * p.innerWidth;
@@ -4825,14 +4802,12 @@ function openWindow(id) {
     return { x: x, y: y };
   }
 
-  // Dig into same-origin iframes so remote control reaches app content
   function deepTarget(rootWin, clientX, clientY) {
     let win = rootWin;
     let doc = win.document;
     let x = clientX;
     let y = clientY;
     let el = doc.elementFromPoint(x, y);
-    // Walk into nested iframes (same-origin only)
     for (let depth = 0; depth < 8 && el; depth++) {
       const tag = (el.tagName || '').toLowerCase();
       if (tag !== 'iframe' && tag !== 'frame') break;
@@ -4840,10 +4815,8 @@ function openWindow(id) {
       try { childDoc = el.contentDocument; } catch (e) { childDoc = null; }
       if (!childDoc) break; // cross-origin — stop at iframe element
       const rect = el.getBoundingClientRect();
-      // coords relative to iframe viewport
       x = x - rect.left;
       y = y - rect.top;
-      // account for iframe border
       try {
         const cs = win.getComputedStyle(el);
         x -= parseFloat(cs.borderLeftWidth) || 0;
@@ -4893,12 +4866,10 @@ function openWindow(id) {
     return t;
   }
 
-  // Single left-click handler: debounce + dblclick + desktop icon open
   function handleRemoteClick(data) {
     const p = window.parent;
     const now = Date.now();
     const key = (Math.round(data.x * 100) + ',' + Math.round(data.y * 100));
-    // Ignore duplicate click packets within 80ms (double-send glitch)
     if (now - lastClickAt < 80 && key === lastClickKey) return;
 
     const isDouble = (now - lastClickAt < 350 && key === lastClickKey);
@@ -4914,7 +4885,6 @@ function openWindow(id) {
       fireMouse('dblclick', payload);
     }
 
-    // Desktop icons only open on dblclick in this OS — make remote single-click work too
     try {
       let node = t.el;
       while (node && node !== p.document.body) {
@@ -4925,7 +4895,6 @@ function openWindow(id) {
             appId = p.desktopLayout[idx].id;
           }
           if (appId && typeof p.toggleApp === 'function') {
-            // Single remote click opens (normal desktop needs double-click)
             if (!isDouble) p.toggleApp(appId);
           }
           break;
@@ -4937,7 +4906,6 @@ function openWindow(id) {
     lastClickEl = t.el;
   }
 
-  // ——— HOST: apply remote input on parent page (this website only) ———
   function applyRemoteEvent(data) {
     try {
       const p = window.parent;
@@ -4947,18 +4915,15 @@ function openWindow(id) {
       if (type === 'mm') {
         fireMouse('mousemove', data);
       } else if (type === 'md') {
-        // Only mousedown — do not open apps here (avoids drag/double-toggle glitches)
         const t = fireMouse('mousedown', data);
         try { if (t.el && t.el.focus) t.el.focus(); } catch (e) {}
       } else if (type === 'mu') {
         fireMouse('mouseup', data);
         if (data.b === 2) fireMouse('contextmenu', data);
-        // Synthesize ONE click on mouseup (guest no longer also sends click)
         if ((data.b || 0) === 0) {
           handleRemoteClick(data);
         }
       } else if (type === 'click') {
-        // Back-compat if an older guest still sends click — debounce against mu
         if ((data.b || 0) === 0) handleRemoteClick(data);
         else if (data.b === 2) fireMouse('contextmenu', data);
         else if (data.b === 1) fireMouse('auxclick', data);
@@ -5034,7 +4999,6 @@ function openWindow(id) {
           metaKey: !!data.meta,
           repeat: !!data.rep
         };
-        // Always deliver KeyboardEvent so Ctrl+A / Ctrl+Z / Ctrl+M / etc. reach the app
         target.dispatchEvent(new KeyboardEvent(map[type], kopts));
 
         if (type === 'kd') {
@@ -5069,7 +5033,6 @@ function openWindow(id) {
                 }
               }
             } else if (!hasMod && data.k && data.k.length === 1) {
-              // Printable character — insert once (no separate 'key' event)
               const start = active.selectionStart != null ? active.selectionStart : active.value.length;
               const end = active.selectionEnd != null ? active.selectionEnd : start;
               active.value = active.value.slice(0, start) + data.k + active.value.slice(end);
@@ -5081,7 +5044,6 @@ function openWindow(id) {
           }
         }
       } else if (type === 'clipboard-req') {
-        // Viewer pressed Ctrl+C — return selection so guest can put it on their clipboard
         let text = '';
         try {
           let targetDoc = p.document;
@@ -5109,7 +5071,6 @@ function openWindow(id) {
           if (conn && conn.open) conn.send({ t: 'clipboard', text: text || '' });
         } catch (e) {}
       } else if (type === 'paste') {
-        // Viewer pressed Ctrl+V — insert text from their clipboard
         const pasteText = (data.text != null) ? String(data.text) : '';
         try {
           let targetDoc = p.document;
@@ -5138,7 +5099,6 @@ function openWindow(id) {
     } catch (err) { /* cross-origin or blocked */ }
   }
 
-  // Size the white border tightly around the actual stream aspect ratio
   function fitViewportToStream() {
     const wrap = document.getElementById('viewportWrap');
     if (!wrap || !video) return;
@@ -5188,7 +5148,6 @@ function openWindow(id) {
     conn.on('error', function() { toast('Data channel error'); });
   }
 
-  // ——— HOST flow ———
   document.getElementById('btnHost').onclick = async function() {
     role = 'host';
     roomId = genCode();
@@ -5226,7 +5185,6 @@ function openWindow(id) {
 
   async function startHostShare() {
     try {
-      // Capture at native tab resolution — do NOT downscale at source
       localStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           displaySurface: 'browser',
@@ -5243,14 +5201,11 @@ function openWindow(id) {
     }
     const track = localStream.getVideoTracks()[0];
     track.onended = function() { toast('Share ended'); cleanup(); };
-    // detail = sharp text/UI (better than motion for a desktop)
     try { track.contentHint = 'detail'; } catch (e) {}
-    // Only nudge framerate — leave width/height at capture native size
     try {
       await track.applyConstraints({ frameRate: { ideal: 30, max: 60 } });
     } catch (e) {}
 
-    // Host does NOT show own stream — only status
     video.srcObject = null;
     video.style.display = 'none';
     placeholder.style.display = '';
@@ -5260,7 +5215,6 @@ function openWindow(id) {
       call = peer.call(conn.peer, localStream);
       call.on('stream', function() {});
       call.on('close', function() { stopAutoQuality(); });
-      // Apply quality + start adaptive controller once PC exists
       const tryTune = function() {
         if (call && call.peerConnection) {
           tuneSender(call.peerConnection);
@@ -5277,8 +5231,6 @@ function openWindow(id) {
     }
   }
 
-  // When data connection opens from guest, guest will also open a connection TO host; host already handles peer.on('connection')
-  // Guest side will call host after connecting.
 
   document.getElementById('btnCopy').onclick = function() {
     const code = document.getElementById('roomCode').textContent;
@@ -5286,7 +5238,6 @@ function openWindow(id) {
   };
   document.getElementById('btnStopHost').onclick = cleanup;
 
-  // ——— GUEST flow ———
   document.getElementById('btnJoin').onclick = function() {
     const code = (document.getElementById('joinCode').value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (code.length < 4) { toast('Enter a valid room code'); return; }
@@ -5297,7 +5248,6 @@ function openWindow(id) {
     setStatus('wait', lan ? 'Connecting (LAN)…' : 'Connecting…');
     peer = new Peer(getPeerOpts());
     peer.on('open', function() {
-      // Data channel to host — serialization binary is slightly leaner
       const c = peer.connect('sos-' + roomId, { reliable: true, serialization: 'binary' });
       c.on('open', function() {
         if (connectWatchdog) { clearTimeout(connectWatchdog); connectWatchdog = null; }
@@ -5309,7 +5259,6 @@ function openWindow(id) {
         toast(lan ? 'LAN connect failed — uncheck Same Wi‑Fi if not on this network' : 'Could not reach host');
         cleanup();
       });
-      // If LAN ICE can't pair (different networks), nudge user quickly
       if (lan) {
         connectWatchdog = setTimeout(function() {
           if (!conn || !conn.open) {
@@ -5328,7 +5277,6 @@ function openWindow(id) {
       setTimeout(tryTuneRx, 200);
       setTimeout(tryTuneRx, 800);
       incoming.on('stream', function(stream) {
-        // Attach ASAP; play without waiting for full buffer
         video.srcObject = stream;
         video.muted = true;
         video.playsInline = true;
@@ -5339,7 +5287,6 @@ function openWindow(id) {
         setStatus('live', 'Streaming');
         enableInputCapture();
         tryTuneRx();
-        // Fit border to stream once metadata is known
         const refit = function() { fitViewportToStream(); };
         video.addEventListener('loadedmetadata', refit);
         video.addEventListener('resize', refit);
@@ -5359,8 +5306,6 @@ function openWindow(id) {
   };
   document.getElementById('btnLeave').onclick = cleanup;
 
-  // Map pointer coords to the actual video *content* (handles letterbox/pillarbox
-  // from object-fit: contain when host/viewer aspect ratios or viewport sizes differ)
   function getVideoContentRect(videoEl) {
     const rect = videoEl.getBoundingClientRect();
     const vw = videoEl.videoWidth;
@@ -5372,13 +5317,11 @@ function openWindow(id) {
     const elementRatio = rect.width / rect.height;
     let contentWidth, contentHeight, offsetX, offsetY;
     if (elementRatio > videoRatio) {
-      // Pillarbox: black bars on left/right
       contentHeight = rect.height;
       contentWidth = contentHeight * videoRatio;
       offsetX = (rect.width - contentWidth) / 2;
       offsetY = 0;
     } else {
-      // Letterbox: black bars on top/bottom
       contentWidth = rect.width;
       contentHeight = contentWidth / videoRatio;
       offsetX = 0;
@@ -5401,9 +5344,7 @@ function openWindow(id) {
     return { x: x, y: y };
   }
 
-  // Guest sends normalized input over data channel
   function enableInputCapture() {
-    // Prevent double-binding if stream event fires more than once (was causing open/close)
     if (inputCaptureBound) return;
     inputCaptureBound = true;
 
@@ -5416,7 +5357,6 @@ function openWindow(id) {
       return { ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey };
     }
 
-    // ~60hz pointer samples via rAF for smoother remote cursor
     let pendingMove = null;
     let moveRaf = 0;
     video.addEventListener('mousemove', function(e) {
@@ -5447,11 +5387,9 @@ function openWindow(id) {
       e.stopPropagation();
       const n = normFromEvent(e);
       if (!n) return;
-      // Host synthesizes the single click from mouseup — do NOT also send 'click'
       send(Object.assign({ t: 'mu', x: n.x, y: n.y, b: e.button, detail: e.detail }, mods(e)));
     });
 
-    // Swallow local click so it never double-fires with mouseup path
     video.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
@@ -5497,7 +5435,6 @@ function openWindow(id) {
       const isCtrl = e.ctrlKey || e.metaKey;
       const key = e.key;
 
-      // Ctrl+C / Cmd+C → ask host for selection, put it on viewer's clipboard
       if (isCtrl && (key === 'c' || key === 'C') && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         send({ t: 'clipboard-req' });
@@ -5508,7 +5445,6 @@ function openWindow(id) {
         return;
       }
 
-      // Ctrl+V / Cmd+V → read viewer's clipboard and send text to host
       if (isCtrl && (key === 'v' || key === 'V') && !e.shiftKey && !e.altKey) {
         e.preventDefault();
         (async function() {
@@ -5523,7 +5459,6 @@ function openWindow(id) {
         return;
       }
 
-      // Normal keys + other Ctrl shortcuts (Ctrl+A, Ctrl+Z, Ctrl+M, etc.)
       send({
         t: 'kd',
         k: key,
@@ -5535,8 +5470,6 @@ function openWindow(id) {
         meta: e.metaKey,
         rep: e.repeat
       });
-      // Do NOT also send a separate {t:'key'} — that caused double typing.
-      // Host inserts printable characters from the keydown itself.
     }
     function onKeyUp(e) {
       if (role !== 'guest') return;
