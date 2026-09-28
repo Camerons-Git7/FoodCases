@@ -1639,17 +1639,41 @@ function applyIframeProgressToFrame(frame, appId) {
   } catch (e) { /* cross-origin */ }
 }
 
-async function saveUserDataToCloud() {
+// Prevent cloud LOAD from overwriting a change we just made locally
+var _cloudSaveInFlight = false;
+var _lastLocalEditAt = 0;
+var _saveCloudTimer = null;
+
+function markLocalEdit() {
+  _lastLocalEditAt = Date.now();
+}
+
+/** Debounced cloud save – coalesces rapid wallpaper/pin changes */
+function queueCloudSave() {
   if (!supabaseClient || !currentUser || isGuest) return;
+  markLocalEdit();
+  if (_saveCloudTimer) clearTimeout(_saveCloudTimer);
+  _saveCloudTimer = setTimeout(function() {
+    _saveCloudTimer = null;
+    saveUserDataToCloud();
+  }, 400);
+}
+
+async function saveUserDataToCloud() {
+  if (!supabaseClient || !currentUser || isGuest) {
+    console.log('[Seamless] Cloud save skipped (guest or not signed in)');
+    return;
+  }
+
+  _cloudSaveInFlight = true;
+  markLocalEdit();
 
   var mainProg = collectMainProgress();
   var iframeProg = collectIframeProgress();
-  // Merge any previously known iframe saves so we don't lose data when a game isn't open
   if (window._pendingIframeSaves) {
     for (var appId in window._pendingIframeSaves) {
       if (!iframeProg[appId]) iframeProg[appId] = window._pendingIframeSaves[appId];
       else {
-        // Prefer live iframe data, keep missing keys from previous
         for (var k in window._pendingIframeSaves[appId]) {
           if (iframeProg[appId][k] === undefined) {
             iframeProg[appId][k] = window._pendingIframeSaves[appId][k];
@@ -1660,31 +1684,66 @@ async function saveUserDataToCloud() {
   }
   window._pendingIframeSaves = iframeProg;
 
-  var gameProg = {
-    _main: mainProg,
-    _iframes: iframeProg
-  };
+  // Prefer localStorage as source of truth (always written by updateSysSetting first)
+  var sysFromLs = {};
+  try { sysFromLs = JSON.parse(localStorage.getItem('cine_sys_config') || '{}') || {}; } catch (e) {}
+  var sysPayload = (typeof sysConfig !== 'undefined' && sysConfig) ? sysConfig : sysFromLs;
+  // Merge so neither side loses keys
+  for (var sk in sysFromLs) {
+    if (sysPayload[sk] === undefined) sysPayload[sk] = sysFromLs[sk];
+  }
+
+  var unlockedFromLs = [];
+  try { unlockedFromLs = JSON.parse(localStorage.getItem('cine_unlocked_wp') || '[]') || []; } catch (e) {}
+
+  var desktopFromLs = [];
+  try { desktopFromLs = JSON.parse(localStorage.getItem('cine_desktop_v2') || '[]') || []; } catch (e) {}
 
   var payload = {
     id: currentUser.id,
-    // Wallpaper *choices* + system toggles only (no image/video cache)
-    sys_config: (typeof sysConfig !== 'undefined') ? sysConfig : {},
+    sys_config: sysPayload,
     pins: JSON.parse(localStorage.getItem('c_pins_v2') || '{}'),
-    desktop: (typeof desktopLayout !== 'undefined') ? desktopLayout : [],
-    unlocked_wp: (typeof unlockedWallpapers !== 'undefined')
+    desktop: (typeof desktopLayout !== 'undefined' && desktopLayout && desktopLayout.length)
+      ? desktopLayout
+      : desktopFromLs,
+    unlocked_wp: (typeof unlockedWallpapers !== 'undefined' && unlockedWallpapers && unlockedWallpapers.length)
       ? unlockedWallpapers
-      : (JSON.parse(localStorage.getItem('cine_unlocked_wp') || '[]') || []),
-    game_progress: gameProg,
+      : unlockedFromLs,
+    game_progress: { _main: mainProg, _iframes: iframeProg },
     updated_at: new Date().toISOString()
   };
 
-  var res = await supabaseClient.from('user_data').upsert(payload);
-  if (res.error) console.warn('[Seamless] Cloud save error:', res.error.message);
-  else console.log('[Seamless] Cloud save OK');
+  try {
+    var res = await supabaseClient
+      .from('user_data')
+      .upsert(payload, { onConflict: 'id' });
+
+    if (res.error) {
+      console.warn('[Seamless] Cloud save error:', res.error.message, res.error);
+      if (typeof showNotification === 'function') {
+        showNotification('Cloud save failed', res.error.message);
+      }
+    } else {
+      console.log('[Seamless] Cloud save OK', {
+        home: payload.sys_config && payload.sys_config.homeWallpaper,
+        lock: payload.sys_config && payload.sys_config.lockWallpaper
+      });
+    }
+  } catch (err) {
+    console.warn('[Seamless] Cloud save exception:', err);
+  }
+
+  _cloudSaveInFlight = false;
 }
 
 async function loadUserDataFromCloud() {
   if (!supabaseClient || !currentUser) return;
+
+  // Don't clobber a wallpaper/setting change we just made
+  if (_cloudSaveInFlight || (Date.now() - _lastLocalEditAt) < 2500) {
+    console.log('[Seamless] Skipping cloud load – local edit in progress');
+    return;
+  }
 
   var res = await supabaseClient
     .from('user_data')
@@ -3030,7 +3089,9 @@ if(!sysConfig.lockWallpaper) sysConfig.lockWallpaper = 'MacOS';
 window.updateSysSetting = function(key, value) {
     sysConfig[key] = value;
     localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
-    if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
+    markLocalEdit();
+    if (typeof queueCloudSave === 'function') queueCloudSave();
+    else if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
     if (key === 'optBg') {
         const bv = document.getElementById('bg-video');
         const lv = document.getElementById('lock-video');
@@ -5757,15 +5818,21 @@ function setWallpaper(k, noti=false) {
         let bV = document.getElementById('bg-video');
         let bI = document.getElementById('bg-img');
         applyMediaToElements(d.url, bV, bI, true);
-        updateSysSetting('homeWallpaper', k);
+        sysConfig.homeWallpaper = k;
     }
     
     if(window.wpMode === 'lock' || window.wpMode === 'both') {
         let lV = document.getElementById('lock-video');
         let lI = document.getElementById('lock-img');
         applyMediaToElements(d.url, lV, lI, false);
-        updateSysSetting('lockWallpaper', k);
+        sysConfig.lockWallpaper = k;
     }
+
+    // Persist once (local + cloud) after both home/lock are set
+    localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
+    markLocalEdit();
+    if (typeof queueCloudSave === 'function') queueCloudSave();
+    else if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
     
     // Ensure a stored preview exists for this wallpaper (same cache path as real media)
     if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.ensure) {
