@@ -1109,11 +1109,16 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
         <h2 class="boot-auth-title">SEAMLESS ACCOUNT</h2>
         <p class="boot-auth-desc">Sign in or create an account to continue into SEAMLESS.</p>
 
+        <form id="boot-auth-form-el" autocomplete="off" onsubmit="return false;">
         <input class="boot-auth-input" type="text" id="boot-auth-username"
-               placeholder="Username" autocomplete="username" aria-label="Username"
-               spellcheck="false" maxlength="32">
+               placeholder="Username" name="seamless_os_user" autocomplete="off"
+               autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="32"
+               inputmode="text" data-lpignore="true" data-form-type="other" aria-label="Username">
         <input class="boot-auth-input" type="password" id="boot-auth-password"
-               placeholder="Password (min 6 characters)" autocomplete="current-password" aria-label="Password">
+               placeholder="Password (min 6 characters)" name="seamless_os_pass" autocomplete="new-password"
+               autocapitalize="off" autocorrect="off" spellcheck="false"
+               data-lpignore="true" data-form-type="other" aria-label="Password">
+        </form>
 
         <button class="boot-auth-btn primary" onclick="handleBootSignIn()">Sign In</button>
         <button class="boot-auth-btn secondary" onclick="handleBootSignUp()">Create Account</button>
@@ -1396,19 +1401,30 @@ function showAuthMessage(text, isError) {
 }
 
 
+function formatUsername(raw, live) {
+  var s = String(raw || '').replace(/[^a-zA-Z0-9. ]/g, '');
+  s = s.replace(/ +/g, ' ');
+  if (!live) s = s.trim();
+  if (!s || !s.trim()) return live && s.indexOf(' ') !== -1 ? s : (s.trim() || '');
+  var trail = live && / $/.test(s) ? ' ' : '';
+  var core = s.trim();
+  if (!core) return trail;
+  return core.charAt(0).toUpperCase() + core.slice(1).toLowerCase() + trail;
+}
+
 function usernameToEmail(username) {
-  var clean = String(username || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  var clean = String(username || '').trim().toLowerCase().replace(/[^a-z0-9.]/g, '');
   if (!clean) return '';
   return clean + '@seamless.os';
 }
 
 function getDisplayUsername(user) {
   if (!user) return '';
-  if (user.user_metadata && user.user_metadata.username) return user.user_metadata.username;
+  if (user.user_metadata && user.user_metadata.username) return formatUsername(user.user_metadata.username);
   if (user.email && user.email.indexOf('@seamless.os') !== -1) {
-    return user.email.split('@')[0];
+    return formatUsername(user.email.split('@')[0]);
   }
-  return user.email || '';
+  return formatUsername(user.email || '');
 }
 
 function updateAuthUI() {
@@ -1440,9 +1456,34 @@ function setBootSessionMessage(text, isError) {
 }
 
 function getBootCredentials() {
-  var username = (document.getElementById('boot-auth-username') || {}).value || '';
-  var password = (document.getElementById('boot-auth-password') || {}).value || '';
-  return { username: username.trim(), password: password };
+  var uEl = document.getElementById('boot-auth-username');
+  var pEl = document.getElementById('boot-auth-password');
+  var username = formatUsername(uEl ? uEl.value : '');
+  if (uEl && uEl.value !== username) uEl.value = username;
+  var password = pEl ? pEl.value : '';
+  return { username: username, password: password };
+}
+
+function bindUsernameFormatting() {
+  var el = document.getElementById('boot-auth-username');
+  if (!el || el._fmtBound) return;
+  el._fmtBound = true;
+  el.addEventListener('input', function() {
+    var start = el.selectionStart;
+    var end = el.selectionEnd;
+    var before = el.value;
+    var next = formatUsername(before, true);
+    if (before !== next) {
+      el.value = next;
+      try {
+        var delta = next.length - before.length;
+        el.setSelectionRange(Math.max(0, start + delta), Math.max(0, end + delta));
+      } catch (e) {}
+    }
+  });
+  el.addEventListener('blur', function() {
+    el.value = formatUsername(el.value, false);
+  });
 }
 
 async function handleBootSignUp() {
@@ -1463,6 +1504,11 @@ async function handleBootSignUp() {
     return;
   }
 
+  if (!/^[A-Za-z0-9. ]+$/.test(creds.username)) {
+    showAuthMessage('Username: letters, numbers, periods, spaces only', true);
+    return;
+  }
+
   if (creds.password.length < 6) {
     showAuthMessage('Password must be at least 6 characters', true);
     return;
@@ -1470,7 +1516,7 @@ async function handleBootSignUp() {
 
   var internalEmail = usernameToEmail(creds.username);
   if (!internalEmail) {
-    showAuthMessage('Username can only contain letters, numbers, dots, underscores, hyphens', true);
+    showAuthMessage('Username: letters, numbers, periods, spaces only', true);
     return;
   }
 
@@ -1593,6 +1639,8 @@ async function handleContinueAsGuest() {
 }
 
 
+
+bindUsernameFormatting();
 var _CLOUD_STRUCTURED_KEYS = {
   'cine_sys_config': 1,
   'c_pins_v2': 1,
@@ -5521,11 +5569,11 @@ function openWindow(id) {
   </p>
 
   <div id="auth-form">
-    <input type="email" id="auth-email" placeholder="Email address" autocomplete="email"
+    <input type="email" id="auth-email" placeholder="Email address" autocomplete="off"
       style="width:100%; padding:13px 14px; margin-bottom:12px; background:#1a1a1a;
              border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
     
-    <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="current-password"
+    <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="new-password"
       style="width:100%; padding:13px 14px; margin-bottom:18px; background:#1a1a1a;
              border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
 
@@ -6705,11 +6753,11 @@ requestAnimationFrame(chkFps);
   </p>
 
   <div id="auth-form">
-    <input type="email" id="auth-email" placeholder="Email address" autocomplete="email"
+    <input type="email" id="auth-email" placeholder="Email address" autocomplete="off"
       style="width:100%; padding:13px 14px; margin-bottom:12px; background:#1a1a1a;
              border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
     
-    <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="current-password"
+    <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="new-password"
       style="width:100%; padding:13px 14px; margin-bottom:18px; background:#1a1a1a;
              border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
 
