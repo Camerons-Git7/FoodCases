@@ -3332,6 +3332,33 @@ function waitForWallpapersReady(timeoutMs) {
     });
 }
 
+/**
+ * Build readable Cache Storage entries for the CURRENT home + lock wallpapers.
+ * Called on page load (loading screen), NOT when the user picks a wallpaper in-session.
+ * Next visit can then play via blob: URL instantly.
+ */
+function warmSelectedWallpapersCache() {
+    if (typeof window.seamlessCacheAdd !== 'function') return;
+    try {
+        var urls = [];
+        if (typeof wallpaperRegistry !== 'undefined' && typeof sysConfig !== 'undefined') {
+            if (sysConfig.homeWallpaper && wallpaperRegistry[sysConfig.homeWallpaper]) {
+                urls.push(wallpaperRegistry[sysConfig.homeWallpaper].url);
+            }
+            if (sysConfig.lockWallpaper && wallpaperRegistry[sysConfig.lockWallpaper]) {
+                urls.push(wallpaperRegistry[sysConfig.lockWallpaper].url);
+            }
+        }
+        // de-dupe
+        var seen = {};
+        for (var i = 0; i < urls.length; i++) {
+            if (!urls[i] || seen[urls[i]]) continue;
+            seen[urls[i]] = 1;
+            window.seamlessCacheAdd(urls[i]);
+        }
+    } catch (e) {}
+}
+
 function withTimeout(promise, ms) {
     return Promise.race([
         Promise.resolve(promise).catch(function() {}),
@@ -3343,14 +3370,18 @@ document.addEventListener("DOMContentLoaded", async function() {
     var minShowMs = 500;
     var startedAt = Date.now();
 
-    // Start wallpaper from LOCAL choice immediately (cache blob or network)
+    // Start wallpaper from LOCAL choice immediately (blob cache or network — no cache write)
     var homeBefore = sysConfig && sysConfig.homeWallpaper;
     var lockBefore = sysConfig && sysConfig.lockWallpaper;
     try {
         if (typeof initWallpapers === 'function') initWallpapers();
     } catch (e) {}
 
-    // Auth + cloud CHOICE (which wallpaper) — does not wait for media bytes itself
+    // On this visit's loading screen: build usable cache for the selected wallpapers
+    // so the *next* visit can switch instantly via blob. Not done when picking in-session.
+    try { warmSelectedWallpapersCache(); } catch (e) {}
+
+    // Auth + cloud CHOICE (which wallpaper)
     try {
         if (typeof supabaseClient !== 'undefined' && supabaseClient) {
             var sessionResult = await withTimeout(supabaseClient.auth.getSession(), 2500);
@@ -3364,6 +3395,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                 }
                 if (sysConfig.homeWallpaper !== homeBefore || sysConfig.lockWallpaper !== lockBefore) {
                     try { initWallpapers(); } catch (e) {}
+                    try { warmSelectedWallpapersCache(); } catch (e) {}
                 }
             } else {
                 currentUser = null;
@@ -3382,11 +3414,12 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
     try { loadDesktop(); } catch (e) {}
 
-    // FIRST LOAD: keep SEAMLESS loading screen until a wallpaper frame is ready
-    // (cache hit = almost instant; network = stays up instead of showing black video)
+    // Keep loading screen until a frame is ready (no black wallpaper flash)
     try {
         await waitForWallpapersReady(35000);
     } catch (e) {}
+    // Ensure cache warm finished a readable copy while loading was up
+    try { warmSelectedWallpapersCache(); } catch (e) {}
 
     var elapsed = Date.now() - startedAt;
     if (elapsed < minShowMs) {
@@ -3797,6 +3830,8 @@ window.unlockSystem = function() {
 function applyMediaToElements(url, vidEl, imgEl, isBg) {
     if (!url || !vidEl || !imgEl) return;
 
+    // Play from blob cache if present, else network. Do NOT write cache here —
+    // usable entries are built on the next visit during the loading screen.
     var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
     var networkUrl = url;
     if (force) {
@@ -3806,8 +3841,6 @@ function applyMediaToElements(url, vidEl, imgEl, isBg) {
         if (typeof window.seamlessCacheAdd === 'function') {
             window.seamlessCacheAdd(url, { force: true, token: force.token });
         }
-    } else if (typeof window.seamlessCacheAdd === 'function') {
-        window.seamlessCacheAdd(url);
     }
 
     var basePath = String(url).split('?')[0].split('#')[0];
