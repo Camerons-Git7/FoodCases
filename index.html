@@ -1766,7 +1766,7 @@ function queueCloudSave() {
   _saveCloudTimer = setTimeout(function() {
     _saveCloudTimer = null;
     saveUserDataToCloud();
-  }, 400);
+  }, 2000);
 }
 
 (function watchLocalProgressChanges() {
@@ -1774,8 +1774,8 @@ function queueCloudSave() {
     var originalSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function(key, value) {
       var result = originalSetItem.call(this, key, value);
-      if (key && currentUser && !isGuest && !isBlockedProgressKey(key) && typeof markLocalEdit === 'function') {
-        markLocalEdit();
+      if (key && currentUser && !isGuest && !isBlockedProgressKey(key) && typeof queueCloudSave === 'function') {
+        queueCloudSave();
       }
       return result;
     };
