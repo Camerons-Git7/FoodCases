@@ -11,17 +11,12 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-@font-face {
-    font-family: 'Azonix';
-    src: url('https://db.onlinewebfonts.com/t/04e1f7fb2b58d60eb24df50a9807fa36.woff2') format('woff2');
-}
-
 :root {
     --glass-bg: rgba(20, 20, 20, 0.6);
     --glass-border: #333;
     --accent-main: #fff;
     --font-main: 'Rajdhani', sans-serif;
-    --font-header: 'Azonix', 'Orbitron', sans-serif;
+    --font-header: 'Orbitron', sans-serif;
     --z-bg: 0;
     --z-snow: 1;
     --z-desktop: 10;
@@ -192,7 +187,7 @@ body {
 .boot-auth-btn.primary:hover { box-shadow: 0 0 24px rgba(255,255,255,0.2); }
 .boot-auth-btn.secondary:hover { background: #2b2b2b; border-color: #666; }
 
-#boot-auth-message {
+#boot-auth-message, #boot-session-message {
     min-height: 18px;
     margin-top: 14px;
     text-align: center;
@@ -208,13 +203,6 @@ body {
     margin: 10px 0 18px;
     word-break: break-all;
 }
-
-.boot-session-actions {
-    display: flex;
-    gap: 9px;
-}
-
-.boot-session-actions .boot-auth-btn { flex: 1; }
 
 .boot__hint {
     margin-top: 18px;
@@ -1339,7 +1327,7 @@ const supabaseClient = (typeof window.supabase !== 'undefined')
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
-let currentUser = null;   // null = Guest
+let currentUser = null;
 let isGuest = true;
 
 function showAuthMessage(text, isError) {
@@ -1402,28 +1390,32 @@ async function handleBootSignUp() {
 
   showAuthMessage('Creating account…');
 
-  var res = await supabaseClient.auth.signUp({
-    email: creds.email,
-    password: creds.password,
-    options: { emailRedirectTo: window.location.origin }
-  });
+  try {
+    var res = await supabaseClient.auth.signUp({
+      email: creds.email,
+      password: creds.password,
+      options: { emailRedirectTo: window.location.origin }
+    });
 
-  if (res.error) {
-    showAuthMessage(res.error.message, true);
-    return;
+    if (res.error) {
+      showAuthMessage(res.error.message, true);
+      return;
+    }
+
+    if (res.data && res.data.session && res.data.user) {
+      currentUser = res.data.user;
+      isGuest = false;
+      updateAuthUI();
+      showAuthMessage('');
+      await loadUserDataFromCloud();
+      startBootSequence();
+      return;
+    }
+
+    showAuthMessage('Account created. Check your email to confirm it, then sign in here.');
+  } catch (err) {
+    showAuthMessage(err && err.message ? err.message : 'Could not create account', true);
   }
-
-  if (res.data && res.data.session && res.data.user) {
-    currentUser = res.data.user;
-    isGuest = false;
-    updateAuthUI();
-    showAuthMessage('');
-    await loadUserDataFromCloud();
-    startBootSequence();
-    return;
-  }
-
-  showAuthMessage('Account created. Check your email to confirm it, then sign in here.');
 }
 
 async function handleBootSignIn() {
@@ -1441,22 +1433,26 @@ async function handleBootSignIn() {
 
   showAuthMessage('Signing in…');
 
-  var res = await supabaseClient.auth.signInWithPassword({
-    email: creds.email,
-    password: creds.password
-  });
+  try {
+    var res = await supabaseClient.auth.signInWithPassword({
+      email: creds.email,
+      password: creds.password
+    });
 
-  if (res.error) {
-    showAuthMessage(res.error.message, true);
-    return;
+    if (res.error) {
+      showAuthMessage(res.error.message, true);
+      return;
+    }
+
+    currentUser = res.data.user;
+    isGuest = false;
+    updateAuthUI();
+    showAuthMessage('');
+    await loadUserDataFromCloud();
+    startBootSequence();
+  } catch (err) {
+    showAuthMessage(err && err.message ? err.message : 'Could not sign in', true);
   }
-
-  currentUser = res.data.user;
-  isGuest = false;
-  updateAuthUI();
-  showAuthMessage('');
-  await loadUserDataFromCloud();
-  startBootSequence();
 }
 
 function handleBootSignOut() {
@@ -1472,18 +1468,18 @@ function handleBootSignOut() {
 }
 
 function openBootAccountPanel() {
-  // The account entry point is now the boot screen. Reusing the same screen
-  // avoids the old standalone sign-in/sign-up modal.
-  if (bootStarted) {
-    location.reload();
+  if (!bootStarted) {
+    var layer = document.getElementById('boot-layer');
+    if (layer) {
+      layer.style.display = 'block';
+      layer.style.opacity = '1';
+    }
+    updateAuthUI();
     return;
   }
 
-  var layer = document.getElementById('boot-layer');
-  if (layer) {
-    layer.style.display = 'block';
-    layer.style.opacity = '1';
-  }
+  // Restarting is safer than exposing the old standalone auth modal.
+  location.reload();
 }
 
 async function saveUserDataToCloud() {
@@ -1556,7 +1552,7 @@ async function loadUserDataFromCloud() {
   }
 }
 
-// Restore the Supabase session on load. The session now controls the boot screen.
+// Restore session on load.
 if (supabaseClient) {
   supabaseClient.auth.getSession().then(function(result) {
     var session = result.data && result.data.session;
@@ -1565,12 +1561,14 @@ if (supabaseClient) {
       currentUser = session.user;
       isGuest = false;
       updateAuthUI();
-      loadUserDataFromCloud();
     } else {
       currentUser = null;
       isGuest = true;
       updateAuthUI();
     }
+  }).catch(function(err) {
+    console.warn('[Seamless] Session restore error:', err);
+    updateAuthUI();
   });
 
   supabaseClient.auth.onAuthStateChange(function(event, session) {
@@ -3154,30 +3152,31 @@ function positionContextMenu(menu, e) {
 }
 
 function startBootSequence() {
+    if (bootStarted) return;
+
+    bootStarted = true;
+
     let bootLayer = document.getElementById('boot-layer');
     let cb = document.getElementById('boot-content');
     let bv = document.getElementById('boot-video');
-    
-    // Hide the static boot content
+
     cb.style.display = 'none';
     bv.style.display = 'block';
     bv.muted = false;
     bv.volume = 1.0;
-    
-    // === START HIDING CURSOR HERE ===
+
     bootLayer.classList.add('boot-animation');
-    
-    // Cache the boot videos so the next launch is instant
+
     if (typeof window.seamlessCacheAdd === 'function') {
         window.seamlessCacheAdd("cine-os/Videos/Boot.mp4");
         window.seamlessCacheAdd("cine-os/Videos/QuickBoot.mp4");
     }
-    
+
     if(sysConfig.shortBoot) {
         bv.src = "cine-os/Videos/QuickBoot.mp4";
         bv.load();
     }
-    
+
     let p = bv.play();
     if(p !== undefined) {
         p.catch(function() {
@@ -3185,7 +3184,7 @@ function startBootSequence() {
             bv.play();
         });
     }
-    
+
     bv.onended = function() {
         if(bootActive) skipBootSequence();
     };
@@ -3622,5 +3621,2503 @@ function openWindow(id) {
                         document.getElementById('chk-boot').checked = !!prefs.shortBoot;
                         document.getElementById('chk-idle').checked = !!prefs.idleLock;
                     <\/script>
+                
+
+
+</body>
+                </html>`;
+                f.srcdoc = html;
+            }
+        }
+        if(dat.internal && id === 'seamlessremote') {
+            let f = document.getElementById('frame-' + id);
+            if(f) {
+                let html = `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\/script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+  body { background: #0a0a0a; color: #fff; font-family: 'Rajdhani', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  .hdr { padding: 16px 20px; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; background: #111; flex-shrink: 0; }
+  .hdr h1 { font-family: 'Orbitron', sans-serif; font-size: 15px; letter-spacing: 2px; font-weight: 700; }
+  .status { font-size: 12px; font-weight: 600; color: #888; display: flex; align-items: center; gap: 6px; }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+  .status.live .dot { background: #28c840; box-shadow: 0 0 8px #28c840; }
+  .status.wait .dot { background: #febc2e; }
+  .status.err .dot { background: #ff5f57; }
+  .main { flex: 1; display: flex; overflow: hidden; }
+  .panel { width: 280px; background: #0f0f0f; border-right: 1px solid #222; padding: 18px; display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; overflow-y: auto; }
+  .panel h3 { font-size: 11px; letter-spacing: 1.5px; color: #666; font-weight: 700; text-transform: uppercase; }
+  .btn { width: 100%; padding: 12px 14px; border: 1px solid #333; background: #1a1a1a; color: #fff; border-radius: 10px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.15s; }
+  .btn:hover { background: #222; border-color: #555; }
+  .btn.primary { background: #fff; color: #000; border-color: #fff; }
+  .btn.primary:hover { background: #ddd; }
+  .btn.danger { border-color: #553; color: #f88; }
+  .btn.danger:hover { background: #311; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  input[type=text] { width: 100%; padding: 12px 14px; background: #1a1a1a; border: 1px solid #333; border-radius: 10px; color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; letter-spacing: 2px; text-align: center; text-transform: uppercase; }
+  input[type=text]:focus { border-color: #666; }
+  .room-code { font-family: 'Orbitron', sans-serif; font-size: 22px; letter-spacing: 4px; text-align: center; padding: 14px; background: #111; border: 1px dashed #333; border-radius: 10px; color: #fff; user-select: all; }
+  .hint { font-size: 12px; color: #666; line-height: 1.45; }
+  .lan-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 10px 12px;
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ccc;
+    user-select: none;
+  }
+  .lan-row input { width: 16px; height: 16px; accent-color: #fff; cursor: pointer; }
+  .lan-row:hover { border-color: #444; color: #fff; }
+  .stage {
+    flex: 1;
+    background: #050505;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 14px;
+  }
+  .viewport-wrap {
+    position: relative;
+    width: min(100%, 960px);
+    height: min(100%, 540px);
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    border: 2px solid #fff;
+    overflow: hidden;
+    background: #000;
+    flex-shrink: 0;
+    transition: width 0.15s ease, height 0.15s ease;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.12),
+      0 16px 48px rgba(0,0,0,0.55),
+      inset 0 0 0 1px rgba(255,255,255,0.06);
+  }
+  .viewport-wrap.has-stream {
+    /* sized by JS to match stream aspect */
+  }
+  #remoteVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* contain + content-rect mapping works for any host/viewer aspect */
+    background: #000;
+    cursor: default;
+    display: none;
+    border-radius: 14px;
+  }
+  .placeholder { text-align: center; color: #444; padding: 40px; position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+  .placeholder i { font-size: 48px; margin-bottom: 16px; display: block; }
+  .placeholder p { font-size: 14px; font-weight: 600; }
+  .toast { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); background: #1a1a1a; border: 1px solid #333; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; opacity: 0; transition: 0.25s; pointer-events: none; z-index: 10; }
+  .toast.show { opacity: 1; }
+  .section { display: none; flex-direction: column; gap: 14px; }
+  .section.active { display: flex; }
+  .ctrl-bar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 8px;
+    z-index: 6;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .viewport-wrap:hover .ctrl-bar,
+  .ctrl-bar:focus-within { opacity: 1; }
+  .ctrl-bar .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: 0.15s;
+  }
+  .ctrl-bar .icon-btn:hover { background: rgba(255,255,255,0.15); border-color: #fff; }
+  .stage.fs {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    padding: 0;
+    background: #000;
+  }
+  .stage.fs .viewport-wrap,
+  .viewport-wrap:fullscreen,
+  .viewport-wrap:-webkit-full-screen {
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    transition: none !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    background: #000;
+  }
+  .stage.fs #remoteVideo,
+  .viewport-wrap:fullscreen #remoteVideo,
+  .viewport-wrap:-webkit-full-screen #remoteVideo {
+    border-radius: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .stage.fs .ctrl-bar,
+  .viewport-wrap:fullscreen .ctrl-bar,
+  .viewport-wrap:-webkit-full-screen .ctrl-bar {
+    opacity: 1;
+    top: 16px;
+    right: 16px;
+  }
+</style>
+</head>
+<body>
+  <div class="hdr">
+    <h1><i class="fas fa-desktop"></i> REMOTE DESKTOP</h1>
+    <div class="status" id="connStatus"><span class="dot"></span><span id="statusText">Disconnected</span></div>
+  </div>
+  <div class="main">
+    <div class="panel">
+      <div class="section active" id="sec-home">
+        <h3>Start a session</h3>
+        <button class="btn primary" id="btnHost"><i class="fas fa-broadcast-tower"></i> Host Room</button>
+        <p class="hint">Share this Seamless-OS tab with someone. They can view and control it (this site only).</p>
+        <h3 style="margin-top:8px">Or join</h3>
+        <input type="text" id="joinCode" placeholder="ROOM CODE" maxlength="8" autocomplete="off">
+        <button class="btn" id="btnJoin"><i class="fas fa-sign-in-alt"></i> Join Room</button>
+        <label class="lan-row" title="Uses local network ICE only — connects much faster on the same Wi‑Fi. Turn off if connecting over the internet.">
+          <input type="checkbox" id="chkLan" checked>
+          <span>Same Wi‑Fi — faster connect</span>
+        </label>
+        <p class="hint">Both devices must use the same setting. Same Wi‑Fi skips STUN so ICE finishes in ms on your LAN.</p>
+      </div>
+      <div class="section" id="sec-host">
+        <h3>Your room</h3>
+        <div class="room-code" id="roomCode">------</div>
+        <button class="btn" id="btnCopy"><i class="fas fa-copy"></i> Copy Code</button>
+        <p class="hint" id="hostHint">Waiting for peer… When prompted, share <b>this tab</b> (or window) for best results.</p>
+        <button class="btn danger" id="btnStopHost"><i class="fas fa-stop"></i> End Session</button>
+      </div>
+      <div class="section" id="sec-guest">
+        <h3>Connected</h3>
+        <p class="hint">You are viewing the remote session. Click / move / type on the video to send input (site-only control).</p>
+        <button class="btn danger" id="btnLeave"><i class="fas fa-sign-out-alt"></i> Leave</button>
+      </div>
+    </div>
+    <div class="stage" id="stage">
+      <div class="viewport-wrap" id="viewportWrap">
+        <div class="placeholder" id="placeholder"><i class="fas fa-display"></i><p>No stream yet</p></div>
+        <video id="remoteVideo" autoplay playsinline muted></video>
+        <div class="ctrl-bar" id="ctrlBar">
+          <button type="button" class="icon-btn" id="btnFs" title="Fullscreen" aria-label="Fullscreen"><i class="fas fa-expand" id="fsIcon"></i></button>
+        </div>
+        <div class="toast" id="toast"></div>
+      </div>
+    </div>
+  </div>
+<script>
+(function() {
+  // WAN: STUN so peers behind NATs can find each other (slower ICE)
+  const PEER_OPTS_WAN = {
+    debug: 0,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+      ],
+      sdpSemantics: 'unified-plan',
+      iceCandidatePoolSize: 8,
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require'
+    }
+  };
+  // Same Wi‑Fi / LAN: host candidates only — no STUN wait → much faster connect
+  const PEER_OPTS_LAN = {
+    debug: 0,
+    config: {
+      iceServers: [],
+      sdpSemantics: 'unified-plan',
+      iceCandidatePoolSize: 10,
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require'
+    }
+  };
+  function useLanMode() {
+    const el = document.getElementById('chkLan');
+    return !!(el && el.checked);
+  }
+  function getPeerOpts() {
+    return useLanMode() ? PEER_OPTS_LAN : PEER_OPTS_WAN;
+  }
+  let peer = null, conn = null, call = null, localStream = null, role = null, roomId = null;
+  let connectWatchdog = null;
+  const video = document.getElementById('remoteVideo');
+  const placeholder = document.getElementById('placeholder');
+  const stage = document.getElementById('stage');
+  const statusEl = document.getElementById('connStatus');
+  const statusText = document.getElementById('statusText');
+  video.playsInline = true;
+  video.muted = true;
+  try { video.disablePictureInPicture = true; } catch (e) {}
+
+  // Quality tiers: highest usable quality with minimal delay
+  // scale 1 = full res, higher = lower res; bitrate in bps
+  // WAN-oriented tiers (internet / higher RTT)
+  const QUALITY_TIERS = [
+    { name: 'Ultra',  scale: 1,   maxBitrate: 10000000, maxFramerate: 30 },
+    { name: 'High',   scale: 1,   maxBitrate: 6000000,  maxFramerate: 30 },
+    { name: 'Medium', scale: 1.5, maxBitrate: 3500000,  maxFramerate: 24 },
+    { name: 'Low',    scale: 2,   maxBitrate: 1800000,  maxFramerate: 20 },
+    { name: 'Min',    scale: 3,   maxBitrate: 800000,   maxFramerate: 15 }
+  ];
+  // Same Wi‑Fi / LAN: prioritize low delay over max pixels
+  const LAN_QUALITY_TIERS = [
+    { name: 'LAN Ultra',  scale: 1,    maxBitrate: 12000000, maxFramerate: 60 },
+    { name: 'LAN High',   scale: 1,    maxBitrate: 8000000,  maxFramerate: 45 },
+    { name: 'LAN Medium', scale: 1.25, maxBitrate: 4500000,  maxFramerate: 30 },
+    { name: 'LAN Low',    scale: 1.75, maxBitrate: 2500000,  maxFramerate: 24 },
+    { name: 'LAN Min',    scale: 2.5,  maxBitrate: 1200000,  maxFramerate: 20 }
+  ];
+  let qualityIdx = 1; // start High — good balance
+  let qualityTimer = null;
+  let lastStats = null;
+  let qualityStableUntil = 0;
+  let isLanPath = false;
+  let inputCaptureBound = false;
+  let lastClickAt = 0;
+  let lastClickKey = '';
+  let lastClickEl = null;
+
+  // Prefer lowest latency on the playout side
+  function tuneReceiver(pc) {
+    if (!pc) return;
+    try {
+      pc.getReceivers().forEach(function(r) {
+        if (r.track && r.track.kind === 'video') {
+          try { r.track.contentHint = 'detail'; } catch (e) {}
+        }
+        if (typeof r.playoutDelayHint === 'number') r.playoutDelayHint = 0;
+        if (typeof r.jitterBufferTarget === 'number') r.jitterBufferTarget = 0;
+      });
+    } catch (e) {}
+  }
+
+  function currentTiers() {
+    return isLanPath ? LAN_QUALITY_TIERS : QUALITY_TIERS;
+  }
+
+  function applyQualityTier(pc, idx) {
+    if (!pc) return;
+    const tiers = currentTiers();
+    const tier = tiers[Math.max(0, Math.min(tiers.length - 1, idx))];
+    try {
+      pc.getSenders().forEach(function(sender) {
+        if (!sender.track || sender.track.kind !== 'video') return;
+        // detail = sharp UI; motion = lower latency bias on LAN
+        try { sender.track.contentHint = isLanPath ? 'motion' : 'detail'; } catch (e) {}
+        const params = sender.getParameters();
+        if (!params.encodings || !params.encodings.length) params.encodings = [{}];
+        params.degradationPreference = isLanPath ? 'maintain-framerate' : (tier.scale <= 1.25 ? 'maintain-resolution' : 'balanced');
+        params.encodings.forEach(function(enc) {
+          enc.scaleResolutionDownBy = tier.scale;
+          enc.maxFramerate = tier.maxFramerate;
+          enc.maxBitrate = tier.maxBitrate;
+          if (enc.priority != null) enc.priority = 'high';
+          if (enc.networkPriority != null) enc.networkPriority = 'high';
+        });
+        sender.setParameters(params).catch(function() {});
+      });
+    } catch (e) {}
+    return tier;
+  }
+
+  function tuneSender(pc) {
+    applyQualityTier(pc, qualityIdx);
+  }
+
+  function stopAutoQuality() {
+    if (qualityTimer) {
+      clearInterval(qualityTimer);
+      qualityTimer = null;
+    }
+    lastStats = null;
+  }
+
+  function startAutoQuality(pc) {
+    stopAutoQuality();
+    if (!pc) return;
+    isLanPath = false;
+    qualityIdx = 1;
+    applyQualityTier(pc, qualityIdx);
+    qualityStableUntil = Date.now() + 2000;
+
+    qualityTimer = setInterval(async function() {
+      if (!pc || pc.connectionState === 'closed' || pc.connectionState === 'failed') {
+        stopAutoQuality();
+        return;
+      }
+      try {
+        const report = await pc.getStats();
+        let rtt = null, loss = 0;
+        let outbound = null, remoteInbound = null;
+        let hostPair = false;
+        report.forEach(function(s) {
+          if (s.type === 'outbound-rtp' && s.kind === 'video' && !s.remoteId) outbound = s;
+          if (s.type === 'remote-inbound-rtp' && (s.kind === 'video' || s.mediaType === 'video')) remoteInbound = s;
+          if (s.type === 'candidate-pair' && s.state === 'succeeded') {
+            if (typeof s.currentRoundTripTime === 'number') {
+              const ms = s.currentRoundTripTime * 1000;
+              if (rtt == null || ms < rtt) rtt = ms;
+            }
+            // local/host candidate ≈ same LAN / Wi‑Fi
+            if (s.localCandidateId) {
+              const local = report.get(s.localCandidateId);
+              if (local && (local.candidateType === 'host' || local.candidateType === 'local')) hostPair = true;
+            }
+          }
+        });
+        if (remoteInbound) {
+          if (typeof remoteInbound.roundTripTime === 'number') {
+            const ms = remoteInbound.roundTripTime * 1000;
+            if (rtt == null || ms < rtt) rtt = ms;
+          }
+          if (typeof remoteInbound.packetsLost === 'number') loss = remoteInbound.packetsLost;
+        }
+
+        // Detect same Wi‑Fi / LAN: host candidate or very low RTT
+        const lanNow = hostPair || (rtt != null && rtt < 25);
+        if (lanNow !== isLanPath) {
+          isLanPath = lanNow;
+          qualityIdx = isLanPath ? 1 : 1;
+          const tier = applyQualityTier(pc, qualityIdx);
+          qualityStableUntil = Date.now() + 1500;
+          if (role === 'host') setStatus('live', 'Sharing · ' + (isLanPath ? 'LAN ' : 'Auto ') + tier.name.replace(/^LAN /, ''));
+        }
+
+        const now = Date.now();
+        const prevLoss = (lastStats && lastStats.loss) || 0;
+        const lossDelta = Math.max(0, loss - prevLoss);
+        lastStats = { outbound: outbound, loss: loss, t: now };
+
+        if (now < qualityStableUntil) return;
+
+        const tiers = currentTiers();
+        let next = qualityIdx;
+        // Tighter thresholds on LAN (expect low delay); looser on WAN
+        const highRtt = rtt != null && rtt > (isLanPath ? 40 : 120);
+        const veryHighRtt = rtt != null && rtt > (isLanPath ? 80 : 220);
+        const packetLoss = lossDelta >= (isLanPath ? 2 : 4);
+        const heavyLoss = lossDelta >= (isLanPath ? 6 : 12);
+        const healthyRtt = rtt == null || rtt < (isLanPath ? 20 : 70);
+
+        if (heavyLoss || veryHighRtt) {
+          next = Math.min(tiers.length - 1, qualityIdx + 1);
+        } else if (packetLoss || highRtt) {
+          next = Math.min(tiers.length - 1, qualityIdx + 1);
+        } else if (healthyRtt && lossDelta === 0 && qualityIdx > 0) {
+          next = qualityIdx - 1;
+        }
+
+        if (next !== qualityIdx) {
+          const dropping = next > qualityIdx;
+          qualityIdx = next;
+          const tier = applyQualityTier(pc, qualityIdx);
+          qualityStableUntil = now + (dropping ? 1500 : (isLanPath ? 3000 : 4500));
+          if (role === 'host') {
+            setStatus('live', 'Sharing · Auto ' + tier.name);
+          }
+        }
+      } catch (e) {}
+    }, isLanPath ? 1000 : 1500);
+  }
+
+  function updateFsIcon(isFs) {
+    const icon = document.getElementById('fsIcon');
+    if (icon) icon.className = isFs ? 'fas fa-compress' : 'fas fa-expand';
+    const btn = document.getElementById('btnFs');
+    if (btn) btn.title = isFs ? 'Exit fullscreen' : 'Fullscreen';
+    stage.classList.toggle('fs', !!isFs);
+    requestAnimationFrame(function() { fitViewportToStream(); });
+  }
+
+  // True browser fullscreen (entire display), not just the app window
+  async function toggleFullscreen() {
+    const wrap = document.getElementById('viewportWrap') || stage;
+    const doc = document;
+    try {
+      if (!doc.fullscreenElement && !doc.webkitFullscreenElement) {
+        if (wrap.requestFullscreen) await wrap.requestFullscreen();
+        else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen();
+        else if (wrap.msRequestFullscreen) wrap.msRequestFullscreen();
+      } else {
+        if (doc.exitFullscreen) await doc.exitFullscreen();
+        else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+        else if (doc.msExitFullscreen) doc.msExitFullscreen();
+      }
+    } catch (e) {
+      // Fallback: CSS-only expand inside the Remote Desktop window
+      stage.classList.toggle('fs');
+      updateFsIcon(stage.classList.contains('fs'));
+      toast('Browser blocked fullscreen — expanded in-window');
+    }
+  }
+  document.getElementById('btnFs').onclick = function(e) {
+    e.stopPropagation();
+    toggleFullscreen();
+  };
+  document.addEventListener('fullscreenchange', function() {
+    updateFsIcon(!!document.fullscreenElement);
+  });
+  document.addEventListener('webkitfullscreenchange', function() {
+    updateFsIcon(!!(document.fullscreenElement || document.webkitFullscreenElement));
+  });
+
+  function setStatus(mode, text) {
+    statusEl.className = 'status ' + (mode || '');
+    statusText.textContent = text;
+  }
+  function showSec(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById('sec-' + name).classList.add('active');
+  }
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+  function genCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = '';
+    for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return s;
+  }
+  function cleanup() {
+    try { if (call) call.close(); } catch(e){}
+    try { if (conn) conn.close(); } catch(e){}
+    try { if (peer) peer.destroy(); } catch(e){}
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    peer = conn = call = null; role = roomId = null;
+    stopAutoQuality();
+    if (connectWatchdog) { clearTimeout(connectWatchdog); connectWatchdog = null; }
+    inputCaptureBound = false;
+    lastClickAt = 0;
+    lastClickKey = '';
+    lastClickEl = null;
+    isLanPath = false;
+    video.srcObject = null; video.style.display = 'none';
+    placeholder.style.display = '';
+    placeholder.innerHTML = '<i class="fas fa-display"></i><p>No stream yet</p>';
+    const wrap = document.getElementById('viewportWrap');
+    if (wrap) {
+      wrap.classList.remove('has-stream');
+      wrap.style.width = '';
+      wrap.style.height = '';
+    }
+    try {
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      }
+    } catch (e) {}
+    stage.classList.remove('fs');
+    const icon = document.getElementById('fsIcon');
+    if (icon) icon.className = 'fas fa-expand';
+    setStatus('', 'Disconnected');
+    showSec('home');
+  }
+
+  // Map normalized 0–1 (of captured frame) → host viewport CSS pixels
+  function hostPoint(nx, ny) {
+    const p = window.parent;
+    const x = Math.max(0, Math.min(1, nx)) * p.innerWidth;
+    const y = Math.max(0, Math.min(1, ny)) * p.innerHeight;
+    return { x: x, y: y };
+  }
+
+  // Dig into same-origin iframes so remote control reaches app content
+  function deepTarget(rootWin, clientX, clientY) {
+    let win = rootWin;
+    let doc = win.document;
+    let x = clientX;
+    let y = clientY;
+    let el = doc.elementFromPoint(x, y);
+    // Walk into nested iframes (same-origin only)
+    for (let depth = 0; depth < 8 && el; depth++) {
+      const tag = (el.tagName || '').toLowerCase();
+      if (tag !== 'iframe' && tag !== 'frame') break;
+      let childDoc = null;
+      try { childDoc = el.contentDocument; } catch (e) { childDoc = null; }
+      if (!childDoc) break; // cross-origin — stop at iframe element
+      const rect = el.getBoundingClientRect();
+      // coords relative to iframe viewport
+      x = x - rect.left;
+      y = y - rect.top;
+      // account for iframe border
+      try {
+        const cs = win.getComputedStyle(el);
+        x -= parseFloat(cs.borderLeftWidth) || 0;
+        y -= parseFloat(cs.borderTopWidth) || 0;
+      } catch (e) {}
+      win = el.contentWindow || win;
+      doc = childDoc;
+      el = doc.elementFromPoint(x, y);
+    }
+    return {
+      win: win,
+      doc: doc,
+      el: el || doc.body || doc.documentElement,
+      x: x,
+      y: y
+    };
+  }
+
+  function mouseOpts(pt, data, view) {
+    const btn = (data && typeof data.b === 'number') ? data.b : 0;
+    const buttonsMap = { 0: 1, 1: 4, 2: 2 };
+    return {
+      bubbles: true,
+      cancelable: true,
+      view: view || window.parent,
+      clientX: pt.x,
+      clientY: pt.y,
+      screenX: pt.x,
+      screenY: pt.y,
+      button: btn,
+      buttons: buttonsMap[btn] != null ? buttonsMap[btn] : 1,
+      detail: (data && data.detail) || 1,
+      ctrlKey: !!(data && data.ctrl),
+      shiftKey: !!(data && data.shift),
+      altKey: !!(data && data.alt),
+      metaKey: !!(data && data.meta)
+    };
+  }
+
+  function fireMouse(type, data) {
+    const p = window.parent;
+    const outer = hostPoint(data.x, data.y);
+    const t = deepTarget(p, outer.x, outer.y);
+    const localPt = { x: t.x, y: t.y };
+    const opts = mouseOpts(localPt, data, t.win);
+    t.el.dispatchEvent(new MouseEvent(type, opts));
+    return t;
+  }
+
+  // Single left-click handler: debounce + dblclick + desktop icon open
+  function handleRemoteClick(data) {
+    const p = window.parent;
+    const now = Date.now();
+    const key = (Math.round(data.x * 100) + ',' + Math.round(data.y * 100));
+    // Ignore duplicate click packets within 80ms (double-send glitch)
+    if (now - lastClickAt < 80 && key === lastClickKey) return;
+
+    const isDouble = (now - lastClickAt < 350 && key === lastClickKey);
+    lastClickAt = now;
+    lastClickKey = key;
+
+    const detail = isDouble ? 2 : 1;
+    const payload = Object.assign({}, data, { b: 0, detail: detail });
+    const t = fireMouse('click', payload);
+    try { if (t.el && t.el.focus) t.el.focus(); } catch (e) {}
+
+    if (isDouble) {
+      fireMouse('dblclick', payload);
+    }
+
+    // Desktop icons only open on dblclick in this OS — make remote single-click work too
+    try {
+      let node = t.el;
+      while (node && node !== p.document.body) {
+        if (node.classList && node.classList.contains('desktop-app') && !node.classList.contains('expanded-folder')) {
+          const idx = node.getAttribute('data-idx');
+          let appId = null;
+          if (idx != null && p.desktopLayout && p.desktopLayout[idx] && p.desktopLayout[idx].type !== 'folder') {
+            appId = p.desktopLayout[idx].id;
+          }
+          if (appId && typeof p.toggleApp === 'function') {
+            // Single remote click opens (normal desktop needs double-click)
+            if (!isDouble) p.toggleApp(appId);
+          }
+          break;
+        }
+        node = node.parentElement;
+      }
+    } catch (e) {}
+
+    lastClickEl = t.el;
+  }
+
+  // ——— HOST: apply remote input on parent page (this website only) ———
+  function applyRemoteEvent(data) {
+    try {
+      const p = window.parent;
+      if (!p || !data) return;
+      const type = data.t;
+
+      if (type === 'mm') {
+        fireMouse('mousemove', data);
+      } else if (type === 'md') {
+        // Only mousedown — do not open apps here (avoids drag/double-toggle glitches)
+        const t = fireMouse('mousedown', data);
+        try { if (t.el && t.el.focus) t.el.focus(); } catch (e) {}
+      } else if (type === 'mu') {
+        fireMouse('mouseup', data);
+        if (data.b === 2) fireMouse('contextmenu', data);
+        // Synthesize ONE click on mouseup (guest no longer also sends click)
+        if ((data.b || 0) === 0) {
+          handleRemoteClick(data);
+        }
+      } else if (type === 'click') {
+        // Back-compat if an older guest still sends click — debounce against mu
+        if ((data.b || 0) === 0) handleRemoteClick(data);
+        else if (data.b === 2) fireMouse('contextmenu', data);
+        else if (data.b === 1) fireMouse('auxclick', data);
+      } else if (type === 'ctx') {
+        fireMouse('contextmenu', Object.assign({}, data, { b: 2 }));
+      } else if (type === 'wd') {
+        const outer = hostPoint(data.x, data.y);
+        const t = deepTarget(p, outer.x, outer.y);
+        const wopts = {
+          bubbles: true,
+          cancelable: true,
+          view: t.win,
+          clientX: t.x,
+          clientY: t.y,
+          deltaX: data.dx || 0,
+          deltaY: data.dy || 0,
+          deltaZ: data.dz || 0,
+          deltaMode: typeof data.dm === 'number' ? data.dm : 0,
+          ctrlKey: !!data.ctrl,
+          shiftKey: !!data.shift,
+          altKey: !!data.alt,
+          metaKey: !!data.meta
+        };
+        const handled = !t.el.dispatchEvent(new WheelEvent('wheel', wopts));
+        if (!handled) {
+          let node = t.el;
+          const doc = t.doc;
+          while (node && node !== doc.body && node !== doc.documentElement) {
+            let st;
+            try { st = t.win.getComputedStyle(node); } catch (e) { break; }
+            const oy = st.overflowY, ox = st.overflowX;
+            const canY = (oy === 'auto' || oy === 'scroll' || oy === 'overlay') && node.scrollHeight > node.clientHeight;
+            const canX = (ox === 'auto' || ox === 'scroll' || ox === 'overlay') && node.scrollWidth > node.clientWidth;
+            if (canY || canX) {
+              node.scrollLeft += (data.dx || 0);
+              node.scrollTop += (data.dy || 0);
+              break;
+            }
+            node = node.parentElement;
+          }
+          if (!node || node === doc.body) {
+            try { t.win.scrollBy(data.dx || 0, data.dy || 0); } catch (e) {}
+          }
+        }
+      } else if (type === 'kd' || type === 'ku') {
+        const map = { kd: 'keydown', ku: 'keyup' };
+        let targetWin = p;
+        let targetDoc = p.document;
+        let active = targetDoc.activeElement;
+        try {
+          for (let i = 0; i < 8 && active; i++) {
+            const tag = (active.tagName || '').toLowerCase();
+            if (tag !== 'iframe' && tag !== 'frame') break;
+            const cd = active.contentDocument;
+            if (!cd) break;
+            targetWin = active.contentWindow;
+            targetDoc = cd;
+            active = cd.activeElement;
+          }
+        } catch (e) {}
+        const target = (active && active !== targetDoc.body) ? active : targetDoc;
+        const kopts = {
+          bubbles: true,
+          cancelable: true,
+          view: targetWin,
+          key: data.k,
+          code: data.c,
+          keyCode: data.kc,
+          which: data.kc,
+          ctrlKey: !!data.ctrl,
+          shiftKey: !!data.shift,
+          altKey: !!data.alt,
+          metaKey: !!data.meta,
+          repeat: !!data.rep
+        };
+        // Always deliver KeyboardEvent so Ctrl+A / Ctrl+Z / Ctrl+M / etc. reach the app
+        target.dispatchEvent(new KeyboardEvent(map[type], kopts));
+
+        if (type === 'kd') {
+          const hasMod = !!(data.ctrl || data.meta || data.alt);
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+            if (data.k === 'Backspace') {
+              const s = active.selectionStart || 0;
+              const e2 = active.selectionEnd || 0;
+              if (s === e2 && s > 0) {
+                active.value = active.value.slice(0, s - 1) + active.value.slice(e2);
+                active.selectionStart = active.selectionEnd = s - 1;
+              } else if (s !== e2) {
+                active.value = active.value.slice(0, s) + active.value.slice(e2);
+                active.selectionStart = active.selectionEnd = s;
+              }
+              active.dispatchEvent(new Event('input', { bubbles: true }));
+            } else if (data.k === 'Delete') {
+              const s = active.selectionStart || 0;
+              const e2 = active.selectionEnd || 0;
+              if (s === e2) {
+                active.value = active.value.slice(0, s) + active.value.slice(e2 + 1);
+              } else {
+                active.value = active.value.slice(0, s) + active.value.slice(e2);
+              }
+              active.selectionStart = active.selectionEnd = s;
+              active.dispatchEvent(new Event('input', { bubbles: true }));
+            } else if (data.k === 'Enter' && active.tagName === 'INPUT') {
+              active.dispatchEvent(new Event('change', { bubbles: true }));
+              if (active.form) {
+                try { active.form.requestSubmit(); } catch (e) {
+                  active.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                }
+              }
+            } else if (!hasMod && data.k && data.k.length === 1) {
+              // Printable character — insert once (no separate 'key' event)
+              const start = active.selectionStart != null ? active.selectionStart : active.value.length;
+              const end = active.selectionEnd != null ? active.selectionEnd : start;
+              active.value = active.value.slice(0, start) + data.k + active.value.slice(end);
+              active.selectionStart = active.selectionEnd = start + 1;
+              active.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+          } else if (active && active.isContentEditable && !hasMod && data.k && data.k.length === 1) {
+            try { targetDoc.execCommand('insertText', false, data.k); } catch (e) {}
+          }
+        }
+      } else if (type === 'clipboard-req') {
+        // Viewer pressed Ctrl+C — return selection so guest can put it on their clipboard
+        let text = '';
+        try {
+          let targetDoc = p.document;
+          let active = targetDoc.activeElement;
+          try {
+            for (let i = 0; i < 8 && active; i++) {
+              const tag = (active.tagName || '').toLowerCase();
+              if (tag !== 'iframe' && tag !== 'frame') break;
+              const cd = active.contentDocument;
+              if (!cd) break;
+              targetDoc = cd;
+              active = cd.activeElement;
+            }
+          } catch (e) {}
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && typeof active.value === 'string') {
+            const s = active.selectionStart != null ? active.selectionStart : 0;
+            const e2 = active.selectionEnd != null ? active.selectionEnd : 0;
+            text = active.value.slice(s, e2);
+          } else {
+            const sel = (targetDoc.defaultView || targetDoc.parentWindow || p).getSelection();
+            if (sel) text = sel.toString();
+          }
+        } catch (e) {}
+        try {
+          if (conn && conn.open) conn.send({ t: 'clipboard', text: text || '' });
+        } catch (e) {}
+      } else if (type === 'paste') {
+        // Viewer pressed Ctrl+V — insert text from their clipboard
+        const pasteText = (data.text != null) ? String(data.text) : '';
+        try {
+          let targetDoc = p.document;
+          let active = targetDoc.activeElement;
+          try {
+            for (let i = 0; i < 8 && active; i++) {
+              const tag = (active.tagName || '').toLowerCase();
+              if (tag !== 'iframe' && tag !== 'frame') break;
+              const cd = active.contentDocument;
+              if (!cd) break;
+              targetDoc = cd;
+              active = cd.activeElement;
+            }
+          } catch (e) {}
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && typeof active.value === 'string') {
+            const start = active.selectionStart != null ? active.selectionStart : active.value.length;
+            const end = active.selectionEnd != null ? active.selectionEnd : start;
+            active.value = active.value.slice(0, start) + pasteText + active.value.slice(end);
+            active.selectionStart = active.selectionEnd = start + pasteText.length;
+            active.dispatchEvent(new Event('input', { bubbles: true }));
+          } else if (active && active.isContentEditable) {
+            try { targetDoc.execCommand('insertText', false, pasteText); } catch (e) {}
+          }
+        } catch (e) {}
+      }
+    } catch (err) { /* cross-origin or blocked */ }
+  }
+
+  // Size the white border tightly around the actual stream aspect ratio
+  function fitViewportToStream() {
+    const wrap = document.getElementById('viewportWrap');
+    if (!wrap || !video) return;
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return;
+    const pad = stage.classList.contains('fs') ? 0 : 28;
+    const maxW = Math.max(120, stage.clientWidth - pad);
+    const maxH = Math.max(90, stage.clientHeight - pad);
+    const scale = Math.min(maxW / vw, maxH / vh);
+    const w = Math.max(1, Math.floor(vw * scale));
+    const h = Math.max(1, Math.floor(vh * scale));
+    wrap.style.width = w + 'px';
+    wrap.style.height = h + 'px';
+    wrap.classList.add('has-stream');
+  }
+
+  function wireData(c) {
+    conn = c;
+    conn.on('data', function(data) {
+      if (!data || !data.t) return;
+      if (role === 'host') {
+        applyRemoteEvent(data);
+      } else if (role === 'guest') {
+        if (data.t === 'clipboard' && typeof data.text === 'string') {
+          try {
+            navigator.clipboard.writeText(data.text).then(function() {
+              toast('Copied to clipboard');
+            }).catch(function() {
+              try {
+                const ta = document.createElement('textarea');
+                ta.value = data.text;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                toast('Copied to clipboard');
+              } catch (e) {}
+            });
+          } catch (e) {}
+        }
+      }
+    });
+    conn.on('close', function() { toast('Peer disconnected'); if (role === 'host') setStatus('wait', 'Waiting…'); else cleanup(); });
+    conn.on('error', function() { toast('Data channel error'); });
+  }
+
+  // ——— HOST flow ———
+  document.getElementById('btnHost').onclick = async function() {
+    role = 'host';
+    roomId = genCode();
+    document.getElementById('roomCode').textContent = roomId;
+    showSec('host');
+    setStatus('wait', 'Creating room…');
+    const lan = useLanMode();
+    peer = new Peer('sos-' + roomId, getPeerOpts());
+    peer.on('open', function() {
+      setStatus('wait', lan ? 'Waiting (LAN / same Wi‑Fi)' : 'Waiting for peer');
+      toast(lan ? 'Room ready (fast LAN mode)' : 'Room ready — share the code');
+      const hint = document.getElementById('hostHint');
+      if (hint) {
+        hint.innerHTML = lan
+          ? 'LAN mode on — guest must also check <b>Same Wi‑Fi</b>. Share <b>this tab</b> when they join.'
+          : 'Waiting for peer… When prompted, share <b>this tab</b> (or window) for best results.';
+      }
+    });
+    peer.on('error', function(e) {
+      setStatus('err', 'Error');
+      toast(e.type === 'unavailable-id' ? 'Code taken, try again' : (e.message || 'Peer error'));
+      cleanup();
+    });
+    peer.on('connection', function(c) {
+      if (connectWatchdog) { clearTimeout(connectWatchdog); connectWatchdog = null; }
+      wireData(c);
+      setStatus('live', 'Peer connected');
+      toast('Viewer joined — start share when prompted');
+      startHostShare();
+    });
+    peer.on('call', function(incoming) {
+      incoming.close();
+    });
+  };
+
+  async function startHostShare() {
+    try {
+      // Capture at native tab resolution — do NOT downscale at source
+      localStream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: 'browser',
+          frameRate: { ideal: 30, max: 60 }
+        },
+        audio: false,
+        preferCurrentTab: true,
+        selfBrowserSurface: 'include'
+      });
+    } catch (e) {
+      toast('Screen share cancelled');
+      setStatus('wait', 'Share cancelled — waiting');
+      return;
+    }
+    const track = localStream.getVideoTracks()[0];
+    track.onended = function() { toast('Share ended'); cleanup(); };
+    // detail = sharp text/UI (better than motion for a desktop)
+    try { track.contentHint = 'detail'; } catch (e) {}
+    // Only nudge framerate — leave width/height at capture native size
+    try {
+      await track.applyConstraints({ frameRate: { ideal: 30, max: 60 } });
+    } catch (e) {}
+
+    // Host does NOT show own stream — only status
+    video.srcObject = null;
+    video.style.display = 'none';
+    placeholder.style.display = '';
+    placeholder.innerHTML = '<i class="fas fa-broadcast-tower"></i><p>Sharing — viewer can see your screen</p>';
+    setStatus('live', 'Sharing');
+    if (conn && conn.peer) {
+      call = peer.call(conn.peer, localStream);
+      call.on('stream', function() {});
+      call.on('close', function() { stopAutoQuality(); });
+      // Apply quality + start adaptive controller once PC exists
+      const tryTune = function() {
+        if (call && call.peerConnection) {
+          tuneSender(call.peerConnection);
+          startAutoQuality(call.peerConnection);
+        }
+      };
+      tryTune();
+      setTimeout(tryTune, 150);
+      setTimeout(tryTune, 500);
+      setTimeout(tryTune, 1500);
+      try {
+        conn.send({ t: 'meta', w: window.parent.innerWidth, h: window.parent.innerHeight });
+      } catch (e) {}
+    }
+  }
+
+  // When data connection opens from guest, guest will also open a connection TO host; host already handles peer.on('connection')
+  // Guest side will call host after connecting.
+
+  document.getElementById('btnCopy').onclick = function() {
+    const code = document.getElementById('roomCode').textContent;
+    navigator.clipboard.writeText(code).then(() => toast('Copied')).catch(() => toast(code));
+  };
+  document.getElementById('btnStopHost').onclick = cleanup;
+
+  // ——— GUEST flow ———
+  document.getElementById('btnJoin').onclick = function() {
+    const code = (document.getElementById('joinCode').value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length < 4) { toast('Enter a valid room code'); return; }
+    roomId = code;
+    role = 'guest';
+    showSec('guest');
+    const lan = useLanMode();
+    setStatus('wait', lan ? 'Connecting (LAN)…' : 'Connecting…');
+    peer = new Peer(getPeerOpts());
+    peer.on('open', function() {
+      // Data channel to host — serialization binary is slightly leaner
+      const c = peer.connect('sos-' + roomId, { reliable: true, serialization: 'binary' });
+      c.on('open', function() {
+        if (connectWatchdog) { clearTimeout(connectWatchdog); connectWatchdog = null; }
+        wireData(c);
+        setStatus('live', 'Connected');
+        toast(lan ? 'Connected on LAN — waiting for stream' : 'Connected — waiting for stream');
+      });
+      c.on('error', function() {
+        toast(lan ? 'LAN connect failed — uncheck Same Wi‑Fi if not on this network' : 'Could not reach host');
+        cleanup();
+      });
+      // If LAN ICE can't pair (different networks), nudge user quickly
+      if (lan) {
+        connectWatchdog = setTimeout(function() {
+          if (!conn || !conn.open) {
+            toast('Still connecting… If this hangs, turn off Same Wi‑Fi and retry');
+          }
+        }, 4000);
+      }
+    });
+    peer.on('call', function(incoming) {
+      call = incoming;
+      incoming.answer();
+      const tryTuneRx = function() {
+        if (call && call.peerConnection) tuneReceiver(call.peerConnection);
+      };
+      tryTuneRx();
+      setTimeout(tryTuneRx, 200);
+      setTimeout(tryTuneRx, 800);
+      incoming.on('stream', function(stream) {
+        // Attach ASAP; play without waiting for full buffer
+        video.srcObject = stream;
+        video.muted = true;
+        video.playsInline = true;
+        video.style.display = 'block';
+        placeholder.style.display = 'none';
+        const p = video.play();
+        if (p && p.catch) p.catch(function() {});
+        setStatus('live', 'Streaming');
+        enableInputCapture();
+        tryTuneRx();
+        // Fit border to stream once metadata is known
+        const refit = function() { fitViewportToStream(); };
+        video.addEventListener('loadedmetadata', refit);
+        video.addEventListener('resize', refit);
+        refit();
+        setTimeout(refit, 100);
+        setTimeout(refit, 400);
+        setTimeout(refit, 1000);
+        window.addEventListener('resize', refit);
+      });
+      incoming.on('close', function() { toast('Stream ended'); cleanup(); });
+    });
+    peer.on('error', function(e) {
+      setStatus('err', 'Error');
+      toast(e.message || 'Connection failed');
+      cleanup();
+    });
+  };
+  document.getElementById('btnLeave').onclick = cleanup;
+
+  // Map pointer coords to the actual video *content* (handles letterbox/pillarbox
+  // from object-fit: contain when host/viewer aspect ratios or viewport sizes differ)
+  function getVideoContentRect(videoEl) {
+    const rect = videoEl.getBoundingClientRect();
+    const vw = videoEl.videoWidth;
+    const vh = videoEl.videoHeight;
+    if (!vw || !vh || !rect.width || !rect.height) {
+      return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    }
+    const videoRatio = vw / vh;
+    const elementRatio = rect.width / rect.height;
+    let contentWidth, contentHeight, offsetX, offsetY;
+    if (elementRatio > videoRatio) {
+      // Pillarbox: black bars on left/right
+      contentHeight = rect.height;
+      contentWidth = contentHeight * videoRatio;
+      offsetX = (rect.width - contentWidth) / 2;
+      offsetY = 0;
+    } else {
+      // Letterbox: black bars on top/bottom
+      contentWidth = rect.width;
+      contentHeight = contentWidth / videoRatio;
+      offsetX = 0;
+      offsetY = (rect.height - contentHeight) / 2;
+    }
+    return {
+      left: rect.left + offsetX,
+      top: rect.top + offsetY,
+      width: contentWidth,
+      height: contentHeight
+    };
+  }
+
+  function normFromEvent(e) {
+    const content = getVideoContentRect(video);
+    if (!content.width || !content.height) return null;
+    let x = (e.clientX - content.left) / content.width;
+    let y = (e.clientY - content.top) / content.height;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+    return { x: x, y: y };
+  }
+
+  // Guest sends normalized input over data channel
+  function enableInputCapture() {
+    // Prevent double-binding if stream event fires more than once (was causing open/close)
+    if (inputCaptureBound) return;
+    inputCaptureBound = true;
+
+    const send = (obj) => { if (conn && conn.open) try { conn.send(obj); } catch(e){} };
+    video.style.cursor = 'default';
+    video.tabIndex = 0;
+    try { video.focus({ preventScroll: true }); } catch (e) { try { video.focus(); } catch (e2) {} }
+
+    function mods(e) {
+      return { ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey };
+    }
+
+    // ~60hz pointer samples via rAF for smoother remote cursor
+    let pendingMove = null;
+    let moveRaf = 0;
+    video.addEventListener('mousemove', function(e) {
+      pendingMove = e;
+      if (moveRaf) return;
+      moveRaf = requestAnimationFrame(function() {
+        moveRaf = 0;
+        const ev = pendingMove;
+        pendingMove = null;
+        if (!ev) return;
+        const n = normFromEvent(ev);
+        if (!n) return;
+        send(Object.assign({ t: 'mm', x: n.x, y: n.y }, mods(ev)));
+      });
+    });
+
+    video.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      try { video.focus({ preventScroll: true }); } catch (err) {}
+      const n = normFromEvent(e);
+      if (!n) return;
+      send(Object.assign({ t: 'md', x: n.x, y: n.y, b: e.button, detail: e.detail }, mods(e)));
+    });
+
+    video.addEventListener('mouseup', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const n = normFromEvent(e);
+      if (!n) return;
+      // Host synthesizes the single click from mouseup — do NOT also send 'click'
+      send(Object.assign({ t: 'mu', x: n.x, y: n.y, b: e.button, detail: e.detail }, mods(e)));
+    });
+
+    // Swallow local click so it never double-fires with mouseup path
+    video.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    video.addEventListener('auxclick', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const n = normFromEvent(e);
+      if (!n) return;
+      send(Object.assign({ t: 'click', x: n.x, y: n.y, b: e.button, detail: e.detail }, mods(e)));
+    });
+
+    video.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const n = normFromEvent(e);
+      if (!n) return;
+      send(Object.assign({ t: 'ctx', x: n.x, y: n.y, b: 2, detail: 1 }, mods(e)));
+    });
+
+    video.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      const n = normFromEvent(e);
+      if (!n) return;
+      send(Object.assign({
+        t: 'wd',
+        x: n.x,
+        y: n.y,
+        dx: e.deltaX,
+        dy: e.deltaY,
+        dz: e.deltaZ || 0,
+        dm: e.deltaMode
+      }, mods(e)));
+    }, { passive: false });
+
+    function onKeyDown(e) {
+      if (role !== 'guest') return;
+      if (document.activeElement === video || document.activeElement === document.body || document.activeElement === document.documentElement) {
+        e.preventDefault();
+      }
+
+      const isCtrl = e.ctrlKey || e.metaKey;
+      const key = e.key;
+
+      // Ctrl+C / Cmd+C → ask host for selection, put it on viewer's clipboard
+      if (isCtrl && (key === 'c' || key === 'C') && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        send({ t: 'clipboard-req' });
+        send({
+          t: 'kd', k: key, c: e.code, kc: e.keyCode || e.which,
+          ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey, rep: e.repeat
+        });
+        return;
+      }
+
+      // Ctrl+V / Cmd+V → read viewer's clipboard and send text to host
+      if (isCtrl && (key === 'v' || key === 'V') && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        (async function() {
+          let text = '';
+          try { text = await navigator.clipboard.readText(); } catch (err) {}
+          send({ t: 'paste', text: text || '' });
+          send({
+            t: 'kd', k: key, c: e.code, kc: e.keyCode || e.which,
+            ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey, rep: e.repeat
+          });
+        })();
+        return;
+      }
+
+      // Normal keys + other Ctrl shortcuts (Ctrl+A, Ctrl+Z, Ctrl+M, etc.)
+      send({
+        t: 'kd',
+        k: key,
+        c: e.code,
+        kc: e.keyCode || e.which,
+        ctrl: e.ctrlKey,
+        shift: e.shiftKey,
+        alt: e.altKey,
+        meta: e.metaKey,
+        rep: e.repeat
+      });
+      // Do NOT also send a separate {t:'key'} — that caused double typing.
+      // Host inserts printable characters from the keydown itself.
+    }
+    function onKeyUp(e) {
+      if (role !== 'guest') return;
+      send({
+        t: 'ku',
+        k: e.key,
+        c: e.code,
+        kc: e.keyCode || e.which,
+        ctrl: e.ctrlKey,
+        shift: e.shiftKey,
+        alt: e.altKey,
+        meta: e.metaKey
+      });
+    }
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('keyup', onKeyUp, true);
+  }
+
+  })();
+<\/script>
+
+<!-- ==================== SEAMLESS AUTH MODAL ==================== -->
+<dialog id="auth-modal" style="
+  background: rgba(15,15,15,0.97);
+  border: 1px solid #333;
+  border-radius: 18px;
+  padding: 32px 28px;
+  color: #fff;
+  max-width: 420px;
+  width: 92%;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+  font-family: var(--font-main);
+  position: fixed;
+  z-index: 999999;
+">
+  <button onclick="this.closest('dialog').close()" style="
+    position:absolute; top:14px; right:16px;
+    background:none; border:none; color:#888; font-size:22px; cursor:pointer;
+  ">&times;</button>
+
+  <h2 style="
+    font-family: var(--font-header);
+    letter-spacing: 3px;
+    font-size: 1.4rem;
+    text-align: center;
+    margin: 0 0 8px 0;
+  ">SEAMLESS ACCOUNT</h2>
+
+  <p style="text-align:center; color:#888; font-size:13px; margin-bottom:24px;">
+    Sign in to sync wallpapers, pins &amp; progress across devices
+  </p>
+
+  <div id="auth-form">
+    <input type="email" id="auth-email" placeholder="Email address" autocomplete="email"
+      style="width:100%; padding:13px 14px; margin-bottom:12px; background:#1a1a1a;
+             border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
+    
+    <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="current-password"
+      style="width:100%; padding:13px 14px; margin-bottom:18px; background:#1a1a1a;
+             border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
+
+    <button onclick="handleSignIn()" style="
+      width:100%; padding:13px; background:#fff; color:#000; border:none;
+      border-radius:10px; font-weight:700; font-size:15px; cursor:pointer; margin-bottom:10px;
+    ">Sign In</button>
+
+    <button onclick="handleSignUp()" style="
+      width:100%; padding:13px; background:#222; color:#fff; border:1px solid #444;
+      border-radius:10px; font-weight:600; font-size:15px; cursor:pointer; margin-bottom:14px;
+    ">Create Account</button>
+
+    <div style="text-align:center; margin: 16px 0 8px; color:#555; font-size:12px;">— or —</div>
+
+    <button onclick="handleContinueAsGuest()" style="
+      width:100%; padding:12px; background:transparent; color:#aaa; border:1px solid #333;
+      border-radius:10px; font-size:14px; cursor:pointer;
+    ">Continue as Guest</button>
+  </div>
+
+  <div id="auth-logged-in" style="display:none; text-align:center;">
+    <p style="margin-bottom:6px; color:#aaa; font-size:13px;">Signed in as</p>
+    <p id="auth-user-email" style="font-weight:600; margin-bottom:20px; word-break:break-all;"></p>
+    <button onclick="handleSignOut()" style="
+      padding:11px 28px; background:#222; color:#fff; border:1px solid #444;
+      border-radius:10px; font-weight:600; cursor:pointer;
+    ">Sign Out</button>
+  </div>
+
+  <p id="auth-message" style="margin-top:18px; text-align:center; font-size:13px; min-height:18px;"></p>
+</dialog>
+
+</body>
+</html>`;
+                f.srcdoc = html;
+            }
+        }
+    } else {
+        // Existing window — restore with same open animation if it was minimized
+        const wasHidden = win.classList.contains('minimized') || win.style.display === 'none';
+        win.style.display = '';
+        win.classList.remove('minimized', 'minimizing');
+        win.style.zIndex = ++highestZ;
+        if (wasHidden) {
+            win.classList.add('opening');
+            void win.offsetWidth;
+            requestAnimationFrame(function() {
+                win.classList.remove('opening');
+                win.classList.add('active');
+            });
+        } else {
+            win.classList.add('active');
+        }
+    }
+    
+    activeWindowId = id;
+    updateDockForFullscreen();
+    updateOpenAppsDock();
+}
+
+function closeWindow(id) {
+    let w = document.getElementById('win-' + id);
+    if(w) w.remove();
+    if(activeWindowId === id) activeWindowId = null;
+    updateDockForFullscreen();
+    updateOpenAppsDock();
+}
+
+function refreshWindow(id) {
+    const frame = document.getElementById('frame-' + id);
+    if (!frame) return;
+    try {
+        // Prefer location.reload so same-origin iframes keep history clean
+        if (frame.contentWindow && frame.contentWindow.location) {
+            frame.contentWindow.location.reload();
+            return;
+        }
+    } catch (e) {
+        // Cross-origin: fall back to re-assigning src
+    }
+    const src = frame.src;
+    if (src) {
+        frame.src = '';
+        frame.src = src;
+    }
+}
+
+function updateDockForFullscreen() {
+    const dock = document.getElementById('dock-container');
+    if (!dock) return;
+    const anyFullscreen = document.querySelector('.window.maximized:not(.minimized)');
+    const topTrig = document.getElementById('top-trigger');
+    const botTrig = document.getElementById('bottom-trigger');
+
+    if (anyFullscreen) {
+        dock.classList.add('dock-hidden');
+        if (topTrig) topTrig.style.pointerEvents = 'none';
+        if (botTrig) botTrig.style.pointerEvents = 'none';
+    } else {
+        dock.classList.remove('dock-hidden');
+        if (topTrig) topTrig.style.pointerEvents = '';
+        if (botTrig) botTrig.style.pointerEvents = '';
+    }
+}
+
+function minimizeWindow(id) {
+    let w = document.getElementById('win-' + id);
+    if (!w || w.classList.contains('minimizing') || w.classList.contains('minimized')) return;
+
+    // If this window was fullscreen, show dock again once it minimizes
+    const wasMax = w.classList.contains('maximized');
+    if (wasMax) {
+        w.classList.remove('maximized');
+        if (w.dataset.prevTop) {
+            w.style.top = w.dataset.prevTop;
+            w.style.left = w.dataset.prevLeft;
+            w.style.width = w.dataset.prevWidth;
+            w.style.height = w.dataset.prevHeight;
+        }
+    }
+
+    w.classList.remove('active');
+    w.classList.add('minimizing');
+    if (activeWindowId === id) activeWindowId = null;
+
+    // After animation, fully hide
+    setTimeout(function() {
+        w.classList.remove('minimizing');
+        w.classList.add('minimized');
+        w.style.display = 'none';
+        // Reset transform so restore looks clean
+        w.style.transform = '';
+        updateDockForFullscreen();
+        updateOpenAppsDock();
+    }, 400);
+
+    if (wasMax) updateDockForFullscreen();
+    updateOpenAppsDock();
+}
+
+function toggleMaximize(id) {
+    let w = document.getElementById('win-' + id);
+    if (!w) return;
+    
+    if (w.classList.contains('maximized')) {
+        w.classList.remove('maximized');
+        // Restore previous geometry
+        if (w.dataset.prevTop) {
+            w.style.top = w.dataset.prevTop;
+            w.style.left = w.dataset.prevLeft;
+            w.style.width = w.dataset.prevWidth;
+            w.style.height = w.dataset.prevHeight;
+        }
+    } else {
+        // Store current geometry before maximizing
+        const rect = w.getBoundingClientRect();
+        w.dataset.prevTop = rect.top + 'px';
+        w.dataset.prevLeft = rect.left + 'px';
+        w.dataset.prevWidth = rect.width + 'px';
+        w.dataset.prevHeight = rect.height + 'px';
+        w.classList.add('maximized');
+        // Let CSS .maximized rules control size/position
+        w.style.width = '';
+        w.style.height = '';
+        w.style.top = '';
+        w.style.left = '';
+    }
+    w.style.zIndex = ++highestZ;
+    activeWindowId = id;
+    updateDockForFullscreen();
+}
+
+// Legacy alias so any remaining calls don't break
+function toggleFullscreen(id) {
+    toggleMaximize(id);
+}
+
+function startImmersiveMode(win) {
+    // No-op in windowed macOS mode — dock stays visible
+}
+
+function endImmersiveMode() {
+    // No-op
+}
+
+var desktopLayout = JSON.parse(localStorage.getItem('cine_desktop_v2')) || [];
+
+function saveDesktop() {
+    localStorage.setItem('cine_desktop_v2', JSON.stringify(desktopLayout));
+    if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
+    loadDesktop();
+}
+
+function loadDesktop() {
+    let c = document.getElementById('desktop-area');
+    let ex = document.querySelectorAll('.desktop-app');
+    for(let j=0; j<ex.length; j++) ex[j].remove();
+    
+    desktopLayout.forEach(function(item, idx) {
+        let d = document.createElement('div');
+        d.className = 'desktop-app';
+        d.style.left = item.x + 'px';
+        d.style.top = item.y + 'px';
+        d.setAttribute('data-idx', idx);
+        
+        if(item.type === 'folder') {
+            let gHTML = '<div class="d-folder-grid">';
+            let mx = item.apps.slice(0, 4);
+            mx.forEach(function(a) {
+                if(APPS[a]) gHTML += '<img src="' + iconSrc(APPS[a].icon) + '">';
+            });
+            gHTML += '</div>';
+            if(!item.hideName) gHTML += '<div class="d-label">' + (item.customName || 'Folder') + '</div>';
+            
+            d.innerHTML = gHTML;
+            d.onclick = function(ev) {
+                if(DragSystem.isDragMove) return;
+                ev.stopPropagation();
+                if(!this.classList.contains('expanded-folder')) {
+                    closeAllFolders();
+                    expandFolder(this, item, idx);
+                }
+            };
+        } else {
+            let a = APPS[item.id];
+            if(a) {
+                let iSrc = item.customIcon || a.icon;
+                let lbl = item.customName || a.title;
+                let h = '<img src="' + iconSrc(iSrc) + '" class="d-icon" loading="eager" decoding="async" onerror="window.__iconErr&&window.__iconErr(this)">';
+                if(!item.hideName) h += '<div class="d-label">' + lbl + '</div>';
+                d.innerHTML = h;
+                d.ondblclick = function(ev) { ev.stopPropagation(); toggleApp(item.id); };
+            }
+        }
+        
+        d.onmousedown = function(ev) {
+            ev.stopPropagation();
+            if(ev.button === 0) DragSystem.start(ev, d, 'desktop', idx);
+        };
+        
+        d.oncontextmenu = function(ev) {
+    ev.preventDefault(); 
+    ev.stopPropagation();
+    hideAllCtx();
+    let m = document.getElementById('app-context-menu');
+    if(m) {
+        positionContextMenu(m, ev);
+        m.setAttribute('data-target-idx', idx);
+    }
+};
+        
+        c.appendChild(d);
+    });
+}
+
+function expandFolder(el, dat, idx) {
+    el.classList.add('expanded-folder');
+    
+    let h = '<div class="folder-header">' + (dat.customName || 'Folder') + ' <i class="fas fa-times" onclick="closeAllFolders(event)"></i></div>';
+    h += '<div class="folder-grid-expanded">';
+    for(let k=0; k<dat.apps.length; k++) {
+        let aId = dat.apps[k];
+        let info = APPS[aId];
+        if(info) {
+            h += '<div class="f-app" onclick="event.stopPropagation(); toggleApp(\'' + aId + '\')"><img src="' + iconSrc(info.icon) + '"><span>' + info.title + '</span></div>';
+        }
+    }
+    h += '</div>';
+    el.innerHTML = h;
+    
+    setTimeout(function() {
+        let rect = el.getBoundingClientRect();
+        let sibs = document.querySelectorAll('.desktop-app:not(.expanded-folder)');
+        for(let s=0; s<sibs.length; s++) {
+            let sib = sibs[s];
+            let sr = sib.getBoundingClientRect();
+            if(!(rect.right < sr.left || rect.left > sr.right || rect.bottom < sr.top || rect.top > sr.bottom)) {
+                let push = (rect.bottom - sr.top) + 20;
+                sib.style.transform = 'translateY(' + push + 'px)';
+                sib.setAttribute('data-pushed', 'true');
+            }
+        }
+    }, 50);
+}
+
+function closeAllFolders(ev) {
+    if(ev) ev.stopPropagation();
+    let op = document.querySelectorAll('.expanded-folder');
+    if(op.length === 0) return;
+    
+    for(let i=0; i<op.length; i++) op[i].classList.remove('expanded-folder');
+    
+    let push = document.querySelectorAll('.desktop-app[data-pushed="true"]');
+    for(let j=0; j<push.length; j++) {
+        push[j].style.transform = '';
+        push[j].removeAttribute('data-pushed');
+    }
+    setTimeout(loadDesktop, 250);
+}
+
+function setupAppContextMenu() {
+    let m = document.getElementById('app-context-menu');
+    if(!m) return;
+    m.innerHTML = `
+        <li class="ctx-item" id="ctx-rename" role="menuitem" tabindex="0"><i class="fas fa-edit fa-fw" aria-hidden="true"></i> Rename</li>
+        <li class="ctx-item" id="ctx-hidename" role="menuitem" tabindex="0"><i class="fas fa-eye-slash fa-fw" aria-hidden="true"></i> Toggle Name</li>
+        <li class="ctx-item" id="ctx-changeicon" role="menuitem" tabindex="0"><i class="fas fa-image fa-fw" aria-hidden="true"></i> Change Icon</li>
+        <li class="ctx-item" id="ctx-open-newtab-desktop" role="menuitem" tabindex="0"><i class="fas fa-plus fa-fw" aria-hidden="true"></i> Open in New Tab</li>
+        <li class="ctx-separator" role="separator"></li>
+        <li class="ctx-item" id="ctx-delete" role="menuitem" tabindex="0"><i class="fas fa-trash fa-fw" style="color:#aaa;" aria-hidden="true"></i> Remove</li>
+    `;
+    
+    document.getElementById('ctx-rename').onclick = function() {
+        let i = m.getAttribute('data-target-idx');
+        let nm = prompt("Enter new name:", desktopLayout[i].customName || "");
+        if(nm !== null) {
+            desktopLayout[i].customName = nm.trim() === "" ? "App" : nm;
+            saveDesktop();
+        }
+        m.style.display = 'none';
+    };
+    
+    document.getElementById('ctx-hidename').onclick = function() {
+        let i = m.getAttribute('data-target-idx');
+        desktopLayout[i].hideName = !desktopLayout[i].hideName;
+        saveDesktop();
+        m.style.display = 'none';
+    };
+    
+    document.getElementById('ctx-changeicon').onclick = function() {
+        let i = m.getAttribute('data-target-idx');
+        let url = prompt("Enter image URL for custom icon:");
+        if(url) {
+            desktopLayout[i].customIcon = url;
+            saveDesktop();
+        }
+        m.style.display = 'none';
+    };
+
+        document.getElementById('ctx-open-newtab-desktop').onclick = function() {
+        let i = m.getAttribute('data-target-idx');
+        let item = desktopLayout[i];
+        if (item && item.type === 'app' && APPS[item.id]) {
+            const app = APPS[item.id];
+            const url = app.newTabPath || app.path;
+            if(url) window.open(url, '_blank');
+        }
+        m.style.display = 'none';
+    };
+    
+    document.getElementById('ctx-delete').onclick = function() {
+        let i = m.getAttribute('data-target-idx');
+        desktopLayout.splice(i, 1);
+        saveDesktop();
+        m.style.display = 'none';
+    };
+}
+
+document.addEventListener('contextmenu', function(e) {
+    let ids = ['desktop-area', 'windows-layer', 'bg-video', 'bg-img', 'snow-fx'];
+    if(ids.includes(e.target.id) || e.target.tagName === 'BODY') {
+        e.preventDefault();
+        hideAllCtx();
+        let m = document.getElementById('desktop-context-menu');
+        if(m) {
+            positionContextMenu(m, e);
+        }
+    }
+});
+
+var DragSystem = {
+    dragging: false, startPos: {x:0,y:0}, sourceType: null, sourceEl: null,
+    idx: null, appId: null, proxy: document.getElementById('drag-proxy'),
+    pImg: document.getElementById('proxy-img'), badge: document.getElementById('folder-badge'),
+    
+    init: function() {
+        window.addEventListener('mousemove', e => this.move(e));
+        window.addEventListener('mouseup', e => this.end(e));
+    },
+    
+    start: function(e, el, type, id) {
+        this.startPos = {x: e.clientX, y: e.clientY};
+        this.sourceType = type; this.sourceEl = el; this.isDragMove = false;
+        if(type === 'drawer' || type === 'dock') this.appId = id;
+        else if(type === 'desktop') { this.idx = id; this.sourceEl.style.opacity = '0.5'; }
+    },
+    
+    startWinDrag: function(e, id) {
+        // Don't drag when clicking traffic-light buttons or refresh
+        if (e.target.closest('.win-btn') || e.target.closest('.win-refresh')) return;
+        const win = document.getElementById('win-' + id);
+        if (!win || win.classList.contains('maximized')) return;
+        
+        this.startPos = {x: e.clientX, y: e.clientY};
+        this.sourceType = 'window';
+        this.sourceEl = win;
+        this.isDragMove = false;
+        this.draggingWinId = id;
+        
+        const rect = win.getBoundingClientRect();
+        this.winOffset = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+        win.style.zIndex = ++highestZ;
+        activeWindowId = id;
+    },
+    
+    move: function(e) {
+        if(!this.sourceEl) return;
+        let dx = Math.abs(e.clientX - this.startPos.x);
+        let dy = Math.abs(e.clientY - this.startPos.y);
+        
+        if(dx > 3 || dy > 3) {
+            this.dragging = true; this.isDragMove = true;
+            
+            if (this.sourceType === 'window') {
+                // Disable pointer events on the iframe so fast drags
+                // don't get captured when the cursor enters the iframe
+                if (!this._iframePointerDisabled) {
+                    const frame = this.sourceEl.querySelector('iframe');
+                    if (frame) {
+                        frame.style.pointerEvents = 'none';
+                        this._iframePointerDisabled = true;
+                    }
+                }
+                const newLeft = e.clientX - this.winOffset.x;
+                const newTop = e.clientY - this.winOffset.y;
+                // Keep window mostly on-screen
+                const maxL = window.innerWidth - 80;
+                const maxT = window.innerHeight - 60;
+                this.sourceEl.style.left = Math.max(-this.sourceEl.offsetWidth + 100, Math.min(newLeft, maxL)) + 'px';
+                this.sourceEl.style.top = Math.max(0, Math.min(newTop, maxT)) + 'px';
+                return;
+            }
+            
+            if(this.sourceType === 'desktop' || this.sourceType === 'drawer' || this.sourceType === 'dock') {
+                if(this.sourceType === 'drawer') toggleAppDrawer();
+                this.proxy.style.display = 'block';
+                this.proxy.style.left = (e.clientX - 25) + 'px';
+                this.proxy.style.top = (e.clientY - 25) + 'px';
+                
+                if(this.sourceType === 'drawer' || this.sourceType === 'dock') {
+                    if(APPS[this.appId]) this.pImg.src = iconSrc(APPS[this.appId].icon);
+                } else {
+                    let itm = desktopLayout[this.idx];
+                    if(itm.type === 'app') {
+                        if(APPS[itm.id]) this.pImg.src = iconSrc(APPS[itm.id].icon);
+                    } else {
+                        this.pImg.src = '';
+                        this.badge.style.display = 'flex';
+                        this.badge.innerText = itm.apps.length;
+                    }
+                }
+            }
+        }
+    },
+    
+    end: function(e) {
+        if(!this.sourceEl) return;
+        if(!this.isDragMove && this.sourceType === 'desktop') { this.reset(); return; }
+        if(!this.dragging) { this.reset(); return; }
+        
+        if (this.sourceType === 'window') {
+            // Restore iframe pointer events after drag
+            if (this._iframePointerDisabled && this.sourceEl) {
+                const frame = this.sourceEl.querySelector('iframe');
+                if (frame) frame.style.pointerEvents = '';
+                this._iframePointerDisabled = false;
+            }
+            this.reset();
+            return;
+        }
+        
+        if(this.sourceType === 'desktop' || this.sourceType === 'drawer' || this.sourceType === 'dock') {
+            let nx = Math.round((e.clientX - 40) / 90) * 90;
+            let ny = Math.round((e.clientY - 40) / 100) * 100;
+            
+            if(e.clientY > window.innerHeight - 80) {
+                if(this.sourceType === 'desktop') desktopLayout.splice(this.idx, 1);
+            } else {
+                let tIdx = -1;
+                let aAll = document.querySelectorAll('.desktop-app');
+                for(let i=0; i<aAll.length; i++) {
+                    if(aAll[i] !== this.sourceEl) {
+                        let r = aAll[i].getBoundingClientRect();
+                        if(e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom) tIdx = aAll[i].dataset.idx;
+                    }
+                }
+                
+                if(tIdx > -1) {
+                    let targ = desktopLayout[tIdx];
+                    let drp = (this.sourceType === 'drawer' || this.sourceType === 'dock') ? [this.appId] : (desktopLayout[this.idx].type === 'app' ? [desktopLayout[this.idx].id] : desktopLayout[this.idx].apps);
+                    
+                    if(targ.type === 'app') {
+                        targ.type = 'folder';
+                        targ.apps = [targ.id].concat(drp);
+                        delete targ.id;
+                    } else {
+                        targ.apps.push.apply(targ.apps, drp);
+                    }
+                    if(this.sourceType === 'desktop') desktopLayout.splice(this.idx, 1);
+                } else {
+                    if(this.sourceType === 'drawer' || this.sourceType === 'dock') {
+                        desktopLayout.push({type: 'app', id: this.appId, x: nx, y: ny});
+                    } else {
+                        desktopLayout[this.idx].x = nx;
+                        desktopLayout[this.idx].y = ny;
+                    }
+                }
+            }
+            saveDesktop();
+        }
+        this.reset();
+    },
+    
+    reset: function() {
+        // Safety: restore iframe pointer-events if still disabled
+        if (this._iframePointerDisabled && this.sourceEl) {
+            const frame = this.sourceEl.querySelector('iframe');
+            if (frame) frame.style.pointerEvents = '';
+            this._iframePointerDisabled = false;
+        }
+        this.dragging = false;
+        if(this.sourceEl) this.sourceEl.style.opacity = '1';
+        this.sourceEl = null;
+        this.proxy.style.display = 'none';
+        this.badge.style.display = 'none';
+        this.winOffset = null;
+        this.draggingWinId = null;
+    }
+};
+DragSystem.init();
+
+window.toggleDesktopSize = function(l) {
+    if(l) document.getElementById('desktop-area').classList.add('desktop-large-mode');
+    else document.getElementById('desktop-area').classList.remove('desktop-large-mode');
+    document.getElementById('desktop-context-menu').style.display = 'none';
+};
+
+var unlockedWallpapers = JSON.parse(localStorage.getItem('cine_unlocked_wp')) || ['default'];
+window.wpMode = 'both';
+
+function setWallpaper(k, noti=false) {
+    let d = wallpaperRegistry[k];
+    if(!d) return;
+    
+    if(noti && d.locked && !unlockedWallpapers.includes(d.id)) {
+        unlockedWallpapers.push(d.id);
+        localStorage.setItem('cine_unlocked_wp', JSON.stringify(unlockedWallpapers));
+        if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
+        alert("Wallpaper: [ " + d.name + " ] Unlocked.");
+    }
+    
+    if(window.wpMode === 'home' || window.wpMode === 'both') {
+        let bV = document.getElementById('bg-video');
+        let bI = document.getElementById('bg-img');
+        applyMediaToElements(d.url, bV, bI, true);
+        updateSysSetting('homeWallpaper', k);
+    }
+    
+    if(window.wpMode === 'lock' || window.wpMode === 'both') {
+        let lV = document.getElementById('lock-video');
+        let lI = document.getElementById('lock-img');
+        applyMediaToElements(d.url, lV, lI, false);
+        updateSysSetting('lockWallpaper', k);
+    }
+    
+    // Ensure a stored preview exists for this wallpaper (same cache path as real media)
+    if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.ensure) {
+        WpPreviewCache.ensure(d.url);
+    }
+    
+    updateWallpaperLoop();
+    openWallpaperMenu();
+}
+
+function openWallpaperMenu() {
+    let m = document.getElementById('wallpaper-menu');
+    let gu = document.getElementById('wp-grid-unlocked');
+    let gl = document.getElementById('wp-grid-locked');
+    if(!m) return;
+    
+    // Non-modal open only — showModal() puts the dialog in the browser top layer,
+    // which hides our fixed context menus and blocks the default menu after preventDefault.
+    try { if (typeof m.close === 'function' && m.open) m.close(); } catch (e) {}
+    m.style.display = 'flex';
+    m.classList.add('open');
+    
+    gu.innerHTML = '';
+    gl.innerHTML = '';
+    
+    for(let k in wallpaperRegistry) {
+        let d = wallpaperRegistry[k];
+        let ul = !d.locked || unlockedWallpapers.includes(d.id);
+        let c = document.createElement('div');
+        c.className = "wp-card " + (ul ? "" : "wp-locked");
+        
+        if(ul) {
+            // Placeholder until cached preview resolves (thumb from IndexedDB, or SW-cached media)
+            c.innerHTML = '<div class="wp-info">' + d.name + '</div>';
+            c.setAttribute('data-key', k);
+            c.onclick = function() {
+                setWallpaper(this.getAttribute('data-key'));
+                let crds = document.querySelectorAll('.wp-card');
+                for(let j=0; j<crds.length; j++) crds[j].classList.remove('active-wp');
+                this.classList.add('active-wp');
+            };
+            gu.appendChild(c);
+
+            (function(card, entry, key) {
+                function applySrc(info) {
+                    if (!info || !info.src) return;
+                    var mHtml;
+                    if (info.type === 'thumb') {
+                        mHtml = '<img src="' + info.src + '" alt="wp" draggable="false">';
+                    } else if (entry.url.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
+                        mHtml = '<img src="' + info.src + '" alt="wp" draggable="false">';
+                    } else {
+                        mHtml = '<video src="' + info.src + '" preload="metadata" playsinline muted loop draggable="false" onmouseover="this.play()" onmouseout="this.pause()"></video>';
+                    }
+                    var infoEl = card.querySelector('.wp-info');
+                    card.innerHTML = mHtml + (infoEl ? infoEl.outerHTML : '<div class="wp-info">' + entry.name + '</div>');
+                }
+
+                if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.getPreviewSrc) {
+                    WpPreviewCache.getPreviewSrc(entry.url).then(function(info) {
+                        applySrc(info);
+                        if (info && info.type === 'media' && WpPreviewCache.ensure) {
+                            WpPreviewCache.ensure(entry.url).then(function(dataUrl) {
+                                if (dataUrl && card.isConnected) {
+                                    applySrc({ type: 'thumb', src: dataUrl });
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    var previewSrc = entry.url;
+                    var fr = (typeof window._wpGetForce === 'function') ? window._wpGetForce(entry.url) : null;
+                    if (fr && typeof window._wpBustUrl === 'function') {
+                        previewSrc = window._wpBustUrl(entry.url, fr.token);
+                    }
+                    applySrc({
+                        type: entry.url.match(/\.(png|jpg|jpeg|gif|webp)$/i) ? 'thumb' : 'media',
+                        src: previewSrc
+                    });
+                }
+            })(c, d, k);
+        } else {
+            c.innerHTML = '<div class="wp-info"><i class="fas fa-lock"></i></div>';
+            gl.appendChild(c);
+        }
+    }
+    
+    let chk = document.getElementById('wp-loop-chk');
+    if(chk) {
+        chk.checked = sysConfig.wpLoop;
+        chk.onchange = e => updateSysSetting('wpLoop', e.target.checked);
+    }
+}
+
+// Capture-phase: right-click on any wallpaper card (or its img/video child)
+document.addEventListener('contextmenu', function(ev) {
+    var card = ev.target && ev.target.closest ? ev.target.closest('.wp-card') : null;
+    if (!card || !card.getAttribute('data-key')) return;
+    // Only unlocked cards (locked have no data-key interaction / wp-locked)
+    if (card.classList.contains('wp-locked')) return;
+    var menuEl = document.getElementById('wallpaper-menu');
+    if (!menuEl || !menuEl.classList.contains('open')) return;
+
+    ev.preventDefault();
+    ev.stopPropagation();
+    hideAllCtx();
+    var ctx = document.getElementById('wp-context-menu');
+    if (ctx) {
+        ctx.setAttribute('data-wp-key', card.getAttribute('data-key'));
+        positionContextMenu(ctx, ev);
+    }
+}, true);
+
+/** Clear Seamless SW cache for a wallpaper URL, re-fetch it, and force-reload
+ *  any media elements currently using it (home / lock / menu preview). */
+function refreshWallpaper(key) {
+    let d = wallpaperRegistry[key];
+    if (!d || !d.url) {
+        showNotification('Wallpaper', 'Unknown wallpaper.');
+        return;
+    }
+    let url = d.url;
+    showNotification('Wallpaper', 'Refreshing "' + d.name + '"…');
+
+    var finish = function(ok) {
+        // Force-flag is already set by seamlessCacheRefresh; applyMediaToElements
+        // will load with ?_cb= and re-seed the SW cache from network.
+        if (sysConfig.homeWallpaper === key) {
+            applyMediaToElements(url, document.getElementById('bg-video'), document.getElementById('bg-img'), true);
+        }
+        if (sysConfig.lockWallpaper === key) {
+            applyMediaToElements(url, document.getElementById('lock-video'), document.getElementById('lock-img'), false);
+        }
+        // Invalidate stored preview thumb, regenerate, then update open menu cards
+        var afterPreview = function(thumbSrc) {
+            var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
+            var bust = force && typeof window._wpBustUrl === 'function'
+                ? window._wpBustUrl(url, force.token)
+                : (url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cb=' + Date.now());
+            var cards = document.querySelectorAll('.wp-card[data-key="' + key + '"]');
+            cards.forEach(function(card) {
+                var infoEl = card.querySelector('.wp-info');
+                var label = infoEl ? infoEl.outerHTML : '<div class="wp-info">' + d.name + '</div>';
+                if (thumbSrc) {
+                    card.innerHTML = '<img src="' + thumbSrc + '" alt="wp" draggable="false">' + label;
+                } else {
+                    var media = card.querySelector('video, img');
+                    if (!media) {
+                        if (url.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
+                            card.innerHTML = '<img src="' + bust + '" alt="wp" draggable="false">' + label;
+                        } else {
+                            card.innerHTML = '<video src="' + bust + '" preload="metadata" playsinline muted loop draggable="false" onmouseover="this.play()" onmouseout="this.pause()"></video>' + label;
+                        }
+                    } else if (media.tagName === 'VIDEO') {
+                        try { media.pause(); } catch (e) {}
+                        media.removeAttribute('src');
+                        media.src = bust;
+                        media.load();
+                    } else {
+                        media.removeAttribute('src');
+                        media.src = thumbSrc || bust;
+                    }
+                }
+            });
+            showNotification('Wallpaper', ok
+                ? '"' + d.name + '" cache cleared & reloaded.'
+                : '"' + d.name + '" reloaded (cache may be unavailable).');
+        };
+
+        if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.invalidate) {
+            WpPreviewCache.invalidate(url).then(function() {
+                return WpPreviewCache.ensure(url, { force: true });
+            }).then(function(dataUrl) {
+                afterPreview(dataUrl || null);
+            }).catch(function() {
+                afterPreview(null);
+            });
+        } else {
+            afterPreview(null);
+        }
+    };
+
+    if (typeof window.seamlessCacheRefresh === 'function') {
+        window.seamlessCacheRefresh(url).then(function(ok) { finish(!!ok); }).catch(function() { finish(false); });
+    } else if (typeof window.seamlessCacheDelete === 'function') {
+        var token = Date.now();
+        if (typeof window._wpMarkForce === 'function') window._wpMarkForce(url, token);
+        window.seamlessCacheDelete(url).then(function() {
+            if (typeof window.seamlessCacheAdd === 'function') {
+                window.seamlessCacheAdd(url, { force: true, token: token });
+            }
+            finish(true);
+        }).catch(function() { finish(false); });
+    } else {
+        if (typeof window._wpMarkForce === 'function') window._wpMarkForce(url, Date.now());
+        finish(false);
+    }
+}
+
+// Wire wallpaper context menu action (once)
+(function setupWpContextMenu() {
+    var btn = document.getElementById('ctx-wp-refresh');
+    if (!btn) return;
+    btn.onclick = function() {
+        var ctx = document.getElementById('wp-context-menu');
+        var key = ctx ? ctx.getAttribute('data-wp-key') : null;
+        hideAllCtx();
+        if (key) refreshWallpaper(key);
+    };
+})();
+
+var sInp = document.getElementById('start-search-input');
+if(sInp) {
+    sInp.addEventListener('keydown', function(e) {
+        if(e.key === 'Enter') {
+            let q = this.value.trim();
+            if(q.toLowerCase() === 'cherry') {
+                cherriUnlocked = true;
+                localStorage.setItem('cherri_unlocked', 'true');
+                updateCherriApp();
+                renderUI();
+                this.value = "";
+                this.blur();
+            } else if(wallpaperRegistry[q]) {
+                setWallpaper(q, true);
+                this.value = "";
+                this.blur();
+            }
+        }
+    });
+}
+
+function toggleStartMenu() {
+    let sm = document.getElementById('start-menu');
+    if(sm.classList.contains('open')) {
+        sm.classList.remove('open');
+        setTimeout(function(){ sm.style.display='none'; }, 300);
+    } else {
+        sm.style.display = 'flex';
+        setTimeout(function(){ sm.classList.add('open'); }, 10);
+    }
+}
+
+document.addEventListener('click', function(e) {
+    let sm = document.getElementById('start-menu');
+    if(sm && !sm.contains(e.target) && !e.target.closest('.dock-item')) {
+        sm.classList.remove('open');
+        setTimeout(function(){ sm.style.display='none'; }, 300);
+    }
+});
+
+var cvsSnow = document.getElementById('snow-fx');
+if(cvsSnow) {
+    var ctxSnow = cvsSnow.getContext('2d');
+    var sW = window.innerWidth, sH = window.innerHeight;
+    cvsSnow.width = sW; cvsSnow.height = sH;
+    
+    var flakes = [];
+    for(var f=0; f<30; f++) flakes.push({x: Math.random()*sW, y: Math.random()*sH, r: Math.random()*2, s: Math.random()+0.5});
+    
+    function drawSnow() {
+        if(isDesktopActive) {
+            ctxSnow.clearRect(0, 0, sW, sH);
+            ctxSnow.fillStyle = "rgba(255,255,255,0.3)";
+            for(let i=0; i<flakes.length; i++) {
+                let fl = flakes[i];
+                ctxSnow.beginPath();
+                ctxSnow.arc(fl.x, fl.y, fl.r, 0, Math.PI * 2);
+                ctxSnow.fill();
+                fl.y += fl.s;
+                if(fl.y > sH) fl.y = 0;
+            }
+        }
+        requestAnimationFrame(drawSnow);
+    }
+    drawSnow();
+}
+
+var MODES = ['FAST', 'THINKING', 'LIVE'];
+var cMode = 0;
+var isCiriActive = false;
+var holdTimer = null;
+var hasBootCiri = false;
+var expectKey = false;
+var sStream = null;
+var cImgB64 = null;
+var cImgMime = null;
+
+function checkApiKey() {
+    let st = document.getElementById('status-text');
+    let si = document.getElementById('status-icon');
+    if(!st) return;
+    if(localStorage.getItem('ciri_key')) {
+        st.textContent = "Secure"; st.className = "secure";
+        si.innerHTML = '<svg class="secure-svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>';
+    } else {
+        st.textContent = "Unstable"; st.className = "unstable";
+        si.innerHTML = '<svg class="unstable-svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+    }
+}
+checkApiKey();
+
+window.autoGrow = function(el) { el.style.height = "5px"; el.style.height = (el.scrollHeight) + "px"; };
+
+window.addEventListener('keydown', function(e) {
+    if(e.altKey && (e.code === 'KeyS' || e.key.toLowerCase() === 's')) {
+        if(!holdTimer && !isCiriActive) {
+            holdTimer = setTimeout(function() {
+                document.body.classList.add('ciri-active');
+                isCiriActive = true;
+                let cInp = document.getElementById('chat-input');
+                if(!hasBootCiri) {
+                    let bs = document.getElementById('ciri-boot-screen');
+                    if(bs) bs.style.display = 'flex';
+                    setTimeout(function(){ document.getElementById('boot-ciri-text').classList.add('typing'); }, 300);
+                    setTimeout(function(){ document.getElementById('boot-sub-text').classList.add('show'); }, 1100);
+                    setTimeout(function() {
+                        document.getElementById('boot-loader').style.opacity = '1';
+                        setTimeout(function() {
+                            document.getElementById('boot-status-text').textContent = "Connection Established.";
+                            document.getElementById('boot-spinner').style.display = 'none';
+                            setTimeout(function() {
+                                bs.style.filter = 'blur(10px)'; bs.style.opacity = '0';
+                                setTimeout(function() {
+                                    bs.style.display = 'none';
+                                    hasBootCiri = true;
+                                    if(cInp) cInp.focus();
+                                }, 800);
+                            }, 1800);
+                        }, 1000);
+                    }, 2200);
+                } else {
+                    setTimeout(function(){ if(cInp) cInp.focus(); }, 100);
+                }
+            }, 2000);
+        }
+    } else if(e.code === 'Escape' && isCiriActive) {
+        closeCiri();
+    }
+});
+
+window.addEventListener('keyup', function(e) {
+    if(e.code === 'KeyS' || e.key.toLowerCase() === 's' || e.key === 'Alt') {
+        clearTimeout(holdTimer); holdTimer = null;
+    }
+});
+
+window.closeCiri = function() {
+    document.body.classList.remove('ciri-active');
+    isCiriActive = false;
+};
+
+var aMedia = null;
+var nHide;
+var cNoti = document.getElementById('cine-noti');
+
+function showNoti() {
+    if(!cNoti) return;
+    cNoti.classList.add('active'); cNoti.classList.remove('minimized');
+    let rb = document.getElementById('restore-btn');
+    if(rb) rb.classList.remove('visible');
+    resetNH();
+}
+
+function hideNoti() {
+    if(!cNoti) return;
+    cNoti.classList.remove('active'); cNoti.classList.remove('minimized');
+    let rb = document.getElementById('restore-btn');
+    if(rb) rb.classList.remove('visible');
+    clearTimeout(nHide);
+}
+
+function resetNH() {
+    clearTimeout(nHide);
+    if(cNoti && cNoti.classList.contains('active') && !cNoti.classList.contains('minimized')) {
+        nHide = setTimeout(function() {
+            cNoti.classList.add('minimized');
+            setTimeout(function(){ let rb = document.getElementById('restore-btn'); if(rb) rb.classList.add('visible'); }, 300);
+        }, 5000);
+    }
+}
+
+if(cNoti) {
+    cNoti.addEventListener('mouseenter', function(){ clearTimeout(nHide); });
+    cNoti.addEventListener('mouseleave', resetNH);
+    let mn = document.getElementById('minimize-noti-btn');
+    if(mn) mn.onclick = function() {
+        cNoti.classList.add('minimized');
+        setTimeout(function(){ let rb = document.getElementById('restore-btn'); if(rb) rb.classList.add('visible'); }, 300);
+    };
+    let rbtn = document.getElementById('restore-btn');
+    if(rbtn) rbtn.onclick = function() {
+        this.classList.remove('visible');
+        cNoti.classList.remove('minimized');
+        resetNH();
+    };
+    let clbtn = document.getElementById('close-noti-btn');
+    if(clbtn) clbtn.onclick = function() {
+        if(aMedia) aMedia.pause();
+        hideNoti();
+    };
+}
+
+setInterval(function() {
+    let fnd = null;
+    let md = document.querySelectorAll('audio, video');
+    for(let i=0; i<md.length; i++) {
+        let m = md[i];
+        if(!m.paused && !m.muted && m.volume > 0 && !['bg-video', 'lock-video', 'boot-video'].includes(m.id)) fnd = m;
+    }
+    
+    let ifr = document.querySelectorAll('iframe');
+    for(let j=0; j<ifr.length; j++) {
+        try {
+            let idc = ifr[j].contentDocument || ifr[j].contentWindow.document;
+            if(idc) {
+                let imd = idc.querySelectorAll('audio, video');
+                for(let k=0; k<imd.length; k++) {
+                    if(!imd[k].paused && !imd[k].muted && imd[k].volume > 0) fnd = imd[k];
+                }
+            }
+        } catch(e) {}
+    }
+    
+    isMediaPlaying = !!fnd;
+    if(fnd !== aMedia) {
+        if(fnd) { aMedia = fnd; setupM(); showNoti(); }
+        else { aMedia = null; hideNoti(); }
+    }
+    
+    if(aMedia) {
+        let ct = document.getElementById('current-time');
+        if(ct) ct.textContent = fmtT(aMedia.currentTime);
+        if(isFinite(aMedia.duration) && aMedia.duration > 0) {
+            let pf = document.getElementById('progress-fill');
+            if(pf) pf.style.width = ((aMedia.currentTime / aMedia.duration) * 100) + "%";
+            let tt = document.getElementById('total-time');
+            if(tt) tt.textContent = fmtT(aMedia.duration);
+        }
+    }
+}, 1000);
+
+function setupM() {
+    if(!aMedia) return;
+    let nt = document.getElementById('noti-title');
+    if(nt) nt.innerText = aMedia.title || "Web Media Playing";
+    
+    let pp = document.getElementById('play-pause');
+    if(pp) pp.onclick = function() { aMedia.paused ? aMedia.play() : aMedia.pause(); resetNH(); };
+    
+    aMedia.addEventListener('play', function() {
+        let iPl = document.getElementById('icon-play');
+        let iPa = document.getElementById('icon-pause');
+        if(iPl) iPl.classList.add('hidden-svg');
+        if(iPa) iPa.classList.add('visible-svg');
+        showNoti();
+    });
+    
+    aMedia.addEventListener('pause', function() {
+        let iPl = document.getElementById('icon-play');
+        let iPa = document.getElementById('icon-pause');
+        if(iPl) { iPl.classList.remove('hidden-svg'); iPl.classList.add('visible-svg'); }
+        if(iPa) { iPa.classList.remove('visible-svg'); iPa.classList.add('hidden-svg'); }
+    });
+    
+    let sb = document.getElementById('skip-back');
+    if(sb) sb.onclick = function() { if(isFinite(aMedia.currentTime)) aMedia.currentTime = Math.max(0, aMedia.currentTime - 15); resetNH(); };
+    
+    let sf = document.getElementById('skip-forward');
+    if(sf) sf.onclick = function() { if(isFinite(aMedia.duration) && aMedia.duration > 0) aMedia.currentTime = Math.min(aMedia.duration, aMedia.currentTime + 15); resetNH(); };
+    
+    let pha = document.getElementById('progress-hit-area');
+    if(pha) pha.onclick = function(e) {
+        if(isFinite(aMedia.duration) && aMedia.duration > 0) {
+            let r = this.getBoundingClientRect();
+            let p = (e.clientX - r.left) / r.width;
+            aMedia.currentTime = p * aMedia.duration;
+        }
+        resetNH();
+    };
+}
+
+function fmtT(s) {
+    if(isNaN(s) || !isFinite(s)) return "0:00";
+    let m = Math.floor(s / 60);
+    let se = Math.floor(s % 60);
+    return m + ":" + se.toString().padStart(2, '0');
+}
+
+function drawFV() {
+    requestAnimationFrame(drawFV);
+    let cv = document.getElementById('visualizer');
+    if(!cv) return;
+    let cx = cv.getContext('2d');
+    
+    cv.width = cv.parentElement.clientWidth;
+    cv.height = 14;
+    
+    let bL = 32;
+    cx.clearRect(0, 0, cv.width, cv.height);
+    let bW = (cv.width / bL) * 2;
+    let xP = 0;
+    
+    for(let i=0; i<bL; i++) {
+        let bH = aMedia && !aMedia.paused ? (Math.random() * cv.height) : 2;
+        cx.fillStyle = "#fff";
+        cx.beginPath();
+        cx.roundRect(xP, cv.height - bH, bW - 1.5, bH, 2);
+        cx.fill();
+        xP += bW;
+    }
+}
+drawFV();
+
+var fLT = performance.now();
+var fFr = 0;
+var fLC = 0;
+
+function chkFps() {
+    let nw = performance.now();
+    fFr++;
+    if(nw - fLT >= 1000) {
+        let cFps = fFr;
+        let fv = document.getElementById('fps-val');
+        if(fv) fv.innerText = cFps;
+
+        if(cFps <= 20) {
+            fLC++;
+            if(fLC >= 5 && !sysConfig.optBg) {
+                sysConfig.optBg = true;
+                localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
+    if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
+                let bv = document.getElementById('bg-video');
+                let lv = document.getElementById('lock-video');
+                if(bv) bv.pause();
+                if(lv) lv.pause();
+                showNotification("System Optimized", "Low FPS detected. Backgrounds paused.");
+            }
+        } else {
+            fLC = 0;
+        }
+        
+        fFr = 0;
+        fLT = nw;
+    }
+    requestAnimationFrame(chkFps);
+}
+requestAnimationFrame(chkFps);
+</script>
+
+<!-- ==================== SEAMLESS AUTH MODAL ==================== -->
+<dialog id="auth-modal" style="
+  background: rgba(15,15,15,0.97);
+  border: 1px solid #333;
+  border-radius: 18px;
+  padding: 32px 28px;
+  color: #fff;
+  max-width: 420px;
+  width: 92%;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+  font-family: var(--font-main);
+  position: fixed;
+  z-index: 999999;
+">
+  <button onclick="this.closest('dialog').close()" style="
+    position:absolute; top:14px; right:16px;
+    background:none; border:none; color:#888; font-size:22px; cursor:pointer;
+  ">&times;</button>
+
+  <h2 style="
+    font-family: var(--font-header);
+    letter-spacing: 3px;
+    font-size: 1.4rem;
+    text-align: center;
+    margin: 0 0 8px 0;
+  ">SEAMLESS ACCOUNT</h2>
+
+  <p style="text-align:center; color:#888; font-size:13px; margin-bottom:24px;">
+    Sign in to sync wallpapers, pins &amp; progress across devices
+  </p>
+
+  <div id="auth-form">
+    <input type="email" id="auth-email" placeholder="Email address" autocomplete="email"
+      style="width:100%; padding:13px 14px; margin-bottom:12px; background:#1a1a1a;
+             border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
+    
+    <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="current-password"
+      style="width:100%; padding:13px 14px; margin-bottom:18px; background:#1a1a1a;
+             border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
+
+    <button onclick="handleSignIn()" style="
+      width:100%; padding:13px; background:#fff; color:#000; border:none;
+      border-radius:10px; font-weight:700; font-size:15px; cursor:pointer; margin-bottom:10px;
+    ">Sign In</button>
+
+    <button onclick="handleSignUp()" style="
+      width:100%; padding:13px; background:#222; color:#fff; border:1px solid #444;
+      border-radius:10px; font-weight:600; font-size:15px; cursor:pointer; margin-bottom:14px;
+    ">Create Account</button>
+
+    <div style="text-align:center; margin: 16px 0 8px; color:#555; font-size:12px;">— or —</div>
+
+    <button onclick="handleContinueAsGuest()" style="
+      width:100%; padding:12px; background:transparent; color:#aaa; border:1px solid #333;
+      border-radius:10px; font-size:14px; cursor:pointer;
+    ">Continue as Guest</button>
+  </div>
+
+  <div id="auth-logged-in" style="display:none; text-align:center;">
+    <p style="margin-bottom:6px; color:#aaa; font-size:13px;">Signed in as</p>
+    <p id="auth-user-email" style="font-weight:600; margin-bottom:20px; word-break:break-all;"></p>
+    <button onclick="handleSignOut()" style="
+      padding:11px 28px; background:#222; color:#fff; border:1px solid #444;
+      border-radius:10px; font-weight:600; cursor:pointer;
+    ">Sign Out</button>
+  </div>
+
+  <p id="auth-message" style="margin-top:18px; text-align:center; font-size:13px; min-height:18px;"></p>
+</dialog>
+
 </body>
 </html>
