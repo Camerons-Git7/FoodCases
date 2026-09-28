@@ -1141,8 +1141,8 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 </section>
 
 <main id="lock-screen" onclick="unlockSystem()" role="presentation">
-  <video id="lock-video" autoplay loop muted playsinline aria-hidden="true"></video>
-  <img id="lock-img" class="media__fallback" alt="Lockscreen Background">
+  <video id="lock-video" autoplay loop muted playsinline preload="auto" aria-hidden="true"></video>
+  <img id="lock-img" class="media__fallback" alt="Lockscreen Background" decoding="async">
   
  <article id="lock-ui">
     <div class="lock-content">
@@ -1154,8 +1154,8 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 </main>
 
 <!-- Base OS Backgrounds -->
-<video id="bg-video" loop muted playsinline aria-hidden="true"></video>
-<img id="bg-img" class="media__fallback" alt="Desktop Background">
+<video id="bg-video" loop muted playsinline preload="auto" aria-hidden="true"></video>
+<img id="bg-img" class="media__fallback" alt="Desktop Background" decoding="async">
 <canvas id="snow-fx" aria-hidden="true"></canvas>
 
 <header id="hud-top">
@@ -1980,7 +1980,8 @@ var _devBuildVer = "3.0.1";
 (function registerSeamlessCache() {
   if (!('serviceWorker' in navigator) || !('caches' in window)) return;
 
-  const CACHE_NAME = 'seamless-os-cache-v3.0.3';
+  const CACHE_NAME = 'seamless-os-cache-v3.0.4';
+  window.SEAMLESS_CACHE_NAME = CACHE_NAME;
 
   const swSource = `
     const CACHE_NAME = '${CACHE_NAME}';
@@ -2167,57 +2168,75 @@ var _devBuildVer = "3.0.1";
     return base + '?_v=' + (token || Date.now());
   }
 
-  // Helper so the main page can force-cache any URL it discovers
+  // Same-origin wallpapers must be cached as real (non-opaque) responses so we can
+  // replay them via blob: URLs. no-cors opaque entries cannot drive <video>/<img>.
   window.seamlessCacheAdd = function(url, opts) {
     if (!url || typeof url !== 'string') return;
     opts = opts || {};
-    var ver = _wpGetVersion(url);
-    // Never overwrite a versioned/refreshed entry with a possibly-stale no-cors fetch
-    // unless this call is itself a force refresh.
-    if (!opts.force && ver) {
-      // Warm the versioned key only (do not put under clean URL — that would fight refresh)
-      var warmUrl = _wpBustUrl(url, ver);
-      caches.open(CACHE_NAME).then(function(cache) {
-        cache.match(warmUrl).then(function(hit) {
-          if (hit) return;
-          fetch(warmUrl, { mode: 'no-cors', cache: 'reload' }).then(function(res) {
-            if (res) cache.put(warmUrl, res).catch(function(){});
-          }).catch(function(){});
-        });
-      }).catch(function(){});
-      return;
-    }
-    caches.open(CACHE_NAME).then(cache => {
-      var token = opts.token || ver || Date.now();
+    var abs;
+    try { abs = new URL(url, self.location.href).href; } catch (e) { abs = url; }
+    var sameOrigin = false;
+    try { sameOrigin = new URL(abs).origin === self.location.origin; } catch (e) {}
+
+    caches.open(CACHE_NAME).then(function(cache) {
+      var token = opts.token || Date.now();
+      var reqUrl = opts.force ? _wpBustUrl(url, token) : url;
       var fetchOpts = opts.force
-        ? { cache: 'reload', mode: 'cors', credentials: 'same-origin' }
-        : { mode: 'no-cors' };
-      var reqUrl = opts.force ? _wpBustUrl(url, token) : (ver ? _wpBustUrl(url, ver) : url);
-      fetch(reqUrl, fetchOpts).then(res => {
-        if (!res) return;
-        // Store under versioned key (and clean only when not versioned)
-        var puts = [];
-        if (opts.force || ver) {
-          puts.push(cache.put(_wpBustUrl(url, token), res.clone()));
-        } else {
-          puts.push(cache.put(url, res.clone()));
-          try {
-            var abs = new URL(url, self.location.href).href;
-            if (abs !== url) puts.push(cache.put(abs, res.clone()));
-          } catch (e) {}
-        }
+        ? { cache: 'reload', credentials: 'same-origin' }
+        : { credentials: 'same-origin', cache: 'force-cache' };
+
+      function storeReadable(res) {
+        if (!res || !(res.ok || res.type === 'basic' || res.type === 'cors')) return;
+        var puts = [cache.put(url, res.clone())];
+        if (abs !== url) puts.push(cache.put(abs, res.clone()));
+        if (opts.force) puts.push(cache.put(_wpBustUrl(url, token), res.clone()));
         return Promise.all(puts.map(function(p) { return p.catch(function(){}); }));
-      }).catch(() => {
-        if (opts.force) {
-          var bust = _wpBustUrl(url, token);
-          fetch(bust, { mode: 'no-cors', cache: 'reload' }).then(function(r2) {
-            if (r2) {
-              cache.put(bust, r2.clone()).catch(function(){});
-            }
+      }
+
+      // Prefer same-origin / cors so the body is readable
+      var mode = sameOrigin ? 'same-origin' : 'cors';
+      fetch(reqUrl, Object.assign({ mode: mode }, fetchOpts)).then(storeReadable).catch(function() {
+        if (!sameOrigin) {
+          // Last resort: opaque cache (SW may still serve it; page cannot blob it)
+          fetch(reqUrl, { mode: 'no-cors', cache: opts.force ? 'reload' : 'default' }).then(function(res) {
+            if (res) cache.put(url, res).catch(function(){});
           }).catch(function(){});
         }
       });
-    }).catch(() => {});
+    }).catch(function(){});
+  };
+
+  /** Return a blob: URL from Cache Storage if we have a readable copy of this wallpaper. */
+  window.seamlessCacheGetBlobUrl = async function(url) {
+    if (!url || !('caches' in window)) return null;
+    try {
+      var cache = await caches.open(CACHE_NAME);
+      var abs = url;
+      try { abs = new URL(url, self.location.href).href; } catch (e) {}
+      var path = _wpNormPath(url);
+      var hit = await cache.match(url, { ignoreSearch: true })
+        || await cache.match(abs, { ignoreSearch: true });
+      if (!hit) {
+        var keys = await cache.keys();
+        for (var i = 0; i < keys.length; i++) {
+          try {
+            if (new URL(keys[i].url).pathname === path) {
+              hit = await cache.match(keys[i]);
+              if (hit) break;
+            }
+          } catch (e) {}
+        }
+      }
+      if (!hit) return null;
+      // Opaque responses cannot be turned into usable media blobs
+      if (hit.type === 'opaque') return null;
+      if (!hit.ok && hit.type !== 'basic' && hit.type !== 'cors') return null;
+      var blob = await hit.blob();
+      if (!blob || blob.size < 32) return null;
+      return URL.createObjectURL(blob);
+    } catch (e) {
+      return null;
+    }
   };
 
   // Delete a specific URL (and any absolute / path / versioned variants) from the Seamless cache
@@ -3309,12 +3328,18 @@ function withTimeout(promise, ms) {
 }
 
 document.addEventListener("DOMContentLoaded", async function() {
-    var minShowMs = 500;
+    var minShowMs = 400;
     var startedAt = Date.now();
 
-    // 1) Auth + cloud wallpaper CHOICE only (not media files)
-    //    - Signed in → wait for cloud sys_config so we know which wallpaper
-    //    - Guest / no session → skip cloud entirely, use localStorage
+    // Start wallpaper from LOCAL choice immediately (cache blob or network).
+    // Do not wait for cloud before beginning the media request.
+    var homeBefore = sysConfig && sysConfig.homeWallpaper;
+    var lockBefore = sysConfig && sysConfig.lockWallpaper;
+    try {
+        if (typeof initWallpapers === 'function') initWallpapers();
+    } catch (e) {}
+
+    // Auth + cloud CHOICE only (which wallpaper) — media already started above
     try {
         if (typeof supabaseClient !== 'undefined' && supabaseClient) {
             var sessionResult = await withTimeout(supabaseClient.auth.getSession(), 2500);
@@ -3323,9 +3348,12 @@ document.addEventListener("DOMContentLoaded", async function() {
                 currentUser = session.user;
                 isGuest = false;
                 if (typeof updateAuthUI === 'function') updateAuthUI();
-                // Wait for cloud metadata (which wallpaper, pins, etc.) — NOT the video/image bytes
                 if (typeof loadUserDataFromCloud === 'function') {
                     await withTimeout(loadUserDataFromCloud(), 5000);
+                }
+                // Only re-apply if cloud changed the selected wallpaper
+                if (sysConfig.homeWallpaper !== homeBefore || sysConfig.lockWallpaper !== lockBefore) {
+                    try { initWallpapers(); } catch (e) {}
                 }
             } else {
                 currentUser = null;
@@ -3337,14 +3365,13 @@ document.addEventListener("DOMContentLoaded", async function() {
         isGuest = true;
     }
 
-    // 2) Apply chosen wallpaper URLs + UI (media downloads in background — do NOT block)
-    try { loadDynamicResources(); } catch (e) {}
+    try { renderUI(); } catch (e) {}
+    try { setupAppContextMenu(); } catch (e) {}
     if (typeof IconCache !== 'undefined' && IconCache.warmAllApps) {
         try { IconCache.warmAllApps(APPS); } catch (e) {}
     }
     try { loadDesktop(); } catch (e) {}
 
-    // 3) Short minimum only (avoid flash) — never wait on media cache / network
     var elapsed = Date.now() - startedAt;
     if (elapsed < minShowMs) {
         await new Promise(function(r) { setTimeout(r, minShowMs - elapsed); });
@@ -3751,13 +3778,12 @@ window.unlockSystem = function() {
 };
 
 function applyMediaToElements(url, vidEl, imgEl, isBg) {
-    if(!url) return;
-    // Only cache-bust during explicit "Refresh Wallpaper" (short session window).
-    // Normal loads use the clean URL so browser / SW cache can hit immediately.
+    if (!url || !vidEl || !imgEl) return;
+
     var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
-    var loadUrl = url;
+    var networkUrl = url;
     if (force) {
-        loadUrl = (typeof window._wpBustUrl === 'function')
+        networkUrl = (typeof window._wpBustUrl === 'function')
             ? window._wpBustUrl(url, force.token)
             : (url + (url.indexOf('?') >= 0 ? '&' : '?') + '_v=' + force.token);
         if (typeof window.seamlessCacheAdd === 'function') {
@@ -3768,57 +3794,81 @@ function applyMediaToElements(url, vidEl, imgEl, isBg) {
     }
 
     var basePath = String(url).split('?')[0].split('#')[0];
+    function pathOf(s) {
+        try { return new URL(s, location.href).pathname; } catch (e) { return String(s).split('?')[0]; }
+    }
     function sameMedia(el) {
         if (!el) return false;
         var s = el.currentSrc || el.src || '';
-        if (!s) return false;
-        try {
-            var sp = new URL(s, location.href).pathname;
-            var bp = new URL(basePath, location.href).pathname;
-            return sp === bp || s.indexOf(basePath) !== -1;
-        } catch (e) {
-            return s.indexOf(basePath) !== -1;
+        if (!s || s.indexOf('blob:') === 0) {
+            // blob src: compare against remembered source path
+            return el.dataset && el.dataset.wpSrc === basePath;
+        }
+        return pathOf(s) === pathOf(basePath);
+    }
+    function revokeOldBlob(el) {
+        if (!el) return;
+        var prev = el.dataset && el.dataset.wpBlob;
+        if (prev && prev.indexOf('blob:') === 0) {
+            try { URL.revokeObjectURL(prev); } catch (e) {}
+        }
+        if (el.dataset) delete el.dataset.wpBlob;
+    }
+    function markSource(el, loadUrl, isBlob) {
+        if (!el || !el.dataset) return;
+        el.dataset.wpSrc = basePath;
+        if (isBlob) el.dataset.wpBlob = loadUrl;
+        else delete el.dataset.wpBlob;
+    }
+    function playIfNeeded() {
+        if (isBg && isDesktopActive && !sysConfig.optBg) vidEl.play().catch(function(){});
+        var lock = document.getElementById('lock-screen');
+        if (!isBg && lock && lock.classList.contains('active')) vidEl.play().catch(function(){});
+    }
+
+    var isImg = /\.(png|jpe?g|gif|webp)$/i.test(url);
+
+    function applyToDom(loadUrl, fromBlob) {
+        if (isImg) {
+            vidEl.style.display = 'none';
+            try { vidEl.pause(); } catch (e) {}
+            imgEl.style.display = 'block';
+            if (!force && sameMedia(imgEl) && imgEl.complete && imgEl.naturalWidth > 0) return;
+            revokeOldBlob(imgEl);
+            markSource(imgEl, loadUrl, fromBlob);
+            imgEl.src = loadUrl;
+        } else {
+            imgEl.style.display = 'none';
+            vidEl.style.display = 'block';
+            if (!force && sameMedia(vidEl) && vidEl.readyState >= 2) {
+                playIfNeeded();
+                return;
+            }
+            try { vidEl.pause(); } catch (e) {}
+            revokeOldBlob(vidEl);
+            markSource(vidEl, loadUrl, fromBlob);
+            vidEl.preload = 'auto';
+            vidEl.src = loadUrl;
+            try { vidEl.load(); } catch (e) {}
+            playIfNeeded();
         }
     }
 
-    let isImg = url.match(/\.(png|jpg|jpeg|gif|webp)$/i);
-    if(isImg) {
-        vidEl.style.display = 'none';
-        try { vidEl.pause(); } catch (e) {}
-        imgEl.style.display = 'block';
-        // Already showing this image with data → do not tear down (avoids black flash)
-        if (!force && sameMedia(imgEl) && imgEl.complete && imgEl.naturalWidth > 0) {
-            return;
-        }
-        imgEl.src = loadUrl;
-    } else {
-        imgEl.style.display = 'none';
-        vidEl.style.display = 'block';
-        // Already buffered this video → keep it (black screen was from removeAttribute+load every time)
-        if (!force && sameMedia(vidEl) && vidEl.readyState >= 2) {
-            if(isBg && isDesktopActive && !sysConfig.optBg) vidEl.play().catch(function(e){});
-            if(!isBg && document.getElementById('lock-screen') && document.getElementById('lock-screen').classList.contains('active')) {
-                vidEl.play().catch(function(e){});
+    // Instant path: readable entry in Cache Storage → blob: URL (no network)
+    if (!force && typeof window.seamlessCacheGetBlobUrl === 'function') {
+        window.seamlessCacheGetBlobUrl(url).then(function(blobUrl) {
+            if (blobUrl) {
+                applyToDom(blobUrl, true);
+                return;
             }
-            return;
-        }
-        try { vidEl.pause(); } catch (e) {}
-        // Only reset src when URL actually changes
-        var cur = vidEl.getAttribute('src') || '';
-        var curBase = cur.split('?')[0];
-        var nextBase = loadUrl.split('?')[0];
-        if (force || curBase !== nextBase && !sameMedia(vidEl)) {
-            vidEl.src = loadUrl;
-            try { vidEl.load(); } catch (e) {}
-        } else if (!cur) {
-            vidEl.src = loadUrl;
-            try { vidEl.load(); } catch (e) {}
-        }
-        if(isBg && isDesktopActive && !sysConfig.optBg) vidEl.play().catch(function(e){});
-        if(!isBg && document.getElementById('lock-screen') && document.getElementById('lock-screen').classList.contains('active')) {
-            vidEl.play().catch(function(e){});
-        }
+            applyToDom(networkUrl, false);
+        }).catch(function() {
+            applyToDom(networkUrl, false);
+        });
+        return;
     }
+
+    applyToDom(networkUrl, false);
 }
 
 function initWallpapers() {
