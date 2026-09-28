@@ -1618,6 +1618,9 @@ function handleBootSignOut() {
 }
 
 function handleStartMenuPower() {
+  if (currentUser && !isGuest && typeof saveUserDataToCloud === 'function') {
+    try { saveUserDataToCloud(); } catch (e) {}
+  }
   if (supabaseClient) {
     supabaseClient.auth.signOut().catch(function(){}).then(function() {
       location.reload();
@@ -1784,7 +1787,6 @@ function queueCloudSave() {
 
 async function saveUserDataToCloud() {
   if (!supabaseClient || !currentUser || isGuest) {
-    console.log('[Seamless] Cloud save skipped (guest or not signed in)');
     return;
   }
   
@@ -1842,16 +1844,12 @@ async function saveUserDataToCloud() {
       .from('user_data')
       .upsert(payload, { onConflict: 'id' });
 
-    if (res.error) {
-      console.warn('[Seamless] Cloud save error:', res.error.message, res.error);
-    } else {
-      
+    if (!res.error) {
       _pendingCloudSync = false;
       _lastCloudSaveAt = Date.now();
     }
   } catch (err) {
-    console.warn('[Seamless] Cloud save exception:', err);
-    
+    // silent fail
   }
 
   _cloudSaveInFlight = false;
@@ -1862,7 +1860,6 @@ async function loadUserDataFromCloud() {
 
   
   if (_cloudSaveInFlight || _pendingCloudSync) {
-    console.log('[Seamless] Skipping cloud load – pending local changes not on cloud yet');
     return;
   }
 
@@ -1873,7 +1870,6 @@ async function loadUserDataFromCloud() {
     .maybeSingle();
 
   if (res.error) {
-    console.warn('[Seamless] Cloud load error:', res.error.message);
     return;
   }
 
@@ -1895,12 +1891,8 @@ async function loadUserDataFromCloud() {
     window.sysConfig = target;
     try { sysConfig = target; } catch (e) {}
     localStorage.setItem('cine_sys_config', JSON.stringify(target));
-    console.log('[Seamless] Cloud loaded wallpapers:', {
-      home: target.homeWallpaper,
-      lock: target.lockWallpaper
-    });
   } else {
-    console.log('[Seamless] Cloud row has no sys_config yet');
+    // no sys_config yet
   }
 
   if (data.pins) {
@@ -2002,7 +1994,6 @@ if (supabaseClient) {
       updateAuthUI();
     }
   }).catch(function(err) {
-    console.warn('[Seamless] Session restore error:', err);
     updateAuthUI();
   });
 
@@ -6466,6 +6457,16 @@ window.addEventListener('keydown', function(e) {
         }
     } else if(e.code === 'Escape' && isCiriActive) {
         closeCiri();
+    } else if ((e.key === '`' || e.code === 'Backquote') && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        // Silent cloud save on backtick (`) — only when signed in and not typing in a field
+        var t = e.target;
+        var tag = (t && t.tagName) ? t.tagName.toUpperCase() : '';
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !(t && t.isContentEditable)) {
+            if (currentUser && !isGuest && typeof saveUserDataToCloud === 'function') {
+                e.preventDefault();
+                try { saveUserDataToCloud(); } catch (err) {}
+            }
+        }
     }
 });
 
