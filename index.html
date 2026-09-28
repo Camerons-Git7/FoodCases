@@ -1980,7 +1980,7 @@ var _devBuildVer = "3.0.1";
 (function registerSeamlessCache() {
   if (!('serviceWorker' in navigator) || !('caches' in window)) return;
 
-  const CACHE_NAME = 'seamless-os-cache-v3.0.2';
+  const CACHE_NAME = 'seamless-os-cache-v3.0.3';
 
   const swSource = `
     const CACHE_NAME = '${CACHE_NAME}';
@@ -2034,14 +2034,34 @@ var _devBuildVer = "3.0.1";
 
       event.respondWith(
         caches.open(CACHE_NAME).then(async cache => {
-          const cached = await cache.match(req, { ignoreSearch: false });
-          if (cached) {
-            // Stale-while-revalidate
-            fetch(req).then(networkRes => {
-              if (networkRes && networkRes.ok) {
-                cache.put(req, networkRes.clone());
+          // ignoreSearch: true so ?_v= tokens still hit the cached file
+          let cached = await cache.match(req, { ignoreSearch: true });
+          if (!cached) {
+            // Also try pathname-only match (relative vs absolute key mismatch)
+            try {
+              const keys = await cache.keys();
+              const path = url.pathname;
+              for (const k of keys) {
+                try {
+                  if (new URL(k.url).pathname === path) {
+                    cached = await cache.match(k);
+                    if (cached) break;
+                  }
+                } catch (e) {}
               }
-            }).catch(() => {});
+            } catch (e) {}
+          }
+          if (cached) {
+            // Background revalidate only when not a huge media file mid-play
+            const ct = (cached.headers && cached.headers.get('content-type')) || '';
+            const isMedia = /video|audio|image\//.test(ct) || /\.(mp4|webm|mov|png|jpe?g|gif|webp)(\?|$)/i.test(url.pathname);
+            if (!isMedia) {
+              fetch(req).then(networkRes => {
+                if (networkRes && networkRes.ok) {
+                  cache.put(req, networkRes.clone());
+                }
+              }).catch(() => {});
+            }
             return cached;
           }
 
@@ -2055,7 +2075,7 @@ var _devBuildVer = "3.0.1";
             }
             return networkRes;
           } catch (err) {
-            const fallback = await cache.match(req);
+            const fallback = await cache.match(req, { ignoreSearch: true });
             return fallback || new Response('Offline', { status: 503, statusText: 'Offline' });
           }
         })
@@ -2127,9 +2147,10 @@ var _devBuildVer = "3.0.1";
   }
 
   function _wpGetForce(url) {
-    // Prefer durable version (survives reload)
-    var ver = _wpGetVersion(url);
-    if (ver) return { token: ver, until: Number.MAX_SAFE_INTEGER };
+    // Only force a cache-bust during the short window after an explicit
+    // "Refresh Wallpaper". Durable versions in localStorage must NOT change
+    // the URL on every load — that bypasses browser/SW cache and causes a
+    // black screen while the video re-downloads.
     var p = _wpNormPath(url);
     var e = window._wpForceReload[p] || window._wpForceReload[url];
     if (!e) return null;
@@ -3731,48 +3752,72 @@ window.unlockSystem = function() {
 
 function applyMediaToElements(url, vidEl, imgEl, isBg) {
     if(!url) return;
-    // After a wallpaper refresh, a durable ?_v= token is stored in localStorage.
-    // Always load that version so a full page reload cannot fall back to the old
-    // SW / HTTP cache entry under the clean URL.
+    // Only cache-bust during explicit "Refresh Wallpaper" (short session window).
+    // Normal loads use the clean URL so browser / SW cache can hit immediately.
     var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
     var loadUrl = url;
     if (force) {
         loadUrl = (typeof window._wpBustUrl === 'function')
             ? window._wpBustUrl(url, force.token)
             : (url + (url.indexOf('?') >= 0 ? '&' : '?') + '_v=' + force.token);
-        // Only force-network-seed right after an explicit Refresh (short-lived session flag).
-        // Durable versions just use the busted URL; SW cache-first will hit the versioned key.
-        var sessionForce = false;
-        if (window._wpForceReload) {
-            var np = (typeof window._wpNormPath === 'function') ? window._wpNormPath(url) : url;
-            var sf = window._wpForceReload[np] || window._wpForceReload[url];
-            sessionForce = !!(sf && Date.now() <= sf.until);
-        }
-        if (sessionForce && typeof window.seamlessCacheAdd === 'function') {
+        if (typeof window.seamlessCacheAdd === 'function') {
             window.seamlessCacheAdd(url, { force: true, token: force.token });
-        } else if (typeof window.seamlessCacheAdd === 'function') {
-            window.seamlessCacheAdd(url); // warms versioned key only
         }
     } else if (typeof window.seamlessCacheAdd === 'function') {
         window.seamlessCacheAdd(url);
     }
-    let isImg = url.match(/\.(png|jpg|jpeg|gif)$/i);
+
+    var basePath = String(url).split('?')[0].split('#')[0];
+    function sameMedia(el) {
+        if (!el) return false;
+        var s = el.currentSrc || el.src || '';
+        if (!s) return false;
+        try {
+            var sp = new URL(s, location.href).pathname;
+            var bp = new URL(basePath, location.href).pathname;
+            return sp === bp || s.indexOf(basePath) !== -1;
+        } catch (e) {
+            return s.indexOf(basePath) !== -1;
+        }
+    }
+
+    let isImg = url.match(/\.(png|jpg|jpeg|gif|webp)$/i);
     if(isImg) {
         vidEl.style.display = 'none';
-        vidEl.pause();
+        try { vidEl.pause(); } catch (e) {}
         imgEl.style.display = 'block';
-        imgEl.removeAttribute('src');
+        // Already showing this image with data → do not tear down (avoids black flash)
+        if (!force && sameMedia(imgEl) && imgEl.complete && imgEl.naturalWidth > 0) {
+            return;
+        }
         imgEl.src = loadUrl;
     } else {
         imgEl.style.display = 'none';
         vidEl.style.display = 'block';
+        // Already buffered this video → keep it (black screen was from removeAttribute+load every time)
+        if (!force && sameMedia(vidEl) && vidEl.readyState >= 2) {
+            if(isBg && isDesktopActive && !sysConfig.optBg) vidEl.play().catch(function(e){});
+            if(!isBg && document.getElementById('lock-screen') && document.getElementById('lock-screen').classList.contains('active')) {
+                vidEl.play().catch(function(e){});
+            }
+            return;
+        }
         try { vidEl.pause(); } catch (e) {}
-        vidEl.removeAttribute('src');
-        try { vidEl.load(); } catch (e) {}
-        vidEl.src = loadUrl;
-        vidEl.load();
+        // Only reset src when URL actually changes
+        var cur = vidEl.getAttribute('src') || '';
+        var curBase = cur.split('?')[0];
+        var nextBase = loadUrl.split('?')[0];
+        if (force || curBase !== nextBase && !sameMedia(vidEl)) {
+            vidEl.src = loadUrl;
+            try { vidEl.load(); } catch (e) {}
+        } else if (!cur) {
+            vidEl.src = loadUrl;
+            try { vidEl.load(); } catch (e) {}
+        }
         if(isBg && isDesktopActive && !sysConfig.optBg) vidEl.play().catch(function(e){});
-        if(!isBg && document.getElementById('lock-screen').classList.contains('active')) vidEl.play().catch(function(e){});
+        if(!isBg && document.getElementById('lock-screen') && document.getElementById('lock-screen').classList.contains('active')) {
+            vidEl.play().catch(function(e){});
+        }
     }
 }
 
