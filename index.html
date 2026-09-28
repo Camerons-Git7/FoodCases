@@ -1104,7 +1104,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
     <h1 class="boot-logo">SEAMLESS-OS</h1>
     <p class="boot-sub">Seamless-Hub Softwares // V1</p>
 
-    <div class="boot-auth-card" id="boot-auth-card" style="visibility:hidden;">
+    <div class="boot-auth-card" id="boot-auth-card">
       <div id="boot-auth-form">
         <h2 class="boot-auth-title">SEAMLESS ACCOUNT</h2>
         <p class="boot-auth-desc">Sign in or create an account to continue into SEAMLESS.</p>
@@ -1433,9 +1433,6 @@ function updateAuthUI() {
   var emailSpan = document.getElementById('boot-session-email');
   var startLabel = document.getElementById('start-user-label');
 
-  var authCard = document.getElementById('boot-auth-card');
-  if (authCard) authCard.style.visibility = 'visible';
-
   if (currentUser) {
     isGuest = false;
     if (form) form.style.display = 'none';
@@ -1598,12 +1595,10 @@ async function handleBootSignIn() {
     
     
     
-    if (typeof loadUserDataFromCloud === 'function') {
-      try { await withTimeout(loadUserDataFromCloud(), 5000); } catch (e) {}
-    }
-    if (typeof initWallpapers === 'function') initWallpapers();
-    try { await waitForWallpapersReady(35000); } catch (e) {}
-    startBootSequence();
+    try {
+      sessionStorage.setItem('seamless_post_signin', '1');
+    } catch (e) {}
+    location.reload();
     return;
   } catch (err) {
     showAuthMessage(err && err.message ? err.message : 'Could not sign in', true);
@@ -1787,53 +1782,11 @@ function queueCloudSave() {
   } catch (e) {}
 })();
 
-function isConfirmedDeletedAccountError(error) {
-  if (!error) return false;
-  var text = [error.message, error.code, error.status, error.statusCode].filter(function(v) {
-    return v !== undefined && v !== null;
-  }).join(' ').toLowerCase();
-  return text.indexOf('user from sub claim in jwt does not exist') !== -1;
-}
-
-async function handleConfirmedDeletedAccount() {
-  if (window._handlingDeletedAccount) return;
-  window._handlingDeletedAccount = true;
-  currentUser = null;
-  isGuest = true;
-  try {
-    if (supabaseClient) await supabaseClient.auth.signOut({ scope: 'local' });
-  } catch (e) {}
-  location.reload();
-}
-
-async function verifyCurrentAccount() {
-  if (!supabaseClient || !currentUser || isGuest) return true;
-  try {
-    var result = await supabaseClient.auth.getUser();
-    if (result && result.error) {
-      if (isConfirmedDeletedAccountError(result.error)) {
-        await handleConfirmedDeletedAccount();
-        return false;
-      }
-      return true;
-    }
-    if (result && result.data && result.data.user) {
-      currentUser = result.data.user;
-      isGuest = false;
-    }
-    return true;
-  } catch (e) {
-    return true;
-  }
-}
-
 async function saveUserDataToCloud() {
   if (!supabaseClient || !currentUser || isGuest) {
     console.log('[Seamless] Cloud save skipped (guest or not signed in)');
     return;
   }
-
-  if (!(await verifyCurrentAccount())) return;
   
   if (_cloudSaveInFlight) return;
 
@@ -1906,8 +1859,6 @@ async function saveUserDataToCloud() {
 
 async function loadUserDataFromCloud() {
   if (!supabaseClient || !currentUser) return;
-
-  if (!(await verifyCurrentAccount())) return;
 
   
   if (_cloudSaveInFlight || _pendingCloudSync) {
@@ -2033,38 +1984,36 @@ window.addEventListener('beforeunload', function() {
 });
 
 
-var _authReady = Promise.resolve(null);
 if (supabaseClient) {
-  _authReady = supabaseClient.auth.getSession().then(function(result) {
-    var session = result && result.data && result.data.session;
+  supabaseClient.auth.getSession().then(function(result) {
+    var session = result.data && result.data.session;
+
     if (session && session.user) {
       currentUser = session.user;
       isGuest = false;
+      updateAuthUI();
+      
+      setTimeout(function() {
+        loadUserDataFromCloud();
+      }, 50);
     } else {
       currentUser = null;
       isGuest = true;
+      updateAuthUI();
     }
-    updateAuthUI();
-    return session || null;
   }).catch(function(err) {
     console.warn('[Seamless] Session restore error:', err);
-    return null;
+    updateAuthUI();
   });
 
-  _authReady.then(function(session) {
-    supabaseClient.auth.onAuthStateChange(function(event, nextSession) {
-      if (event === 'SIGNED_OUT') {
-        currentUser = null;
-        isGuest = true;
-        updateAuthUI();
-        return;
-      }
-      if (nextSession && nextSession.user) {
-        currentUser = nextSession.user;
-        isGuest = false;
-        updateAuthUI();
-      }
-    });
+  supabaseClient.auth.onAuthStateChange(function(event, session) {
+    currentUser = (session && session.user) ? session.user : null;
+    isGuest = !currentUser;
+    updateAuthUI();
+
+    if (event === 'SIGNED_IN' && currentUser) {
+      loadUserDataFromCloud();
+    }
   });
 }
 
@@ -2075,7 +2024,7 @@ var _devBuildVer = "3.0.1";
 (function registerSeamlessCache() {
   if (!('serviceWorker' in navigator) || !('caches' in window)) return;
 
-  const CACHE_NAME = 'seamless-os-cache-v3.0.5';
+  const CACHE_NAME = 'seamless-os-cache-v3.0.4';
   window.SEAMLESS_CACHE_NAME = CACHE_NAME;
 
   const swSource = `
@@ -2109,24 +2058,6 @@ var _devBuildVer = "3.0.1";
       if (req.method !== 'GET') return;
       const url = new URL(req.url);
       if (url.protocol === 'chrome-extension:' || url.protocol === 'data:' || url.protocol === 'blob:') return;
-
-      if (req.mode === 'navigate' || req.destination === 'document') {
-        event.respondWith(
-          fetch(req).then(function(networkRes) {
-            if (networkRes && networkRes.ok) {
-              caches.open(CACHE_NAME).then(function(cache) { cache.put(req, networkRes.clone()).catch(function() {}); }).catch(function() {});
-            }
-            return networkRes;
-          }).catch(function() {
-            return caches.open(CACHE_NAME).then(function(cache) {
-              return cache.match(req, { ignoreSearch: true }).then(function(cached) {
-                return cached || new Response('Offline', { status: 503, statusText: 'Offline' });
-              });
-            });
-          })
-        );
-        return;
-      }
 
       const path = url.pathname.toLowerCase();
       if (
@@ -3460,15 +3391,27 @@ document.addEventListener("DOMContentLoaded", async function() {
     var startedAt = Date.now();
     var signedIn = false;
 
+    
     try {
-        var session = await _authReady;
-        signedIn = !!(session && session.user);
-        if (typeof updateAuthUI === 'function') updateAuthUI();
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            var sessionResult = await withTimeout(supabaseClient.auth.getSession(), 2500);
+            var session = sessionResult && sessionResult.data && sessionResult.data.session;
+            if (session && session.user) {
+                currentUser = session.user;
+                isGuest = false;
+                signedIn = true;
+                if (typeof updateAuthUI === 'function') updateAuthUI();
+            } else {
+                currentUser = null;
+                isGuest = true;
+                if (typeof updateAuthUI === 'function') updateAuthUI();
+            }
+        }
     } catch (e) {
-        signedIn = !!(currentUser && !isGuest);
-        if (typeof updateAuthUI === 'function') updateAuthUI();
+        isGuest = true;
     }
 
+    
     if (signedIn && typeof loadUserDataFromCloud === 'function') {
         try {
             await withTimeout(loadUserDataFromCloud(), 5000);
