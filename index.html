@@ -4,6 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>𝐒𝐄𝐀𝐌𝐋𝐄𝐒𝐒-𝐎𝐒</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico"/>
+  <style>html,body{background:#000;margin:0;}</style>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
@@ -87,6 +88,53 @@ body {
 .mobile-box i { font-size: 3rem; color: #fff; margin-bottom: 15px; }
 .mobile-box h2 { font-family: var(--font-header); font-size: 1.2rem; color: #fff; margin-bottom: 10px; }
 .mobile-box p { color: #888; font-size: 1rem; font-weight: 600; }
+
+/* ========== Option A: minimal boot loading screen ========== */
+#seamless-preload {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    transition: opacity 0.55s ease, visibility 0.55s ease;
+}
+#seamless-preload.is-done {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+.sp-wordmark {
+    font-family: var(--font-header);
+    font-weight: 900;
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    letter-spacing: 0.55em;
+    color: #fff;
+    text-indent: 0.55em; /* optical center with letter-spacing */
+    margin: 0 0 28px 0;
+    text-shadow: 0 0 40px rgba(255,255,255,0.12);
+    user-select: none;
+}
+.sp-bar-track {
+    width: min(220px, 48vw);
+    height: 2px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.sp-bar-fill {
+    height: 100%;
+    width: 40%;
+    background: #fff;
+    border-radius: 2px;
+    animation: sp-shimmer 1.35s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes sp-shimmer {
+    0%   { transform: translateX(-120%); }
+    100% { transform: translateX(320%); }
+}
 
 #boot-layer {
     position: fixed; inset: 0; background: #000; z-index: var(--z-boot);
@@ -1030,6 +1078,12 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 </head>
 
 <body id="desktop-area" role="application">
+
+<!-- Option A: minimal loading screen (shown until boot is ready) -->
+<div id="seamless-preload" aria-hidden="true">
+  <div class="sp-wordmark">SEAMLESS</div>
+  <div class="sp-bar-track" aria-hidden="true"><div class="sp-bar-fill"></div></div>
+</div>
 
 <!-- accessibility wrapper for screen readers -->
 <div id="fps-counter" aria-live="polite"><span id="fps-val">60</span> FPS</div>
@@ -3158,13 +3212,35 @@ async function loadDynamicResources() {
     setupAppContextMenu();
 }
 
+function hideSeamlessPreload() {
+    var el = document.getElementById('seamless-preload');
+    if (!el || el.classList.contains('is-done')) return;
+    el.classList.add('is-done');
+    setTimeout(function() {
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+    }, 600);
+}
+
 document.addEventListener("DOMContentLoaded", function() {
-    loadDynamicResources();
-    document.getElementById('boot-layer').style.display = 'block';
+    var bootReadyAt = Date.now();
+    var minShowMs = 900; // never flash — keep loading visible at least this long
+
+    // Run heavy init while the black loading screen is up
+    try { loadDynamicResources(); } catch (e) {}
     if (typeof IconCache !== 'undefined' && IconCache.warmAllApps) {
         try { IconCache.warmAllApps(APPS); } catch (e) {}
     }
-    loadDesktop();
+    try { loadDesktop(); } catch (e) {}
+
+    function revealBoot() {
+        var layer = document.getElementById('boot-layer');
+        if (layer) layer.style.display = 'block';
+        hideSeamlessPreload();
+    }
+
+    var elapsed = Date.now() - bootReadyAt;
+    var wait = Math.max(0, minShowMs - elapsed);
+    setTimeout(revealBoot, wait);
 });
 
 function getOpenWindowIds() {
