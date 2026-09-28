@@ -1769,16 +1769,26 @@ function queueCloudSave() {
   }, 400);
 }
 
+(function watchLocalProgressChanges() {
+  try {
+    var originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) {
+      var result = originalSetItem.call(this, key, value);
+      if (key && currentUser && !isGuest && !isBlockedProgressKey(key) && typeof markLocalEdit === 'function') {
+        markLocalEdit();
+      }
+      return result;
+    };
+  } catch (e) {}
+})();
+
 async function saveUserDataToCloud() {
   if (!supabaseClient || !currentUser || isGuest) {
     console.log('[Seamless] Cloud save skipped (guest or not signed in)');
     return;
   }
   
-  if (!_pendingCloudSync && !_cloudSaveInFlight) {
-    console.log('[Seamless] Cloud save skipped (nothing pending)');
-    return;
-  }
+  if (_cloudSaveInFlight) return;
 
   _cloudSaveInFlight = true;
 
@@ -1939,9 +1949,8 @@ async function loadUserDataFromCloud() {
     }
 
     
-    if (localStorage.getItem('cherri_unlocked') === 'true') {
-      if (typeof window.cherriUnlocked !== 'undefined') window.cherriUnlocked = true;
-    }
+    cherriUnlocked = localStorage.getItem('cherri_unlocked') === 'true';
+    window.cherriUnlocked = cherriUnlocked;
 
     
     if (gp._iframes && typeof gp._iframes === 'object') {
@@ -1962,15 +1971,14 @@ async function loadUserDataFromCloud() {
 
 
 setInterval(function() {
-  if (currentUser && !isGuest && _pendingCloudSync) {
-    console.log('[Seamless] Auto-save (pending unsaved changes)');
+  if (currentUser && !isGuest) {
     saveUserDataToCloud();
   }
-}, 60000);
+}, 30000);
 
 
 window.addEventListener('beforeunload', function() {
-  if (currentUser && !isGuest && _pendingCloudSync) {
+  if (currentUser && !isGuest) {
     saveUserDataToCloud();
   }
 });
@@ -3179,7 +3187,8 @@ function syncPins() {
     let obj = {};
     for(let k in APPS) obj[k] = APPS[k].pinned;
     localStorage.setItem('c_pins_v2', JSON.stringify(obj));
-    if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
+    if (typeof queueCloudSave === 'function') queueCloudSave();
+    else if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
 }
 
 var wallpaperRegistry = {
@@ -5787,7 +5796,8 @@ var desktopLayout = JSON.parse(localStorage.getItem('cine_desktop_v2')) || [];
 
 function saveDesktop() {
     localStorage.setItem('cine_desktop_v2', JSON.stringify(desktopLayout));
-    if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
+    if (typeof queueCloudSave === 'function') queueCloudSave();
+    else if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
     loadDesktop();
 }
 
@@ -6148,7 +6158,8 @@ function setWallpaper(k, noti=false) {
     if(noti && d.locked && !unlockedWallpapers.includes(d.id)) {
         unlockedWallpapers.push(d.id);
         localStorage.setItem('cine_unlocked_wp', JSON.stringify(unlockedWallpapers));
-        if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
+        if (typeof queueCloudSave === 'function') queueCloudSave();
+        else if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
         alert("Wallpaper: [ " + d.name + " ] Unlocked.");
     }
     
@@ -6389,7 +6400,8 @@ if(sInp) {
             if(q.toLowerCase() === 'cherry') {
                 cherriUnlocked = true;
                 localStorage.setItem('cherri_unlocked', 'true');
-                if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
+                if (typeof queueCloudSave === 'function') queueCloudSave();
+                else if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
                 updateCherriApp();
                 renderUI();
                 this.value = "";
