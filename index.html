@@ -1787,7 +1787,15 @@ function queueCloudSave() {
   } catch (e) {}
 })();
 
-async function handleDeletedAccount() {
+function isConfirmedDeletedAccountError(error) {
+  if (!error) return false;
+  var text = [error.message, error.code, error.status, error.statusCode].filter(function(v) {
+    return v !== undefined && v !== null;
+  }).join(' ').toLowerCase();
+  return text.indexOf('user from sub claim in jwt does not exist') !== -1;
+}
+
+async function handleConfirmedDeletedAccount() {
   if (window._handlingDeletedAccount) return;
   window._handlingDeletedAccount = true;
   currentUser = null;
@@ -1798,24 +1806,18 @@ async function handleDeletedAccount() {
   location.reload();
 }
 
-function isDeletedAccountError(error) {
-  if (!error) return false;
-  var text = [error.message, error.code, error.status, error.statusCode].filter(function(v) { return v !== undefined && v !== null; }).join(' ').toLowerCase();
-  return text.includes('user from sub claim in jwt does not exist');
-}
-
 async function verifyCurrentAccount() {
   if (!supabaseClient || !currentUser || isGuest) return true;
   try {
     var result = await supabaseClient.auth.getUser();
-    if (result.error) {
-      if (isDeletedAccountError(result.error)) {
-        await handleDeletedAccount();
+    if (result && result.error) {
+      if (isConfirmedDeletedAccountError(result.error)) {
+        await handleConfirmedDeletedAccount();
         return false;
       }
       return true;
     }
-    if (result.data && result.data.user) {
+    if (result && result.data && result.data.user) {
       currentUser = result.data.user;
       isGuest = false;
     }
