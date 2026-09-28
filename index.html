@@ -3259,6 +3259,7 @@ var isDesktopActive = false;
 var bootActive = true;
 var bootStarted = false;
 var enterCount = 0;
+var enterSessionInProgress = false;
 var highestZ = 500;
 var activeWindowId = null;
 var isMediaPlaying = false;
@@ -3711,9 +3712,15 @@ document.addEventListener('click', function(e) {
 
 
 document.addEventListener('keydown', function(e) {
-    if(bootActive && bootStarted && e.key === 'Enter' && document.getElementById('boot-layer').style.display !== 'none') {
+    var layer = document.getElementById('boot-layer');
+    var sessionBox = document.getElementById('boot-session-box');
+    var sessionReady = sessionBox && sessionBox.style.display !== 'none';
+    if (bootActive && !bootStarted && !enterSessionInProgress && e.key === 'Enter' && layer && layer.style.display !== 'none' && sessionReady) {
         enterCount++;
-        if(enterCount >= 2) skipBootSequence();
+        if (enterCount >= 2) {
+            enterCount = 0;
+            enterSeamlessFromSession();
+        }
         setTimeout(function(){ enterCount = 0; }, 500);
     }
 });
@@ -3765,6 +3772,11 @@ function positionContextMenu(menu, e) {
 }
 
 async function enterSeamlessFromSession() {
+    if (!bootActive || bootStarted || enterSessionInProgress) return;
+    var layer = document.getElementById('boot-layer');
+    var sessionBox = document.getElementById('boot-session-box');
+    if (!layer || layer.style.display === 'none' || !sessionBox || sessionBox.style.display === 'none') return;
+    enterSessionInProgress = true;
     
     if (currentUser && !isGuest && typeof loadUserDataFromCloud === 'function') {
       try { await withTimeout(loadUserDataFromCloud(), 5000); } catch (e) {}
