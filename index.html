@@ -1548,11 +1548,15 @@ async function handleBootSignIn() {
     currentUser = res.data.user;
     isGuest = false;
     updateAuthUI();
-    showAuthMessage('');
-    await withTimeout(loadUserDataFromCloud(), 5000);
-    if (typeof initWallpapers === 'function') initWallpapers();
-    try { await waitForWallpapersReady(35000); } catch (e) {}
-    startBootSequence();
+    showAuthMessage('Signed in…');
+    // Auth only → reload. After reload the loading screen will:
+    // 1) load cloud wallpaper choices  2) build usable cache  3) then finish.
+    // (Create Account does not reload.)
+    try {
+      sessionStorage.setItem('seamless_post_signin', '1');
+    } catch (e) {}
+    location.reload();
+    return;
   } catch (err) {
     showAuthMessage(err && err.message ? err.message : 'Could not sign in', true);
   }
@@ -2173,15 +2177,16 @@ var _devBuildVer = "3.0.1";
 
   // Same-origin wallpapers must be cached as real (non-opaque) responses so we can
   // replay them via blob: URLs. no-cors opaque entries cannot drive <video>/<img>.
+  // Returns a Promise that resolves when the readable entry is stored (or fails).
   window.seamlessCacheAdd = function(url, opts) {
-    if (!url || typeof url !== 'string') return;
+    if (!url || typeof url !== 'string') return Promise.resolve(false);
     opts = opts || {};
     var abs;
     try { abs = new URL(url, self.location.href).href; } catch (e) { abs = url; }
     var sameOrigin = false;
     try { sameOrigin = new URL(abs).origin === self.location.origin; } catch (e) {}
 
-    caches.open(CACHE_NAME).then(function(cache) {
+    return caches.open(CACHE_NAME).then(function(cache) {
       var token = opts.token || Date.now();
       var reqUrl = opts.force ? _wpBustUrl(url, token) : url;
       var fetchOpts = opts.force
@@ -2189,24 +2194,28 @@ var _devBuildVer = "3.0.1";
         : { credentials: 'same-origin', cache: 'force-cache' };
 
       function storeReadable(res) {
-        if (!res || !(res.ok || res.type === 'basic' || res.type === 'cors')) return;
+        if (!res || !(res.ok || res.type === 'basic' || res.type === 'cors')) return false;
         var puts = [cache.put(url, res.clone())];
         if (abs !== url) puts.push(cache.put(abs, res.clone()));
         if (opts.force) puts.push(cache.put(_wpBustUrl(url, token), res.clone()));
-        return Promise.all(puts.map(function(p) { return p.catch(function(){}); }));
+        return Promise.all(puts.map(function(p) { return p.catch(function(){}); })).then(function() { return true; });
       }
 
-      // Prefer same-origin / cors so the body is readable
       var mode = sameOrigin ? 'same-origin' : 'cors';
-      fetch(reqUrl, Object.assign({ mode: mode }, fetchOpts)).then(storeReadable).catch(function() {
-        if (!sameOrigin) {
-          // Last resort: opaque cache (SW may still serve it; page cannot blob it)
-          fetch(reqUrl, { mode: 'no-cors', cache: opts.force ? 'reload' : 'default' }).then(function(res) {
-            if (res) cache.put(url, res).catch(function(){});
-          }).catch(function(){});
-        }
-      });
-    }).catch(function(){});
+      return fetch(reqUrl, Object.assign({ mode: mode }, fetchOpts))
+        .then(storeReadable)
+        .catch(function() {
+          if (!sameOrigin) {
+            return fetch(reqUrl, { mode: 'no-cors', cache: opts.force ? 'reload' : 'default' })
+              .then(function(res) {
+                if (res) return cache.put(url, res).then(function() { return false; }).catch(function() { return false; });
+                return false;
+              })
+              .catch(function() { return false; });
+          }
+          return false;
+        });
+    }).catch(function() { return false; });
   };
 
   /** Return a blob: URL from Cache Storage if we have a readable copy of this wallpaper. */
@@ -3334,11 +3343,11 @@ function waitForWallpapersReady(timeoutMs) {
 
 /**
  * Build readable Cache Storage entries for the CURRENT home + lock wallpapers.
- * Called on page load (loading screen), NOT when the user picks a wallpaper in-session.
- * Next visit can then play via blob: URL instantly.
+ * Called on page load (loading screen) AFTER cloud choice is known.
+ * Returns a Promise that settles when entries are stored (or fail).
  */
 function warmSelectedWallpapersCache() {
-    if (typeof window.seamlessCacheAdd !== 'function') return;
+    if (typeof window.seamlessCacheAdd !== 'function') return Promise.resolve();
     try {
         var urls = [];
         if (typeof wallpaperRegistry !== 'undefined' && typeof sysConfig !== 'undefined') {
@@ -3349,14 +3358,17 @@ function warmSelectedWallpapersCache() {
                 urls.push(wallpaperRegistry[sysConfig.lockWallpaper].url);
             }
         }
-        // de-dupe
         var seen = {};
+        var jobs = [];
         for (var i = 0; i < urls.length; i++) {
             if (!urls[i] || seen[urls[i]]) continue;
             seen[urls[i]] = 1;
-            window.seamlessCacheAdd(urls[i]);
+            jobs.push(Promise.resolve(window.seamlessCacheAdd(urls[i])).catch(function() {}));
         }
-    } catch (e) {}
+        return Promise.all(jobs);
+    } catch (e) {
+        return Promise.resolve();
+    }
 }
 
 function withTimeout(promise, ms) {
@@ -3369,19 +3381,9 @@ function withTimeout(promise, ms) {
 document.addEventListener("DOMContentLoaded", async function() {
     var minShowMs = 500;
     var startedAt = Date.now();
+    var signedIn = false;
 
-    // Start wallpaper from LOCAL choice immediately (blob cache or network — no cache write)
-    var homeBefore = sysConfig && sysConfig.homeWallpaper;
-    var lockBefore = sysConfig && sysConfig.lockWallpaper;
-    try {
-        if (typeof initWallpapers === 'function') initWallpapers();
-    } catch (e) {}
-
-    // On this visit's loading screen: build usable cache for the selected wallpapers
-    // so the *next* visit can switch instantly via blob. Not done when picking in-session.
-    try { warmSelectedWallpapersCache(); } catch (e) {}
-
-    // Auth + cloud CHOICE (which wallpaper)
+    // 1) Session first
     try {
         if (typeof supabaseClient !== 'undefined' && supabaseClient) {
             var sessionResult = await withTimeout(supabaseClient.auth.getSession(), 2500);
@@ -3389,14 +3391,8 @@ document.addEventListener("DOMContentLoaded", async function() {
             if (session && session.user) {
                 currentUser = session.user;
                 isGuest = false;
+                signedIn = true;
                 if (typeof updateAuthUI === 'function') updateAuthUI();
-                if (typeof loadUserDataFromCloud === 'function') {
-                    await withTimeout(loadUserDataFromCloud(), 5000);
-                }
-                if (sysConfig.homeWallpaper !== homeBefore || sysConfig.lockWallpaper !== lockBefore) {
-                    try { initWallpapers(); } catch (e) {}
-                    try { warmSelectedWallpapersCache(); } catch (e) {}
-                }
             } else {
                 currentUser = null;
                 isGuest = true;
@@ -3407,6 +3403,23 @@ document.addEventListener("DOMContentLoaded", async function() {
         isGuest = true;
     }
 
+    // 2) If signed in → learn WHICH wallpapers from cloud BEFORE applying / caching
+    if (signedIn && typeof loadUserDataFromCloud === 'function') {
+        try {
+            await withTimeout(loadUserDataFromCloud(), 5000);
+        } catch (e) {}
+    }
+
+    // 3) Apply the correct wallpaper choice (local for guest, cloud for signed-in)
+    try {
+        if (typeof initWallpapers === 'function') initWallpapers();
+    } catch (e) {}
+
+    // 4) Build usable cache entries for those wallpapers (await so load finishes after)
+    try {
+        await withTimeout(warmSelectedWallpapersCache(), 30000);
+    } catch (e) {}
+
     try { renderUI(); } catch (e) {}
     try { setupAppContextMenu(); } catch (e) {}
     if (typeof IconCache !== 'undefined' && IconCache.warmAllApps) {
@@ -3414,12 +3427,10 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
     try { loadDesktop(); } catch (e) {}
 
-    // Keep loading screen until a frame is ready (no black wallpaper flash)
+    // 5) Wait until a frame can show (no black flash), then end loading screen
     try {
         await waitForWallpapersReady(35000);
     } catch (e) {}
-    // Ensure cache warm finished a readable copy while loading was up
-    try { warmSelectedWallpapersCache(); } catch (e) {}
 
     var elapsed = Date.now() - startedAt;
     if (elapsed < minShowMs) {
