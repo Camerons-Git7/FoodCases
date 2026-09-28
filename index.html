@@ -1810,9 +1810,9 @@ async function verifyCurrentAccount() {
       }
       return true;
     }
-    if (!result.data || !result.data.user || result.data.user.id !== currentUser.id) {
-      await handleDeletedAccount();
-      return false;
+    if (result.data && result.data.user) {
+      currentUser = result.data.user;
+      isGuest = false;
     }
     return true;
   } catch (e) {
