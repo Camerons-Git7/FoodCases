@@ -1501,6 +1501,7 @@ async function handleBootSignUp() {
       showAuthMessage('');
       await withTimeout(loadUserDataFromCloud(), 5000);
       if (typeof initWallpapers === 'function') initWallpapers();
+      try { await waitForWallpapersReady(35000); } catch (e) {}
       startBootSequence();
       return;
     }
@@ -1550,6 +1551,7 @@ async function handleBootSignIn() {
     showAuthMessage('');
     await withTimeout(loadUserDataFromCloud(), 5000);
     if (typeof initWallpapers === 'function') initWallpapers();
+    try { await waitForWallpapersReady(35000); } catch (e) {}
     startBootSequence();
   } catch (err) {
     showAuthMessage(err && err.message ? err.message : 'Could not sign in', true);
@@ -1584,12 +1586,13 @@ function openBootAccountPanel() {
 }
 
 /** Guest mode – pure localStorage, no cloud sync */
-function handleContinueAsGuest() {
+async function handleContinueAsGuest() {
   currentUser = null;
   isGuest = true;
   updateAuthUI();
   showAuthMessage('');
   if (typeof initWallpapers === 'function') initWallpapers();
+  try { await waitForWallpapersReady(35000); } catch (e) {}
   startBootSequence();
 }
 
@@ -3264,60 +3267,69 @@ function hideSeamlessPreload() {
     }, 600);
 }
 
-/** Wait until a video/img element has enough data to display (or errors / times out). */
-function waitForElementMedia(vidEl, imgEl, timeoutMs) {
-    return new Promise(function(resolve) {
-        var done = false;
-        function finish() {
-            if (done) return;
-            done = true;
-            resolve();
-        }
-        var t = setTimeout(finish, timeoutMs || 10000);
-
-        var imgVisible = imgEl && imgEl.style.display !== 'none' && imgEl.getAttribute('src');
-        if (imgVisible) {
-            if (imgEl.complete && imgEl.naturalWidth > 0) {
-                clearTimeout(t);
-                finish();
-                return;
-            }
-            imgEl.addEventListener('load', function() { clearTimeout(t); finish(); }, { once: true });
-            imgEl.addEventListener('error', function() { clearTimeout(t); finish(); }, { once: true });
-            return;
-        }
-
-        var vidVisible = vidEl && vidEl.style.display !== 'none' && (vidEl.src || vidEl.currentSrc);
-        if (vidVisible) {
-            // HAVE_FUTURE_DATA (3) or HAVE_ENOUGH_DATA (4) — ready to show a frame
-            if (vidEl.readyState >= 3) {
-                clearTimeout(t);
-                finish();
-                return;
-            }
-            function onReady() { clearTimeout(t); finish(); }
-            vidEl.addEventListener('canplay', onReady, { once: true });
-            vidEl.addEventListener('loadeddata', onReady, { once: true });
-            vidEl.addEventListener('error', onReady, { once: true });
-            return;
-        }
-
-        clearTimeout(t);
-        finish();
-    });
+/** True when lock (or home) media has a visible frame — not a black empty video. */
+function isWallpaperElementReady(vidEl, imgEl) {
+    if (imgEl && imgEl.style.display !== 'none') {
+        var src = imgEl.currentSrc || imgEl.src || '';
+        if (src && imgEl.complete && imgEl.naturalWidth > 0) return true;
+    }
+    if (vidEl && vidEl.style.display !== 'none') {
+        var vsrc = vidEl.currentSrc || vidEl.src || '';
+        // readyState >= 2 = HAVE_CURRENT_DATA (at least one frame)
+        if (vsrc && vidEl.readyState >= 2) return true;
+    }
+    return false;
 }
 
-/** After initWallpapers(), wait for lock + home media so Enter SEAMLESS is not black. */
+/**
+ * Keep the loading screen up until wallpaper can show a frame.
+ * - Cache hit (blob) → usually resolves in milliseconds
+ * - First network load → stays until canplay / loadeddata (max timeoutMs)
+ * Polls because applyMedia may set src asynchronously after Cache API lookup.
+ */
 function waitForWallpapersReady(timeoutMs) {
-    var per = timeoutMs || 12000;
-    var lV = document.getElementById('lock-video');
-    var lI = document.getElementById('lock-img');
-    var bV = document.getElementById('bg-video');
-    var bI = document.getElementById('bg-img');
-    return Promise.all([
-        waitForElementMedia(lV, lI, per),
-        waitForElementMedia(bV, bI, per)
-    ]);
+    var maxMs = timeoutMs || 30000;
+    return new Promise(function(resolve) {
+        var deadline = Date.now() + maxMs;
+        var lV = document.getElementById('lock-video');
+        var lI = document.getElementById('lock-img');
+        var bV = document.getElementById('bg-video');
+        var bI = document.getElementById('bg-img');
+
+        function attachOnce(el, ev, fn) {
+            if (!el) return;
+            el.addEventListener(ev, fn, { once: true });
+        }
+        function onMaybeReady() {
+            // Prefer lock screen (what user sees after Enter SEAMLESS)
+            if (isWallpaperElementReady(lV, lI) || isWallpaperElementReady(bV, bI)) {
+                resolve(true);
+                return true;
+            }
+            return false;
+        }
+        if (onMaybeReady()) return;
+
+        attachOnce(lV, 'loadeddata', onMaybeReady);
+        attachOnce(lV, 'canplay', onMaybeReady);
+        attachOnce(lV, 'error', function() { /* keep waiting for home or timeout */ });
+        attachOnce(lI, 'load', onMaybeReady);
+        attachOnce(lI, 'error', function() {});
+        attachOnce(bV, 'loadeddata', onMaybeReady);
+        attachOnce(bV, 'canplay', onMaybeReady);
+        attachOnce(bI, 'load', onMaybeReady);
+
+        var iv = setInterval(function() {
+            if (onMaybeReady()) {
+                clearInterval(iv);
+                return;
+            }
+            if (Date.now() >= deadline) {
+                clearInterval(iv);
+                resolve(false);
+            }
+        }, 120);
+    });
 }
 
 function withTimeout(promise, ms) {
@@ -3328,18 +3340,17 @@ function withTimeout(promise, ms) {
 }
 
 document.addEventListener("DOMContentLoaded", async function() {
-    var minShowMs = 400;
+    var minShowMs = 500;
     var startedAt = Date.now();
 
-    // Start wallpaper from LOCAL choice immediately (cache blob or network).
-    // Do not wait for cloud before beginning the media request.
+    // Start wallpaper from LOCAL choice immediately (cache blob or network)
     var homeBefore = sysConfig && sysConfig.homeWallpaper;
     var lockBefore = sysConfig && sysConfig.lockWallpaper;
     try {
         if (typeof initWallpapers === 'function') initWallpapers();
     } catch (e) {}
 
-    // Auth + cloud CHOICE only (which wallpaper) — media already started above
+    // Auth + cloud CHOICE (which wallpaper) — does not wait for media bytes itself
     try {
         if (typeof supabaseClient !== 'undefined' && supabaseClient) {
             var sessionResult = await withTimeout(supabaseClient.auth.getSession(), 2500);
@@ -3351,7 +3362,6 @@ document.addEventListener("DOMContentLoaded", async function() {
                 if (typeof loadUserDataFromCloud === 'function') {
                     await withTimeout(loadUserDataFromCloud(), 5000);
                 }
-                // Only re-apply if cloud changed the selected wallpaper
                 if (sysConfig.homeWallpaper !== homeBefore || sysConfig.lockWallpaper !== lockBefore) {
                     try { initWallpapers(); } catch (e) {}
                 }
@@ -3371,6 +3381,12 @@ document.addEventListener("DOMContentLoaded", async function() {
         try { IconCache.warmAllApps(APPS); } catch (e) {}
     }
     try { loadDesktop(); } catch (e) {}
+
+    // FIRST LOAD: keep SEAMLESS loading screen until a wallpaper frame is ready
+    // (cache hit = almost instant; network = stays up instead of showing black video)
+    try {
+        await waitForWallpapersReady(35000);
+    } catch (e) {}
 
     var elapsed = Date.now() - startedAt;
     if (elapsed < minShowMs) {
@@ -3695,11 +3711,12 @@ function positionContextMenu(menu, e) {
 }
 
 async function enterSeamlessFromSession() {
-    // Refresh cloud CHOICE (which wallpaper), not media bytes
+    // Refresh cloud CHOICE, then wait until wallpaper has a frame (no black lock screen)
     if (currentUser && !isGuest && typeof loadUserDataFromCloud === 'function') {
       try { await withTimeout(loadUserDataFromCloud(), 5000); } catch (e) {}
     }
     if (typeof initWallpapers === 'function') initWallpapers();
+    try { await waitForWallpapersReady(35000); } catch (e) {}
     startBootSequence();
 }
 
