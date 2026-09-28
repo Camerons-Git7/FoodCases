@@ -100,20 +100,25 @@ body {
 
 .boot-logo {
     font-family: var(--font-header);
-    font-size: 3rem;
+    font-size: 2.1rem;
     color: #fff;
-    letter-spacing: 10px;
+    letter-spacing: 6px;
     margin-bottom: 10px;
     text-shadow: 0 0 30px rgba(255,255,255,0.2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .boot-sub {
     font-family: var(--font-main);
     color: #888;
-    font-size: 1.05rem;
-    letter-spacing: 3px;
+    font-size: 0.95rem;
+    letter-spacing: 2px;
     margin-bottom: 28px;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .boot-auth-card {
@@ -1042,7 +1047,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 
 <section id="boot-layer" aria-label="Seamless account and system boot">
   <div id="boot-content">
-    <h1 class="boot-logo">𝐒𝐄𝐀𝐌𝐋𝐄𝐒𝐒-𝐎𝐒</h1>
+    <h1 class="boot-logo">SEAMLESS-OS</h1>
     <p class="boot-sub">Seamless-Hub Softwares // V1</p>
 
     <div class="boot-auth-card" id="boot-auth-card">
@@ -1050,8 +1055,9 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
         <h2 class="boot-auth-title">SEAMLESS ACCOUNT</h2>
         <p class="boot-auth-desc">Sign in or create an account to continue into SEAMLESS.</p>
 
-        <input class="boot-auth-input" type="email" id="boot-auth-email"
-               placeholder="Email address" autocomplete="email" aria-label="Email address">
+        <input class="boot-auth-input" type="text" id="boot-auth-username"
+               placeholder="Username" autocomplete="username" aria-label="Username"
+               spellcheck="false" maxlength="32">
         <input class="boot-auth-input" type="password" id="boot-auth-password"
                placeholder="Password (min 6 characters)" autocomplete="current-password" aria-label="Password">
 
@@ -1072,10 +1078,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 
     <div class="boot__hint">Your account syncs wallpapers, pins &amp; progress across devices.</div>
   </div>
-
-  <video id="boot-video" playsinline aria-hidden="true">
-    <source src="cine-os/Videos/Boot.mp4" type="video/mp4">
-  </video>
 </section>
 
 <main id="lock-screen" onclick="unlockSystem()" role="presentation">
@@ -1337,6 +1339,22 @@ function showAuthMessage(text, isError) {
   el.style.color = isError ? '#ff6b6b' : '#7dffb3';
 }
 
+/** Map a display username → internal Supabase email (username is primary for the user). */
+function usernameToEmail(username) {
+  var clean = String(username || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  if (!clean) return '';
+  return clean + '@seamless.os';
+}
+
+function getDisplayUsername(user) {
+  if (!user) return '';
+  if (user.user_metadata && user.user_metadata.username) return user.user_metadata.username;
+  if (user.email && user.email.indexOf('@seamless.os') !== -1) {
+    return user.email.split('@')[0];
+  }
+  return user.email || '';
+}
+
 function updateAuthUI() {
   var form = document.getElementById('boot-auth-form');
   var sessionBox = document.getElementById('boot-session-box');
@@ -1347,7 +1365,7 @@ function updateAuthUI() {
     isGuest = false;
     if (form) form.style.display = 'none';
     if (sessionBox) sessionBox.style.display = 'block';
-    if (emailSpan) emailSpan.textContent = currentUser.email || '';
+    if (emailSpan) emailSpan.textContent = getDisplayUsername(currentUser);
     if (guestBadge) guestBadge.style.display = 'none';
   } else {
     isGuest = true;
@@ -1365,9 +1383,9 @@ function setBootSessionMessage(text, isError) {
 }
 
 function getBootCredentials() {
-  var email = (document.getElementById('boot-auth-email') || {}).value || '';
+  var username = (document.getElementById('boot-auth-username') || {}).value || '';
   var password = (document.getElementById('boot-auth-password') || {}).value || '';
-  return { email: email.trim(), password: password };
+  return { username: username.trim(), password: password };
 }
 
 async function handleBootSignUp() {
@@ -1378,8 +1396,13 @@ async function handleBootSignUp() {
 
   var creds = getBootCredentials();
 
-  if (!creds.email || !creds.password) {
-    showAuthMessage('Please enter an email and password', true);
+  if (!creds.username || !creds.password) {
+    showAuthMessage('Please enter a username and password', true);
+    return;
+  }
+
+  if (creds.username.length < 3) {
+    showAuthMessage('Username must be at least 3 characters', true);
     return;
   }
 
@@ -1388,13 +1411,22 @@ async function handleBootSignUp() {
     return;
   }
 
+  var internalEmail = usernameToEmail(creds.username);
+  if (!internalEmail) {
+    showAuthMessage('Username can only contain letters, numbers, dots, underscores, hyphens', true);
+    return;
+  }
+
   showAuthMessage('Creating account…');
 
   try {
     var res = await supabaseClient.auth.signUp({
-      email: creds.email,
+      email: internalEmail,
       password: creds.password,
-      options: { emailRedirectTo: window.location.origin }
+      options: {
+        data: { username: creds.username },
+        emailRedirectTo: window.location.origin
+      }
     });
 
     if (res.error) {
@@ -1412,7 +1444,8 @@ async function handleBootSignUp() {
       return;
     }
 
-    showAuthMessage('Account created. Check your email to confirm it, then sign in here.');
+    // If email confirmation is still enabled in Supabase, session is null until confirmed.
+    showAuthMessage('Account created. You can sign in now (or confirm email if required).');
   } catch (err) {
     showAuthMessage(err && err.message ? err.message : 'Could not create account', true);
   }
@@ -1426,8 +1459,14 @@ async function handleBootSignIn() {
 
   var creds = getBootCredentials();
 
-  if (!creds.email || !creds.password) {
-    showAuthMessage('Please enter an email and password', true);
+  if (!creds.username || !creds.password) {
+    showAuthMessage('Please enter a username and password', true);
+    return;
+  }
+
+  var internalEmail = usernameToEmail(creds.username);
+  if (!internalEmail) {
+    showAuthMessage('Invalid username', true);
     return;
   }
 
@@ -1435,7 +1474,7 @@ async function handleBootSignIn() {
 
   try {
     var res = await supabaseClient.auth.signInWithPassword({
-      email: creds.email,
+      email: internalEmail,
       password: creds.password
     });
 
@@ -3153,41 +3192,9 @@ function positionContextMenu(menu, e) {
 
 function startBootSequence() {
     if (bootStarted) return;
-
     bootStarted = true;
-
-    let bootLayer = document.getElementById('boot-layer');
-    let cb = document.getElementById('boot-content');
-    let bv = document.getElementById('boot-video');
-
-    cb.style.display = 'none';
-    bv.style.display = 'block';
-    bv.muted = false;
-    bv.volume = 1.0;
-
-    bootLayer.classList.add('boot-animation');
-
-    if (typeof window.seamlessCacheAdd === 'function') {
-        window.seamlessCacheAdd("cine-os/Videos/Boot.mp4");
-        window.seamlessCacheAdd("cine-os/Videos/QuickBoot.mp4");
-    }
-
-    if(sysConfig.shortBoot) {
-        bv.src = "cine-os/Videos/QuickBoot.mp4";
-        bv.load();
-    }
-
-    let p = bv.play();
-    if(p !== undefined) {
-        p.catch(function() {
-            bv.muted = true;
-            bv.play();
-        });
-    }
-
-    bv.onended = function() {
-        if(bootActive) skipBootSequence();
-    };
+    // Boot videos removed — go straight to lock screen
+    skipBootSequence();
 }
 
 function skipBootSequence() {
@@ -3195,8 +3202,6 @@ function skipBootSequence() {
     bootActive = false;
     
     let lay = document.getElementById('boot-layer');
-    let bv = document.getElementById('boot-video');
-    if(bv) bv.pause();
     
     // Restore cursor when boot animation ends
     if(lay) lay.classList.remove('boot-animation');
@@ -3206,7 +3211,7 @@ function skipBootSequence() {
         document.getElementById('lock-screen').classList.add('active');
         
         let lv = document.getElementById('lock-video');
-        if(lv.style.display !== 'none') {
+        if(lv && lv.style.display !== 'none') {
             lv.play().catch(function(e) {});
         }
         
