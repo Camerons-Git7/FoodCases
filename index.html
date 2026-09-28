@@ -1211,13 +1211,11 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   </header>
   <div class="pinned-grid" id="pinned-grid"></div>
   <footer class="start-footer">
-    <div class="user-profile" onclick="openBootAccountPanel()" style="cursor:pointer;" title="Account">
+    <div class="user-profile" style="cursor:default; pointer-events:none;" title="">
       <div class="user-avatar"><i class="fas fa-user" aria-hidden="true"></i></div>
-      <span class="user-role">
-        <span id="guest-badge" style="color:#888; font-size:11px;">Guest · </span>Account
-      </span>
+      <span class="user-role" id="start-user-label">Guest</span>
     </div>
-    <i class="fas fa-power-off power-btn" role="button" tabindex="0" onclick="location.reload()" aria-label="Restart OS"></i>
+    <i class="fas fa-power-off power-btn" role="button" tabindex="0" onclick="handleStartMenuPower()" aria-label="Sign out"></i>
   </footer>
 </aside>
 
@@ -1379,9 +1377,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 
 <script>
 
-/* ============================================================
-   SEAMLESS-OS  ·  AUTH + CLOUD SAVE (Supabase)
-   ============================================================ */
+
 const SUPABASE_URL = 'https://vhxotukthsiefyqelfir.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Yk2Wz4UnIcI67LnLubNwbA_lHZywLLP';
 
@@ -1399,7 +1395,7 @@ function showAuthMessage(text, isError) {
   el.style.color = isError ? '#ff6b6b' : '#7dffb3';
 }
 
-/** Map a display username → internal Supabase email (username is primary for the user). */
+
 function usernameToEmail(username) {
   var clean = String(username || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
   if (!clean) return '';
@@ -1418,20 +1414,21 @@ function getDisplayUsername(user) {
 function updateAuthUI() {
   var form = document.getElementById('boot-auth-form');
   var sessionBox = document.getElementById('boot-session-box');
-  var guestBadge = document.getElementById('guest-badge');
   var emailSpan = document.getElementById('boot-session-email');
+  var startLabel = document.getElementById('start-user-label');
 
   if (currentUser) {
     isGuest = false;
     if (form) form.style.display = 'none';
     if (sessionBox) sessionBox.style.display = 'block';
-    if (emailSpan) emailSpan.textContent = getDisplayUsername(currentUser);
-    if (guestBadge) guestBadge.style.display = 'none';
+    var name = getDisplayUsername(currentUser);
+    if (emailSpan) emailSpan.textContent = name;
+    if (startLabel) startLabel.textContent = name || 'User';
   } else {
     isGuest = true;
     if (form) form.style.display = 'block';
     if (sessionBox) sessionBox.style.display = 'none';
-    if (guestBadge) guestBadge.style.display = 'inline';
+    if (startLabel) startLabel.textContent = 'Guest';
   }
 }
 
@@ -1506,7 +1503,7 @@ async function handleBootSignUp() {
       return;
     }
 
-    // If email confirmation is still enabled in Supabase, session is null until confirmed.
+    
     showAuthMessage('Account created. You can sign in now (or confirm email if required).');
   } catch (err) {
     showAuthMessage(err && err.message ? err.message : 'Could not create account', true);
@@ -1549,9 +1546,9 @@ async function handleBootSignIn() {
     isGuest = false;
     updateAuthUI();
     showAuthMessage('Signed in…');
-    // Auth only → reload. After reload the loading screen will:
-    // 1) load cloud wallpaper choices  2) build usable cache  3) then finish.
-    // (Create Account does not reload.)
+    
+    
+    
     try {
       sessionStorage.setItem('seamless_post_signin', '1');
     } catch (e) {}
@@ -1574,22 +1571,17 @@ function handleBootSignOut() {
   showAuthMessage('');
 }
 
-function openBootAccountPanel() {
-  if (!bootStarted) {
-    var layer = document.getElementById('boot-layer');
-    if (layer) {
-      layer.style.display = 'block';
-      layer.style.opacity = '1';
-    }
-    updateAuthUI();
-    return;
+function handleStartMenuPower() {
+  if (supabaseClient) {
+    supabaseClient.auth.signOut().catch(function(){}).then(function() {
+      location.reload();
+    });
+  } else {
+    location.reload();
   }
-
-  // Restarting is safer than exposing the old standalone auth modal.
-  location.reload();
 }
 
-/** Guest mode – pure localStorage, no cloud sync */
+
 async function handleContinueAsGuest() {
   currentUser = null;
   isGuest = true;
@@ -1600,26 +1592,23 @@ async function handleContinueAsGuest() {
   startBootSequence();
 }
 
-/* Keys that belong in dedicated columns – not duplicated inside game_progress */
+
 var _CLOUD_STRUCTURED_KEYS = {
   'cine_sys_config': 1,
   'c_pins_v2': 1,
   'cine_desktop_v2': 1,
   'cine_unlocked_wp': 1,
-  'cine_wp_versions': 1   // wallpaper cache tokens – never upload
+  'cine_wp_versions': 1   
 };
 
-/*
- * Asset / cache flags from Unity & other games – NEVER upload these.
- * Real progress keys (coins, xp, settings) are still allowed.
- */
+
 var _CLOUD_BLOCKED_KEYS = {
   'cod-assets-cached': 1,
   'buildnow_assets_cached': 1,
   'cine_wp_versions': 1
 };
 
-/* Block keys that look like asset caches, not progress */
+
 function isBlockedProgressKey(key) {
   if (!key) return true;
   if (_CLOUD_STRUCTURED_KEYS[key] || _CLOUD_BLOCKED_KEYS[key]) return true;
@@ -1629,15 +1618,15 @@ function isBlockedProgressKey(key) {
   if (lower.indexOf('unitycache') !== -1) return true;
   if (lower.indexOf('cache-v') !== -1) return true;
   if (lower.indexOf('sw-cache') !== -1) return true;
-  // base64 / data-url dumps
+  
   if (lower.indexOf('data:image') !== -1) return true;
   return false;
 }
 
-/* Skip huge values (Unity dumps, base64 images). Progress JSON is usually < 50KB */
+
 var _CLOUD_MAX_VALUE_LEN = 100000;
 
-/** Snapshot every progress-related localStorage key on the main page */
+
 function collectMainProgress() {
   var out = {};
   try {
@@ -1647,17 +1636,17 @@ function collectMainProgress() {
       var val = localStorage.getItem(key);
       if (val == null) continue;
       if (val.length > _CLOUD_MAX_VALUE_LEN) continue;
-      // Skip obvious binary/base64 blobs even if under the size limit
+      
       if (val.indexOf('data:image') === 0 || val.indexOf('data:application') === 0) continue;
       out[key] = val;
     }
   } catch (e) {}
-  // Always capture cherry unlock explicitly
+  
   out['cherri_unlocked'] = localStorage.getItem('cherri_unlocked') === 'true' ? 'true' : 'false';
   return out;
 }
 
-/** Try to read localStorage from same-origin open game iframes */
+
 function collectIframeProgress() {
   var byApp = {};
   try {
@@ -1679,14 +1668,14 @@ function collectIframeProgress() {
         }
         if (Object.keys(bag).length) byApp[appId] = bag;
       } catch (crossOrigin) {
-        // Game is on another domain – browser blocks access (expected)
+        
       }
     }
   } catch (e) {}
   return byApp;
 }
 
-/** After cloud load: push saved iframe data into a same-origin frame when it opens */
+
 window._pendingIframeSaves = window._pendingIframeSaves || {};
 
 function applyIframeProgressToFrame(frame, appId) {
@@ -1700,18 +1689,18 @@ function applyIframeProgressToFrame(frame, appId) {
         try { ls.setItem(k, bag[k]); } catch (e) {}
       }
     }
-  } catch (e) { /* cross-origin */ }
+  } catch (e) {  }
 }
 
-// Only push to cloud when local has changes NOT yet confirmed on the cloud
+
 var _cloudSaveInFlight = false;
 var _lastLocalEditAt = 0;
 var _saveCloudTimer = null;
-var _pendingCloudSync = false;  // true = local has unsaved changes vs last successful cloud write
+var _pendingCloudSync = false;  
 var _lastCloudSaveAt = 0;
 var _lastCloudLoadAt = 0;
 
-/** User changed something locally that still needs to be written to cloud */
+
 function markPendingCloudSync() {
   _lastLocalEditAt = Date.now();
   _pendingCloudSync = true;
@@ -1721,7 +1710,7 @@ function markLocalEdit() {
   markPendingCloudSync();
 }
 
-/** Debounced save – only for changes not yet confirmed on the cloud */
+
 function queueCloudSave() {
   if (!supabaseClient || !currentUser || isGuest) return;
   markPendingCloudSync();
@@ -1737,7 +1726,7 @@ async function saveUserDataToCloud() {
     console.log('[Seamless] Cloud save skipped (guest or not signed in)');
     return;
   }
-  // Nothing pending → do not overwrite cloud with this tab's older snapshot
+  
   if (!_pendingCloudSync && !_cloudSaveInFlight) {
     console.log('[Seamless] Cloud save skipped (nothing pending)');
     return;
@@ -1761,11 +1750,11 @@ async function saveUserDataToCloud() {
   }
   window._pendingIframeSaves = iframeProg;
 
-  // Prefer localStorage as source of truth (always written by updateSysSetting first)
+  
   var sysFromLs = {};
   try { sysFromLs = JSON.parse(localStorage.getItem('cine_sys_config') || '{}') || {}; } catch (e) {}
   var sysPayload = (typeof sysConfig !== 'undefined' && sysConfig) ? sysConfig : sysFromLs;
-  // Merge so neither side loses keys
+  
   for (var sk in sysFromLs) {
     if (sysPayload[sk] === undefined) sysPayload[sk] = sysFromLs[sk];
   }
@@ -1798,13 +1787,13 @@ async function saveUserDataToCloud() {
     if (res.error) {
       console.warn('[Seamless] Cloud save error:', res.error.message, res.error);
     } else {
-      // Confirmed on cloud — nothing pending from this tab anymore
+      
       _pendingCloudSync = false;
       _lastCloudSaveAt = Date.now();
     }
   } catch (err) {
     console.warn('[Seamless] Cloud save exception:', err);
-    // Keep _pendingCloudSync true so we retry later
+    
   }
 
   _cloudSaveInFlight = false;
@@ -1813,7 +1802,7 @@ async function saveUserDataToCloud() {
 async function loadUserDataFromCloud() {
   if (!supabaseClient || !currentUser) return;
 
-  // Don't clobber changes that are still pending upload
+  
   if (_cloudSaveInFlight || _pendingCloudSync) {
     console.log('[Seamless] Skipping cloud load – pending local changes not on cloud yet');
     return;
@@ -1836,7 +1825,7 @@ async function loadUserDataFromCloud() {
     return;
   }
 
-  // System settings from CLOUD win over local when signed in
+  
   if (data.sys_config && typeof data.sys_config === 'object') {
     var sc = data.sys_config;
     var target = (typeof sysConfig !== 'undefined' && sysConfig) ? sysConfig : {};
@@ -1875,11 +1864,11 @@ async function loadUserDataFromCloud() {
     localStorage.setItem('cine_unlocked_wp', JSON.stringify(data.unlocked_wp));
   }
 
-  // Restore all game / app progress
+  
   if (data.game_progress) {
     var gp = data.game_progress;
 
-    // New format: { _main: {...}, _iframes: {...} }
+    
     if (gp._main && typeof gp._main === 'object') {
       for (var key in gp._main) {
         if (!Object.prototype.hasOwnProperty.call(gp._main, key)) continue;
@@ -1887,7 +1876,7 @@ async function loadUserDataFromCloud() {
         try { localStorage.setItem(key, gp._main[key]); } catch (e) {}
       }
     } else {
-      // Legacy format fallback (older saves)
+      
       if (typeof gp._cherri === 'boolean') {
         localStorage.setItem('cherri_unlocked', gp._cherri ? 'true' : 'false');
       }
@@ -1901,12 +1890,12 @@ async function loadUserDataFromCloud() {
       }
     }
 
-    // Cherry unlock → unlock Cherri apps
+    
     if (localStorage.getItem('cherri_unlocked') === 'true') {
       if (typeof window.cherriUnlocked !== 'undefined') window.cherriUnlocked = true;
     }
 
-    // Stash iframe saves so we can inject when those games open (same-origin only)
+    
     if (gp._iframes && typeof gp._iframes === 'object') {
       window._pendingIframeSaves = gp._iframes;
     }
@@ -1919,11 +1908,11 @@ async function loadUserDataFromCloud() {
   if (typeof checkApiKey === 'function') checkApiKey();
 
   _lastCloudLoadAt = Date.now();
-  // Cloud is source of truth after load — nothing pending from this tab
+  
   _pendingCloudSync = false;
 }
 
-// Retry only if local still has changes not confirmed on the cloud
+
 setInterval(function() {
   if (currentUser && !isGuest && _pendingCloudSync) {
     console.log('[Seamless] Auto-save (pending unsaved changes)');
@@ -1931,14 +1920,14 @@ setInterval(function() {
   }
 }, 60000);
 
-// On leave, only write if something still isn't on the cloud
+
 window.addEventListener('beforeunload', function() {
   if (currentUser && !isGuest && _pendingCloudSync) {
     saveUserDataToCloud();
   }
 });
 
-// Restore session on load — also pull cloud settings (wallpapers, etc.)
+
 if (supabaseClient) {
   supabaseClient.auth.getSession().then(function(result) {
     var session = result.data && result.data.session;
@@ -1947,7 +1936,7 @@ if (supabaseClient) {
       currentUser = session.user;
       isGuest = false;
       updateAuthUI();
-      // Delay slightly so global sysConfig / wallpaperRegistry are initialized
+      
       setTimeout(function() {
         loadUserDataFromCloud();
       }, 50);
@@ -1975,15 +1964,7 @@ if (supabaseClient) {
 var _SYSTEM_PATHS = ["C:/Windows/System32/kernel32.dll", "/var/www/html/cine-os/", "https://cine-os.local/api/v1/auth"];
 var _devBuildVer = "3.0.1";
 
-/* ============================================================
-   SEAMLESS-OS RESOURCE CACHE (Service Worker)
-   Caches EVERYTHING loaded outside of iframes:
-   - Wallpaper videos / images
-   - Icons, fonts, CSS, JS libraries
-   - Boot / lock / home media
-   - Any other static asset the main page requests
-   Strategy: Cache-first + background update
-   ============================================================ */
+
 (function registerSeamlessCache() {
   if (!('serviceWorker' in navigator) || !('caches' in window)) return;
 
@@ -2103,15 +2084,15 @@ var _devBuildVer = "3.0.1";
       console.warn('[Seamless Cache] SW registration failed (normal on file://):', err);
     });
 
-  // Persistent per-URL content versions (survive full page reload).
-  // After "Refresh Wallpaper", media always loads with ?_v=<token> so browser + SW
-  // cannot serve the previous body under the clean key.
+  
+  
+  
   try {
     window._wpVersions = JSON.parse(localStorage.getItem('cine_wp_versions') || '{}') || {};
   } catch (e) {
     window._wpVersions = {};
   }
-  // Short-lived in-memory force (same session) — versions are the durable source of truth
+  
   window._wpForceReload = window._wpForceReload || {};
 
   function _wpNormPath(u) {
@@ -2148,17 +2129,17 @@ var _devBuildVer = "3.0.1";
   function _wpMarkForce(url, token) {
     var p = _wpNormPath(url);
     var t = token || Date.now();
-    // Persist version so page refresh still uses the busted URL
+    
     _wpSetVersion(url, t);
     window._wpForceReload[p] = { token: t, until: Date.now() + 120000 };
     window._wpForceReload[url] = window._wpForceReload[p];
   }
 
   function _wpGetForce(url) {
-    // Only force a cache-bust during the short window after an explicit
-    // "Refresh Wallpaper". Durable versions in localStorage must NOT change
-    // the URL on every load — that bypasses browser/SW cache and causes a
-    // black screen while the video re-downloads.
+    
+    
+    
+    
     var p = _wpNormPath(url);
     var e = window._wpForceReload[p] || window._wpForceReload[url];
     if (!e) return null;
@@ -2175,9 +2156,9 @@ var _devBuildVer = "3.0.1";
     return base + '?_v=' + (token || Date.now());
   }
 
-  // Same-origin wallpapers must be cached as real (non-opaque) responses so we can
-  // replay them via blob: URLs. no-cors opaque entries cannot drive <video>/<img>.
-  // Returns a Promise that resolves when the readable entry is stored (or fails).
+  
+  
+  
   window.seamlessCacheAdd = function(url, opts) {
     if (!url || typeof url !== 'string') return Promise.resolve(false);
     opts = opts || {};
@@ -2218,7 +2199,7 @@ var _devBuildVer = "3.0.1";
     }).catch(function() { return false; });
   };
 
-  /** Return a blob: URL from Cache Storage if we have a readable copy of this wallpaper. */
+  
   window.seamlessCacheGetBlobUrl = async function(url) {
     if (!url || !('caches' in window)) return null;
     try {
@@ -2240,7 +2221,7 @@ var _devBuildVer = "3.0.1";
         }
       }
       if (!hit) return null;
-      // Opaque responses cannot be turned into usable media blobs
+      
       if (hit.type === 'opaque') return null;
       if (!hit.ok && hit.type !== 'basic' && hit.type !== 'cors') return null;
       var blob = await hit.blob();
@@ -2251,7 +2232,7 @@ var _devBuildVer = "3.0.1";
     }
   };
 
-  // Delete a specific URL (and any absolute / path / versioned variants) from the Seamless cache
+  
   window.seamlessCacheDelete = function(url) {
     if (!url || typeof url !== 'string' || !('caches' in window)) return Promise.resolve(false);
     return caches.open(CACHE_NAME).then(async cache => {
@@ -2280,7 +2261,7 @@ var _devBuildVer = "3.0.1";
     }).catch(() => false);
   };
 
-  // Clear cache entry then re-fetch from network and re-store under versioned keys
+  
   window.seamlessCacheRefresh = function(url) {
     if (!url || typeof url !== 'string') return Promise.resolve(false);
     var token = Date.now();
@@ -2291,7 +2272,7 @@ var _devBuildVer = "3.0.1";
         function store(res) {
           if (!res) return Promise.resolve(false);
           try { res.clone(); } catch (e) { return Promise.resolve(false); }
-          // Store under the versioned URL the page will actually request after reload
+          
           var puts = [cache.put(bust, res.clone())];
           return Promise.all(puts.map(function(p) { return p.catch(function(){}); }))
             .then(function() { return true; });
@@ -2320,19 +2301,12 @@ var _devBuildVer = "3.0.1";
   window._wpSetVersion = _wpSetVersion;
 })();
 
-/* ============================================================
-   WALLPAPER PREVIEW CACHE
-   Stores small JPEG thumbnails of each wallpaper so the menu
-   does not re-fetch full MP4/PNG every open — same idea as
-   seamlessCacheAdd for the real wallpaper media.
-   Storage: IndexedDB (primary) + in-memory map; falls back to
-   versioned media URL from Seamless SW cache when no thumb yet.
-   ============================================================ */
+
 var WpPreviewCache = (function() {
   var DB_NAME = 'seamless-wp-previews';
   var DB_VER = 1;
   var STORE = 'thumbs';
-  var mem = Object.create(null); // url -> dataURL
+  var mem = Object.create(null); 
   var dbPromise = null;
   var generating = Object.create(null);
 
@@ -2418,7 +2392,7 @@ var WpPreviewCache = (function() {
     return url;
   }
 
-  /** Resolve a display src for the menu card: thumb dataURL if any, else media URL (cache-busted). */
+  
   function getPreviewSrc(url) {
     if (!url) return Promise.resolve(null);
     if (mem[url]) return Promise.resolve({ type: 'thumb', src: mem[url] });
@@ -2520,10 +2494,7 @@ var WpPreviewCache = (function() {
     });
   }
 
-  /** Generate (or refresh) a thumbnail for one wallpaper URL and persist it.
-   *  Does NOT install the full wallpaper as home/lock media — only captures a
-   *  small JPEG preview. Full media is loaded solely for the selected screens
-   *  via applyMediaToElements / seamlessCacheAdd on setWallpaper. */
+  
   function ensure(url, opts) {
     opts = opts || {};
     if (!url) return Promise.resolve(null);
@@ -2531,8 +2502,8 @@ var WpPreviewCache = (function() {
     if (!opts.force && generating[url]) return generating[url];
 
     var loadUrl = mediaSrc(url);
-    // On explicit refresh only, re-seed SW with full media. Normal preview
-    // generation must not bulk-cache every wallpaper file.
+    
+    
     if (opts.force && typeof window.seamlessCacheAdd === 'function') {
       try {
         var tok = (typeof window._wpGetForce === 'function' && window._wpGetForce(url))
@@ -2563,7 +2534,7 @@ var WpPreviewCache = (function() {
     return job;
   }
 
-  /** Invalidate thumb (e.g. after Refresh Wallpaper) so a new one is generated. */
+  
   function invalidate(url) {
     if (!url) return Promise.resolve();
     delete mem[url];
@@ -2571,10 +2542,8 @@ var WpPreviewCache = (function() {
     return idbDelete(url);
   }
 
-  /** Background: ensure thumbs for every registry entry (staggered). */
-  /** Eagerly load every wallpaper PREVIEW as soon as the site opens.
-   *  Parallel (limited concurrency). Does not apply full wallpapers to
-   *  home/lock — only selected ones are applied via initWallpapers. */
+  
+  
   function warmAll(registry) {
     if (!registry) return;
     var keys = Object.keys(registry);
@@ -2610,7 +2579,7 @@ var WpPreviewCache = (function() {
         })(queue[idx++]);
       }
     }
-    // Start immediately — no artificial delay
+    
     pump();
   }
 
@@ -2637,11 +2606,7 @@ var WpPreviewCache = (function() {
     mediaSrc: mediaSrc
   };
 })();
-/* ============================================================
-   APP ICON CACHE
-   Persist icons in IndexedDB so desktop / dock / drawer icons
-   do not blank out when external CDNs fail or change on reload.
-   ============================================================ */
+
 var IconCache = (function() {
   var DB_NAME = 'seamless-icon-cache';
   var DB_VER = 1;
@@ -3125,7 +3090,6 @@ var APPS = {
 };
 
 
-
 var CHERRI_APP = {
   'cherri': {title: 'Cherri', path: 'https://menist.free.nf/cherri/cherri/', icon: 'https://i.ibb.co/Nn2zwt1N/fav.jpg', pinned: true, openInNewTab: false},
   'geforcenow': {title: 'Geforce Now', path: 'https://menist.free.nf/cherri/cherri/#/embed?u=https%3A%2F%2Fplay.geforcenow.com%2F', icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple124/v4/c0/35/6a/c0356aef-37e2-0936-4ca7-63b68b5af896/AppIcon-0-0-1x_U007emarketing-0-0-0-4-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/200x200ia-75.webp', pinned: true, openInNewTab: false},
@@ -3276,7 +3240,7 @@ function hideSeamlessPreload() {
     }, 600);
 }
 
-/** True when lock (or home) media has a visible frame — not a black empty video. */
+
 function isWallpaperElementReady(vidEl, imgEl) {
     if (imgEl && imgEl.style.display !== 'none') {
         var src = imgEl.currentSrc || imgEl.src || '';
@@ -3284,18 +3248,13 @@ function isWallpaperElementReady(vidEl, imgEl) {
     }
     if (vidEl && vidEl.style.display !== 'none') {
         var vsrc = vidEl.currentSrc || vidEl.src || '';
-        // readyState >= 2 = HAVE_CURRENT_DATA (at least one frame)
+        
         if (vsrc && vidEl.readyState >= 2) return true;
     }
     return false;
 }
 
-/**
- * Keep the loading screen up until wallpaper can show a frame.
- * - Cache hit (blob) → usually resolves in milliseconds
- * - First network load → stays until canplay / loadeddata (max timeoutMs)
- * Polls because applyMedia may set src asynchronously after Cache API lookup.
- */
+
 function waitForWallpapersReady(timeoutMs) {
     var maxMs = timeoutMs || 30000;
     return new Promise(function(resolve) {
@@ -3310,7 +3269,7 @@ function waitForWallpapersReady(timeoutMs) {
             el.addEventListener(ev, fn, { once: true });
         }
         function onMaybeReady() {
-            // Prefer lock screen (what user sees after Enter SEAMLESS)
+            
             if (isWallpaperElementReady(lV, lI) || isWallpaperElementReady(bV, bI)) {
                 resolve(true);
                 return true;
@@ -3321,7 +3280,7 @@ function waitForWallpapersReady(timeoutMs) {
 
         attachOnce(lV, 'loadeddata', onMaybeReady);
         attachOnce(lV, 'canplay', onMaybeReady);
-        attachOnce(lV, 'error', function() { /* keep waiting for home or timeout */ });
+        attachOnce(lV, 'error', function() {  });
         attachOnce(lI, 'load', onMaybeReady);
         attachOnce(lI, 'error', function() {});
         attachOnce(bV, 'loadeddata', onMaybeReady);
@@ -3341,11 +3300,7 @@ function waitForWallpapersReady(timeoutMs) {
     });
 }
 
-/**
- * Build readable Cache Storage entries for the CURRENT home + lock wallpapers.
- * Called on page load (loading screen) AFTER cloud choice is known.
- * Returns a Promise that settles when entries are stored (or fail).
- */
+
 function warmSelectedWallpapersCache() {
     if (typeof window.seamlessCacheAdd !== 'function') return Promise.resolve();
     try {
@@ -3383,7 +3338,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     var startedAt = Date.now();
     var signedIn = false;
 
-    // 1) Session first
+    
     try {
         if (typeof supabaseClient !== 'undefined' && supabaseClient) {
             var sessionResult = await withTimeout(supabaseClient.auth.getSession(), 2500);
@@ -3403,19 +3358,19 @@ document.addEventListener("DOMContentLoaded", async function() {
         isGuest = true;
     }
 
-    // 2) If signed in → learn WHICH wallpapers from cloud BEFORE applying / caching
+    
     if (signedIn && typeof loadUserDataFromCloud === 'function') {
         try {
             await withTimeout(loadUserDataFromCloud(), 5000);
         } catch (e) {}
     }
 
-    // 3) Apply the correct wallpaper choice (local for guest, cloud for signed-in)
+    
     try {
         if (typeof initWallpapers === 'function') initWallpapers();
     } catch (e) {}
 
-    // 4) Build usable cache entries for those wallpapers (await so load finishes after)
+    
     try {
         await withTimeout(warmSelectedWallpapersCache(), 30000);
     } catch (e) {}
@@ -3427,7 +3382,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
     try { loadDesktop(); } catch (e) {}
 
-    // 5) Wait until a frame can show (no black flash), then end loading screen
+    
     try {
         await waitForWallpapersReady(35000);
     } catch (e) {}
@@ -3461,16 +3416,16 @@ function isWindowMinimized(id) {
 function renderUI() {
     let dock = document.getElementById('dock-container');
     
-    // Order: Start → App Drawer → Pinned → Open → Time
+    
     let dHTML = 
         '<div class="dock-item" onclick="toggleStartMenu()"><img src="https://missionsupport.archden.org/wp-content/uploads/2022/02/windows11-icon.png"></div>' +
         '<div class="dock-sep"></div>' +
-        // App Drawer (waffle grid)
+        
         '<div class="dock-item" onclick="toggleAppDrawer()" style="display:flex; align-items:center; justify-content:center;">' +
         '<svg width="26" height="26" viewBox="0 0 24 24" fill="#ddd"><path d="M4 4h4v4H4zM10 4h4v4h-4zM16 4h4v4h-4zM4 10h4v4H4zM10 10h4v4h-4zM16 10h4v4h-4zM4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z"/></svg>' +
         '</div>' +
         '<div class="dock-sep"></div>' +
-        // Pinned apps
+        
         '<div id="dock-pinned-apps">';
     
     for(let id in APPS) {
@@ -3480,12 +3435,12 @@ function renderUI() {
     }
     
     dHTML += '</div>' +
-        // Separator between pinned and open (shown when there are open apps)
+        
         '<div id="dock-open-sep" class="dock-sep" style="display:none;"></div>' +
-        // Open apps (right of pinned) — filled by updateOpenAppsDock
+        
         '<div id="dock-open-apps"></div>';
     
-    // Fancy Time + Date on the right
+    
     dHTML += `
         <div class="dock-sep"></div>
         <div id="dock-time" style="padding: 0 12px; font-size: 12px; font-weight: 600; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; min-width: 108px; user-select: none; pointer-events: none; height: 100%; white-space: nowrap; flex-shrink: 0;">
@@ -3510,9 +3465,7 @@ function renderUI() {
     updateOpenAppsDock();
 }
 
-/** Refresh the open-apps section (left of pinned).
- *  Every open window gets its own icon here (with the under-icon line),
- *  including apps that are also pinned — pinned icons stay without the line. */
+
 function updateOpenAppsDock() {
     const openWrap = document.getElementById('dock-open-apps');
     const openSep = document.getElementById('dock-open-sep');
@@ -3534,7 +3487,7 @@ function updateOpenAppsDock() {
         openSep.style.display = openIds.length > 0 ? '' : 'none';
     }
 
-    // Ensure pinned icons never show the running line
+    
     const pinnedWrap = document.getElementById('dock-pinned-apps');
     if (pinnedWrap) {
         const pinnedItems = pinnedWrap.querySelectorAll('.dock-item[data-dock-type="pinned"]');
@@ -3549,7 +3502,7 @@ function openDockCtx(e, id) {
     e.stopPropagation();
     hideAllCtx();
     activeCtxId = id;
-    // Pinned icon always uses pin/unpin menu (open copy is separate in open-apps section)
+    
     let m = document.getElementById('dock-ctx-menu');
     if(m) {
         positionContextMenu(m, e);
@@ -3570,7 +3523,7 @@ function openDockOpenCtx(e, id) {
     if (restoreItem) restoreItem.style.display = minimized ? '' : 'none';
     if (minItem) minItem.style.display = minimized ? 'none' : '';
 
-    // Show unpin only when this app is pinned
+    
     const isPinned = APPS[id] && APPS[id].pinned;
     const sep = document.getElementById('ctx-dock-open-sep');
     const unpin = document.getElementById('ctx-dock-open-unpin');
@@ -3609,7 +3562,7 @@ document.getElementById('ctx-unpin-app').onclick = function() {
     hideAllCtx();
 }
 
-// Open-app dock context menu actions
+
 document.getElementById('ctx-dock-open-restore').onclick = function() {
     if (activeCtxId) toggleApp(activeCtxId);
     hideAllCtx();
@@ -3631,7 +3584,7 @@ document.getElementById('ctx-dock-open-unpin').onclick = function() {
     hideAllCtx();
 };
 
-// New Tab Handlers
+
 document.getElementById('ctx-open-newtab-drawer').onclick = function() {
     if(activeCtxId && APPS[activeCtxId]) {
         const app = APPS[activeCtxId];
@@ -3650,15 +3603,15 @@ document.getElementById('ctx-open-newtab-dock').onclick = function() {
     hideAllCtx();
 };
 
-// Copy Link function
+
 function copyAppLink(id) {
     const app = APPS[id];
     if (!app) return;
 
     navigator.clipboard.writeText(app.path).then(() => {
-        // Optional: you can add a temporary toast later if you want
+        
     }).catch(() => {
-        // fallback
+        
         const textarea = document.createElement('textarea');
         textarea.value = app.path;
         document.body.appendChild(textarea);
@@ -3668,7 +3621,7 @@ function copyAppLink(id) {
     });
 }
 
-// Attach copy link handlers
+
 document.getElementById('ctx-copylink').onclick = function() {
     if (activeCtxId) copyAppLink(activeCtxId);
     hideAllCtx();
@@ -3692,14 +3645,14 @@ function hideAllCtx() {
     }
 }
 
-// Close menus when clicking anywhere else
+
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.os-context-menu')) {
         hideAllCtx();
     }
 });
 
-// Boot skip (Double Enter)
+
 document.addEventListener('keydown', function(e) {
     if(bootActive && bootStarted && e.key === 'Enter' && document.getElementById('boot-layer').style.display !== 'none') {
         enterCount++;
@@ -3708,7 +3661,7 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// === SMART CONTEXT MENU POSITIONING - QUADRANT BASED ===
+
 function positionContextMenu(menu, e) {
     if (!menu) return;
     
@@ -3755,7 +3708,7 @@ function positionContextMenu(menu, e) {
 }
 
 async function enterSeamlessFromSession() {
-    // Refresh cloud CHOICE, then wait until wallpaper has a frame (no black lock screen)
+    
     if (currentUser && !isGuest && typeof loadUserDataFromCloud === 'function') {
       try { await withTimeout(loadUserDataFromCloud(), 5000); } catch (e) {}
     }
@@ -3777,7 +3730,7 @@ function skipBootSequence() {
     
     let lay = document.getElementById('boot-layer');
     
-    // Restore cursor when boot animation ends
+    
     if(lay) lay.classList.remove('boot-animation');
     
     if(lay) {
@@ -3829,7 +3782,7 @@ window.unlockSystem = function() {
             welcomeShown = true;
         }
         
-        // Start clock properly
+        
         updateClock();
         if (!window.clockInterval) {
             window.clockInterval = setInterval(updateClock, 500);
@@ -3841,8 +3794,8 @@ window.unlockSystem = function() {
 function applyMediaToElements(url, vidEl, imgEl, isBg) {
     if (!url || !vidEl || !imgEl) return;
 
-    // Play from blob cache if present, else network. Do NOT write cache here —
-    // usable entries are built on the next visit during the loading screen.
+    
+    
     var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
     var networkUrl = url;
     if (force) {
@@ -3862,7 +3815,7 @@ function applyMediaToElements(url, vidEl, imgEl, isBg) {
         if (!el) return false;
         var s = el.currentSrc || el.src || '';
         if (!s || s.indexOf('blob:') === 0) {
-            // blob src: compare against remembered source path
+            
             return el.dataset && el.dataset.wpSrc === basePath;
         }
         return pathOf(s) === pathOf(basePath);
@@ -3915,7 +3868,7 @@ function applyMediaToElements(url, vidEl, imgEl, isBg) {
         }
     }
 
-    // Instant path: readable entry in Cache Storage → blob: URL (no network)
+    
     if (!force && typeof window.seamlessCacheGetBlobUrl === 'function') {
         window.seamlessCacheGetBlobUrl(url).then(function(blobUrl) {
             if (blobUrl) {
@@ -3951,12 +3904,12 @@ function initWallpapers() {
     let wChk = document.getElementById('wp-loop-chk');
     if(wChk) wChk.checked = sysConfig.wpLoop;
 
-    // Full wallpaper media is only applied above for the selected home/lock
-    // screens (applyMediaToElements → seamlessCacheAdd). Do NOT bulk-cache
-    // every wallpaper file here.
+    
+    
+    
 
-    // Eagerly generate & load all PREVIEW thumbnails as soon as the site opens
-    // (not when the menu opens, not lazy).
+    
+    
     if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.warmAll) {
         WpPreviewCache.warmAll(wallpaperRegistry);
     }
@@ -3993,7 +3946,7 @@ function updateClock() {
     if(lDat) lDat.innerText = dNum + ' ' + mArr[n.getMonth()] + ', ' + yr + '.';
     if(lTim) lTim.innerText = '- ' + hrs + ':' + min + ' -';
     
-    updateDockTime();   // ← Add this line
+    updateDockTime();   
 }
 
 function updateDockTime() {
@@ -4012,7 +3965,7 @@ function updateDockTime() {
     const dateSmall = document.getElementById('dock-date-small');
     
     if(timeMain) {
-        // Full clock with seconds; container is wide enough for "12:59:59 PM"
+        
         timeMain.innerHTML = '<span>' + hrs + ':' + min + ':' + sec + '</span><span style="font-size:10px;opacity:0.9;font-weight:700;letter-spacing:0.4px;">' + ampm + '</span>';
     }
     if(dateSmall) dateSmall.textContent = month + '/' + day + '/' + year;
@@ -4039,9 +3992,6 @@ setInterval(function() {
         }
     }
 }, 1000);
-
-
-
 
 
 function populateDrawer() {
@@ -4091,22 +4041,22 @@ function toggleApp(id) {
     let app = APPS[id];
     if (!app) return;
 
-    // Open in new tab if specified
+    
     if (app.openInNewTab === true) {
         window.location.href = app.path;
         return;
     }
 
-    // Normal in-OS window behavior
+    
     let w = document.getElementById('win-' + id);
     if(w) {
         if(w.classList.contains('minimized') || w.style.display === 'none') {
-            // Restore with reverse minimize animation
+            
             w.style.display = '';
             w.classList.remove('minimized', 'minimizing');
             w.classList.add('opening');
             w.style.zIndex = ++highestZ;
-            // Force reflow so opening state is applied before active
+            
             void w.offsetWidth;
             requestAnimationFrame(function() {
                 w.classList.remove('opening');
@@ -4131,7 +4081,7 @@ function openWindow(id) {
     let app = APPS[id];
     if (!app) return;
 
-    // Open in new tab if specified
+    
     if (app.openInNewTab === true) {
         window.location.href = app.path;
         return;
@@ -4150,11 +4100,11 @@ function openWindow(id) {
         let dat = app;
         win = document.createElement('div');
         win.id = 'win-' + id;
-        // Start in "opening" state (scaled down near dock), then animate to active
+        
         win.className = 'window opening';
         win.style.zIndex = ++highestZ;
         
-        // Start perfectly centered on screen
+        
         const winW = Math.min(920, window.innerWidth * 0.85);
         const winH = Math.min(620, window.innerHeight * 0.75);
         const left = Math.max(0, (window.innerWidth - winW) / 2);
@@ -4166,7 +4116,7 @@ function openWindow(id) {
         
         let iframeStr = dat.internal ? '<iframe id="frame-' + id + '"></iframe>' : '<iframe id="frame-' + id + '" src="' + dat.path + '"></iframe>';
         
-        // macOS-style header: traffic lights on the left, title centered, refresh on the right
+        
         win.innerHTML =
             '<div class="win-header" onmousedown="DragSystem.startWinDrag(event, \'' + id + '\')">' +
                 '<div class="win-controls">' +
@@ -4181,7 +4131,7 @@ function openWindow(id) {
             '</div>' +
             '<div class="win-body">' + iframeStr + '</div>';
         
-        // Bring to front on click
+        
         win.addEventListener('mousedown', function() {
             this.style.zIndex = ++highestZ;
             activeWindowId = id;
@@ -4189,14 +4139,14 @@ function openWindow(id) {
         
         layer.appendChild(win);
         
-        // Animate open: opening → active (scale up from dock)
+        
         void win.offsetWidth;
         requestAnimationFrame(function() {
             win.classList.remove('opening');
             win.classList.add('active');
         });
 
-        // Inject cloud-saved progress into same-origin game iframes when they load
+        
         (function(appId) {
           var f = document.getElementById('frame-' + appId);
           if (!f) return;
@@ -4204,13 +4154,13 @@ function openWindow(id) {
             if (typeof applyIframeProgressToFrame === 'function') {
               applyIframeProgressToFrame(f, appId);
             }
-            // Capture progress again a few times while playing (same-origin only)
+            
             if (currentUser && !isGuest) {
               setTimeout(function() { if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud(); }, 5000);
             }
           };
           f.addEventListener('load', inject);
-          // Also try shortly after (in case load already fired)
+          
           setTimeout(inject, 800);
           setTimeout(inject, 2500);
         })(id);
@@ -5615,7 +5565,7 @@ function openWindow(id) {
             }
         }
     } else {
-        // Existing window — restore with same open animation if it was minimized
+        
         const wasHidden = win.classList.contains('minimized') || win.style.display === 'none';
         win.style.display = '';
         win.classList.remove('minimized', 'minimizing');
@@ -5638,12 +5588,12 @@ function openWindow(id) {
 }
 
 function closeWindow(id) {
-    // Snapshot game progress from this iframe before it is destroyed
+    
     if (currentUser && !isGuest && typeof saveUserDataToCloud === 'function') {
       try {
         var frame = document.getElementById('frame-' + id);
         if (frame && typeof applyIframeProgressToFrame === 'function') {
-          // Collect this one frame into pending saves
+          
           try {
             var ls = frame.contentWindow && frame.contentWindow.localStorage;
             if (ls) {
@@ -5672,13 +5622,13 @@ function refreshWindow(id) {
     const frame = document.getElementById('frame-' + id);
     if (!frame) return;
     try {
-        // Prefer location.reload so same-origin iframes keep history clean
+        
         if (frame.contentWindow && frame.contentWindow.location) {
             frame.contentWindow.location.reload();
             return;
         }
     } catch (e) {
-        // Cross-origin: fall back to re-assigning src
+        
     }
     const src = frame.src;
     if (src) {
@@ -5709,7 +5659,7 @@ function minimizeWindow(id) {
     let w = document.getElementById('win-' + id);
     if (!w || w.classList.contains('minimizing') || w.classList.contains('minimized')) return;
 
-    // If this window was fullscreen, show dock again once it minimizes
+    
     const wasMax = w.classList.contains('maximized');
     if (wasMax) {
         w.classList.remove('maximized');
@@ -5725,12 +5675,12 @@ function minimizeWindow(id) {
     w.classList.add('minimizing');
     if (activeWindowId === id) activeWindowId = null;
 
-    // After animation, fully hide
+    
     setTimeout(function() {
         w.classList.remove('minimizing');
         w.classList.add('minimized');
         w.style.display = 'none';
-        // Reset transform so restore looks clean
+        
         w.style.transform = '';
         updateDockForFullscreen();
         updateOpenAppsDock();
@@ -5746,7 +5696,7 @@ function toggleMaximize(id) {
     
     if (w.classList.contains('maximized')) {
         w.classList.remove('maximized');
-        // Restore previous geometry
+        
         if (w.dataset.prevTop) {
             w.style.top = w.dataset.prevTop;
             w.style.left = w.dataset.prevLeft;
@@ -5754,14 +5704,14 @@ function toggleMaximize(id) {
             w.style.height = w.dataset.prevHeight;
         }
     } else {
-        // Store current geometry before maximizing
+        
         const rect = w.getBoundingClientRect();
         w.dataset.prevTop = rect.top + 'px';
         w.dataset.prevLeft = rect.left + 'px';
         w.dataset.prevWidth = rect.width + 'px';
         w.dataset.prevHeight = rect.height + 'px';
         w.classList.add('maximized');
-        // Let CSS .maximized rules control size/position
+        
         w.style.width = '';
         w.style.height = '';
         w.style.top = '';
@@ -5772,17 +5722,17 @@ function toggleMaximize(id) {
     updateDockForFullscreen();
 }
 
-// Legacy alias so any remaining calls don't break
+
 function toggleFullscreen(id) {
     toggleMaximize(id);
 }
 
 function startImmersiveMode(win) {
-    // No-op in windowed macOS mode — dock stays visible
+    
 }
 
 function endImmersiveMode() {
-    // No-op
+    
 }
 
 var desktopLayout = JSON.parse(localStorage.getItem('cine_desktop_v2')) || [];
@@ -5988,7 +5938,7 @@ var DragSystem = {
     },
     
     startWinDrag: function(e, id) {
-        // Don't drag when clicking traffic-light buttons or refresh
+        
         if (e.target.closest('.win-btn') || e.target.closest('.win-refresh')) return;
         const win = document.getElementById('win-' + id);
         if (!win || win.classList.contains('maximized')) return;
@@ -6017,8 +5967,8 @@ var DragSystem = {
             this.dragging = true; this.isDragMove = true;
             
             if (this.sourceType === 'window') {
-                // Disable pointer events on the iframe so fast drags
-                // don't get captured when the cursor enters the iframe
+                
+                
                 if (!this._iframePointerDisabled) {
                     const frame = this.sourceEl.querySelector('iframe');
                     if (frame) {
@@ -6028,7 +5978,7 @@ var DragSystem = {
                 }
                 const newLeft = e.clientX - this.winOffset.x;
                 const newTop = e.clientY - this.winOffset.y;
-                // Keep window mostly on-screen
+                
                 const maxL = window.innerWidth - 80;
                 const maxT = window.innerHeight - 60;
                 this.sourceEl.style.left = Math.max(-this.sourceEl.offsetWidth + 100, Math.min(newLeft, maxL)) + 'px';
@@ -6064,7 +6014,7 @@ var DragSystem = {
         if(!this.dragging) { this.reset(); return; }
         
         if (this.sourceType === 'window') {
-            // Restore iframe pointer events after drag
+            
             if (this._iframePointerDisabled && this.sourceEl) {
                 const frame = this.sourceEl.querySelector('iframe');
                 if (frame) frame.style.pointerEvents = '';
@@ -6117,7 +6067,7 @@ var DragSystem = {
     },
     
     reset: function() {
-        // Safety: restore iframe pointer-events if still disabled
+        
         if (this._iframePointerDisabled && this.sourceEl) {
             const frame = this.sourceEl.querySelector('iframe');
             if (frame) frame.style.pointerEvents = '';
@@ -6168,13 +6118,13 @@ function setWallpaper(k, noti=false) {
         sysConfig.lockWallpaper = k;
     }
 
-    // Persist once (local + cloud) after both home/lock are set
+    
     localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
     markLocalEdit();
     if (typeof queueCloudSave === 'function') queueCloudSave();
     else if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
     
-    // Ensure a stored preview exists for this wallpaper (same cache path as real media)
+    
     if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.ensure) {
         WpPreviewCache.ensure(d.url);
     }
@@ -6189,8 +6139,8 @@ function openWallpaperMenu() {
     let gl = document.getElementById('wp-grid-locked');
     if(!m) return;
     
-    // Non-modal open only — showModal() puts the dialog in the browser top layer,
-    // which hides our fixed context menus and blocks the default menu after preventDefault.
+    
+    
     try { if (typeof m.close === 'function' && m.open) m.close(); } catch (e) {}
     m.style.display = 'flex';
     m.classList.add('open');
@@ -6205,7 +6155,7 @@ function openWallpaperMenu() {
         c.className = "wp-card " + (ul ? "" : "wp-locked");
         
         if(ul) {
-            // Placeholder until cached preview resolves (thumb from IndexedDB, or SW-cached media)
+            
             c.innerHTML = '<div class="wp-info">' + d.name + '</div>';
             c.setAttribute('data-key', k);
             c.onclick = function() {
@@ -6267,11 +6217,11 @@ function openWallpaperMenu() {
     }
 }
 
-// Capture-phase: right-click on any wallpaper card (or its img/video child)
+
 document.addEventListener('contextmenu', function(ev) {
     var card = ev.target && ev.target.closest ? ev.target.closest('.wp-card') : null;
     if (!card || !card.getAttribute('data-key')) return;
-    // Only unlocked cards (locked have no data-key interaction / wp-locked)
+    
     if (card.classList.contains('wp-locked')) return;
     var menuEl = document.getElementById('wallpaper-menu');
     if (!menuEl || !menuEl.classList.contains('open')) return;
@@ -6286,8 +6236,7 @@ document.addEventListener('contextmenu', function(ev) {
     }
 }, true);
 
-/** Clear Seamless SW cache for a wallpaper URL, re-fetch it, and force-reload
- *  any media elements currently using it (home / lock / menu preview). */
+
 function refreshWallpaper(key) {
     let d = wallpaperRegistry[key];
     if (!d || !d.url) {
@@ -6298,15 +6247,15 @@ function refreshWallpaper(key) {
     showNotification('Wallpaper', 'Refreshing "' + d.name + '"…');
 
     var finish = function(ok) {
-        // Force-flag is already set by seamlessCacheRefresh; applyMediaToElements
-        // will load with ?_cb= and re-seed the SW cache from network.
+        
+        
         if (sysConfig.homeWallpaper === key) {
             applyMediaToElements(url, document.getElementById('bg-video'), document.getElementById('bg-img'), true);
         }
         if (sysConfig.lockWallpaper === key) {
             applyMediaToElements(url, document.getElementById('lock-video'), document.getElementById('lock-img'), false);
         }
-        // Invalidate stored preview thumb, regenerate, then update open menu cards
+        
         var afterPreview = function(thumbSrc) {
             var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
             var bust = force && typeof window._wpBustUrl === 'function'
@@ -6372,7 +6321,7 @@ function refreshWallpaper(key) {
     }
 }
 
-// Wire wallpaper context menu action (once)
+
 (function setupWpContextMenu() {
     var btn = document.getElementById('ctx-wp-refresh');
     if (!btn) return;
