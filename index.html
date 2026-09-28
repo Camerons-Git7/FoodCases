@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 @font-face {
     font-family: 'Azonix';
@@ -1049,9 +1051,11 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   </header>
   <div class="pinned-grid" id="pinned-grid"></div>
   <footer class="start-footer">
-    <div class="user-profile">
+    <div class="user-profile" onclick="document.getElementById('auth-modal').showModal()" style="cursor:pointer;" title="Account">
       <div class="user-avatar"><i class="fas fa-user" aria-hidden="true"></i></div>
-      <span class="user-role">Administrator</span>
+      <span class="user-role">
+        <span id="guest-badge" style="color:#888; font-size:11px;">Guest · </span>Account
+      </span>
     </div>
     <i class="fas fa-power-off power-btn" role="button" tabindex="0" onclick="location.reload()" aria-label="Restart OS"></i>
   </footer>
@@ -1214,6 +1218,207 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 </dialog>
 
 <script>
+
+/* ============================================================
+   SEAMLESS-OS  ·  AUTH + CLOUD SAVE (Supabase)
+   ============================================================ */
+const SUPABASE_URL = 'https://vhxotukthsiefyqelfir.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Yk2Wz4UnIcI67LnLubNwbA_lHZywLLP';
+
+const supabaseClient = (typeof window.supabase !== 'undefined')
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+let currentUser = null;   // null = Guest
+let isGuest = true;
+
+function showAuthMessage(text, isError) {
+  var el = document.getElementById('auth-message');
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.color = isError ? '#ff6b6b' : '#7dffb3';
+}
+
+function updateAuthUI() {
+  var form = document.getElementById('auth-form');
+  var logged = document.getElementById('auth-logged-in');
+  var guestBadge = document.getElementById('guest-badge');
+  var emailSpan = document.getElementById('auth-user-email');
+
+  if (currentUser) {
+    isGuest = false;
+    if (form) form.style.display = 'none';
+    if (logged) logged.style.display = 'block';
+    if (emailSpan) emailSpan.textContent = currentUser.email || '';
+    if (guestBadge) guestBadge.style.display = 'none';
+  } else {
+    isGuest = true;
+    if (form) form.style.display = 'block';
+    if (logged) logged.style.display = 'none';
+    if (guestBadge) guestBadge.style.display = 'inline';
+  }
+}
+
+async function handleSignUp() {
+  if (!supabaseClient) { showAuthMessage('Supabase not loaded – check your keys', true); return; }
+  var email = (document.getElementById('auth-email') || {}).value || '';
+  var password = (document.getElementById('auth-password') || {}).value || '';
+  email = email.trim();
+
+  if (!email || !password) { showAuthMessage('Please enter email and password', true); return; }
+  if (password.length < 6) { showAuthMessage('Password must be at least 6 characters', true); return; }
+
+  showAuthMessage('Creating account…');
+
+  var res = await supabaseClient.auth.signUp({
+    email: email,
+    password: password,
+    options: { emailRedirectTo: window.location.origin }
+  });
+
+  if (res.error) {
+    showAuthMessage(res.error.message, true);
+    return;
+  }
+  showAuthMessage('Check your email and click the confirmation link, then come back and Sign In.');
+}
+
+async function handleSignIn() {
+  if (!supabaseClient) { showAuthMessage('Supabase not loaded – check your keys', true); return; }
+  var email = (document.getElementById('auth-email') || {}).value || '';
+  var password = (document.getElementById('auth-password') || {}).value || '';
+  email = email.trim();
+
+  if (!email || !password) { showAuthMessage('Please enter email and password', true); return; }
+
+  showAuthMessage('Signing in…');
+
+  var res = await supabaseClient.auth.signInWithPassword({ email: email, password: password });
+
+  if (res.error) {
+    showAuthMessage(res.error.message, true);
+    return;
+  }
+
+  currentUser = res.data.user;
+  isGuest = false;
+  updateAuthUI();
+  showAuthMessage('Signed in successfully!');
+  await loadUserDataFromCloud();
+  var modal = document.getElementById('auth-modal');
+  if (modal && modal.close) modal.close();
+}
+
+function handleContinueAsGuest() {
+  currentUser = null;
+  isGuest = true;
+  updateAuthUI();
+  showAuthMessage('Continuing as Guest (saves stay on this device only)');
+  var modal = document.getElementById('auth-modal');
+  if (modal && modal.close) modal.close();
+}
+
+async function handleSignOut() {
+  if (supabaseClient) await supabaseClient.auth.signOut();
+  currentUser = null;
+  isGuest = true;
+  updateAuthUI();
+  showAuthMessage('Signed out. Now in Guest mode.');
+}
+
+async function saveUserDataToCloud() {
+  if (!supabaseClient || !currentUser || isGuest) return;
+
+  var payload = {
+    id: currentUser.id,
+    sys_config: (typeof sysConfig !== 'undefined') ? sysConfig : {},
+    pins: JSON.parse(localStorage.getItem('c_pins_v2') || '{}'),
+    desktop: (typeof desktopLayout !== 'undefined') ? desktopLayout : [],
+    unlocked_wp: (typeof unlockedWallpapers !== 'undefined') ? unlockedWallpapers : [],
+    game_progress: JSON.parse(localStorage.getItem('cine_game_progress') || '{}'),
+    updated_at: new Date().toISOString()
+  };
+
+  var res = await supabaseClient.from('user_data').upsert(payload);
+  if (res.error) console.warn('[Seamless] Cloud save error:', res.error.message);
+}
+
+async function loadUserDataFromCloud() {
+  if (!supabaseClient || !currentUser) return;
+
+  var res = await supabaseClient
+    .from('user_data')
+    .select('*')
+    .eq('id', currentUser.id)
+    .maybeSingle();
+
+  if (res.error) {
+    console.warn('[Seamless] Cloud load error:', res.error.message);
+    return;
+  }
+
+  var data = res.data;
+  if (!data) {
+    await saveUserDataToCloud();
+    return;
+  }
+
+  if (data.sys_config) {
+    window.sysConfig = data.sys_config;
+    localStorage.setItem('cine_sys_config', JSON.stringify(data.sys_config));
+  }
+  if (data.pins) {
+    localStorage.setItem('c_pins_v2', JSON.stringify(data.pins));
+    if (typeof APPS !== 'undefined') {
+      for (var k in data.pins) {
+        if (APPS[k]) APPS[k].pinned = data.pins[k];
+      }
+    }
+  }
+  if (data.desktop) {
+    window.desktopLayout = data.desktop;
+    localStorage.setItem('cine_desktop_v2', JSON.stringify(data.desktop));
+  }
+  if (data.unlocked_wp) {
+    window.unlockedWallpapers = data.unlocked_wp;
+    localStorage.setItem('cine_unlocked_wp', JSON.stringify(data.unlocked_wp));
+  }
+  if (data.game_progress) {
+    localStorage.setItem('cine_game_progress', JSON.stringify(data.game_progress));
+  }
+
+  if (typeof initWallpapers === 'function') initWallpapers();
+  if (typeof loadDesktop === 'function') loadDesktop();
+  if (typeof renderUI === 'function') renderUI();
+
+  if (typeof showNotification === 'function') {
+    showNotification('Account', 'Progress loaded from cloud');
+  }
+}
+
+// Restore session on load
+if (supabaseClient) {
+  supabaseClient.auth.getSession().then(function(result) {
+    var session = result.data && result.data.session;
+    if (session && session.user) {
+      currentUser = session.user;
+      isGuest = false;
+      updateAuthUI();
+      loadUserDataFromCloud();
+    } else {
+      isGuest = true;
+      updateAuthUI();
+    }
+  });
+
+  supabaseClient.auth.onAuthStateChange(function(event, session) {
+    currentUser = (session && session.user) ? session.user : null;
+    isGuest = !currentUser;
+    updateAuthUI();
+    if (event === 'SIGNED_IN' && currentUser) loadUserDataFromCloud();
+  });
+}
+
 var _SYSTEM_PATHS = ["C:/Windows/System32/kernel32.dll", "/var/www/html/cine-os/", "https://cine-os.local/api/v1/auth"];
 var _devBuildVer = "3.0.1";
 
@@ -2364,6 +2569,7 @@ function syncPins() {
     let obj = {};
     for(let k in APPS) obj[k] = APPS[k].pinned;
     localStorage.setItem('c_pins_v2', JSON.stringify(obj));
+    if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
 }
 
 var wallpaperRegistry = {
@@ -2414,6 +2620,7 @@ if(!sysConfig.lockWallpaper) sysConfig.lockWallpaper = 'MacOS';
 window.updateSysSetting = function(key, value) {
     sysConfig[key] = value;
     localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
+    if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
     if (key === 'optBg') {
         const bv = document.getElementById('bg-video');
         const lv = document.getElementById('lock-video');
@@ -3249,7 +3456,78 @@ function openWindow(id) {
                         document.getElementById('chk-boot').checked = !!prefs.shortBoot;
                         document.getElementById('chk-idle').checked = !!prefs.idleLock;
                     <\/script>
-                </body>
+                
+<!-- ==================== SEAMLESS AUTH MODAL ==================== -->
+<dialog id="auth-modal" style="
+  background: rgba(15,15,15,0.97);
+  border: 1px solid #333;
+  border-radius: 18px;
+  padding: 32px 28px;
+  color: #fff;
+  max-width: 420px;
+  width: 92%;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+  font-family: var(--font-main);
+  position: fixed;
+  z-index: 999999;
+">
+  <button onclick="this.closest('dialog').close()" style="
+    position:absolute; top:14px; right:16px;
+    background:none; border:none; color:#888; font-size:22px; cursor:pointer;
+  ">&times;</button>
+
+  <h2 style="
+    font-family: var(--font-header);
+    letter-spacing: 3px;
+    font-size: 1.4rem;
+    text-align: center;
+    margin: 0 0 8px 0;
+  ">SEAMLESS ACCOUNT</h2>
+
+  <p style="text-align:center; color:#888; font-size:13px; margin-bottom:24px;">
+    Sign in to sync wallpapers, pins &amp; progress across devices
+  </p>
+
+  <div id="auth-form">
+    <input type="email" id="auth-email" placeholder="Email address" autocomplete="email"
+      style="width:100%; padding:13px 14px; margin-bottom:12px; background:#1a1a1a;
+             border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
+    
+    <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="current-password"
+      style="width:100%; padding:13px 14px; margin-bottom:18px; background:#1a1a1a;
+             border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
+
+    <button onclick="handleSignIn()" style="
+      width:100%; padding:13px; background:#fff; color:#000; border:none;
+      border-radius:10px; font-weight:700; font-size:15px; cursor:pointer; margin-bottom:10px;
+    ">Sign In</button>
+
+    <button onclick="handleSignUp()" style="
+      width:100%; padding:13px; background:#222; color:#fff; border:1px solid #444;
+      border-radius:10px; font-weight:600; font-size:15px; cursor:pointer; margin-bottom:14px;
+    ">Create Account</button>
+
+    <div style="text-align:center; margin: 16px 0 8px; color:#555; font-size:12px;">— or —</div>
+
+    <button onclick="handleContinueAsGuest()" style="
+      width:100%; padding:12px; background:transparent; color:#aaa; border:1px solid #333;
+      border-radius:10px; font-size:14px; cursor:pointer;
+    ">Continue as Guest</button>
+  </div>
+
+  <div id="auth-logged-in" style="display:none; text-align:center;">
+    <p style="margin-bottom:6px; color:#aaa; font-size:13px;">Signed in as</p>
+    <p id="auth-user-email" style="font-weight:600; margin-bottom:20px; word-break:break-all;"></p>
+    <button onclick="handleSignOut()" style="
+      padding:11px 28px; background:#222; color:#fff; border:1px solid #444;
+      border-radius:10px; font-weight:600; cursor:pointer;
+    ">Sign Out</button>
+  </div>
+
+  <p id="auth-message" style="margin-top:18px; text-align:center; font-size:13px; min-height:18px;"></p>
+</dialog>
+
+</body>
                 </html>`;
                 f.srcdoc = html;
             }
@@ -4518,6 +4796,77 @@ function openWindow(id) {
 
   })();
 <\/script>
+
+<!-- ==================== SEAMLESS AUTH MODAL ==================== -->
+<dialog id="auth-modal" style="
+  background: rgba(15,15,15,0.97);
+  border: 1px solid #333;
+  border-radius: 18px;
+  padding: 32px 28px;
+  color: #fff;
+  max-width: 420px;
+  width: 92%;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+  font-family: var(--font-main);
+  position: fixed;
+  z-index: 999999;
+">
+  <button onclick="this.closest('dialog').close()" style="
+    position:absolute; top:14px; right:16px;
+    background:none; border:none; color:#888; font-size:22px; cursor:pointer;
+  ">&times;</button>
+
+  <h2 style="
+    font-family: var(--font-header);
+    letter-spacing: 3px;
+    font-size: 1.4rem;
+    text-align: center;
+    margin: 0 0 8px 0;
+  ">SEAMLESS ACCOUNT</h2>
+
+  <p style="text-align:center; color:#888; font-size:13px; margin-bottom:24px;">
+    Sign in to sync wallpapers, pins &amp; progress across devices
+  </p>
+
+  <div id="auth-form">
+    <input type="email" id="auth-email" placeholder="Email address" autocomplete="email"
+      style="width:100%; padding:13px 14px; margin-bottom:12px; background:#1a1a1a;
+             border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
+    
+    <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="current-password"
+      style="width:100%; padding:13px 14px; margin-bottom:18px; background:#1a1a1a;
+             border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
+
+    <button onclick="handleSignIn()" style="
+      width:100%; padding:13px; background:#fff; color:#000; border:none;
+      border-radius:10px; font-weight:700; font-size:15px; cursor:pointer; margin-bottom:10px;
+    ">Sign In</button>
+
+    <button onclick="handleSignUp()" style="
+      width:100%; padding:13px; background:#222; color:#fff; border:1px solid #444;
+      border-radius:10px; font-weight:600; font-size:15px; cursor:pointer; margin-bottom:14px;
+    ">Create Account</button>
+
+    <div style="text-align:center; margin: 16px 0 8px; color:#555; font-size:12px;">— or —</div>
+
+    <button onclick="handleContinueAsGuest()" style="
+      width:100%; padding:12px; background:transparent; color:#aaa; border:1px solid #333;
+      border-radius:10px; font-size:14px; cursor:pointer;
+    ">Continue as Guest</button>
+  </div>
+
+  <div id="auth-logged-in" style="display:none; text-align:center;">
+    <p style="margin-bottom:6px; color:#aaa; font-size:13px;">Signed in as</p>
+    <p id="auth-user-email" style="font-weight:600; margin-bottom:20px; word-break:break-all;"></p>
+    <button onclick="handleSignOut()" style="
+      padding:11px 28px; background:#222; color:#fff; border:1px solid #444;
+      border-radius:10px; font-weight:600; cursor:pointer;
+    ">Sign Out</button>
+  </div>
+
+  <p id="auth-message" style="margin-top:18px; text-align:center; font-size:13px; min-height:18px;"></p>
+</dialog>
+
 </body>
 </html>`;
                 f.srcdoc = html;
@@ -4675,6 +5024,7 @@ var desktopLayout = JSON.parse(localStorage.getItem('cine_desktop_v2')) || [];
 
 function saveDesktop() {
     localStorage.setItem('cine_desktop_v2', JSON.stringify(desktopLayout));
+    if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
     loadDesktop();
 }
 
@@ -5035,6 +5385,7 @@ function setWallpaper(k, noti=false) {
     if(noti && d.locked && !unlockedWallpapers.includes(d.id)) {
         unlockedWallpapers.push(d.id);
         localStorage.setItem('cine_unlocked_wp', JSON.stringify(unlockedWallpapers));
+        if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
         alert("Wallpaper: [ " + d.name + " ] Unlocked.");
     }
     
@@ -5582,6 +5933,7 @@ function chkFps() {
             if(fLC >= 5 && !sysConfig.optBg) {
                 sysConfig.optBg = true;
                 localStorage.setItem('cine_sys_config', JSON.stringify(sysConfig));
+    if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
                 let bv = document.getElementById('bg-video');
                 let lv = document.getElementById('lock-video');
                 if(bv) bv.pause();
@@ -5599,5 +5951,76 @@ function chkFps() {
 }
 requestAnimationFrame(chkFps);
 </script>
+
+<!-- ==================== SEAMLESS AUTH MODAL ==================== -->
+<dialog id="auth-modal" style="
+  background: rgba(15,15,15,0.97);
+  border: 1px solid #333;
+  border-radius: 18px;
+  padding: 32px 28px;
+  color: #fff;
+  max-width: 420px;
+  width: 92%;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+  font-family: var(--font-main);
+  position: fixed;
+  z-index: 999999;
+">
+  <button onclick="this.closest('dialog').close()" style="
+    position:absolute; top:14px; right:16px;
+    background:none; border:none; color:#888; font-size:22px; cursor:pointer;
+  ">&times;</button>
+
+  <h2 style="
+    font-family: var(--font-header);
+    letter-spacing: 3px;
+    font-size: 1.4rem;
+    text-align: center;
+    margin: 0 0 8px 0;
+  ">SEAMLESS ACCOUNT</h2>
+
+  <p style="text-align:center; color:#888; font-size:13px; margin-bottom:24px;">
+    Sign in to sync wallpapers, pins &amp; progress across devices
+  </p>
+
+  <div id="auth-form">
+    <input type="email" id="auth-email" placeholder="Email address" autocomplete="email"
+      style="width:100%; padding:13px 14px; margin-bottom:12px; background:#1a1a1a;
+             border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
+    
+    <input type="password" id="auth-password" placeholder="Password (min 6 characters)" autocomplete="current-password"
+      style="width:100%; padding:13px 14px; margin-bottom:18px; background:#1a1a1a;
+             border:1px solid #333; border-radius:10px; color:#fff; font-size:15px; box-sizing:border-box;">
+
+    <button onclick="handleSignIn()" style="
+      width:100%; padding:13px; background:#fff; color:#000; border:none;
+      border-radius:10px; font-weight:700; font-size:15px; cursor:pointer; margin-bottom:10px;
+    ">Sign In</button>
+
+    <button onclick="handleSignUp()" style="
+      width:100%; padding:13px; background:#222; color:#fff; border:1px solid #444;
+      border-radius:10px; font-weight:600; font-size:15px; cursor:pointer; margin-bottom:14px;
+    ">Create Account</button>
+
+    <div style="text-align:center; margin: 16px 0 8px; color:#555; font-size:12px;">— or —</div>
+
+    <button onclick="handleContinueAsGuest()" style="
+      width:100%; padding:12px; background:transparent; color:#aaa; border:1px solid #333;
+      border-radius:10px; font-size:14px; cursor:pointer;
+    ">Continue as Guest</button>
+  </div>
+
+  <div id="auth-logged-in" style="display:none; text-align:center;">
+    <p style="margin-bottom:6px; color:#aaa; font-size:13px;">Signed in as</p>
+    <p id="auth-user-email" style="font-weight:600; margin-bottom:20px; word-break:break-all;"></p>
+    <button onclick="handleSignOut()" style="
+      padding:11px 28px; background:#222; color:#fff; border:1px solid #444;
+      border-radius:10px; font-weight:600; cursor:pointer;
+    ">Sign Out</button>
+  </div>
+
+  <p id="auth-message" style="margin-top:18px; text-align:center; font-size:13px; min-height:18px;"></p>
+</dialog>
+
 </body>
 </html>
