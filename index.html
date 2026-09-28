@@ -1782,11 +1782,51 @@ function queueCloudSave() {
   } catch (e) {}
 })();
 
+async function handleDeletedAccount() {
+  if (window._handlingDeletedAccount) return;
+  window._handlingDeletedAccount = true;
+  currentUser = null;
+  isGuest = true;
+  try {
+    if (supabaseClient) await supabaseClient.auth.signOut({ scope: 'local' });
+  } catch (e) {}
+  location.reload();
+}
+
+function isDeletedAccountError(error) {
+  if (!error) return false;
+  var text = [error.message, error.code, error.status, error.statusCode].filter(function(v) { return v !== undefined && v !== null; }).join(' ').toLowerCase();
+  return text.includes('user not found') || text.includes('user_not_found') || text.includes('invalid user') || text.includes('user does not exist') || text.includes('user from sub claim in jwt does not exist') || text.includes('foreign key constraint') && text.includes('user_data');
+}
+
+async function verifyCurrentAccount() {
+  if (!supabaseClient || !currentUser || isGuest) return true;
+  try {
+    var result = await supabaseClient.auth.getUser();
+    if (result.error) {
+      if (isDeletedAccountError(result.error)) {
+        await handleDeletedAccount();
+        return false;
+      }
+      return true;
+    }
+    if (!result.data || !result.data.user || result.data.user.id !== currentUser.id) {
+      await handleDeletedAccount();
+      return false;
+    }
+    return true;
+  } catch (e) {
+    return true;
+  }
+}
+
 async function saveUserDataToCloud() {
   if (!supabaseClient || !currentUser || isGuest) {
     console.log('[Seamless] Cloud save skipped (guest or not signed in)');
     return;
   }
+
+  if (!(await verifyCurrentAccount())) return;
   
   if (_cloudSaveInFlight) return;
 
@@ -1844,6 +1884,10 @@ async function saveUserDataToCloud() {
 
     if (res.error) {
       console.warn('[Seamless] Cloud save error:', res.error.message, res.error);
+      if (isDeletedAccountError(res.error)) {
+        await handleDeletedAccount();
+        return;
+      }
     } else {
       
       _pendingCloudSync = false;
@@ -1860,6 +1904,8 @@ async function saveUserDataToCloud() {
 async function loadUserDataFromCloud() {
   if (!supabaseClient || !currentUser) return;
 
+  if (!(await verifyCurrentAccount())) return;
+
   
   if (_cloudSaveInFlight || _pendingCloudSync) {
     console.log('[Seamless] Skipping cloud load – pending local changes not on cloud yet');
@@ -1874,6 +1920,9 @@ async function loadUserDataFromCloud() {
 
   if (res.error) {
     console.warn('[Seamless] Cloud load error:', res.error.message);
+    if (isDeletedAccountError(res.error)) {
+      await handleDeletedAccount();
+    }
     return;
   }
 
@@ -1993,8 +2042,8 @@ if (supabaseClient) {
       isGuest = false;
       updateAuthUI();
       
-      setTimeout(function() {
-        loadUserDataFromCloud();
+      setTimeout(async function() {
+        if (await verifyCurrentAccount()) loadUserDataFromCloud();
       }, 50);
     } else {
       currentUser = null;
