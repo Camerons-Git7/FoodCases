@@ -1801,7 +1801,7 @@ async function handleDeletedAccount() {
 function isDeletedAccountError(error) {
   if (!error) return false;
   var text = [error.message, error.code, error.status, error.statusCode].filter(function(v) { return v !== undefined && v !== null; }).join(' ').toLowerCase();
-  return text.includes('user from sub claim in jwt does not exist') || text.includes('user not found') || text.includes('user_not_found') || text.includes('user does not exist');
+  return text.includes('user from sub claim in jwt does not exist');
 }
 
 async function verifyCurrentAccount() {
