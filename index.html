@@ -1676,8 +1676,11 @@ function isBlockedProgressKey(key) {
   if (lower.indexOf('unitycache') !== -1) return true;
   if (lower.indexOf('cache-v') !== -1) return true;
   if (lower.indexOf('sw-cache') !== -1) return true;
-  
   if (lower.indexOf('data:image') !== -1) return true;
+  if (lower.indexOf('supabase') !== -1) return true;
+  if (lower.indexOf('sb-') === 0) return true;
+  if (lower.indexOf('-auth-token') !== -1) return true;
+  if (lower === 'seamless_post_signin') return true;
   return false;
 }
 
@@ -1774,6 +1777,11 @@ function clearLocalSyncedData() {
     for (var i = 0; i < localStorage.length; i++) {
       var key = localStorage.key(i);
       if (!key) continue;
+      var lower = key.toLowerCase();
+      if (lower.indexOf('supabase') !== -1) continue;
+      if (lower.indexOf('sb-') === 0) continue;
+      if (lower.indexOf('-auth-token') !== -1) continue;
+      if (lower === 'seamless_post_signin') continue;
       if (_CLOUD_STRUCTURED_KEYS[key]) {
         toRemove.push(key);
         continue;
@@ -1787,6 +1795,8 @@ function clearLocalSyncedData() {
       var k = toRemove[j];
       if (seen[k]) continue;
       seen[k] = 1;
+      var kl = k.toLowerCase();
+      if (kl.indexOf('supabase') !== -1 || kl.indexOf('sb-') === 0 || kl.indexOf('-auth-token') !== -1) continue;
       try { localStorage.removeItem(k); } catch (e) {}
     }
   } catch (e) {}
