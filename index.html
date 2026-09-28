@@ -109,26 +109,26 @@ body {
 .sp-wordmark {
     font-family: var(--font-header);
     font-weight: 900;
-    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    font-size: clamp(2.2rem, 6.5vw, 3.4rem);
     letter-spacing: 0.55em;
     color: #fff;
-    text-indent: 0.55em; /* optical center with letter-spacing */
-    margin: 0 0 28px 0;
-    text-shadow: 0 0 40px rgba(255,255,255,0.12);
+    text-indent: 0.55em;
+    margin: 0 0 36px 0;
+    text-shadow: 0 0 50px rgba(255,255,255,0.14);
     user-select: none;
 }
 .sp-bar-track {
-    width: min(220px, 48vw);
-    height: 2px;
+    width: min(300px, 55vw);
+    height: 3px;
     background: rgba(255,255,255,0.12);
-    border-radius: 2px;
+    border-radius: 3px;
     overflow: hidden;
 }
 .sp-bar-fill {
     height: 100%;
     width: 40%;
     background: #fff;
-    border-radius: 2px;
+    border-radius: 3px;
     animation: sp-shimmer 1.35s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 @keyframes sp-shimmer {
@@ -143,16 +143,16 @@ body {
 
 #boot-content {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    text-align: center; z-index: 2; width: min(92%, 430px);
+    text-align: center; z-index: 2; width: min(94%, 560px);
 }
 
 .boot-logo {
     font-family: var(--font-header);
-    font-size: 2.1rem;
+    font-size: 2.85rem;
     color: #fff;
-    letter-spacing: 6px;
-    margin-bottom: 10px;
-    text-shadow: 0 0 30px rgba(255,255,255,0.2);
+    letter-spacing: 8px;
+    margin-bottom: 14px;
+    text-shadow: 0 0 36px rgba(255,255,255,0.22);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -162,9 +162,9 @@ body {
 .boot-sub {
     font-family: var(--font-main);
     color: #888;
-    font-size: 0.95rem;
-    letter-spacing: 2px;
-    margin-bottom: 28px;
+    font-size: 1.15rem;
+    letter-spacing: 3px;
+    margin-bottom: 36px;
     text-transform: uppercase;
     white-space: nowrap;
 }
@@ -173,38 +173,38 @@ body {
     width: 100%;
     background: rgba(15,15,15,0.94);
     border: 1px solid #333;
-    border-radius: 18px;
-    padding: 26px;
-    box-shadow: 0 25px 70px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.04);
+    border-radius: 22px;
+    padding: 36px 34px;
+    box-shadow: 0 28px 80px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.04);
     text-align: left;
 }
 
 .boot-auth-title {
     font-family: var(--font-header);
-    letter-spacing: 2px;
-    font-size: 1.15rem;
+    letter-spacing: 3px;
+    font-size: 1.45rem;
     text-align: center;
-    margin-bottom: 7px;
+    margin-bottom: 10px;
     color: #fff;
 }
 
 .boot-auth-desc {
     text-align: center;
     color: #777;
-    font-size: 12px;
-    line-height: 1.5;
-    margin-bottom: 20px;
+    font-size: 15px;
+    line-height: 1.55;
+    margin-bottom: 26px;
 }
 
 .boot-auth-input {
     width: 100%;
-    padding: 13px 14px;
-    margin-bottom: 11px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
     background: #1a1a1a;
     border: 1px solid #333;
-    border-radius: 10px;
+    border-radius: 12px;
     color: #fff;
-    font: 600 15px var(--font-main);
+    font: 600 17px var(--font-main);
     box-sizing: border-box;
     user-select: text;
 }
@@ -216,9 +216,9 @@ body {
 
 .boot-auth-btn {
     width: 100%;
-    padding: 13px;
-    border-radius: 10px;
-    font: 700 15px var(--font-main);
+    padding: 16px;
+    border-radius: 12px;
+    font: 700 17px var(--font-main);
     cursor: pointer;
     transition: 0.2s;
 }
@@ -233,27 +233,27 @@ body {
     background: #222;
     color: #fff;
     border: 1px solid #444;
-    margin-top: 9px;
+    margin-top: 12px;
 }
 
 .boot-auth-btn:hover { transform: translateY(-1px); }
-.boot-auth-btn.primary:hover { box-shadow: 0 0 24px rgba(255,255,255,0.2); }
+.boot-auth-btn.primary:hover { box-shadow: 0 0 28px rgba(255,255,255,0.22); }
 .boot-auth-btn.secondary:hover { background: #2b2b2b; border-color: #666; }
 
 #boot-auth-message, #boot-session-message {
-    min-height: 18px;
-    margin-top: 14px;
+    min-height: 22px;
+    margin-top: 16px;
     text-align: center;
     color: #888;
-    font: 600 12px var(--font-main);
+    font: 600 14px var(--font-main);
     line-height: 1.4;
 }
 
 .boot-session-box { text-align: center; }
 .boot-session-email {
     color: #aaa;
-    font-size: 13px;
-    margin: 10px 0 18px;
+    font-size: 16px;
+    margin: 14px 0 22px;
     word-break: break-all;
 }
 
