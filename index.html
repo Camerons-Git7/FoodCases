@@ -4645,7 +4645,7 @@ function openWindow(id) {
     { name: 'LAN Low',    scale: 1.75, maxBitrate: 2500000,  maxFramerate: 24 },
     { name: 'LAN Min',    scale: 2.5,  maxBitrate: 1200000,  maxFramerate: 20 }
   ];
-  let qualityIdx = 1; // start High — good balance
+  let qualityIdx = 1;
   let qualityTimer = null;
   let lastStats = null;
   let qualityStableUntil = 0;
@@ -4905,7 +4905,7 @@ function openWindow(id) {
       if (tag !== 'iframe' && tag !== 'frame') break;
       let childDoc = null;
       try { childDoc = el.contentDocument; } catch (e) { childDoc = null; }
-      if (!childDoc) break; // cross-origin — stop at iframe element
+      if (!childDoc) break;
       const rect = el.getBoundingClientRect();
       x = x - rect.left;
       y = y - rect.top;
@@ -6563,7 +6563,15 @@ window.addEventListener('keydown', function(e) {
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !(t && t.isContentEditable)) {
             if (currentUser && !isGuest && typeof saveUserDataToCloud === 'function') {
                 e.preventDefault();
-                try { saveUserDataToCloud(); } catch (err) {}
+                try {
+                    Promise.resolve(saveUserDataToCloud()).then(function() {
+                        if (typeof showNotification === 'function') showNotification('Progress', 'Saved!');
+                    }).catch(function() {
+                        if (typeof showNotification === 'function') showNotification('Progress', 'Saved!');
+                    });
+                } catch (err) {
+                    if (typeof showNotification === 'function') showNotification('Progress', 'Saved!');
+                }
             }
         }
     }
