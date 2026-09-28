@@ -1639,19 +1639,28 @@ function applyIframeProgressToFrame(frame, appId) {
   } catch (e) { /* cross-origin */ }
 }
 
-// Prevent cloud LOAD from overwriting a change we just made locally
+// Only push to cloud when local has changes NOT yet confirmed on the cloud
 var _cloudSaveInFlight = false;
 var _lastLocalEditAt = 0;
 var _saveCloudTimer = null;
+var _pendingCloudSync = false;  // true = local has unsaved changes vs last successful cloud write
+var _lastCloudSaveAt = 0;
+var _lastCloudLoadAt = 0;
 
-function markLocalEdit() {
+/** User changed something locally that still needs to be written to cloud */
+function markPendingCloudSync() {
   _lastLocalEditAt = Date.now();
+  _pendingCloudSync = true;
 }
 
-/** Debounced cloud save – coalesces rapid wallpaper/pin changes */
+function markLocalEdit() {
+  markPendingCloudSync();
+}
+
+/** Debounced save – only for changes not yet confirmed on the cloud */
 function queueCloudSave() {
   if (!supabaseClient || !currentUser || isGuest) return;
-  markLocalEdit();
+  markPendingCloudSync();
   if (_saveCloudTimer) clearTimeout(_saveCloudTimer);
   _saveCloudTimer = setTimeout(function() {
     _saveCloudTimer = null;
@@ -1664,9 +1673,13 @@ async function saveUserDataToCloud() {
     console.log('[Seamless] Cloud save skipped (guest or not signed in)');
     return;
   }
+  // Nothing pending → do not overwrite cloud with this tab's older snapshot
+  if (!_pendingCloudSync && !_cloudSaveInFlight) {
+    console.log('[Seamless] Cloud save skipped (nothing pending)');
+    return;
+  }
 
   _cloudSaveInFlight = true;
-  markLocalEdit();
 
   var mainProg = collectMainProgress();
   var iframeProg = collectIframeProgress();
@@ -1720,17 +1733,14 @@ async function saveUserDataToCloud() {
 
     if (res.error) {
       console.warn('[Seamless] Cloud save error:', res.error.message, res.error);
-      if (typeof showNotification === 'function') {
-        showNotification('Cloud save failed', res.error.message);
-      }
     } else {
-      console.log('[Seamless] Cloud save OK', {
-        home: payload.sys_config && payload.sys_config.homeWallpaper,
-        lock: payload.sys_config && payload.sys_config.lockWallpaper
-      });
+      // Confirmed on cloud — nothing pending from this tab anymore
+      _pendingCloudSync = false;
+      _lastCloudSaveAt = Date.now();
     }
   } catch (err) {
     console.warn('[Seamless] Cloud save exception:', err);
+    // Keep _pendingCloudSync true so we retry later
   }
 
   _cloudSaveInFlight = false;
@@ -1739,9 +1749,9 @@ async function saveUserDataToCloud() {
 async function loadUserDataFromCloud() {
   if (!supabaseClient || !currentUser) return;
 
-  // Don't clobber a wallpaper/setting change we just made
-  if (_cloudSaveInFlight || (Date.now() - _lastLocalEditAt) < 2500) {
-    console.log('[Seamless] Skipping cloud load – local edit in progress');
+  // Don't clobber changes that are still pending upload
+  if (_cloudSaveInFlight || _pendingCloudSync) {
+    console.log('[Seamless] Skipping cloud load – pending local changes not on cloud yet');
     return;
   }
 
@@ -1762,8 +1772,7 @@ async function loadUserDataFromCloud() {
     return;
   }
 
-  // System settings (which wallpaper, loop, idle lock, etc.) — not the media files
-  // Merge into existing sysConfig so we never wipe local choices with {}
+  // System settings from CLOUD win over local when signed in
   if (data.sys_config && typeof data.sys_config === 'object') {
     var sc = data.sys_config;
     var target = (typeof sysConfig !== 'undefined' && sysConfig) ? sysConfig : {};
@@ -1775,6 +1784,12 @@ async function loadUserDataFromCloud() {
     window.sysConfig = target;
     try { sysConfig = target; } catch (e) {}
     localStorage.setItem('cine_sys_config', JSON.stringify(target));
+    console.log('[Seamless] Cloud loaded wallpapers:', {
+      home: target.homeWallpaper,
+      lock: target.lockWallpaper
+    });
+  } else {
+    console.log('[Seamless] Cloud row has no sys_config yet');
   }
 
   if (data.pins) {
@@ -1839,19 +1854,24 @@ async function loadUserDataFromCloud() {
   if (typeof updateCherriApp === 'function') updateCherriApp();
   if (typeof checkApiKey === 'function') checkApiKey();
 
-  if (typeof showNotification === 'function') {
-    showNotification('Account', 'Progress loaded from cloud');
-  }
+  _lastCloudLoadAt = Date.now();
+  // Cloud is source of truth after load — nothing pending from this tab
+  _pendingCloudSync = false;
 }
 
-// Auto-save progress every 60s while signed in (catches in-game coin changes on same-origin)
+// Retry only if local still has changes not confirmed on the cloud
 setInterval(function() {
-  if (currentUser && !isGuest) saveUserDataToCloud();
+  if (currentUser && !isGuest && _pendingCloudSync) {
+    console.log('[Seamless] Auto-save (pending unsaved changes)');
+    saveUserDataToCloud();
+  }
 }, 60000);
 
-// Save when leaving the page
+// On leave, only write if something still isn't on the cloud
 window.addEventListener('beforeunload', function() {
-  if (currentUser && !isGuest) saveUserDataToCloud();
+  if (currentUser && !isGuest && _pendingCloudSync) {
+    saveUserDataToCloud();
+  }
 });
 
 // Restore session on load — also pull cloud settings (wallpapers, etc.)
@@ -3460,11 +3480,9 @@ function positionContextMenu(menu, e) {
 }
 
 async function enterSeamlessFromSession() {
-    // Logged-in user clicking "Enter SEAMLESS" — refresh cloud settings first
+    // Silently refresh cloud settings, then enter
     if (currentUser && !isGuest && typeof loadUserDataFromCloud === 'function') {
-      setBootSessionMessage('Loading your settings…');
       try { await loadUserDataFromCloud(); } catch (e) {}
-      setBootSessionMessage('');
     }
     startBootSequence();
 }
