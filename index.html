@@ -1677,7 +1677,6 @@ function isBlockedProgressKey(key) {
 
 var _CLOUD_MAX_VALUE_LEN = 100000;
 
-
 function collectMainProgress() {
   var out = {};
   try {
@@ -1686,17 +1685,15 @@ function collectMainProgress() {
       if (isBlockedProgressKey(key)) continue;
       var val = localStorage.getItem(key);
       if (val == null) continue;
-      if (val.length > _CLOUD_MAX_VALUE_LEN) continue;
-      
+      var isMc = key && (key.toLowerCase().indexOf('minecraft') !== -1 || key.toLowerCase().indexOf('eagler') !== -1);
+      if (!isMc && val.length > _CLOUD_MAX_VALUE_LEN) continue;
       if (val.indexOf('data:image') === 0 || val.indexOf('data:application') === 0) continue;
       out[key] = val;
     }
   } catch (e) {}
-  
   out['cherri_unlocked'] = localStorage.getItem('cherri_unlocked') === 'true' ? 'true' : 'false';
   return out;
 }
-
 
 function collectIframeProgress() {
   var byApp = {};
@@ -1705,6 +1702,7 @@ function collectIframeProgress() {
     for (var i = 0; i < frames.length; i++) {
       var frame = frames[i];
       var appId = (frame.id || '').replace(/^frame-/, '') || ('iframe_' + i);
+      var isMcApp = appId === 'minecraft';
       try {
         var ls = frame.contentWindow && frame.contentWindow.localStorage;
         if (!ls) continue;
@@ -1713,13 +1711,13 @@ function collectIframeProgress() {
           var k = ls.key(j);
           if (isBlockedProgressKey(k)) continue;
           var v = ls.getItem(k);
-          if (v == null || v.length > _CLOUD_MAX_VALUE_LEN) continue;
+          if (v == null) continue;
+          if (!isMcApp && v.length > _CLOUD_MAX_VALUE_LEN) continue;
           if (v.indexOf('data:image') === 0 || v.indexOf('data:application') === 0) continue;
           bag[k] = v;
         }
         if (Object.keys(bag).length) byApp[appId] = bag;
       } catch (crossOrigin) {
-        
       }
     }
   } catch (e) {}
@@ -1849,7 +1847,6 @@ async function saveUserDataToCloud() {
       _lastCloudSaveAt = Date.now();
     }
   } catch (err) {
-    // silent fail
   }
 
   _cloudSaveInFlight = false;
@@ -1892,7 +1889,6 @@ async function loadUserDataFromCloud() {
     try { sysConfig = target; } catch (e) {}
     localStorage.setItem('cine_sys_config', JSON.stringify(target));
   } else {
-    // no sys_config yet
   }
 
   if (data.pins) {
@@ -5581,20 +5577,19 @@ function openWindow(id) {
 }
 
 function closeWindow(id) {
-    
     if (currentUser && !isGuest && typeof saveUserDataToCloud === 'function') {
       try {
         var frame = document.getElementById('frame-' + id);
         if (frame && typeof applyIframeProgressToFrame === 'function') {
-          
           try {
             var ls = frame.contentWindow && frame.contentWindow.localStorage;
             if (ls) {
               var bag = {};
+              var isMc = id === 'minecraft';
               for (var j = 0; j < ls.length; j++) {
                 var k = ls.key(j);
                 var v = ls.getItem(k);
-                if (k && v != null && v.length <= 200000) bag[k] = v;
+                if (k && v != null && (isMc || v.length <= 200000)) bag[k] = v;
               }
               if (!window._pendingIframeSaves) window._pendingIframeSaves = {};
               if (Object.keys(bag).length) window._pendingIframeSaves[id] = bag;
@@ -6458,7 +6453,6 @@ window.addEventListener('keydown', function(e) {
     } else if(e.code === 'Escape' && isCiriActive) {
         closeCiri();
     } else if ((e.key === '`' || e.code === 'Backquote') && !e.altKey && !e.ctrlKey && !e.metaKey) {
-        // Silent cloud save on backtick (`) — only when signed in and not typing in a field
         var t = e.target;
         var tag = (t && t.tagName) ? t.tagName.toUpperCase() : '';
         if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !(t && t.isContentEditable)) {
