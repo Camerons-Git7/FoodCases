@@ -1796,7 +1796,7 @@ async function handleDeletedAccount() {
 function isDeletedAccountError(error) {
   if (!error) return false;
   var text = [error.message, error.code, error.status, error.statusCode].filter(function(v) { return v !== undefined && v !== null; }).join(' ').toLowerCase();
-  return text.includes('user not found') || text.includes('user_not_found') || text.includes('invalid user') || text.includes('user does not exist') || text.includes('user from sub claim in jwt does not exist') || text.includes('foreign key constraint') && text.includes('user_data');
+  return text.includes('user from sub claim in jwt does not exist') || text.includes('user not found') || text.includes('user_not_found') || text.includes('user does not exist');
 }
 
 async function verifyCurrentAccount() {
@@ -1884,10 +1884,6 @@ async function saveUserDataToCloud() {
 
     if (res.error) {
       console.warn('[Seamless] Cloud save error:', res.error.message, res.error);
-      if (isDeletedAccountError(res.error)) {
-        await handleDeletedAccount();
-        return;
-      }
     } else {
       
       _pendingCloudSync = false;
@@ -1920,9 +1916,6 @@ async function loadUserDataFromCloud() {
 
   if (res.error) {
     console.warn('[Seamless] Cloud load error:', res.error.message);
-    if (isDeletedAccountError(res.error)) {
-      await handleDeletedAccount();
-    }
     return;
   }
 
@@ -2033,36 +2026,47 @@ window.addEventListener('beforeunload', function() {
 });
 
 
+var _authReady = Promise.resolve(null);
 if (supabaseClient) {
-  supabaseClient.auth.getSession().then(function(result) {
-    var session = result.data && result.data.session;
-
-    if (session && session.user) {
-      currentUser = session.user;
-      isGuest = false;
-      updateAuthUI();
-      
-      setTimeout(async function() {
-        if (await verifyCurrentAccount()) loadUserDataFromCloud();
-      }, 50);
-    } else {
-      currentUser = null;
-      isGuest = true;
-      updateAuthUI();
+  _authReady = new Promise(function(resolve) {
+    var resolved = false;
+    function finish(session) {
+      if (resolved) return;
+      resolved = true;
+      resolve(session || null);
     }
-  }).catch(function(err) {
-    console.warn('[Seamless] Session restore error:', err);
-    updateAuthUI();
-  });
 
-  supabaseClient.auth.onAuthStateChange(function(event, session) {
-    currentUser = (session && session.user) ? session.user : null;
-    isGuest = !currentUser;
-    updateAuthUI();
+    supabaseClient.auth.onAuthStateChange(function(event, session) {
+      if (session && session.user) {
+        currentUser = session.user;
+        isGuest = false;
+        updateAuthUI();
+      } else if (event === 'SIGNED_OUT') {
+        currentUser = null;
+        isGuest = true;
+        updateAuthUI();
+      }
 
-    if (event === 'SIGNED_IN' && currentUser) {
-      loadUserDataFromCloud();
-    }
+      if (event === 'SIGNED_IN' && session && session.user) {
+        finish(session);
+      }
+    });
+
+    supabaseClient.auth.getSession().then(function(result) {
+      var session = result && result.data && result.data.session;
+      if (session && session.user) {
+        currentUser = session.user;
+        isGuest = false;
+      } else {
+        currentUser = null;
+        isGuest = true;
+      }
+      updateAuthUI();
+      finish(session);
+    }).catch(function(err) {
+      console.warn('[Seamless] Session restore error:', err);
+      finish(null);
+    });
   });
 }
 
@@ -3440,27 +3444,15 @@ document.addEventListener("DOMContentLoaded", async function() {
     var startedAt = Date.now();
     var signedIn = false;
 
-    
     try {
-        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-            var sessionResult = await withTimeout(supabaseClient.auth.getSession(), 2500);
-            var session = sessionResult && sessionResult.data && sessionResult.data.session;
-            if (session && session.user) {
-                currentUser = session.user;
-                isGuest = false;
-                signedIn = true;
-                if (typeof updateAuthUI === 'function') updateAuthUI();
-            } else {
-                currentUser = null;
-                isGuest = true;
-                if (typeof updateAuthUI === 'function') updateAuthUI();
-            }
-        }
+        var session = await _authReady;
+        signedIn = !!(session && session.user);
+        if (typeof updateAuthUI === 'function') updateAuthUI();
     } catch (e) {
-        isGuest = true;
+        signedIn = !!(currentUser && !isGuest);
+        if (typeof updateAuthUI === 'function') updateAuthUI();
     }
 
-    
     if (signedIn && typeof loadUserDataFromCloud === 'function') {
         try {
             await withTimeout(loadUserDataFromCloud(), 5000);
