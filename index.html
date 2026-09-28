@@ -1542,6 +1542,10 @@ async function handleBootSignUp() {
       isGuest = false;
       updateAuthUI();
       showAuthMessage('');
+      _pendingCloudSync = false;
+      _cloudSaveInFlight = false;
+      _suppressCloudSave = false;
+      await withTimeout(saveUserDataToCloud(), 5000);
       await withTimeout(loadUserDataFromCloud(), 5000);
       if (typeof initWallpapers === 'function') initWallpapers();
       try { await waitForWallpapersReady(35000); } catch (e) {}
@@ -1592,12 +1596,15 @@ async function handleBootSignIn() {
     isGuest = false;
     updateAuthUI();
     showAuthMessage('Signed in…');
-    
-    
-    
     try {
       sessionStorage.setItem('seamless_post_signin', '1');
     } catch (e) {}
+    _suppressCloudSave = true;
+    _pendingCloudSync = false;
+    if (_saveCloudTimer) {
+      clearTimeout(_saveCloudTimer);
+      _saveCloudTimer = null;
+    }
     location.reload();
     return;
   } catch (err) {
@@ -1759,8 +1766,47 @@ function markLocalEdit() {
   markPendingCloudSync();
 }
 
+var _suppressCloudSave = false;
+
+function clearLocalSyncedData() {
+  try {
+    var toRemove = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (!key) continue;
+      if (_CLOUD_STRUCTURED_KEYS[key]) {
+        toRemove.push(key);
+        continue;
+      }
+      if (_CLOUD_BLOCKED_KEYS[key]) continue;
+      if (!isBlockedProgressKey(key)) toRemove.push(key);
+    }
+    toRemove.push('cherri_unlocked', 'ciri_key');
+    var seen = {};
+    for (var j = 0; j < toRemove.length; j++) {
+      var k = toRemove[j];
+      if (seen[k]) continue;
+      seen[k] = 1;
+      try { localStorage.removeItem(k); } catch (e) {}
+    }
+  } catch (e) {}
+  window._pendingIframeSaves = {};
+  try { window.desktopLayout = []; } catch (e) {}
+  try { desktopLayout = []; } catch (e) {}
+  try { window.unlockedWallpapers = ['default']; } catch (e) {}
+  try { unlockedWallpapers = ['default']; } catch (e) {}
+  try { window.sysConfig = {}; } catch (e) {}
+  try { sysConfig = {}; } catch (e) {}
+  try { cherriUnlocked = false; window.cherriUnlocked = false; } catch (e) {}
+  _pendingCloudSync = false;
+  if (_saveCloudTimer) {
+    clearTimeout(_saveCloudTimer);
+    _saveCloudTimer = null;
+  }
+}
 
 function queueCloudSave() {
+  if (_suppressCloudSave) return;
   if (!supabaseClient || !currentUser || isGuest) return;
   markPendingCloudSync();
   if (_saveCloudTimer) clearTimeout(_saveCloudTimer);
@@ -1784,6 +1830,7 @@ function queueCloudSave() {
 })();
 
 async function saveUserDataToCloud() {
+  if (_suppressCloudSave) return;
   if (!supabaseClient || !currentUser || isGuest) {
     return;
   }
@@ -1855,8 +1902,19 @@ async function saveUserDataToCloud() {
 async function loadUserDataFromCloud() {
   if (!supabaseClient || !currentUser) return;
 
-  
-  if (_cloudSaveInFlight || _pendingCloudSync) {
+  var postSignIn = false;
+  try {
+    postSignIn = sessionStorage.getItem('seamless_post_signin') === '1';
+    if (postSignIn) sessionStorage.removeItem('seamless_post_signin');
+  } catch (e) {}
+  if (postSignIn) {
+    _suppressCloudSave = true;
+    clearLocalSyncedData();
+    _pendingCloudSync = false;
+    _cloudSaveInFlight = false;
+  }
+
+  if (!postSignIn && (_cloudSaveInFlight || _pendingCloudSync)) {
     return;
   }
 
@@ -1867,11 +1925,13 @@ async function loadUserDataFromCloud() {
     .maybeSingle();
 
   if (res.error) {
+    if (postSignIn) _suppressCloudSave = false;
     return;
   }
 
   var data = res.data;
   if (!data) {
+    _suppressCloudSave = false;
     await saveUserDataToCloud();
     return;
   }
@@ -1914,15 +1974,36 @@ async function loadUserDataFromCloud() {
   if (data.game_progress) {
     var gp = data.game_progress;
 
-    
     if (gp._main && typeof gp._main === 'object') {
+      try {
+        var keepMain = gp._main;
+        var orphanKeys = [];
+        for (var oi = 0; oi < localStorage.length; oi++) {
+          var ok = localStorage.key(oi);
+          if (!ok || isBlockedProgressKey(ok) || _CLOUD_STRUCTURED_KEYS[ok]) continue;
+          if (!Object.prototype.hasOwnProperty.call(keepMain, ok)) orphanKeys.push(ok);
+        }
+        for (var or = 0; or < orphanKeys.length; or++) {
+          try { localStorage.removeItem(orphanKeys[or]); } catch (e) {}
+        }
+      } catch (e) {}
       for (var key in gp._main) {
         if (!Object.prototype.hasOwnProperty.call(gp._main, key)) continue;
         if (_CLOUD_STRUCTURED_KEYS[key]) continue;
         try { localStorage.setItem(key, gp._main[key]); } catch (e) {}
       }
     } else {
-      
+      try {
+        var orphanLegacy = [];
+        for (var li = 0; li < localStorage.length; li++) {
+          var lk = localStorage.key(li);
+          if (!lk || isBlockedProgressKey(lk) || _CLOUD_STRUCTURED_KEYS[lk]) continue;
+          orphanLegacy.push(lk);
+        }
+        for (var lr = 0; lr < orphanLegacy.length; lr++) {
+          try { localStorage.removeItem(orphanLegacy[lr]); } catch (e) {}
+        }
+      } catch (e) {}
       if (typeof gp._cherri === 'boolean') {
         localStorage.setItem('cherri_unlocked', gp._cherri ? 'true' : 'false');
       }
@@ -1936,14 +2017,27 @@ async function loadUserDataFromCloud() {
       }
     }
 
-    
     cherriUnlocked = localStorage.getItem('cherri_unlocked') === 'true';
     window.cherriUnlocked = cherriUnlocked;
 
-    
     if (gp._iframes && typeof gp._iframes === 'object') {
       window._pendingIframeSaves = gp._iframes;
+    } else {
+      window._pendingIframeSaves = {};
     }
+  } else if (postSignIn) {
+    try {
+      var orphanAll = [];
+      for (var ai = 0; ai < localStorage.length; ai++) {
+        var ak = localStorage.key(ai);
+        if (!ak || isBlockedProgressKey(ak) || _CLOUD_STRUCTURED_KEYS[ak]) continue;
+        orphanAll.push(ak);
+      }
+      for (var ar = 0; ar < orphanAll.length; ar++) {
+        try { localStorage.removeItem(orphanAll[ar]); } catch (e) {}
+      }
+    } catch (e) {}
+    window._pendingIframeSaves = {};
   }
 
   if (typeof initWallpapers === 'function') initWallpapers();
@@ -1955,6 +2049,7 @@ async function loadUserDataFromCloud() {
   _lastCloudLoadAt = Date.now();
   
   _pendingCloudSync = false;
+  if (postSignIn) _suppressCloudSave = false;
 }
 
 
