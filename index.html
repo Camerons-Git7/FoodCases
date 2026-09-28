@@ -1064,6 +1064,12 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
         <button class="boot-auth-btn primary" onclick="handleBootSignIn()">Sign In</button>
         <button class="boot-auth-btn secondary" onclick="handleBootSignUp()">Create Account</button>
 
+        <div style="text-align:center; margin: 14px 0 6px; color:#555; font-size:12px;">— or —</div>
+
+        <button class="boot-auth-btn secondary" onclick="handleContinueAsGuest()" style="margin-top:0; background:transparent; color:#aaa;">
+          Continue as Guest
+        </button>
+
         <p id="boot-auth-message" aria-live="polite"></p>
       </div>
 
@@ -1521,21 +1527,160 @@ function openBootAccountPanel() {
   location.reload();
 }
 
+/** Guest mode – pure localStorage, no cloud sync */
+function handleContinueAsGuest() {
+  currentUser = null;
+  isGuest = true;
+  updateAuthUI();
+  showAuthMessage('Continuing as Guest (saved only on this device)');
+  startBootSequence();
+}
+
+/* Keys that belong in dedicated columns – not duplicated inside game_progress */
+var _CLOUD_STRUCTURED_KEYS = {
+  'cine_sys_config': 1,
+  'c_pins_v2': 1,
+  'cine_desktop_v2': 1,
+  'cine_unlocked_wp': 1,
+  'cine_wp_versions': 1   // wallpaper cache tokens – never upload
+};
+
+/*
+ * Asset / cache flags from Unity & other games – NEVER upload these.
+ * Real progress keys (coins, xp, settings) are still allowed.
+ */
+var _CLOUD_BLOCKED_KEYS = {
+  'cod-assets-cached': 1,
+  'buildnow_assets_cached': 1,
+  'cine_wp_versions': 1
+};
+
+/* Block keys that look like asset caches, not progress */
+function isBlockedProgressKey(key) {
+  if (!key) return true;
+  if (_CLOUD_STRUCTURED_KEYS[key] || _CLOUD_BLOCKED_KEYS[key]) return true;
+  var lower = key.toLowerCase();
+  if (lower.indexOf('assets-cached') !== -1) return true;
+  if (lower.indexOf('assetscache') !== -1) return true;
+  if (lower.indexOf('unitycache') !== -1) return true;
+  if (lower.indexOf('cache-v') !== -1) return true;
+  if (lower.indexOf('sw-cache') !== -1) return true;
+  // base64 / data-url dumps
+  if (lower.indexOf('data:image') !== -1) return true;
+  return false;
+}
+
+/* Skip huge values (Unity dumps, base64 images). Progress JSON is usually < 50KB */
+var _CLOUD_MAX_VALUE_LEN = 100000;
+
+/** Snapshot every progress-related localStorage key on the main page */
+function collectMainProgress() {
+  var out = {};
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (isBlockedProgressKey(key)) continue;
+      var val = localStorage.getItem(key);
+      if (val == null) continue;
+      if (val.length > _CLOUD_MAX_VALUE_LEN) continue;
+      // Skip obvious binary/base64 blobs even if under the size limit
+      if (val.indexOf('data:image') === 0 || val.indexOf('data:application') === 0) continue;
+      out[key] = val;
+    }
+  } catch (e) {}
+  // Always capture cherry unlock explicitly
+  out['cherri_unlocked'] = localStorage.getItem('cherri_unlocked') === 'true' ? 'true' : 'false';
+  return out;
+}
+
+/** Try to read localStorage from same-origin open game iframes */
+function collectIframeProgress() {
+  var byApp = {};
+  try {
+    var frames = document.querySelectorAll('iframe');
+    for (var i = 0; i < frames.length; i++) {
+      var frame = frames[i];
+      var appId = (frame.id || '').replace(/^frame-/, '') || ('iframe_' + i);
+      try {
+        var ls = frame.contentWindow && frame.contentWindow.localStorage;
+        if (!ls) continue;
+        var bag = {};
+        for (var j = 0; j < ls.length; j++) {
+          var k = ls.key(j);
+          if (isBlockedProgressKey(k)) continue;
+          var v = ls.getItem(k);
+          if (v == null || v.length > _CLOUD_MAX_VALUE_LEN) continue;
+          if (v.indexOf('data:image') === 0 || v.indexOf('data:application') === 0) continue;
+          bag[k] = v;
+        }
+        if (Object.keys(bag).length) byApp[appId] = bag;
+      } catch (crossOrigin) {
+        // Game is on another domain – browser blocks access (expected)
+      }
+    }
+  } catch (e) {}
+  return byApp;
+}
+
+/** After cloud load: push saved iframe data into a same-origin frame when it opens */
+window._pendingIframeSaves = window._pendingIframeSaves || {};
+
+function applyIframeProgressToFrame(frame, appId) {
+  var bag = window._pendingIframeSaves && window._pendingIframeSaves[appId];
+  if (!bag || !frame) return;
+  try {
+    var ls = frame.contentWindow && frame.contentWindow.localStorage;
+    if (!ls) return;
+    for (var k in bag) {
+      if (Object.prototype.hasOwnProperty.call(bag, k)) {
+        try { ls.setItem(k, bag[k]); } catch (e) {}
+      }
+    }
+  } catch (e) { /* cross-origin */ }
+}
+
 async function saveUserDataToCloud() {
   if (!supabaseClient || !currentUser || isGuest) return;
 
+  var mainProg = collectMainProgress();
+  var iframeProg = collectIframeProgress();
+  // Merge any previously known iframe saves so we don't lose data when a game isn't open
+  if (window._pendingIframeSaves) {
+    for (var appId in window._pendingIframeSaves) {
+      if (!iframeProg[appId]) iframeProg[appId] = window._pendingIframeSaves[appId];
+      else {
+        // Prefer live iframe data, keep missing keys from previous
+        for (var k in window._pendingIframeSaves[appId]) {
+          if (iframeProg[appId][k] === undefined) {
+            iframeProg[appId][k] = window._pendingIframeSaves[appId][k];
+          }
+        }
+      }
+    }
+  }
+  window._pendingIframeSaves = iframeProg;
+
+  var gameProg = {
+    _main: mainProg,
+    _iframes: iframeProg
+  };
+
   var payload = {
     id: currentUser.id,
+    // Wallpaper *choices* + system toggles only (no image/video cache)
     sys_config: (typeof sysConfig !== 'undefined') ? sysConfig : {},
     pins: JSON.parse(localStorage.getItem('c_pins_v2') || '{}'),
     desktop: (typeof desktopLayout !== 'undefined') ? desktopLayout : [],
-    unlocked_wp: (typeof unlockedWallpapers !== 'undefined') ? unlockedWallpapers : [],
-    game_progress: JSON.parse(localStorage.getItem('cine_game_progress') || '{}'),
+    unlocked_wp: (typeof unlockedWallpapers !== 'undefined')
+      ? unlockedWallpapers
+      : (JSON.parse(localStorage.getItem('cine_unlocked_wp') || '[]') || []),
+    game_progress: gameProg,
     updated_at: new Date().toISOString()
   };
 
   var res = await supabaseClient.from('user_data').upsert(payload);
   if (res.error) console.warn('[Seamless] Cloud save error:', res.error.message);
+  else console.log('[Seamless] Cloud save OK');
 }
 
 async function loadUserDataFromCloud() {
@@ -1558,10 +1703,12 @@ async function loadUserDataFromCloud() {
     return;
   }
 
+  // System settings (which wallpaper, loop, idle lock, etc.) — not the media files
   if (data.sys_config) {
     window.sysConfig = data.sys_config;
     localStorage.setItem('cine_sys_config', JSON.stringify(data.sys_config));
   }
+
   if (data.pins) {
     localStorage.setItem('c_pins_v2', JSON.stringify(data.pins));
     if (typeof APPS !== 'undefined') {
@@ -1570,26 +1717,74 @@ async function loadUserDataFromCloud() {
       }
     }
   }
+
   if (data.desktop) {
     window.desktopLayout = data.desktop;
     localStorage.setItem('cine_desktop_v2', JSON.stringify(data.desktop));
   }
+
   if (data.unlocked_wp) {
     window.unlockedWallpapers = data.unlocked_wp;
     localStorage.setItem('cine_unlocked_wp', JSON.stringify(data.unlocked_wp));
   }
+
+  // Restore all game / app progress
   if (data.game_progress) {
-    localStorage.setItem('cine_game_progress', JSON.stringify(data.game_progress));
+    var gp = data.game_progress;
+
+    // New format: { _main: {...}, _iframes: {...} }
+    if (gp._main && typeof gp._main === 'object') {
+      for (var key in gp._main) {
+        if (!Object.prototype.hasOwnProperty.call(gp._main, key)) continue;
+        if (_CLOUD_STRUCTURED_KEYS[key]) continue;
+        try { localStorage.setItem(key, gp._main[key]); } catch (e) {}
+      }
+    } else {
+      // Legacy format fallback (older saves)
+      if (typeof gp._cherri === 'boolean') {
+        localStorage.setItem('cherri_unlocked', gp._cherri ? 'true' : 'false');
+      }
+      if (gp._ciri_key) localStorage.setItem('ciri_key', gp._ciri_key);
+      for (var legacyKey in gp) {
+        if (legacyKey.charAt(0) === '_') continue;
+        try {
+          var v = gp[legacyKey];
+          localStorage.setItem(legacyKey, typeof v === 'string' ? v : JSON.stringify(v));
+        } catch (e) {}
+      }
+    }
+
+    // Cherry unlock → unlock Cherri apps
+    if (localStorage.getItem('cherri_unlocked') === 'true') {
+      if (typeof window.cherriUnlocked !== 'undefined') window.cherriUnlocked = true;
+    }
+
+    // Stash iframe saves so we can inject when those games open (same-origin only)
+    if (gp._iframes && typeof gp._iframes === 'object') {
+      window._pendingIframeSaves = gp._iframes;
+    }
   }
 
   if (typeof initWallpapers === 'function') initWallpapers();
   if (typeof loadDesktop === 'function') loadDesktop();
   if (typeof renderUI === 'function') renderUI();
+  if (typeof updateCherriApp === 'function') updateCherriApp();
+  if (typeof checkApiKey === 'function') checkApiKey();
 
   if (typeof showNotification === 'function') {
     showNotification('Account', 'Progress loaded from cloud');
   }
 }
+
+// Auto-save progress every 60s while signed in (catches in-game coin changes on same-origin)
+setInterval(function() {
+  if (currentUser && !isGuest) saveUserDataToCloud();
+}, 60000);
+
+// Save when leaving the page
+window.addEventListener('beforeunload', function() {
+  if (currentUser && !isGuest) saveUserDataToCloud();
+});
 
 // Restore session on load.
 if (supabaseClient) {
@@ -3574,6 +3769,25 @@ function openWindow(id) {
             win.classList.remove('opening');
             win.classList.add('active');
         });
+
+        // Inject cloud-saved progress into same-origin game iframes when they load
+        (function(appId) {
+          var f = document.getElementById('frame-' + appId);
+          if (!f) return;
+          var inject = function() {
+            if (typeof applyIframeProgressToFrame === 'function') {
+              applyIframeProgressToFrame(f, appId);
+            }
+            // Capture progress again a few times while playing (same-origin only)
+            if (currentUser && !isGuest) {
+              setTimeout(function() { if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud(); }, 5000);
+            }
+          };
+          f.addEventListener('load', inject);
+          // Also try shortly after (in case load already fired)
+          setTimeout(inject, 800);
+          setTimeout(inject, 2500);
+        })(id);
         
         if(dat.internal && id === 'settings') {
             let f = document.getElementById('frame-' + id);
@@ -4998,6 +5212,29 @@ function openWindow(id) {
 }
 
 function closeWindow(id) {
+    // Snapshot game progress from this iframe before it is destroyed
+    if (currentUser && !isGuest && typeof saveUserDataToCloud === 'function') {
+      try {
+        var frame = document.getElementById('frame-' + id);
+        if (frame && typeof applyIframeProgressToFrame === 'function') {
+          // Collect this one frame into pending saves
+          try {
+            var ls = frame.contentWindow && frame.contentWindow.localStorage;
+            if (ls) {
+              var bag = {};
+              for (var j = 0; j < ls.length; j++) {
+                var k = ls.key(j);
+                var v = ls.getItem(k);
+                if (k && v != null && v.length <= 200000) bag[k] = v;
+              }
+              if (!window._pendingIframeSaves) window._pendingIframeSaves = {};
+              if (Object.keys(bag).length) window._pendingIframeSaves[id] = bag;
+            }
+          } catch (e) {}
+        }
+        saveUserDataToCloud();
+      } catch (e) {}
+    }
     let w = document.getElementById('win-' + id);
     if(w) w.remove();
     if(activeWindowId === id) activeWindowId = null;
@@ -5723,6 +5960,7 @@ if(sInp) {
             if(q.toLowerCase() === 'cherry') {
                 cherriUnlocked = true;
                 localStorage.setItem('cherri_unlocked', 'true');
+                if (typeof saveUserDataToCloud === 'function') saveUserDataToCloud();
                 updateCherriApp();
                 renderUI();
                 this.value = "";
