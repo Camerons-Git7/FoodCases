@@ -4,14 +4,20 @@ name: Install NoomiClone files
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   download:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Download Unity WebGL files
         run: |
-          mkdir -p noomiclone
-          cd noomiclone
+          mkdir -p core/noomiclone
+          cd core/noomiclone
           curl -L -o webgl.4.data.unityweb \
             "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.data.unityweb"
           curl -L -o webgl.4.wasm.code.unityweb \
@@ -20,8 +26,10 @@ jobs:
             "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.framework.unityweb"
           ls -lh
 
-      - name: Upload files
-        uses: actions/upload-artifact@v4
-        with:
-          name: noomiclone-build
-          path: noomiclone/
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add core/noomiclone/
+          git diff --staged --quiet || git commit -m "Add NoomiClone WebGL build files"
+          git push
