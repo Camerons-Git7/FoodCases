@@ -1,21 +1,29 @@
-# install-noomiclone.yml
-# Downloads Unity WebGL assets into /peak/noomiclone/
-
+# .github/workflows/install-noomiclone.yml
 name: Install NoomiClone files
 
-dest: /peak/noomiclone
+on:
+  workflow_dispatch:
 
-files:
-  - name: webgl.4.data.unityweb
-    url: https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.data.unityweb
-  - name: webgl.4.wasm.code.unityweb
-    url: https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.code.unityweb
-  - name: webgl.4.wasm.framework.unityweb
-    url: https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.framework.unityweb
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create destination folder
+        run: mkdir -p /peak/noomiclone
 
-# Equivalent shell commands:
-# mkdir -p /peak/noomiclone
-# cd /peak/noomiclone
-# curl -L -o webgl.4.data.unityweb "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.data.unityweb"
-# curl -L -o webgl.4.wasm.code.unityweb "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.code.unityweb"
-# curl -L -o webgl.4.wasm.framework.unityweb "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.framework.unityweb"
+      - name: Download Unity WebGL files
+        working-directory: /peak/noomiclone
+        run: |
+          curl -L -o webgl.4.data.unityweb \
+            "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.data.unityweb"
+          curl -L -o webgl.4.wasm.code.unityweb \
+            "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.code.unityweb"
+          curl -L -o webgl.4.wasm.framework.unityweb \
+            "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.framework.unityweb"
+          ls -lh
+
+      - name: Upload as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: noomiclone-build
+          path: /peak/noomiclone/
