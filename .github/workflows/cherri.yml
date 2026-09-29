@@ -8,9 +8,6 @@ jobs:
   download:
     runs-on: ubuntu-latest
     steps:
-      - name: Create destination folder
-        run: mkdir -p /peak/noomiclone
-
       - name: Download Unity WebGL files
         working-directory: /peak/noomiclone
         run: |
@@ -21,9 +18,3 @@ jobs:
           curl -L -o webgl.4.wasm.framework.unityweb \
             "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.framework.unityweb"
           ls -lh
-
-      - name: Upload as artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: noomiclone-build
-          path: /peak/noomiclone/
