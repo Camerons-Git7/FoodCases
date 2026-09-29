@@ -4,11 +4,49 @@
   <meta charset="utf-8" />
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Unity WebGL Player</title>
+  <title></title>
   <link rel="shortcut icon" href="TemplateData/favicon.ico" />
   <link rel="stylesheet" href="TemplateData/style.css" />
   <style>
-    .webgl-content .footer { position: relative; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #231F20;
+    }
+    .webgl-content {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    #unityContainer {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    #unityContainer canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+    .webgl-content .footer {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 38px;
+      pointer-events: none;
+      background: transparent;
+    }
+    .webgl-content .footer .fullscreen {
+      pointer-events: auto;
+    }
+    .webgl-content .footer .webgl-logo,
+    .webgl-content .footer .title {
+      display: none;
+    }
     #keybar {
       display: inline-flex;
       align-items: center;
@@ -197,7 +235,7 @@ function dismissOverlay() {
     </div>
   </div>
   <div class="webgl-content">
-    <div id="unityContainer" style="width: 1280px; height: 720px"></div>
+    <div id="unityContainer"></div>
     <div class="footer">
       <div class="webgl-logo"></div>
       <div id="keybar">
@@ -207,7 +245,7 @@ function dismissOverlay() {
         <span class="key-group"><kbd>R</kbd><span class="action">Reset</span></span>
       </div>
       <div class="fullscreen" onclick="unityInstance.SetFullscreen(1)"></div>
-      <div class="title">Game</div>
+      <div class="title"></div>
     </div>
   </div>
 </body>
