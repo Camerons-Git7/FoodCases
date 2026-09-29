@@ -1,32 +1,21 @@
-name: Fetch cherri
+# install-noomiclone.yml
+# Downloads Unity WebGL assets into /peak/noomiclone/
 
-on:
-  workflow_dispatch:
+name: Install NoomiClone files
 
-permissions:
-  contents: write
+dest: /peak/noomiclone
 
-jobs:
-  fetch:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+files:
+  - name: webgl.4.data.unityweb
+    url: https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.data.unityweb
+  - name: webgl.4.wasm.code.unityweb
+    url: https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.code.unityweb
+  - name: webgl.4.wasm.framework.unityweb
+    url: https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.framework.unityweb
 
-      - name: Download and extract
-        run: |
-          curl -L -o cherri.zip "https://github.com/Camerons-Git7/FoodCases/releases/download/files/cherri.zip"
-          mkdir -p extracted
-          unzip -q cherri.zip -d extracted
-          rm -rf cherri
-          mkdir -p cherri
-          # Copy everything from the zip into the cherri folder
-          cp -a extracted/. cherri/ || cp -a extracted/* cherri/
-          find cherri -maxdepth 2
-
-      - name: Commit
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add cherri
-          git diff --staged --quiet || git commit -m "Add cherri folder from release"
-          git push
+# Equivalent shell commands:
+# mkdir -p /peak/noomiclone
+# cd /peak/noomiclone
+# curl -L -o webgl.4.data.unityweb "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.data.unityweb"
+# curl -L -o webgl.4.wasm.code.unityweb "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.code.unityweb"
+# curl -L -o webgl.4.wasm.framework.unityweb "https://github.com/Camerons-Git7/FoodCases/releases/download/files/webgl.4.wasm.framework.unityweb"
