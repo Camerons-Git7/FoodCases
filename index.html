@@ -1419,7 +1419,14 @@ const SUPABASE_URL = 'https://vhxotukthsiefyqelfir.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Yk2Wz4UnIcI67LnLubNwbA_lHZywLLP';
 
 const supabaseClient = (typeof window.supabase !== 'undefined')
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage
+      }
+    })
   : null;
 
 let currentUser = null;
@@ -2131,13 +2138,36 @@ if (supabaseClient) {
   });
 
   supabaseClient.auth.onAuthStateChange(function(event, session) {
+    var prevUser = currentUser;
     currentUser = (session && session.user) ? session.user : null;
     isGuest = !currentUser;
     updateAuthUI();
 
-    if (event === 'SIGNED_IN' && currentUser) {
-      loadUserDataFromCloud();
+    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && currentUser) {
+      if (typeof loadUserDataFromCloud === 'function') {
+        loadUserDataFromCloud();
+      }
     }
+    if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      isGuest = true;
+      updateAuthUI();
+    }
+  });
+
+  window.addEventListener('pageshow', function(e) {
+    if (!e.persisted || !supabaseClient) return;
+    supabaseClient.auth.getSession().then(function(result) {
+      var session = result && result.data && result.data.session;
+      if (session && session.user) {
+        currentUser = session.user;
+        isGuest = false;
+      } else if (result && result.data && !result.data.session) {
+        currentUser = null;
+        isGuest = true;
+      }
+      if (typeof updateAuthUI === 'function') updateAuthUI();
+    }).catch(function() {});
   });
 }
 
@@ -3506,10 +3536,17 @@ function warmSelectedWallpapersCache() {
 }
 
 function withTimeout(promise, ms) {
-    return Promise.race([
-        Promise.resolve(promise).catch(function() {}),
-        new Promise(function(resolve) { setTimeout(resolve, ms); })
-    ]);
+    return new Promise(function(resolve) {
+        var settled = false;
+        Promise.resolve(promise).then(function(v) {
+            if (!settled) { settled = true; resolve({ ok: true, value: v }); }
+        }).catch(function() {
+            if (!settled) { settled = true; resolve({ ok: false, timedOut: false, value: null }); }
+        });
+        setTimeout(function() {
+            if (!settled) { settled = true; resolve({ ok: false, timedOut: true, value: null }); }
+        }, ms);
+    });
 }
 
 document.addEventListener("DOMContentLoaded", async function() {
@@ -3520,21 +3557,36 @@ document.addEventListener("DOMContentLoaded", async function() {
     
     try {
         if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-            var sessionResult = await withTimeout(supabaseClient.auth.getSession(), 2500);
-            var session = sessionResult && sessionResult.data && sessionResult.data.session;
-            if (session && session.user) {
-                currentUser = session.user;
-                isGuest = false;
-                signedIn = true;
-                if (typeof updateAuthUI === 'function') updateAuthUI();
+            var sessionResult = await withTimeout(supabaseClient.auth.getSession(), 12000);
+            if (sessionResult && sessionResult.ok && sessionResult.value) {
+                var session = sessionResult.value.data && sessionResult.value.data.session;
+                if (session && session.user) {
+                    currentUser = session.user;
+                    isGuest = false;
+                    signedIn = true;
+                    if (typeof updateAuthUI === 'function') updateAuthUI();
+                } else {
+                    currentUser = null;
+                    isGuest = true;
+                    if (typeof updateAuthUI === 'function') updateAuthUI();
+                }
+            } else if (sessionResult && sessionResult.timedOut) {
+                if (currentUser) {
+                    signedIn = true;
+                    isGuest = false;
+                    if (typeof updateAuthUI === 'function') updateAuthUI();
+                }
             } else {
-                currentUser = null;
-                isGuest = true;
-                if (typeof updateAuthUI === 'function') updateAuthUI();
+                if (!currentUser) {
+                    isGuest = true;
+                    if (typeof updateAuthUI === 'function') updateAuthUI();
+                }
             }
         }
     } catch (e) {
-        isGuest = true;
+        if (!currentUser) {
+            isGuest = true;
+        }
     }
 
     
