@@ -265,6 +265,78 @@ InitMelonSdk();
 <body>
 
 <script>
+/* Mock Melon parent host so MelWebSdk stops waiting and Play can proceed */
+(function () {
+  var MODULE = {
+    Global: "global", Adv: "adv", EventTracker: "event-tracker",
+    Auth: "auth", Settings: "settings", Store: "store", Host: "host"
+  };
+
+  function reply(data) {
+    window.postMessage(Object.assign({ source: "melon-web-app" }, data), "*");
+  }
+
+  window.addEventListener("message", function (e) {
+    var msg = e.data;
+    if (!msg || typeof msg !== "object") return;
+    if (msg.source === "melon-web-app") return; // ignore our own
+    if (msg.source !== "melon-web-game-app" && !msg.module) return;
+
+    // Answer hello handshake
+    if (msg.module === MODULE.Global && msg.event === "hello" && msg.type === "start") {
+      reply({
+        module: MODULE.Global,
+        event: "hello",
+        type: "success",
+        data: { id: msg.data && msg.data.id }
+      });
+      // Tell SDK parent modules are ready
+      reply({
+        module: MODULE.Global,
+        event: "modules-initialized",
+        data: { id: msg.data && msg.data.id, hostModuleCreated: false }
+      });
+      return;
+    }
+
+    // Generic success for init requests
+    if (msg.event === "request-initial-data" || msg.event === "RequestInitialData") {
+      reply({
+        module: msg.module,
+        event: "state-data",
+        data: {
+          id: msg.data && msg.data.id,
+          result: {
+            isAvailable: false,
+            isGoogleAvailable: false,
+            deviceId: "standalone-" + Date.now(),
+            language: "en",
+            links: {},
+            activeHost: location.origin,
+            changeHost: false
+          }
+        }
+      });
+      return;
+    }
+
+    // Adv / auth / store no-ops
+    if (msg.event && /show-|request-google|get-auth|open-store|content-/i.test(String(msg.event))) {
+      reply({
+        module: msg.module,
+        event: msg.event,
+        type: "closed",
+        data: { id: msg.data && msg.data.id, data: { wasShown: false } }
+      });
+    }
+  });
+
+  console.log("[MockMelonParent] active — standalone mode");
+})();
+</script>
+
+
+<script>
 // Stubs for optional Melon/Unity bridges missing outside official host
 document.callFBFunctionByName = document.callFBFunctionByName || function () { return null; };
 window.callFBFunctionByName = document.callFBFunctionByName;
@@ -319,7 +391,7 @@ console.log("Skipping early WebGL probe (avoids context limit)");
 var GH = "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/melon-sandbox";
 var loaderUrl = "https://artefacts.melonsandbox.com/MelonPlayground_Webgl/MelonPlayground_Webgl_SiteProdU63/51060/Build/92_release-web-38.1_melon_webgl_30d0fe1e1dbc41bff6bbba0588889ca1efb6fd57_v38_1.loader.js";
 
-// --- IndexedDB helpers (data + wasm only) ---
+// --- IndexedDB helpers (data + wasm + framework) ---
 var IDB_NAME = "melon-build-cache";
 var IDB_STORE = "files";
 
@@ -373,7 +445,7 @@ function cachedBuildUrl(url, key) {
   }).catch(function () { return url; });
 }
 
-// Load only the 2 big ones from cache; framework always from GitHub
+// Cache all 3 build files in IndexedDB (data, wasm, framework)
 if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
   var meta = document.createElement("meta");
   meta.name = "viewport";
@@ -387,12 +459,13 @@ loadingBar.style.display = "block";
 
 Promise.all([
   cachedBuildUrl(GH + "/data.unityweb", "data.unityweb"),
-  cachedBuildUrl(GH + "/wasm.unityweb", "wasm.unityweb")
+  cachedBuildUrl(GH + "/wasm.unityweb", "wasm.unityweb"),
+  cachedBuildUrl(GH + "/framework.unityweb", "framework.unityweb")
 ]).then(function (urls) {
   var config = {
     dataUrl: urls[0],
-    frameworkUrl: GH + "/framework.unityweb",
     codeUrl: urls[1],
+    frameworkUrl: urls[2],
     streamingAssetsUrl: "StreamingAssets",
     companyName: "27 Studio",
     productName: "Melon Sandbox",
@@ -431,6 +504,11 @@ Promise.all([
       window.unityInstance = unityInstance;
       gameInstance = unityInstance;
       loadingBar.style.display = "none";
+      try { canvas.focus(); } catch (e) {}
+      // Soft nudge: some Melon builds wait on visibility
+      try {
+        document.dispatchEvent(new Event("visibilitychange"));
+      } catch (e) {}
     }).catch(function (message) {
       alert(message);
     });
