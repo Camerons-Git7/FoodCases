@@ -13,48 +13,19 @@ runs-on: ubuntu-latest
 ```
 steps:
   - name: Checkout repository
-    uses: actions/checkout@v7
+    uses: actions/checkout@v4
 
-  - name: Download FoodCases release
+  - name: Download release
     run: |
-      mkdir -p /tmp/foodcases-release
-
+      mkdir -p /tmp/foodcases
       curl -L \
-        -H "Accept: application/vnd.github+json" \
-        "https://api.github.com/repos/Camerons-Git7/FoodCases/releases/tags/files" \
-        -o /tmp/release.json
+        "https://github.com/Camerons-Git7/FoodCases/releases/download/files/files.zip" \
+        -o /tmp/foodcases/files.zip
 
-      python - <<'PY'
-      import json
-      import os
-      import urllib.request
-
-      with open("/tmp/release.json", "r") as f:
-          release = json.load(f)
-
-      assets = release.get("assets", [])
-
-      if not assets:
-          raise SystemExit("No assets found in the 'files' release.")
-
-      os.makedirs("/tmp/foodcases-release", exist_ok=True)
-
-      for asset in assets:
-          name = asset["name"]
-          url = asset["browser_download_url"]
-
-          print(f"Downloading: {name}")
-
-          urllib.request.urlretrieve(
-              url,
-              os.path.join("/tmp/foodcases-release", name)
-          )
-      PY
-
-  - name: Copy files into melon-sandbox
+  - name: Extract into melon-sandbox
     run: |
       mkdir -p melon-sandbox
-      cp -a /tmp/foodcases-release/. melon-sandbox/
+      unzip -o /tmp/foodcases/files.zip -d melon-sandbox
 
   - name: Commit changes
     run: |
@@ -66,7 +37,7 @@ steps:
       if git diff --cached --quiet; then
         echo "No changes to commit."
       else
-        git commit -m "Import FoodCases release files"
+        git commit -m "Import FoodCases files"
         git push
       fi
 ```
