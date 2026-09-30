@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Site → Zip Rehoster (Cherri)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    :root {
+      --bg: #0c0e14;
+      --panel: #141824;
+      --border: #252a3a;
+      --text: #e8eaf0;
+      --muted: #8b93a7;
+      --accent: #6c8cff;
+      --accent2: #a78bfa;
+      --ok: #34d399;
+      --err: #f87171;
+      --warn: #fbbf24;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .wrap { max-width: 740px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+    h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.35rem;
+    }
+    .sub { color: var(--muted); font-size: 0.92rem; margin-bottom: 1.75rem; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.35rem 1.4rem;
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      margin-bottom: 0.45rem;
+    }
+    input[type="text"], input[type="url"], select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    .row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .row > * { flex: 1; min-width: 140px; }
+    .opts { display: grid; gap: 0.65rem; margin-top: 0.9rem; }
+    .chk {
+      display: flex; align-items: center; gap: 0.55rem;
+      font-size: 0.9rem; color: var(--text); cursor: pointer;
+    }
+    .chk input { width: 16px; height: 16px; accent-color: var(--accent); }
+    button#go {
+      width: 100%;
+      margin-top: 1.1rem;
+      padding: 0.85rem 1.2rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    button#go:hover:not(:disabled) { opacity: 0.92; }
+    button#go:active:not(:disabled) { transform: scale(0.99); }
+    button#go:disabled { opacity: 0.45; cursor: not-allowed; }
+    #log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+      max-height: 300px;
+      overflow-y: auto;
+      background: var(--bg);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .line { margin-bottom: 0.25rem; }
+    .line.ok { color: var(--ok); }
+    .line.err { color: var(--err); }
+    .line.warn { color: var(--warn); }
+    .line.info { color: var(--muted); }
+    .bar-wrap {
+      height: 6px; background: var(--bg); border-radius: 99px;
+      overflow: hidden; margin-top: 0.85rem;
+    }
+    .bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.25s ease;
+      border-radius: 99px;
+    }
+    .stats {
+      display: flex; gap: 1.25rem; flex-wrap: wrap;
+      margin-top: 0.75rem; font-size: 0.82rem; color: var(--muted);
+    }
+    .stats strong { color: var(--text); }
+    .hint { font-size: 0.8rem; color: var(--muted); margin-top: 0.85rem; }
+    code { background: var(--bg); padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Site → Zip Rehoster</h1>
+    <p class="sub">Fetches through <strong>Cherri</strong> (<code>fn5315</code> proxy), rewrites URLs, packs a ZIP.</p>
+
+    <div class="card">
+      <label for="url">Website URL</label>
+      <input type="url" id="url" placeholder="https://example.com" autocomplete="off" />
+
+      <div class="row" style="margin-top:0.9rem">
+        <div>
+          <label for="cherri">Cherri base (proxy)</label>
+          <input type="text" id="cherri" value="https://menist.free.nf/cherri/cherri/" />
+        </div>
+        <div>
+          <label for="host">Your host (canonical rewrite)</label>
+          <input type="text" id="host" value="https://menist.free.nf" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:0.9rem">
+        <div>
+          <label for="depth">Crawl depth</label>
+          <select id="depth">
+            <option value="0">0 — page only</option>
+            <option value="1" selected>1 — page + linked pages</option>
+            <option value="2">2 — deeper</option>
+          </select>
+        </div>
+        <div>
+          <label for="mode">Fetch mode</label>
+          <select id="mode">
+            <option value="cherri" selected>Cherri first, then CORS fallback</option>
+            <option value="cherri-only">Cherri only</option>
+            <option value="cors">CORS proxies only</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="opts">
+        <label class="chk"><input type="checkbox" id="assets" checked /> Download CSS / JS / images / fonts</label>
+        <label class="chk"><input type="checkbox" id="rewrite" checked /> Rewrite same-site URLs → relative</label>
+        <label class="chk"><input type="checkbox" id="canon" checked /> Rewrite canonical / og:url / homepage → your host</label>
+        <label class="chk"><input type="checkbox" id="strip" checked /> Strip analytics scripts</label>
+      </div>
+
+      <button id="go">Rehost as ZIP</button>
+      <div class="bar-wrap"><div class="bar" id="bar"></div></div>
+      <div class="stats">
+        <span>Files: <strong id="nFiles">0</strong></span>
+        <span>Failed: <strong id="nFail">0</strong></span>
+        <span>Size: <strong id="nSize">0 KB</strong></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Log</label>
+      <div id="log"></div>
+      <p class="hint">
+        <strong>Best results:</strong> host this file under the same origin as Cherri
+        (e.g. <code>https://menist.free.nf/cherri/cherri/rehost.html</code>) so the
+        service worker is already controlling the page. Cherri encodes targets as
+        <code>…/fn5315/&lt;base64url&gt;</code> — same path the embed uses.
+      </p>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const logEl = $("log");
+  const bar = $("bar");
+
+  const CORS_PROXIES = [
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  ];
+
+  const TEXT_TYPES = /^(text\/|application\/(javascript|json|xml|xhtml)|image\/svg)/i;
+  const ASSET_EXT = /\.(css|js|mjs|json|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|otf|mp4|webm|mp3|wav|pdf|map)(\?|#|$)/i;
+  const PAGE_EXT = /\.(html?|php|aspx?|jsp)(\?|#|$)/i;
+
+  let totalBytes = 0;
+  let failCount = 0;
+
+  function log(msg, cls = "info") {
+    const d = document.createElement("div");
+    d.className = "line " + cls;
+    d.textContent = msg;
+    logEl.appendChild(d);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function setProgress(done, total) {
+    const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
+    bar.style.width = pct + "%";
+    $("nFiles").textContent = String(done);
+    $("nFail").textContent = String(failCount);
+    $("nSize").textContent = (totalBytes / 1024).toFixed(1) + " KB";
+  }
+
+  /** base64url encode a string (matches Cherri decodePayload) */
+  function b64url(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  /**
+   * Build Cherri proxy URL the same way the embed does:
+   *   {cherriBase}/fn5315/{base64url(targetUrl)}
+   * Cherri SW intercepts fn5315 paths and fetches the decoded target.
+   */
+  function cherriProxyUrl(targetUrl, cherriBase) {
+    let base = (cherriBase || "").trim();
+    if (!base) base = "./";
+    if (!base.endsWith("/")) base += "/";
+    // Absolute or relative base
+    try {
+      base = new URL(base, location.href).href;
+      if (!base.endsWith("/")) base += "/";
+    } catch (_) {}
+    return base + "fn5315/" + b64url(targetUrl);
+  }
+
+  function normalizeUrl(raw, base) {
+    try {
+      if (!raw || /^(data:|blob:|javascript:|mailto:|#)/i.test(raw)) return null;
+      const u = new URL(raw, base);
+      u.hash = "";
+      return u.href;
+    } catch {
+      return null;
+    }
+  }
+
+  function sameOrigin(a, b) {
+    try { return new URL(a).origin === new URL(b).origin; } catch { return false; }
+  }
+
+  function pathFor(url) {
+    try {
+      const u = new URL(url);
+      let p = u.pathname || "/";
+      if (p.endsWith("/")) p += "index.html";
+      const leaf = p.split("/").pop() || "";
+      if (!/\.[a-z0-9]{1,8}$/i.test(leaf)) p = p.replace(/\/?$/, "/index.html");
+      p = p.replace(/^\//, "") || "index.html";
+      if (u.search) {
+        const q = u.search.slice(1).replace(/[^a-z0-9=_-]/gi, "_").slice(0, 40);
+        const parts = p.split(".");
+        if (parts.length > 1) {
+          const ext = parts.pop();
+          p = parts.join(".") + "__" + q + "." + ext;
+        } else p = p + "__" + q;
+      }
+      return p;
+    } catch {
+      return "asset_" + Math.random().toString(36).slice(2);
+    }
+  }
+
+  function relativeFrom(fromPath, toPath) {
+    const from = fromPath.split("/").slice(0, -1);
+    const to = toPath.split("/");
+    let i = 0;
+    while (i < from.length && i < to.length - 1 && from[i] === to[i]) i++;
+    return ("../".repeat(from.length - i) + to.slice(i).join("/")) || "./";
+  }
+
+  function isHomepageLike(url, rootUrl) {
+    try {
+      const u = new URL(url);
+      const r = new URL(rootUrl);
+      if (u.origin !== r.origin) return false;
+      const p = u.pathname.replace(/\/+$/, "") || "/";
+      return p === "/" || p === "/index.html" || p === "/index.htm" || p === "/home" || p === "/home.html";
+    } catch { return false; }
+  }
+
+  async function fetchDirect(url) {
+    const res = await fetch(url, { credentials: "omit", redirect: "follow" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return { buf: await res.arrayBuffer(), ct: res.headers.get("content-type") || "" };
+  }
+
+  async function fetchViaCherri(url, cherriBase) {
+    const proxy = cherriProxyUrl(url, cherriBase);
+    const res = await fetch(proxy, {
+      credentials: "include", // SW / cookie challenge on free hosts
+      redirect: "follow",
+      headers: { Accept: "*/*" },
+    });
+    if (!res.ok) throw new Error("Cherri HTTP " + res.status);
+    // If we got HTML cookie-challenge page, treat as failure
+    const ct = res.headers.get("content-type") || "";
+    const buf = await res.arrayBuffer();
+    if (ct.includes("text/html") && buf.byteLength < 2500) {
+      const t = new TextDecoder().decode(buf);
+      if (t.includes("slowAES") || t.includes("__test=") || t.includes("This site requires Javascript")) {
+        throw new Error("Cookie challenge / not proxied yet");
+      }
+    }
+    return { buf, ct };
+  }
+
+  async function fetchViaCors(url) {
+    let lastErr;
+    for (const make of CORS_PROXIES) {
+      try {
+        const res = await fetch(make(url));
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return { buf: await res.arrayBuffer(), ct: res.headers.get("content-type") || "" };
+      } catch (e) { lastErr = e; }
+    }
+    try {
+      return await fetchDirect(url);
+    } catch (e) {
+      throw lastErr || e;
+    }
+  }
+
+  async function fetchUrl(url, opts) {
+    const mode = opts.mode;
+    const errors = [];
+
+    if (mode === "cherri" || mode === "cherri-only") {
+      try {
+        return await fetchViaCherri(url, opts.cherriBase);
+      } catch (e) {
+        errors.push("cherri: " + (e.message || e));
+        if (mode === "cherri-only") throw new Error(errors.join("; "));
+      }
+    }
+
+    if (mode === "cors" || mode === "cherri") {
+      try {
+        return await fetchViaCors(url);
+      } catch (e) {
+        errors.push("cors: " + (e.message || e));
+      }
+    }
+
+    throw new Error(errors.join("; ") || "fetch failed");
+  }
+
+  function extractLinks(html, baseUrl) {
+    const links = new Set();
+    const patterns = [
+      /<a[^>]+href=["']([^"']+)["']/gi,
+      /<link[^>]+href=["']([^"']+)["']/gi,
+      /<script[^>]+src=["']([^"']+)["']/gi,
+      /<img[^>]+src=["']([^"']+)["']/gi,
+      /<source[^>]+src=["']([^"']+)["']/gi,
+      /<video[^>]+(?:src|poster)=["']([^"']+)["']/gi,
+      /<audio[^>]+src=["']([^"']+)["']/gi,
+      /<iframe[^>]+src=["']([^"']+)["']/gi,
+      /url\(\s*["']?([^"')]+)["']?\s*\)/gi,
+      /@import\s+["']([^"']+)["']/gi,
+    ];
+    for (const re of patterns) {
+      let m;
+      while ((m = re.exec(html))) {
+        const abs = normalizeUrl(m[1].trim(), baseUrl);
+        if (abs) links.add(abs);
+      }
+    }
+    let sm;
+    const srcsetRe = /srcset=["']([^"']+)["']/gi;
+    while ((sm = srcsetRe.exec(html))) {
+      sm[1].split(",").forEach((part) => {
+        const u = part.trim().split(/\s+/)[0];
+        const abs = normalizeUrl(u, baseUrl);
+        if (abs) links.add(abs);
+      });
+    }
+    return [...links];
+  }
+
+  function rewriteContent(text, fileUrl, rootUrl, pathMap, opts) {
+    const myHost = opts.myHost.replace(/\/+$/, "");
+    const filePath = pathMap.get(fileUrl) || pathFor(fileUrl);
+
+    function rewriteOne(raw) {
+      const abs = normalizeUrl(raw, fileUrl);
+      if (!abs) return raw;
+
+      if (opts.canon && (isHomepageLike(abs, rootUrl) || abs === rootUrl || abs === rootUrl.replace(/\/$/, "") + "/")) {
+        return myHost + "/";
+      }
+
+      if (opts.rewrite && sameOrigin(abs, rootUrl) && pathMap.has(abs)) {
+        return relativeFrom(filePath, pathMap.get(abs));
+      }
+
+      if (opts.rewrite && sameOrigin(abs, rootUrl)) {
+        return relativeFrom(filePath, pathFor(abs));
+      }
+
+      return raw;
+    }
+
+    text = text.replace(
+      /(\b(?:href|src|action|poster|data-src|data-href)\s*=\s*)(["'])([^"']*)\2/gi,
+      (_, pre, q, val) => pre + q + rewriteOne(val) + q
+    );
+
+    text = text.replace(/(\bsrcset\s*=\s*)(["'])([^"']*)\2/gi, (_, pre, q, val) => {
+      const parts = val.split(",").map((p) => {
+        const bits = p.trim().split(/\s+/);
+        if (bits[0]) bits[0] = rewriteOne(bits[0]);
+        return bits.join(" ");
+      });
+      return pre + q + parts.join(", ") + q;
+    });
+
+    text = text.replace(/url\(\s*(["']?)([^"')]+)\1\s*\)/gi, (_, q, val) =>
+      `url(${q}${rewriteOne(val.trim())}${q})`
+    );
+
+    text = text.replace(/@import\s+(["'])([^"']+)\1/gi, (_, q, val) =>
+      `@import ${q}${rewriteOne(val)}${q}`
+    );
+
+    if (opts.canon) {
+      text = text.replace(
+        /(<link[^>]+rel=["']canonical["'][^>]*href=["'])([^"']+)(["'])/gi,
+        `$1${myHost}/$3`
+      );
+      text = text.replace(
+        /(<link[^>]+href=["'])([^"']+)(["'][^>]*rel=["']canonical["'])/gi,
+        `$1${myHost}/$3`
+      );
+      text = text.replace(
+        /(<meta[^>]+(?:property|name)=["'](?:og:url|twitter:url)["'][^>]*content=["'])([^"']+)(["'])/gi,
+        `$1${myHost}/$3`
+      );
+      text = text.replace(
+        /(<meta[^>]+content=["'])([^"']+)(["'][^>]*(?:property|name)=["'](?:og:url|twitter:url)["'])/gi,
+        `$1${myHost}/$3`
+      );
+    }
+
+    if (opts.strip) {
+      text = text.replace(/<script[^>]*(googletagmanager|google-analytics|gtag\/js|hotjar|clarity\.ms|facebook\.net\/en_US\/fbevents|connect\.facebook)[^>]*>[\s\S]*?<\/script>/gi, "");
+      text = text.replace(/<script[^>]*(googletagmanager|google-analytics|gtag\/js|hotjar|clarity\.ms)[^>]*\/?\s*>/gi, "");
+      text = text.replace(/<noscript>[\s\S]*?(googletagmanager|facebook\.com\/tr)[\s\S]*?<\/noscript>/gi, "");
+    }
+
+    if (opts.rewrite) {
+      try {
+        const rootOrigin = new URL(rootUrl).origin;
+        const esc = rootOrigin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        text = text.replace(new RegExp(esc + "(\\/[^\"'\\s)]*)?", "g"), (m, pathPart) => {
+          const full = rootOrigin + (pathPart || "/");
+          if (pathMap.has(full)) return relativeFrom(filePath, pathMap.get(full));
+          if (opts.canon && isHomepageLike(full, rootUrl)) return myHost + "/";
+          return m;
+        });
+      } catch (_) {}
+    }
+
+    return text;
+  }
+
+  async function run() {
+    const rawUrl = $("url").value.trim();
+    if (!rawUrl) { log("Enter a URL", "err"); return; }
+
+    let rootUrl;
+    try {
+      rootUrl = new URL(/^https?:\/\//i.test(rawUrl) ? rawUrl : "https://" + rawUrl).href;
+    } catch {
+      log("Invalid URL", "err");
+      return;
+    }
+
+    const opts = {
+      depth: parseInt($("depth").value, 10),
+      assets: $("assets").checked,
+      rewrite: $("rewrite").checked,
+      canon: $("canon").checked,
+      strip: $("strip").checked,
+      myHost: $("host").value.trim() || "https://menist.free.nf",
+      cherriBase: $("cherri").value.trim() || "https://menist.free.nf/cherri/cherri/",
+      mode: $("mode").value,
+    };
+
+    $("go").disabled = true;
+    logEl.innerHTML = "";
+    totalBytes = 0;
+    failCount = 0;
+    setProgress(0, 1);
+
+    log("Target: " + rootUrl, "ok");
+    log("Cherri: " + cherriProxyUrl(rootUrl, opts.cherriBase), "info");
+    if (opts.mode !== "cors") {
+      log("Tip: open Cherri embed once first so the SW is active, or host this page under /cherri/cherri/", "warn");
+    }
+
+    const queue = [{ url: rootUrl, depth: 0 }];
+    const seen = new Set();
+    const files = new Map();
+    const pathMap = new Map();
+    let planned = 1;
+
+    while (queue.length) {
+      const { url, depth } = queue.shift();
+      if (seen.has(url)) continue;
+      seen.add(url);
+
+      log("Fetch " + url);
+      let result;
+      try {
+        result = await fetchUrl(url, opts);
+      } catch (e) {
+        failCount++;
+        log("FAIL " + url + " — " + (e.message || e), "err");
+        setProgress(files.size, planned);
+        continue;
+      }
+
+      const path = pathFor(url);
+      pathMap.set(url, path);
+      const isText = TEXT_TYPES.test(result.ct) || /\.(html?|css|js|mjs|json|svg|xml|txt|map)$/i.test(path);
+      let text = null;
+      if (isText) text = new TextDecoder("utf-8").decode(result.buf);
+
+      files.set(url, { path, buf: result.buf, ct: result.ct, isText, text });
+      totalBytes += result.buf.byteLength;
+      setProgress(files.size, Math.max(planned, files.size));
+
+      if (text && (depth < opts.depth || opts.assets)) {
+        for (const link of extractLinks(text, url)) {
+          if (seen.has(link) || files.has(link)) continue;
+          const isSame = sameOrigin(link, rootUrl);
+          const isAsset = ASSET_EXT.test(link);
+          const isPage = isSame && (PAGE_EXT.test(link) || !ASSET_EXT.test(link));
+
+          if (opts.assets && isAsset && isSame) {
+            planned++;
+            queue.push({ url: link, depth });
+          } else if (isPage && depth < opts.depth) {
+            planned++;
+            queue.push({ url: link, depth: depth + 1 });
+          }
+        }
+      }
+    }
+
+    log(`Downloaded ${files.size} files (${failCount} failed). Rewriting…`, "ok");
+
+    const zip = new JSZip();
+    for (const [url, f] of files) {
+      let content = f.buf;
+      if (f.isText && f.text != null) {
+        content = new TextEncoder().encode(rewriteContent(f.text, url, rootUrl, pathMap, opts));
+      }
+      zip.file(f.path, content);
+      log(" + " + f.path);
+    }
+
+    const hasIndex = [...pathMap.values()].some((p) => p === "index.html");
+    if (!hasIndex && files.has(rootUrl)) {
+      const f = files.get(rootUrl);
+      const body = f.isText ? rewriteContent(f.text, rootUrl, rootUrl, pathMap, opts) : f.buf;
+      zip.file("index.html", body);
+    }
+
+    log("Building ZIP…", "ok");
+    const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" }, (meta) => {
+      bar.style.width = Math.round(meta.percent) + "%";
+    });
+
+    const host = new URL(rootUrl).hostname.replace(/[^a-z0-9.-]/gi, "_");
+    saveAs(blob, host + "-rehost.zip");
+    log("Done — " + host + "-rehost.zip (" + (blob.size / 1024).toFixed(1) + " KB)", "ok");
+    $("go").disabled = false;
+    setProgress(files.size, files.size);
+  }
+
+  $("go").addEventListener("click", () => {
+    run().catch((e) => {
+      log("Fatal: " + (e.message || e), "err");
+      $("go").disabled = false;
+    });
+  });
+  $("url").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $("go").click();
+  });
+})();
+</script>
+</body>
+</html>
