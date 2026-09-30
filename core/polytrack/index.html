@@ -29,28 +29,35 @@
       padding: 20px;
       text-align: center;
       max-width: 90%;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      inset: 0;
+      background: #111;
+      z-index: 1000;
     }
     iframe {
-      display: block;
+      display: none;
       width: 100%;
       height: 100%;
       border: none;
+      position: fixed;
+      inset: 0;
     }
   </style>
 </head>
 <body>
-
 <div id="loading">
   <div>Loading Game...</div>
   <div style="margin-top:12px; opacity:0.7; font-size:0.9rem;">Please Wait — Loading May Take Up To 1 Minute</div>
 </div>
-
-<iframe id="gameframe" style="display:none;"></iframe>
-
-<div id="error" style="display:none;"></div>
-
+<iframe id="gameframe" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
+<div id="error"></div>
 <script>
-const GAME_URL = "https://raw.githubusercontent.com/Camerons-Git7/Offline-HTML-Games-Pack/master/offline/polytrack.html";
+const GAME_URL = "https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/polytrack.html";
+// (Camerons-Git7 fork also works, but the original is more stable)
 
 async function start() {
   const loading = document.getElementById('loading');
@@ -62,20 +69,29 @@ async function start() {
     if (!resp.ok) {
       throw new Error(`GitHub responded ${resp.status} — maybe rate limit or file moved`);
     }
-
     const text = await resp.text();
 
-    // This is the key part — same technique your runner uses
-    const blob = new Blob([text], { type: 'text/html;charset=utf-8' });
-    const blobUrl = URL.createObjectURL(blob);
+    // Critical fix: write directly into the iframe instead of using a blob: URL
+    // blob: origins break WebGL / workers / some APIs in many single-file games
+    const doc = frame.contentWindow.document;
+    doc.open();
+    doc.write(text);
+    doc.close();
 
-    frame.src = blobUrl;
+    // Give the game a moment to start rendering, then show the iframe
     frame.onload = () => {
       loading.style.display = 'none';
       frame.style.display = 'block';
-      // Optional: clean up after a delay
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+      try { frame.contentWindow.focus(); } catch (_) {}
     };
+
+    // Fallback in case onload already fired
+    setTimeout(() => {
+      if (loading.style.display !== 'none') {
+        loading.style.display = 'none';
+        frame.style.display = 'block';
+      }
+    }, 800);
 
   } catch (err) {
     loading.style.display = 'none';
@@ -86,15 +102,13 @@ async function start() {
       • Check your internet<br>
       • GitHub may be throttling<br>
       • File might have been removed/renamed<br><br>
-      Size hint: original file is ~36 MB — large downloads can fail on slow/unstable connections.
+      Size hint: polytrack.html is currently ~7 MB.
     `;
     console.error(err);
   }
 }
 
-// Go immediately
 start();
 </script>
-
 </body>
 </html>
