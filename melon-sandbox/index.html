@@ -377,12 +377,15 @@ InitMelonSdk();
 
   // Stub Melon online APIs — shapes must match what Unity deserializes
   function mockBodyFor(url) {
-    // TabData[] expected as top-level array
-    if (/tab-config|get-tabs|tabs-by-moniker/i.test(url)) {
+    // Unity deserializes these as top-level arrays
+    if (/tab-config|get-tabs|tabs-by-moniker|manifest\/list|list-active|achievement/i.test(url)) {
       return "[]";
     }
-    if (/achievement/i.test(url)) {
-      return "[]";
+    if (/wallet\/me|account-preview/i.test(url)) {
+      return JSON.stringify({ soft: 999999, hard: 0, coins: 999999, balance: 999999 });
+    }
+    if (/server-time|app-section-status/i.test(url)) {
+      return JSON.stringify({ serverTime: Date.now(), time: Date.now(), status: "ok" });
     }
     if (/us-discovery|\/v1\/resolve/i.test(url)) {
       return JSON.stringify({ endpoints: [], status: "ok" });
@@ -390,7 +393,10 @@ InitMelonSdk();
     if (/gameanalytics|cdp\.cloud\.unity3d/i.test(url)) {
       return "{}";
     }
-    // generic safe object with empty arrays
+    // Prefer arrays for unknown list-ish endpoints
+    if (/\/list|\/all|\/get-/i.test(url)) {
+      return "[]";
+    }
     return JSON.stringify({
       status: "ok",
       data: [],
