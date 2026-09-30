@@ -265,23 +265,53 @@ InitMelonSdk();
 <body>
 
 <script>
-/* Mock Melon parent host so MelWebSdk stops waiting and Play can proceed */
+/* Mock Melon parent — aggressive standalone so Play can leave the loading spinner */
 (function () {
-  // Strong standalone parent: MelWebSdk origin check is patched to accept any host.
   var MODULE = {
     Global: "global", Adv: "adv", EventTracker: "event-tracker",
     Auth: "auth", Settings: "settings", Store: "store", Host: "host",
     GameEvents: "game-events"
   };
   var greeted = false;
+  var seen = {};
 
   function reply(data) {
-    // Same-window post so e.source === window.parent when top-level
-    window.postMessage(Object.assign({ source: "melon-web-app" }, data), "*");
+    try {
+      window.postMessage(Object.assign({ source: "melon-web-app" }, data), "*");
+    } catch (e) {}
   }
 
   function okId(msg) {
     return msg && msg.data && msg.data.id;
+  }
+
+  // Richer payload Melon modules often expect
+  function baseResult(id) {
+    return {
+      id: id,
+      result: {
+        isAvailable: true,
+        isGoogleAvailable: false,
+        isAuthorized: true,
+        isGuest: true,
+        deviceId: "standalone-device",
+        language: "en",
+        region: "US",
+        links: {},
+        activeHost: (typeof location !== "undefined" ? location.origin : ""),
+        changeHost: false,
+        playerId: "guest-standalone",
+        nickname: "Guest",
+        softCurrency: 999999,
+        hardCurrency: 999999,
+        coins: 999999,
+        inventory: [],
+        settings: { sound: true, music: true, quality: "medium", language: "en" },
+        flags: {},
+        features: { workshop: false, multiplayer: false, ads: false },
+        serverTime: Date.now()
+      }
+    };
   }
 
   window.addEventListener("message", function (e) {
@@ -294,8 +324,13 @@ InitMelonSdk();
     var ev = msg.event;
     var typ = msg.type;
     var id = okId(msg);
+    var key = (mod || "") + "|" + (ev || "") + "|" + (typ || "");
+    if (!seen[key]) {
+      seen[key] = true;
+      console.log("[MockMelonParent] msg", mod, ev, typ);
+    }
 
-    // Hello handshake — stop the 500ms spam
+    // Hello handshake
     if (mod === MODULE.Global && ev === "hello" && typ === "start") {
       reply({ module: MODULE.Global, event: "hello", type: "success", data: { id: id } });
       if (!greeted) {
@@ -310,90 +345,64 @@ InitMelonSdk();
       return;
     }
 
-    // Initial data for any module
+    // Initial data
     if (ev === "request-initial-data" || ev === "RequestInitialData") {
       reply({
         module: mod,
         event: "state-data",
         type: "success",
-        data: {
-          id: id,
-          result: {
-            isAvailable: true,
-            isGoogleAvailable: false,
-            isAuthorized: false,
-            deviceId: "standalone-device",
-            language: "en",
-            region: "US",
-            links: {},
-            activeHost: location.origin,
-            changeHost: false,
-            playerId: "guest",
-            nickname: "Guest",
-            softCurrency: 999999,
-            hardCurrency: 0,
-            inventory: [],
-            settings: { sound: true, music: true, quality: "medium" }
-          }
-        }
+        data: baseResult(id)
       });
       return;
     }
 
-    // Ads: pretend closed / not available so game continues
-    if (mod === MODULE.Adv || (ev && /show-|rewarded|interstitial|fullscreen/i.test(String(ev)))) {
+    // Ads — always "closed / not shown"
+    if (mod === MODULE.Adv || (ev && /show-|rewarded|interstitial|fullscreen|banner/i.test(String(ev)))) {
       reply({
         module: mod || MODULE.Adv,
-        event: ev,
+        event: ev || "show-fullscreen",
         type: "closed",
-        data: { id: id, data: { wasShown: false, rewarded: false, reason: "standalone" } }
+        data: { id: id, data: { wasShown: false, rewarded: true, reason: "standalone" } }
       });
       return;
     }
 
-    // Auth / store / settings / host / events — generic success
-    if (mod === MODULE.Auth || mod === MODULE.Store || mod === MODULE.Settings ||
-        mod === MODULE.Host || mod === MODULE.EventTracker || mod === MODULE.GameEvents ||
-        (ev && /auth|store|settings|host|event|content|purchase|login/i.test(String(ev)))) {
-      reply({
-        module: mod,
-        event: ev,
-        type: "success",
-        data: { id: id, result: { ok: true, isAvailable: false }, data: { ok: true } }
-      });
-      return;
-    }
-
-    // Fallback success so unknown cycles don't hang
-    if (typ === "start" || typ === undefined) {
-      reply({
-        module: mod,
-        event: ev,
-        type: "success",
-        data: { id: id, result: {} }
-      });
-    }
+    // Catch-all success for any other module event (Play / session / content)
+    reply({
+      module: mod || MODULE.Global,
+      event: ev || "state-data",
+      type: typ === "start" ? "success" : (typ || "success"),
+      data: baseResult(id)
+    });
   });
 
-  // Stub Melon online APIs — shapes must match what Unity deserializes
   function mockBodyFor(url) {
-    // Unity deserializes these as top-level arrays
-    if (/tab-config|get-tabs|tabs-by-moniker|manifest\/list|list-active|achievement/i.test(url)) {
+    url = String(url || "");
+    // Arrays expected by Unity deserializers
+    if (/tab-config|get-tabs|tabs-by-moniker|manifest\/list|list-active|achievement|content-pack|workshop|catalog/i.test(url)) {
       return "[]";
     }
     if (/wallet\/me|account-preview/i.test(url)) {
-      return JSON.stringify({ soft: 999999, hard: 0, coins: 999999, balance: 999999 });
+      return JSON.stringify({ soft: 999999, hard: 999999, coins: 999999, balance: 999999, softCurrency: 999999, hardCurrency: 999999 });
     }
     if (/server-time|app-section-status/i.test(url)) {
-      return JSON.stringify({ serverTime: Date.now(), time: Date.now(), status: "ok" });
+      return JSON.stringify({ serverTime: Date.now(), time: Date.now(), status: "ok", sections: [] });
     }
     if (/us-discovery|\/v1\/resolve/i.test(url)) {
-      return JSON.stringify({ endpoints: [], status: "ok" });
+      return JSON.stringify({ endpoints: [], status: "ok", resolve: { endpoints: [] } });
     }
-    if (/gameanalytics|cdp\.cloud\.unity3d/i.test(url)) {
+    if (/gameanalytics|cdp\.cloud\.unity3d|config\.uca\.cloud/i.test(url)) {
       return "{}";
     }
-    // Prefer arrays for unknown list-ish endpoints
+    if (/auth|login|session|token/i.test(url)) {
+      return JSON.stringify({
+        status: "ok",
+        token: "standalone-token",
+        playerId: "guest-standalone",
+        isGuest: true,
+        isAuthorized: true
+      });
+    }
     if (/\/list|\/all|\/get-/i.test(url)) {
       return "[]";
     }
@@ -404,15 +413,20 @@ InitMelonSdk();
       items: [],
       achievements: [],
       tabs: [],
-      resolve: { endpoints: [] }
+      resolve: { endpoints: [] },
+      serverTime: Date.now()
     });
+  }
+
+  function shouldStub(url) {
+    return /playmelonpg\.com|melonsandbox\.com\/api|pg-proxy|us-discovery|gameanalytics\.com|cdp\.cloud\.unity3d\.com|config\.uca\.cloud\.unity3d\.com/i.test(String(url || ""));
   }
 
   var _fetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     var url = typeof input === "string" ? input : (input && input.url) || "";
-    if (/playmelonpg\.com|melonsandbox\.com\/api|pg-proxy|us-discovery|gameanalytics\.com|cdp\.cloud\.unity3d\.com/i.test(url)) {
-      console.log("[MockMelonParent] stub fetch", url.slice(0, 100));
+    if (shouldStub(url)) {
+      console.log("[MockMelonParent] stub fetch", url.slice(0, 120));
       return Promise.resolve(new Response(mockBodyFor(url), {
         status: 200,
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
@@ -421,30 +435,53 @@ InitMelonSdk();
     return _fetch(input, init);
   };
 
-  // Also stub XHR used by some Unity/GA paths
+  // XHR stub (Unity / GA often use this)
   var _open = XMLHttpRequest.prototype.open;
   var _send = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.open = function (method, url) {
     this.__mockUrl = url;
     return _open.apply(this, arguments);
   };
-  XMLHttpRequest.prototype.send = function () {
+  XMLHttpRequest.prototype.send = function (body) {
     var u = String(this.__mockUrl || "");
-    if (/playmelonpg\.com|pg-proxy|us-discovery|gameanalytics\.com|cdp\.cloud\.unity3d\.com/i.test(u)) {
+    if (shouldStub(u)) {
       var xhr = this;
-      var body = mockBodyFor(u);
+      var text = mockBodyFor(u);
+      var rt = xhr.responseType;
       setTimeout(function () {
-        Object.defineProperty(xhr, "status", { value: 200 });
-        Object.defineProperty(xhr, "readyState", { value: 4 });
-        Object.defineProperty(xhr, "responseText", { value: body });
-        Object.defineProperty(xhr, "response", { value: body });
-        if (typeof xhr.onreadystatechange === "function") xhr.onreadystatechange();
-        if (typeof xhr.onload === "function") xhr.onload();
-      }, 10);
+        try {
+          Object.defineProperty(xhr, "status", { configurable: true, value: 200 });
+          Object.defineProperty(xhr, "statusText", { configurable: true, value: "OK" });
+          Object.defineProperty(xhr, "readyState", { configurable: true, value: 4 });
+          Object.defineProperty(xhr, "responseText", { configurable: true, value: text });
+          var resp = text;
+          if (rt === "json") {
+            try { resp = JSON.parse(text); } catch (e) { resp = {}; }
+          }
+          Object.defineProperty(xhr, "response", { configurable: true, value: resp });
+        } catch (e) {}
+        if (typeof xhr.onreadystatechange === "function") {
+          try { xhr.onreadystatechange(); } catch (e) {}
+        }
+        if (typeof xhr.onload === "function") {
+          try { xhr.onload(); } catch (e) {}
+        }
+        try { xhr.dispatchEvent(new Event("load")); } catch (e) {}
+        try { xhr.dispatchEvent(new Event("loadend")); } catch (e) {}
+      }, 5);
       return;
     }
     return _send.apply(this, arguments);
   };
+
+  // Hide Unity loading chrome if it lingers after engine start
+  function forceHideLoaders() {
+    ["#unity-loading-bar", "#unity-progress-bar-full", "#unity-progress-bar-empty", ".unity-loading", "#loading"].forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el) el.style.display = "none";
+    });
+  }
+  setInterval(forceHideLoaders, 2000);
 
   console.log("[MockMelonParent] active — standalone mode (origin unlocked)");
 })();
