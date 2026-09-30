@@ -299,33 +299,32 @@ console.log("Skipping early WebGL probe (avoids context limit)");
 
 // --- IndexedDB cache for large Unity builds (localStorage is too small ~5MB) ---
 var GH = "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/melon-sandbox";
+var loaderUrl = "https://artefacts.melonsandbox.com/MelonPlayground_Webgl/MelonPlayground_Webgl_SiteProdU63/51060/Build/92_release-web-38.1_melon_webgl_30d0fe1e1dbc41bff6bbba0588889ca1efb6fd57_v38_1.loader.js";
+
+// --- IndexedDB helpers (data + wasm only) ---
 var IDB_NAME = "melon-build-cache";
 var IDB_STORE = "files";
-var IDB_VER = 1;
 
 function idbOpen() {
   return new Promise(function (resolve, reject) {
-    var req = indexedDB.open(IDB_NAME, IDB_VER);
+    var req = indexedDB.open(IDB_NAME, 1);
     req.onupgradeneeded = function () {
-      var db = req.result;
-      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+      if (!req.result.objectStoreNames.contains(IDB_STORE))
+        req.result.createObjectStore(IDB_STORE);
     };
     req.onsuccess = function () { resolve(req.result); };
     req.onerror = function () { reject(req.error); };
   });
 }
-
 function idbGet(key) {
   return idbOpen().then(function (db) {
     return new Promise(function (resolve, reject) {
-      var tx = db.transaction(IDB_STORE, "readonly");
-      var req = tx.objectStore(IDB_STORE).get(key);
-      req.onsuccess = function () { resolve(req.result || null); };
-      req.onerror = function () { reject(req.error); };
+      var r = db.transaction(IDB_STORE, "readonly").objectStore(IDB_STORE).get(key);
+      r.onsuccess = function () { resolve(r.result || null); };
+      r.onerror = function () { reject(r.error); };
     });
   });
 }
-
 function idbPut(key, blob) {
   return idbOpen().then(function (db) {
     return new Promise(function (resolve, reject) {
@@ -336,93 +335,54 @@ function idbPut(key, blob) {
     });
   });
 }
-
-function fetchToBlob(url) {
-  return fetch(url, { mode: "cors", credentials: "omit" }).then(function (r) {
-    if (!r.ok) throw new Error("HTTP " + r.status + " for " + url);
-    return r.blob();
-  });
-}
-
-// Load URL: use IndexedDB blob if present, else fetch + store (data + wasm only — the 2 big ones)
-function cachedBuildUrl(url, cacheKey) {
-  return idbGet(cacheKey).then(function (cached) {
+function cachedBuildUrl(url, key) {
+  return idbGet(key).then(function (cached) {
     if (cached) {
-      console.log("[BuildCache] HIT", cacheKey, cached.size);
+      console.log("[BuildCache] HIT", key);
       return URL.createObjectURL(cached);
     }
-    console.log("[BuildCache] MISS — downloading", cacheKey);
-    return fetchToBlob(url).then(function (blob) {
-      console.log("[BuildCache] STORE", cacheKey, blob.size);
-      return idbPut(cacheKey, blob).then(function () {
+    console.log("[BuildCache] MISS", key);
+    return fetch(url).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.blob();
+    }).then(function (blob) {
+      return idbPut(key, blob).then(function () {
         return URL.createObjectURL(blob);
-      }).catch(function (e) {
-        console.warn("[BuildCache] store failed", e);
+      }).catch(function () {
         return URL.createObjectURL(blob);
       });
     });
-  }).catch(function (e) {
-    console.warn("[BuildCache] fallback to network", e);
-    return url;
-  });
+  }).catch(function () { return url; });
 }
 
-var loaderUrl = "https://artefacts.melonsandbox.com/MelonPlayground_Webgl/MelonPlayground_Webgl_SiteProdU63/51060/Build/92_release-web-38.1_melon_webgl_30d0fe1e1dbc41bff6bbba0588889ca1efb6fd57_v38_1.loader.js";
-
-if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-  var meta = document.createElement("meta");
-  meta.name = "viewport";
-  meta.content = "width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes";
-  document.getElementsByTagName("head")[0].appendChild(meta);
-  container.className = "unity-mobile";
-  canvas.className = "unity-mobile";
-}
-
-loadingBar.style.display = "block";
-
-// Prefetch the 2 large builds into IndexedDB, then start Unity with blob: URLs
+// Load only the 2 big ones from cache; framework always from GitHub
 Promise.all([
   cachedBuildUrl(GH + "/data.unityweb", "data.unityweb"),
-  cachedBuildUrl(GH + "/wasm.unityweb", "wasm.unityweb"),
-  // framework is smaller; still cache for consistency
-  cachedBuildUrl(GH + "/framework.unityweb", "framework.unityweb")
+  cachedBuildUrl(GH + "/wasm.unityweb", "wasm.unityweb")
 ]).then(function (urls) {
-  var dataBlobUrl = urls[0];
-  var wasmBlobUrl = urls[1];
-  var fwBlobUrl = urls[2];
-
   var config = {
-    dataUrl: dataBlobUrl,
-    frameworkUrl: fwBlobUrl,
-    codeUrl: wasmBlobUrl,
+    dataUrl: urls[0],                          // cached
+    frameworkUrl: GH + "/framework.unityweb",  // always network
+    codeUrl: urls[1],                          // cached
     streamingAssetsUrl: "StreamingAssets",
     companyName: "27 Studio",
     productName: "Melon Sandbox",
     productVersion: "38.1",
-    showBanner: unityShowBanner,
+    showBanner: unityShowBanner
   };
-  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-    config.devicePixelRatio = 1.2;
-  }
 
   var script = document.createElement("script");
   script.src = loaderUrl;
   script.onload = function () {
     createUnityInstance(canvas, config, function (progress) {
-      progressBarFull.style.width = 100 * progress + "%";
+      progressBarFull.style.width = (100 * progress) + "%";
     }).then(function (unityInstance) {
-      console.log("UnityInstance Created!", unityInstance);
       window.unityInstance = unityInstance;
-      gameInstance = unityInstance;
       loadingBar.style.display = "none";
-    }).catch(function (message) {
-      alert(message);
-    });
-  };
-  script.onerror = function () {
-    alert("Failed to load Unity loader.js — host this page over https, not file://");
+    }).catch(alert);
   };
   document.body.appendChild(script);
+});
 }).catch(function (err) {
   console.error(err);
   alert("Failed to load build files: " + err);
