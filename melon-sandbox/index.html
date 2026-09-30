@@ -265,7 +265,7 @@ InitMelonSdk();
 <body>
 
 <script>
-/* Mock Melon parent — aggressive standalone so Play can leave the loading spinner */
+/* Mock Melon parent — map/session path after Play */
 (function () {
   var MODULE = {
     Global: "global", Adv: "adv", EventTracker: "event-tracker",
@@ -285,32 +285,78 @@ InitMelonSdk();
     return msg && msg.data && msg.data.id;
   }
 
-  // Richer payload Melon modules often expect
-  function baseResult(id) {
+  function authPayload(id) {
     return {
       id: id,
       result: {
         isAvailable: true,
-        isGoogleAvailable: false,
         isAuthorized: true,
         isGuest: true,
+        isGoogleAvailable: false,
+        playerId: "guest-standalone",
+        userId: "guest-standalone",
+        nickname: "Guest",
         deviceId: "standalone-device",
         language: "en",
         region: "US",
-        links: {},
-        activeHost: (typeof location !== "undefined" ? location.origin : ""),
-        changeHost: false,
-        playerId: "guest-standalone",
-        nickname: "Guest",
         softCurrency: 999999,
         hardCurrency: 999999,
         coins: 999999,
+        mells: 999999,
         inventory: [],
+        token: "standalone-token",
+        accessToken: "standalone-token",
+        sessionId: "standalone-session",
+        links: {},
         settings: { sound: true, music: true, quality: "medium", language: "en" },
-        flags: {},
+        flags: { workshop: false, multiplayer: false, ads: false },
         features: { workshop: false, multiplayer: false, ads: false },
         serverTime: Date.now()
-      }
+      },
+      // some handlers read data at top level
+      isAuthorized: true,
+      isGuest: true,
+      playerId: "guest-standalone",
+      nickname: "Guest",
+      softCurrency: 999999,
+      hardCurrency: 999999
+    };
+  }
+
+  function hostPayload(id) {
+    return {
+      id: id,
+      result: {
+        isAvailable: true,
+        activeHost: (typeof location !== "undefined" ? location.origin : ""),
+        changeHost: false,
+        hostReady: true,
+        sessionReady: true,
+        mapReady: true,
+        canPlay: true,
+        offline: true,
+        serverTime: Date.now()
+      },
+      hostReady: true,
+      sessionReady: true,
+      mapReady: true,
+      canPlay: true
+    };
+  }
+
+  function genericPayload(id) {
+    return {
+      id: id,
+      result: {
+        isAvailable: true,
+        success: true,
+        ready: true,
+        status: "ok",
+        serverTime: Date.now()
+      },
+      success: true,
+      ready: true,
+      status: "ok"
     };
   }
 
@@ -327,10 +373,10 @@ InitMelonSdk();
     var key = (mod || "") + "|" + (ev || "") + "|" + (typ || "");
     if (!seen[key]) {
       seen[key] = true;
-      console.log("[MockMelonParent] msg", mod, ev, typ);
+      console.log("[MockMelonParent] msg", mod, ev, typ, msg.data);
     }
 
-    // Hello handshake
+    // Hello
     if (mod === MODULE.Global && ev === "hello" && typ === "start") {
       reply({ module: MODULE.Global, event: "hello", type: "success", data: { id: id } });
       if (!greeted) {
@@ -345,18 +391,52 @@ InitMelonSdk();
       return;
     }
 
-    // Initial data
-    if (ev === "request-initial-data" || ev === "RequestInitialData") {
+    // Auth (including get-auth-data used when entering map)
+    if (mod === MODULE.Auth || (ev && /auth|login|session|token|get-auth/i.test(String(ev)))) {
       reply({
-        module: mod,
-        event: "state-data",
+        module: mod || MODULE.Auth,
+        event: ev === "request-initial-data" ? "state-data" : (ev || "state-data"),
         type: "success",
-        data: baseResult(id)
+        data: authPayload(id)
       });
       return;
     }
 
-    // Ads — always "closed / not shown"
+    // Host (map/session readiness)
+    if (mod === MODULE.Host || (ev && /host|map|session|play|start-game|can-play/i.test(String(ev)))) {
+      reply({
+        module: mod || MODULE.Host,
+        event: ev === "request-initial-data" ? "state-data" : (ev || "state-data"),
+        type: "success",
+        data: hostPayload(id)
+      });
+      // Extra nudge: some builds wait for an explicit ready event
+      reply({
+        module: MODULE.Host,
+        event: "state-data",
+        type: "success",
+        data: hostPayload(id)
+      });
+      return;
+    }
+
+    // Game events (game-step while loading map)
+    if (mod === MODULE.GameEvents || (ev && /game-step|game-event|loading|progress/i.test(String(ev)))) {
+      reply({
+        module: mod || MODULE.GameEvents,
+        event: ev || "game-step",
+        type: "success",
+        data: Object.assign(genericPayload(id), {
+          step: "complete",
+          progress: 1,
+          loading: false,
+          mapReady: true
+        })
+      });
+      return;
+    }
+
+    // Ads
     if (mod === MODULE.Adv || (ev && /show-|rewarded|interstitial|fullscreen|banner/i.test(String(ev)))) {
       reply({
         module: mod || MODULE.Adv,
@@ -367,23 +447,39 @@ InitMelonSdk();
       return;
     }
 
-    // Catch-all success for any other module event (Play / session / content)
+    // Initial data for other modules
+    if (ev === "request-initial-data" || ev === "RequestInitialData") {
+      var payload = (mod === MODULE.Auth) ? authPayload(id)
+        : (mod === MODULE.Host) ? hostPayload(id)
+        : authPayload(id);
+      reply({
+        module: mod,
+        event: "state-data",
+        type: "success",
+        data: payload
+      });
+      return;
+    }
+
+    // Catch-all
     reply({
       module: mod || MODULE.Global,
       event: ev || "state-data",
       type: typ === "start" ? "success" : (typ || "success"),
-      data: baseResult(id)
+      data: genericPayload(id)
     });
   });
 
   function mockBodyFor(url) {
     url = String(url || "");
-    // Arrays expected by Unity deserializers
-    if (/tab-config|get-tabs|tabs-by-moniker|manifest\/list|list-active|achievement|content-pack|workshop|catalog/i.test(url)) {
+    if (/tab-config|get-tabs|tabs-by-moniker|manifest\/list|list-active|achievement|content-pack|workshop|catalog|maps?/i.test(url)) {
       return "[]";
     }
     if (/wallet\/me|account-preview/i.test(url)) {
-      return JSON.stringify({ soft: 999999, hard: 999999, coins: 999999, balance: 999999, softCurrency: 999999, hardCurrency: 999999 });
+      return JSON.stringify({
+        soft: 999999, hard: 999999, coins: 999999, mells: 999999,
+        balance: 999999, softCurrency: 999999, hardCurrency: 999999
+      });
     }
     if (/server-time|app-section-status/i.test(url)) {
       return JSON.stringify({ serverTime: Date.now(), time: Date.now(), status: "ok", sections: [] });
@@ -398,9 +494,11 @@ InitMelonSdk();
       return JSON.stringify({
         status: "ok",
         token: "standalone-token",
+        accessToken: "standalone-token",
         playerId: "guest-standalone",
         isGuest: true,
-        isAuthorized: true
+        isAuthorized: true,
+        sessionId: "standalone-session"
       });
     }
     if (/\/list|\/all|\/get-/i.test(url)) {
@@ -413,8 +511,10 @@ InitMelonSdk();
       items: [],
       achievements: [],
       tabs: [],
+      maps: [],
       resolve: { endpoints: [] },
-      serverTime: Date.now()
+      serverTime: Date.now(),
+      ready: true
     });
   }
 
@@ -435,7 +535,6 @@ InitMelonSdk();
     return _fetch(input, init);
   };
 
-  // XHR stub (Unity / GA often use this)
   var _open = XMLHttpRequest.prototype.open;
   var _send = XMLHttpRequest.prototype.send;
   XMLHttpRequest.prototype.open = function (method, url) {
@@ -474,7 +573,6 @@ InitMelonSdk();
     return _send.apply(this, arguments);
   };
 
-  // Hide Unity loading chrome if it lingers after engine start
   function forceHideLoaders() {
     ["#unity-loading-bar", "#unity-progress-bar-full", "#unity-progress-bar-empty", ".unity-loading", "#loading"].forEach(function (sel) {
       var el = document.querySelector(sel);
@@ -482,6 +580,17 @@ InitMelonSdk();
     });
   }
   setInterval(forceHideLoaders, 2000);
+
+  // After engine is up, keep host "ready" alive (helps map spinner)
+  setInterval(function () {
+    if (!window.unityInstance) return;
+    reply({
+      module: MODULE.Host,
+      event: "state-data",
+      type: "success",
+      data: hostPayload(Date.now())
+    });
+  }, 5000);
 
   console.log("[MockMelonParent] active — standalone mode (origin unlocked)");
 })();
