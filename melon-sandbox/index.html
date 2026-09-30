@@ -267,7 +267,7 @@ InitMelonSdk();
 
 
 <script>
-/* Mock Melon parent — map/session path after Play */
+/* Mock Melon parent — fixed adv request-initial-data + map/session */
 (function () {
   var MODULE = {
     Global: "global", Adv: "adv", EventTracker: "event-tracker",
@@ -315,7 +315,6 @@ InitMelonSdk();
         features: { workshop: false, multiplayer: false, ads: false },
         serverTime: Date.now()
       },
-      // some handlers read data at top level
       isAuthorized: true,
       isGuest: true,
       playerId: "guest-standalone",
@@ -346,6 +345,20 @@ InitMelonSdk();
     };
   }
 
+  function advPayload(id) {
+    return {
+      id: id,
+      result: {
+        isAvailable: true,
+        interstitialReady: false,
+        rewardedReady: false,
+        bannerReady: false,
+        adsEnabled: false
+      },
+      isAvailable: true
+    };
+  }
+
   function genericPayload(id) {
     return {
       id: id,
@@ -358,8 +371,16 @@ InitMelonSdk();
       },
       success: true,
       ready: true,
-      status: "ok"
+      status: "ok",
+      isAvailable: true
     };
+  }
+
+  function payloadForModule(mod, id) {
+    if (mod === MODULE.Auth) return authPayload(id);
+    if (mod === MODULE.Host) return hostPayload(id);
+    if (mod === MODULE.Adv) return advPayload(id);
+    return genericPayload(id);
   }
 
   window.addEventListener("message", function (e) {
@@ -378,7 +399,7 @@ InitMelonSdk();
       console.log("[MockMelonParent] msg", mod, ev, typ, msg.data);
     }
 
-    // Hello
+    // 1) Hello
     if (mod === MODULE.Global && ev === "hello" && typ === "start") {
       reply({ module: MODULE.Global, event: "hello", type: "success", data: { id: id } });
       if (!greeted) {
@@ -393,36 +414,40 @@ InitMelonSdk();
       return;
     }
 
-    // Auth (including get-auth-data used when entering map)
+    // 2) request-initial-data for ANY module → always state-data (fixes adv)
+    if (ev === "request-initial-data" || ev === "RequestInitialData") {
+      reply({
+        module: mod,
+        event: "state-data",
+        type: "success",
+        data: payloadForModule(mod, id)
+      });
+      return;
+    }
+
+    // 3) Auth / get-auth-data
     if (mod === MODULE.Auth || (ev && /auth|login|session|token|get-auth/i.test(String(ev)))) {
       reply({
         module: mod || MODULE.Auth,
-        event: ev === "request-initial-data" ? "state-data" : (ev || "state-data"),
+        event: ev || "state-data",
         type: "success",
         data: authPayload(id)
       });
       return;
     }
 
-    // Host (map/session readiness)
+    // 4) Host
     if (mod === MODULE.Host || (ev && /host|map|session|play|start-game|can-play/i.test(String(ev)))) {
       reply({
         module: mod || MODULE.Host,
-        event: ev === "request-initial-data" ? "state-data" : (ev || "state-data"),
-        type: "success",
-        data: hostPayload(id)
-      });
-      // Extra nudge: some builds wait for an explicit ready event
-      reply({
-        module: MODULE.Host,
-        event: "state-data",
+        event: ev || "state-data",
         type: "success",
         data: hostPayload(id)
       });
       return;
     }
 
-    // Game events (game-step while loading map)
+    // 5) Game events
     if (mod === MODULE.GameEvents || (ev && /game-step|game-event|loading|progress/i.test(String(ev)))) {
       reply({
         module: mod || MODULE.GameEvents,
@@ -438,37 +463,26 @@ InitMelonSdk();
       return;
     }
 
-    // Ads
-    if (mod === MODULE.Adv || (ev && /show-|rewarded|interstitial|fullscreen|banner/i.test(String(ev)))) {
+    // 6) Ads ONLY for show-* events (not request-initial-data)
+    if (
+      (mod === MODULE.Adv || (ev && /show-|rewarded|interstitial|fullscreen|banner/i.test(String(ev)))) &&
+      ev && /show-|rewarded|interstitial|fullscreen|banner/i.test(String(ev))
+    ) {
       reply({
         module: mod || MODULE.Adv,
-        event: ev || "show-fullscreen",
+        event: ev,
         type: "closed",
         data: { id: id, data: { wasShown: false, rewarded: true, reason: "standalone" } }
       });
       return;
     }
 
-    // Initial data for other modules
-    if (ev === "request-initial-data" || ev === "RequestInitialData") {
-      var payload = (mod === MODULE.Auth) ? authPayload(id)
-        : (mod === MODULE.Host) ? hostPayload(id)
-        : authPayload(id);
-      reply({
-        module: mod,
-        event: "state-data",
-        type: "success",
-        data: payload
-      });
-      return;
-    }
-
-    // Catch-all
+    // 7) Catch-all success
     reply({
       module: mod || MODULE.Global,
       event: ev || "state-data",
       type: typ === "start" ? "success" : (typ || "success"),
-      data: genericPayload(id)
+      data: payloadForModule(mod, id)
     });
   });
 
@@ -489,7 +503,15 @@ InitMelonSdk();
     if (/us-discovery|\/v1\/resolve/i.test(url)) {
       return JSON.stringify({ endpoints: [], status: "ok", resolve: { endpoints: [] } });
     }
-    if (/gameanalytics|cdp\.cloud\.unity3d|config\.uca\.cloud/i.test(url)) {
+    // GameAnalytics init needs server_ts or it logs "invalid value in server_ts"
+    if (/gameanalytics\.com/i.test(url)) {
+      return JSON.stringify({
+        server_ts: Math.floor(Date.now() / 1000),
+        enabled: false,
+        flags: {}
+      });
+    }
+    if (/cdp\.cloud\.unity3d|config\.uca\.cloud/i.test(url)) {
       return "{}";
     }
     if (/auth|login|session|token/i.test(url)) {
@@ -524,56 +546,59 @@ InitMelonSdk();
     return /playmelonpg\.com|melonsandbox\.com\/api|pg-proxy|us-discovery|gameanalytics\.com|cdp\.cloud\.unity3d\.com|config\.uca\.cloud\.unity3d\.com/i.test(String(url || ""));
   }
 
-  var _fetch = window.fetch.bind(window);
-  window.fetch = function (input, init) {
-    var url = typeof input === "string" ? input : (input && input.url) || "";
-    if (shouldStub(url)) {
-      console.log("[MockMelonParent] stub fetch", url.slice(0, 120));
-      return Promise.resolve(new Response(mockBodyFor(url), {
-        status: 200,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-      }));
-    }
-    return _fetch(input, init);
-  };
+  // Only install fetch/XHR stubs if melon-api-mock.js did not already
+  if (!window.MelonApiMock) {
+    var _fetch = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+      var url = typeof input === "string" ? input : (input && input.url) || "";
+      if (shouldStub(url)) {
+        console.log("[MockMelonParent] stub fetch", url.slice(0, 120));
+        return Promise.resolve(new Response(mockBodyFor(url), {
+          status: 200,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+        }));
+      }
+      return _fetch(input, init);
+    };
 
-  var _open = XMLHttpRequest.prototype.open;
-  var _send = XMLHttpRequest.prototype.send;
-  XMLHttpRequest.prototype.open = function (method, url) {
-    this.__mockUrl = url;
-    return _open.apply(this, arguments);
-  };
-  XMLHttpRequest.prototype.send = function (body) {
-    var u = String(this.__mockUrl || "");
-    if (shouldStub(u)) {
-      var xhr = this;
-      var text = mockBodyFor(u);
-      var rt = xhr.responseType;
-      setTimeout(function () {
-        try {
-          Object.defineProperty(xhr, "status", { configurable: true, value: 200 });
-          Object.defineProperty(xhr, "statusText", { configurable: true, value: "OK" });
-          Object.defineProperty(xhr, "readyState", { configurable: true, value: 4 });
-          Object.defineProperty(xhr, "responseText", { configurable: true, value: text });
-          var resp = text;
-          if (rt === "json") {
-            try { resp = JSON.parse(text); } catch (e) { resp = {}; }
+    var _open = XMLHttpRequest.prototype.open;
+    var _send = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function (method, url) {
+      this.__mockUrl = url;
+      return _open.apply(this, arguments);
+    };
+    XMLHttpRequest.prototype.send = function (body) {
+      var u = String(this.__mockUrl || "");
+      if (shouldStub(u)) {
+        var xhr = this;
+        var text = mockBodyFor(u);
+        var rt = xhr.responseType;
+        setTimeout(function () {
+          try {
+            Object.defineProperty(xhr, "status", { configurable: true, value: 200 });
+            Object.defineProperty(xhr, "statusText", { configurable: true, value: "OK" });
+            Object.defineProperty(xhr, "readyState", { configurable: true, value: 4 });
+            Object.defineProperty(xhr, "responseText", { configurable: true, value: text });
+            var resp = text;
+            if (rt === "json") {
+              try { resp = JSON.parse(text); } catch (e) { resp = {}; }
+            }
+            Object.defineProperty(xhr, "response", { configurable: true, value: resp });
+          } catch (e) {}
+          if (typeof xhr.onreadystatechange === "function") {
+            try { xhr.onreadystatechange(); } catch (e) {}
           }
-          Object.defineProperty(xhr, "response", { configurable: true, value: resp });
-        } catch (e) {}
-        if (typeof xhr.onreadystatechange === "function") {
-          try { xhr.onreadystatechange(); } catch (e) {}
-        }
-        if (typeof xhr.onload === "function") {
-          try { xhr.onload(); } catch (e) {}
-        }
-        try { xhr.dispatchEvent(new Event("load")); } catch (e) {}
-        try { xhr.dispatchEvent(new Event("loadend")); } catch (e) {}
-      }, 5);
-      return;
-    }
-    return _send.apply(this, arguments);
-  };
+          if (typeof xhr.onload === "function") {
+            try { xhr.onload(); } catch (e) {}
+          }
+          try { xhr.dispatchEvent(new Event("load")); } catch (e) {}
+          try { xhr.dispatchEvent(new Event("loadend")); } catch (e) {}
+        }, 5);
+        return;
+      }
+      return _send.apply(this, arguments);
+    };
+  }
 
   function forceHideLoaders() {
     ["#unity-loading-bar", "#unity-progress-bar-full", "#unity-progress-bar-empty", ".unity-loading", "#loading"].forEach(function (sel) {
@@ -582,17 +607,6 @@ InitMelonSdk();
     });
   }
   setInterval(forceHideLoaders, 2000);
-
-  // After engine is up, keep host "ready" alive (helps map spinner)
-  setInterval(function () {
-    if (!window.unityInstance) return;
-    reply({
-      module: MODULE.Host,
-      event: "state-data",
-      type: "success",
-      data: hostPayload(Date.now())
-    });
-  }, 5000);
 
   console.log("[MockMelonParent] active — standalone mode (origin unlocked)");
 })();
