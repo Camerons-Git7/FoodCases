@@ -375,19 +375,39 @@ InitMelonSdk();
     }
   });
 
-  // Stub Melon online APIs so Unity fetch doesn't hang forever
+  // Stub Melon online APIs — shapes must match what Unity deserializes
+  function mockBodyFor(url) {
+    // TabData[] expected as top-level array
+    if (/tab-config|get-tabs|tabs-by-moniker/i.test(url)) {
+      return "[]";
+    }
+    if (/achievement/i.test(url)) {
+      return "[]";
+    }
+    if (/us-discovery|\/v1\/resolve/i.test(url)) {
+      return JSON.stringify({ endpoints: [], status: "ok" });
+    }
+    if (/gameanalytics|cdp\.cloud\.unity3d/i.test(url)) {
+      return "{}";
+    }
+    // generic safe object with empty arrays
+    return JSON.stringify({
+      status: "ok",
+      data: [],
+      result: [],
+      items: [],
+      achievements: [],
+      tabs: [],
+      resolve: { endpoints: [] }
+    });
+  }
+
   var _fetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     var url = typeof input === "string" ? input : (input && input.url) || "";
     if (/playmelonpg\.com|melonsandbox\.com\/api|pg-proxy|us-discovery|gameanalytics\.com|cdp\.cloud\.unity3d\.com/i.test(url)) {
-      console.log("[MockMelonParent] stub fetch", url.slice(0, 80));
-      return Promise.resolve(new Response(JSON.stringify({
-        status: "ok",
-        data: [],
-        result: {},
-        achievements: [],
-        resolve: { endpoints: [] }
-      }), {
+      console.log("[MockMelonParent] stub fetch", url.slice(0, 100));
+      return Promise.resolve(new Response(mockBodyFor(url), {
         status: 200,
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
       }));
@@ -406,10 +426,12 @@ InitMelonSdk();
     var u = String(this.__mockUrl || "");
     if (/playmelonpg\.com|pg-proxy|us-discovery|gameanalytics\.com|cdp\.cloud\.unity3d\.com/i.test(u)) {
       var xhr = this;
+      var body = mockBodyFor(u);
       setTimeout(function () {
         Object.defineProperty(xhr, "status", { value: 200 });
         Object.defineProperty(xhr, "readyState", { value: 4 });
-        Object.defineProperty(xhr, "responseText", { value: '{"status":"ok","data":[]}' });
+        Object.defineProperty(xhr, "responseText", { value: body });
+        Object.defineProperty(xhr, "response", { value: body });
         if (typeof xhr.onreadystatechange === "function") xhr.onreadystatechange();
         if (typeof xhr.onload === "function") xhr.onload();
       }, 10);
