@@ -1,0 +1,46 @@
+<svg width="600" height="675" viewBox="300 0 600 675" fill="none"
+    xmlns="http://www.w3.org/2000/svg">
+    <g clip-path="url(#clip0_6734_50710)">
+        <g filter="url(#filter0_f_6734_50710)">
+            <path d="M770.084 -125.95C683.829 -194.947 558.209 -180.766 489.506 -94.276L154.313 327.699C85.6098 414.189 99.8392 540.237 186.095 609.235L604.832 944.188C691.088 1013.19 816.707 999.005 885.41 912.514L1220.6 490.539C1289.31 404.049 1275.08 278.001 1188.82 209.004L770.084 -125.95Z" fill="url(#paint0_radial_6734_50710)"/>
+        </g>
+        <g style="mix-blend-mode:color-dodge" filter="url(#filter1_f_6734_50710)">
+            <path d="M788.378 242.592C823.674 137.927 767.525 24.2107 662.965 -11.3991L296.36 -136.254C191.8 -171.864 78.4248 -115.883 43.1288 -11.2173L-81.0884 357.132C-116.384 461.798 -60.2353 575.514 44.3242 611.124L410.93 735.979C515.489 771.589 628.865 715.608 664.161 610.942L788.378 242.592Z" fill="url(#paint1_radial_6734_50710)"/>
+        </g>
+        <foreignObject x="-252.708" y="-252.708" width="1705.42" height="1180.73">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="backdrop-filter:blur(126.35px);clip-path:url(#bgblur_1_6734_50710_clip_path);height:100%;width:100%"></div>
+        </foreignObject>
+        <rect data-figma-bg-blur-radius="252.708" width="1200" height="675.312" fill="black" fill-opacity="0.32"/>
+        <rect width="1200" height="831" fill="url(#paint2_linear_6734_50710)"/>
+    </g>
+    <defs>
+        <filter id="filter0_f_6734_50710" x="11.7998" y="-268.702" width="1351.32" height="1355.64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+            <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+            <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+            <feGaussianBlur stdDeviation="49.5093" result="effect1_foregroundBlur_6734_50710"/>
+        </filter>
+        <filter id="filter1_f_6734_50710" x="-180.048" y="-235.386" width="1067.39" height="1070.5" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+            <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+            <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+            <feGaussianBlur stdDeviation="44.2047" result="effect1_foregroundBlur_6734_50710"/>
+        </filter>
+        <clipPath id="bgblur_1_6734_50710_clip_path" transform="translate(252.708 252.708)">
+            <rect width="1200" height="675.312"/>
+        </clipPath>
+        <radialGradient id="paint0_radial_6734_50710" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(712.083 287.17) rotate(95.9917) scale(649.863 648.994)">
+            <stop stop-color="#766AB7"/>
+            <stop offset="1" stop-color="#766AB7" stop-opacity="0.1"/>
+        </radialGradient>
+        <radialGradient id="paint1_radial_6734_50710" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(483.66 402.553) rotate(133.373) scale(372.817 373.494)">
+            <stop offset="0.0001" stop-color="#007DB5"/>
+            <stop offset="1" stop-color="#007DB5" stop-opacity="0.8"/>
+        </radialGradient>
+        <linearGradient id="paint2_linear_6734_50710" x1="183.978" y1="0" x2="183.978" y2="576.191" gradientUnits="userSpaceOnUse">
+            <stop offset="0.192308" stop-color="#1A1B1E" stop-opacity="0.01"/>
+            <stop offset="1" stop-color="#1A1B1E"/>
+        </linearGradient>
+        <clipPath id="clip0_6734_50710">
+            <rect width="1200" height="675" fill="white"/>
+        </clipPath>
+    </defs>
+</svg>
