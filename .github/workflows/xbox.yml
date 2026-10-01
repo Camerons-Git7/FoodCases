@@ -1,0 +1,36 @@
+name: Import Xbox Cloud Gaming
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-xbox:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download ZIP
+        run: |
+          curl -L "https://github.com/Camerons-Git7/FoodCases/releases/download/files/xbox-cloud-gaming-offline.zip" -o xbox.zip
+
+      - name: Extract ZIP into xbox
+        run: |
+          mkdir -p xbox
+          unzip -o xbox.zip -d xbox
+
+      - name: Remove ZIP
+        run: |
+          rm xbox.zip
+
+      - name: Commit Xbox files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add xbox
+          git commit -m "Add Xbox Cloud Gaming offline files" || echo "No changes to commit"
+          git push
