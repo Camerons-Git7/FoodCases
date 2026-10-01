@@ -735,15 +735,9 @@
     function handlePlayerState(state) {
 
       if (state === 1) {
-        isPlaying = true;
-        intentionalPause = false;
-        playbackEnded = false;
         consecutiveErrors = 0;
-        window._progressBase = progressSec || 0;
-        progressTickStart = Date.now();
-        updatePlayIcon();
-        startRealProgress();
-        highlightNowPlaying();
+        // Sync clock to real position when YT reports playing
+        markPlaybackStarted(typeof progressSec === "number" ? progressSec : 0);
       } else if (state === 2) {
         isPlaying = false;
         updatePlayIcon();
@@ -821,6 +815,24 @@
       return p[0] || 0;
     }
 
+
+    function markPlaybackStarted(fromSec) {
+      isPlaying = true;
+      intentionalPause = false;
+      playbackEnded = false;
+      if (typeof fromSec === "number") {
+        progressSec = fromSec;
+        window._progressBase = fromSec;
+        progressTickStart = Date.now();
+      } else if (!progressTickStart) {
+        window._progressBase = progressSec || 0;
+        progressTickStart = Date.now();
+      }
+      updatePlayIcon();
+      if (!progressTimer) startRealProgress();
+      highlightNowPlaying();
+    }
+
     function loadTrack(track, autoplay) {
       if (autoplay === undefined) autoplay = true;
       if (!track || !track.id) return;
@@ -858,24 +870,36 @@
       var url = embedUrl(track.id, autoplay, 0);
 
       try { frame.src = "about:blank"; } catch (e) {}
+
+      var startedForGen = false;
+      function beginAfterEmbedReady() {
+        if (gen !== loadGen || startedForGen || !autoplay) return;
+        startedForGen = true;
+        playbackEnded = false;
+        progressSec = 0;
+        window._progressBase = 0;
+        updateProgressUI();
+        ytCommand("playVideo");
+        ytCommand("unMute");
+        try { ytCommand("setVolume", [Math.round(volume * 100)]); } catch (e) {}
+        // Start progress when embed is ready (postMessage PLAYING often never fires)
+        markPlaybackStarted(0);
+      }
+
+      frame.onload = function() {
+        if (gen !== loadGen) return;
+        if (autoplay) {
+          // Small delay so autoplay can kick in; progress starts with real playback intent
+          setTimeout(beginAfterEmbedReady, 300);
+        }
+      };
+
       setTimeout(function() {
         if (gen !== loadGen) return;
         frame.src = url;
-
         if (autoplay) {
-          setTimeout(function() {
-            if (gen !== loadGen) return;
-            playbackEnded = false;
-            progressSec = 0;
-            window._progressBase = 0;
-            progressTickStart = 0;
-            updateProgressUI();
-            updatePlayIcon();
-            ytCommand("playVideo");
-            ytCommand("unMute");
-            try { ytCommand("setVolume", [Math.round(volume * 100)]); } catch (e) {}
-            highlightNowPlaying();
-          }, 400);
+          // Fallback if onload doesn't fire (some browsers on about:blank→src)
+          setTimeout(beginAfterEmbedReady, 1200);
         } else {
           isPlaying = false;
           updatePlayIcon();
@@ -919,12 +943,7 @@
         return;
       }
       ytCommand("playVideo");
-      isPlaying = true;
-      playbackEnded = false;
-      window._progressBase = progressSec || 0;
-      progressTickStart = Date.now();
-      updatePlayIcon();
-      startRealProgress();
+      markPlaybackStarted(progressSec || 0);
     }
     function playNext() {
       if (!queue.length) return;
