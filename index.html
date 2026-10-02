@@ -5,7 +5,7 @@
   <title>𝐒𝐄𝐀𝐌𝐋𝐄𝐒𝐒-𝐎𝐒</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico"/>
   <style>html,body{background:#000;margin:0;}</style>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Monaco:wght@900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -17,7 +17,7 @@
     --glass-border: #333;
     --accent-main: #fff;
     --font-main: 'Rajdhani', sans-serif;
-    --font-header: 'Orbitron', sans-serif;
+    --font-header: 'Monaco', sans-serif;
     --z-bg: 0;
     --z-snow: 1;
     --z-desktop: 10;
@@ -89,7 +89,6 @@ body {
 .mobile-box h2 { font-family: var(--font-header); font-size: 1.2rem; color: #fff; margin-bottom: 10px; }
 .mobile-box p { color: #888; font-size: 1rem; font-weight: 600; }
 
-/* ========== Option A: minimal boot loading screen ========== */
 #seamless-preload {
     position: fixed;
     inset: 0;
@@ -438,7 +437,6 @@ body {
 .dock-item img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
 .dock-sep { width: 1px; height: 24px; background: rgba(255, 255, 255, 0.2); margin: 0 8px; flex-shrink: 0; }
 
-/* Running / open app indicator (line under icon) */
 .dock-item.running::after,
 .dock-item.open-app::after {
     content: '';
@@ -459,7 +457,6 @@ body {
     width: 10px;
 }
 
-/* Group open apps on the left of pinned */
 #dock-open-apps,
 #dock-pinned-apps {
     display: flex;
@@ -696,7 +693,6 @@ body {
     transform: scale(1) translateY(0);
 }
 
-/* Open / restore: same motion as minimize, reversed */
 .window.opening {
     opacity: 0;
     pointer-events: none;
@@ -704,7 +700,6 @@ body {
     transform: scale(0.15) translateY(30vh);
 }
 
-/* Minimize animation: shrink + slide toward dock, then fully hidden */
 .window.minimizing {
     transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -721,7 +716,6 @@ body {
     display: none !important;
 }
 
-/* True fullscreen */
 .window.maximized {
     width: 100vw !important;
     height: 100vh !important;
@@ -767,7 +761,6 @@ body {
     box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
 }
 
-/* macOS traffic lights */
 .btn-close {
     background: #ff5f57;
 }
@@ -832,7 +825,6 @@ body {
     opacity: 1;
 }
 
-/* Refresh button (top-right of window header) */
 .win-refresh {
     position: absolute;
     right: 12px;
@@ -960,7 +952,7 @@ body.ciri-active #ciri-window { opacity: 1; pointer-events: all; transform: tran
 .spinner { width: 24px; height: 24px; border: 3px solid #333; border-top-color: #fff; border-radius: 50%; animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-bottom: 16px; }
 .boot-status { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 8px; letter-spacing: 0.5px; }
 .boot-warning { font-size: 11px; color: #666; max-width: 280px; text-align: center; line-height: 1.5; font-weight: 500; }
-@keyframes typeCiri { from { width: 0; } to { width: 115px; } }
+@keyframes typeCiri { from { width: 0; } to { width: 210px; } }
 @keyframes blinkCiri { 50% { border-color: transparent; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -993,10 +985,24 @@ details.thought-process summary::before { content: "🧠"; font-size: 15px; }
 #mode-toggle:hover { background: #fff; color: #000; border-color: #fff; }
 #mode-toggle.live-active { background: #fff; color: #000; border-color: #fff; animation: pulseWhite 2s infinite; }
 @keyframes pulseWhite { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); } 70% { box-shadow: 0 0 0 8px rgba(255,255,255,0); } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } }
-#action-orb { width: 48px; height: 48px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fff 0%, #aaa 20%, #444 60%, #111 100%); box-shadow: 0 8px 20px rgba(0,0,0,0.8), inset -4px -4px 10px rgba(0,0,0,0.9), inset 2px 2px 8px rgba(255,255,255,0.4); transition: all 0.3s cubic-bezier(0.2,0.8,0.2,1); flex-shrink: 0; cursor: pointer; }
-#action-orb:hover { transform: scale(1.08); box-shadow: 0 12px 25px rgba(255,255,255,0.1); }
-#action-orb.thinking { animation: orbAlive 2s infinite ease-in-out; filter: contrast(1.2) brightness(1.1); }
-@keyframes orbAlive { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255,255,255,0.1); } 50% { transform: scale(1.05); box-shadow: 0 0 20px 5px rgba(255,255,255,0.3); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255,255,255,0.1); } }
+#send-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #fff;
+  border: none;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+#send-btn:hover { background: #e8e8e8; transform: scale(1.05); }
+#send-btn:active { transform: scale(0.95); }
+#send-btn.thinking { opacity: 0.55; pointer-events: none; }
+#send-btn svg { width: 20px; height: 20px; fill: currentColor; }
 #img-preview-box { position: absolute; bottom: 85px; left: 10px; background: #1a1a1a; padding: 6px; border-radius: 12px; display: none; align-items: center; gap: 10px; box-shadow: 0 8px 25px rgba(0,0,0,0.8); border: 1px solid #333; }
 #img-preview-box img { height: 44px; border-radius: 8px; }
 #img-preview-box span { color: #fff; font-size: 13px; cursor: pointer; padding-right: 10px; font-weight: 800; }
@@ -1045,7 +1051,7 @@ details.thought-process summary::before { content: "🧠"; font-size: 15px; }
   width: 400px; max-width: 90%; font-family: var(--font-main);
 }
 .modal__header {
-  margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; font-family: 'Orbitron', sans-serif; color: #fff;
+  margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; font-family: 'Monaco', sans-serif; color: #fff;
 }
 .modal__list {
   color: #ccc; font-size: 14px; margin-left: 20px; line-height: 1.8; margin-bottom: 20px;
@@ -1057,7 +1063,7 @@ details.thought-process summary::before { content: "🧠"; font-size: 15px; }
 #wallpaper-menu { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(0.95); width: 800px; max-height: 80vh; background: #111; border: 1px solid #333; border-radius: 16px; z-index: var(--z-modal); display: none; opacity: 0; transition: all 0.3s ease; flex-direction: column; padding: 30px; box-shadow: 0 30px 80px rgba(0,0,0,0.9); }
 #wallpaper-menu.open { display: flex; opacity: 1; transform: translate(-50%,-50%) scale(1); }
 .wp-modal-header { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-.wp-modal-header h2 { font-family: 'Orbitron'; color: #fff; letter-spacing: 2px; margin: 0; }
+.wp-modal-header h2 { font-family: 'Monaco'; color: #fff; letter-spacing: 2px; margin: 0; }
 .wp-controls-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .segmented-control { display: flex; background: #222; border: 1px solid #333; border-radius: 8px; padding: 4px; gap: 4px; border-style: solid; }
 .segmented-control label { flex: 1; text-align: center; cursor: pointer; }
@@ -1111,13 +1117,11 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 
 <body id="desktop-area" role="application">
 
-<!-- Option A: minimal loading screen (shown until boot is ready) -->
 <div id="seamless-preload" aria-hidden="true">
   <div class="sp-wordmark">SEAMLESS</div>
   <div class="sp-bar-track" aria-hidden="true"><div class="sp-bar-fill"></div></div>
 </div>
 
-<!-- accessibility wrapper for screen readers -->
 <div id="fps-counter" aria-live="polite"><span id="fps-val">60</span> FPS</div>
 
 <dialog id="mobile-warning" aria-modal="true">
@@ -1134,7 +1138,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 <section id="boot-layer" aria-label="Seamless account and system boot">
   <div id="boot-content">
     <h1 class="boot-logo">SEAMLESS-OS</h1>
-    <p class="boot-sub">Seamless-Hub Softwares // V1</p>
+    <p class="boot-sub">Seamless-Hub Softwares 
 
     <div class="boot-auth-card" id="boot-auth-card">
       <div id="boot-auth-form">
@@ -1190,7 +1194,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   </article>
 </main>
 
-<!-- Base OS Backgrounds -->
 <video id="bg-video" loop muted playsinline preload="auto" aria-hidden="true"></video>
 <img id="bg-img" class="media__fallback" alt="Desktop Background" decoding="async">
 <canvas id="snow-fx" aria-hidden="true"></canvas>
@@ -1204,11 +1207,9 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   <img id="proxy-img" src="" alt="Dragging">
 </div>
 
-<!-- Taskbar -->
 <nav id="dock-container" aria-label="System Taskbar"></nav>
 <section id="windows-layer" aria-live="assertive"></section>
 
-<!-- Modals -->
 <dialog id="wallpaper-menu" aria-label="Wallpaper Settings">
   <header class="wp-modal-header">
     <h2>WALLPAPER PROTOCOLS</h2>
@@ -1286,7 +1287,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
     <li class="ctx-item" id="ctx-copylink-dock" role="menuitem" tabindex="0"><i class="fas fa-link fa-fw" aria-hidden="true"></i> Copy Link</li>
 </menu>
 
-<!-- Context menu for open (running) apps on the dock -->
 <menu id="dock-open-ctx-menu" class="os-context-menu" role="menu">
     <li class="ctx-item" id="ctx-dock-open-restore" role="menuitem" tabindex="0" style="display:none;"><i class="fas fa-window-restore fa-fw" aria-hidden="true"></i> Open</li>
     <li class="ctx-item" id="ctx-dock-open-minimize" role="menuitem" tabindex="0" style="display:none;"><i class="fas fa-window-minimize fa-fw" aria-hidden="true"></i> Minimize</li>
@@ -1306,28 +1306,26 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   <li class="ctx-item" role="menuitem" tabindex="0" onclick="location.reload()"><i class="fas fa-sync fa-fw"></i> Refresh System</li>
 </menu>
 
-<!-- Context menu for wallpaper cards -->
 <menu id="wp-context-menu" class="os-context-menu" role="menu">
   <li class="ctx-item" id="ctx-wp-refresh" role="menuitem" tabindex="0"><i class="fas fa-sync fa-fw" aria-hidden="true"></i> Refresh Wallpaper</li>
 </menu>
 
 <div id="toast-container" aria-live="polite"></div>
 
-<!-- Assistant -->
 <div id="ciri-backdrop" onclick="closeCiri()" aria-hidden="true"></div>
-<aside id="ciri-window" aria-label="Ciri AI Assistant">
+<aside id="ciri-window" aria-label="Seamless AI Assistant">
   <div id="ciri-boot-screen">
-    <div id="boot-ciri-text" class="boot-ciri">CIRI.</div>
+    <div id="boot-ciri-text" class="boot-ciri">SEAMLESS</div>
     <div id="boot-sub-text" class="boot-sub">Seamless-Hub SOFTWARES</div>
     <div id="boot-loader" class="boot-loader">
       <div id="boot-spinner" class="spinner"></div>
-      <div id="boot-status-text" class="boot-status">Connecting To Gemini...</div>
-      <div class="boot-warning">If network restricts Gemini, This webOS needs to be launched through a proxy giving up LIVE mode.</div>
+      <div id="boot-status-text" class="boot-status">Connecting to server...</div>
+      <div class="boot-warning">If the connection fails, check your network or API key.</div>
     </div>
   </div>
 
   <header id="status-pill">
-    <span>CIRI</span>
+    <span>SEAMLESS AI</span>
     <div id="status-icon" class="status-icon"></div>
     <span id="status-text"></span>
   </header>
@@ -1342,16 +1340,17 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
     <button class="icon-btn" onclick="document.getElementById('file-upload').click()" aria-label="Upload Image">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
     </button>
-    <textarea id="chat-input" placeholder="Message Ciri..." rows="1" oninput="autoGrow(this)" aria-label="Chat Input"></textarea>
+    <textarea id="chat-input" placeholder="Message Seamless AI..." rows="1" oninput="autoGrow(this)" aria-label="Chat Input"></textarea>
     <div id="mode-toggle" onclick="cycleMode()" role="button" tabindex="0">FAST</div>
-    <div id="action-orb" onclick="handleSend()" role="button" tabindex="0" aria-label="Send Message"></div>
+    <button id="send-btn" onclick="handleSend()" aria-label="Send Message">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
   </footer>
 </aside>
 
 <video id="screen-video" autoplay playsinline class="hidden-media"></video>
 <canvas id="screen-canvas" class="hidden-media"></canvas>
 
-<!-- Media Player -->
 <button id="restore-btn" title="Restore Player" aria-label="Restore Media Player">
   <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
 </button>
@@ -1396,7 +1395,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   </nav>
 </aside>
 
-<!-- Update Modal (Inline styles stripped out) -->
 <dialog id="update-modal" class="modal__backdrop" aria-modal="true">
   <article class="modal__content">
     <h2 class="modal__header">UPDATE LOG v3.0</h2>
@@ -1413,7 +1411,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 </dialog>
 
 <script>
-
 
 const SUPABASE_URL = 'https://vhxotukthsiefyqelfir.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Yk2Wz4UnIcI67LnLubNwbA_lHZywLLP';
@@ -1438,7 +1435,6 @@ function showAuthMessage(text, isError) {
   el.textContent = text || '';
   el.style.color = isError ? '#ff6b6b' : '#7dffb3';
 }
-
 
 function formatUsername(raw, live) {
   var s = String(raw || '').replace(/[^a-zA-Z0-9. ]/g, '');
@@ -1676,7 +1672,6 @@ function handleStartMenuPower() {
   }
 }
 
-
 async function handleContinueAsGuest() {
   currentUser = null;
   isGuest = true;
@@ -1687,8 +1682,6 @@ async function handleContinueAsGuest() {
   startBootSequence();
 }
 
-
-
 bindUsernameFormatting();
 var _CLOUD_STRUCTURED_KEYS = {
   'cine_sys_config': 1,
@@ -1698,13 +1691,11 @@ var _CLOUD_STRUCTURED_KEYS = {
   'cine_wp_versions': 1   
 };
 
-
 var _CLOUD_BLOCKED_KEYS = {
   'cod-assets-cached': 1,
   'buildnow_assets_cached': 1,
   'cine_wp_versions': 1
 };
-
 
 function isBlockedProgressKey(key) {
   if (!key) return true;
@@ -1722,7 +1713,6 @@ function isBlockedProgressKey(key) {
   if (lower === 'seamless_post_signin') return true;
   return false;
 }
-
 
 var _CLOUD_MAX_VALUE_LEN = 100000;
 
@@ -1773,7 +1763,6 @@ function collectIframeProgress() {
   return byApp;
 }
 
-
 window._pendingIframeSaves = window._pendingIframeSaves || {};
 
 function applyIframeProgressToFrame(frame, appId) {
@@ -1790,14 +1779,12 @@ function applyIframeProgressToFrame(frame, appId) {
   } catch (e) {  }
 }
 
-
 var _cloudSaveInFlight = false;
 var _lastLocalEditAt = 0;
 var _saveCloudTimer = null;
 var _pendingCloudSync = false;  
 var _lastCloudSaveAt = 0;
 var _lastCloudLoadAt = 0;
-
 
 function markPendingCloudSync() {
   _lastLocalEditAt = Date.now();
@@ -2101,20 +2088,17 @@ async function loadUserDataFromCloud() {
   if (postSignIn) _suppressCloudSave = false;
 }
 
-
 setInterval(function() {
   if (currentUser && !isGuest) {
     saveUserDataToCloud();
   }
 }, 30000);
 
-
 window.addEventListener('beforeunload', function() {
   if (currentUser && !isGuest) {
     saveUserDataToCloud();
   }
 });
-
 
 if (supabaseClient) {
   supabaseClient.auth.getSession().then(function(result) {
@@ -2173,7 +2157,6 @@ if (supabaseClient) {
 
 var _SYSTEM_PATHS = ["C:/Windows/System32/kernel32.dll", "/var/www/html/cine-os/", "https://cine-os.local/api/v1/auth"];
 var _devBuildVer = "3.0.1";
-
 
 (function registerSeamlessCache() {
   if (!('serviceWorker' in navigator) || !('caches' in window)) return;
@@ -2506,7 +2489,6 @@ var _devBuildVer = "3.0.1";
   window._wpGetVersion = _wpGetVersion;
   window._wpSetVersion = _wpSetVersion;
 })();
-
 
 var WpPreviewCache = (function() {
   var DB_NAME = 'seamless-wp-previews';
@@ -3067,7 +3049,6 @@ window.__iconErr = function(img) {
   }
 };
 
-
 var APPS = {
   '1on1soccer': {title: 'Soccer', path: './core/1on1soccer/', icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-wDyrUDPQKy5G-nNTUNM0UzoRldrqqPXWvQ&s', pinned: false, openInNewTab: false},
   '1on1tennis': {title: 'Tennis', path: './core/1on1tennis/', icon: 'https://igre.games/wp-content/uploads/thumbs/custom/0-9/1-On-1-Tennis.jpg', pinned: false, openInNewTab: false},
@@ -3297,7 +3278,6 @@ var APPS = {
   'settings': {title: 'Settings', internal: true, icon: 'https://cdn.iconscout.com/icon/free/png-256/free-apple-settings-icon-svg-download-png-493162.png', pinned: true, openInNewTab: false},
 };
 
-
 var CHERRI_APP = {
   'cherri': {title: 'Cherri', path: './cherri/cherri/', icon: 'https://i.ibb.co/Nn2zwt1N/fav.jpg', pinned: true, openInNewTab: false},
   'geforcenow': {title: 'Geforce Now', path: './cherri/cherri/#/embed?u=https%3A%2F%2Fplay.geforcenow.com%2F', icon: 'https://is1-ssl.mzstatic.com/image/thumb/Purple124/v4/c0/35/6a/c0356aef-37e2-0936-4ca7-63b68b5af896/AppIcon-0-0-1x_U007emarketing-0-0-0-4-0-0-sRGB-0-0-0-GLES2_U002c0-512MB-85-220-0-0.png/200x200ia-75.webp', pinned: true, openInNewTab: false},
@@ -3325,7 +3305,6 @@ function updateCherriApp() {
     }
 }
 updateCherriApp();
-
 
 var savedPins = localStorage.getItem('c_pins_v2');
 if(savedPins) {
@@ -3450,7 +3429,6 @@ function hideSeamlessPreload() {
     }, 600);
 }
 
-
 function isWallpaperElementReady(vidEl, imgEl) {
     if (imgEl && imgEl.style.display !== 'none') {
         var src = imgEl.currentSrc || imgEl.src || '';
@@ -3463,7 +3441,6 @@ function isWallpaperElementReady(vidEl, imgEl) {
     }
     return false;
 }
-
 
 function waitForWallpapersReady(timeoutMs) {
     var maxMs = timeoutMs || 30000;
@@ -3509,7 +3486,6 @@ function waitForWallpapersReady(timeoutMs) {
         }, 120);
     });
 }
-
 
 function warmSelectedWallpapersCache() {
     if (typeof window.seamlessCacheAdd !== 'function') return Promise.resolve();
@@ -3697,7 +3673,6 @@ function renderUI() {
     updateOpenAppsDock();
 }
 
-
 function updateOpenAppsDock() {
     const openWrap = document.getElementById('dock-open-apps');
     const openSep = document.getElementById('dock-open-sep');
@@ -3794,7 +3769,6 @@ document.getElementById('ctx-unpin-app').onclick = function() {
     hideAllCtx();
 }
 
-
 document.getElementById('ctx-dock-open-restore').onclick = function() {
     if (activeCtxId) toggleApp(activeCtxId);
     hideAllCtx();
@@ -3816,7 +3790,6 @@ document.getElementById('ctx-dock-open-unpin').onclick = function() {
     hideAllCtx();
 };
 
-
 document.getElementById('ctx-open-newtab-drawer').onclick = function() {
     if(activeCtxId && APPS[activeCtxId]) {
         const app = APPS[activeCtxId];
@@ -3835,7 +3808,6 @@ document.getElementById('ctx-open-newtab-dock').onclick = function() {
     hideAllCtx();
 };
 
-
 function copyAppLink(id) {
     const app = APPS[id];
     if (!app) return;
@@ -3852,7 +3824,6 @@ function copyAppLink(id) {
         document.body.removeChild(textarea);
     });
 }
-
 
 document.getElementById('ctx-copylink').onclick = function() {
     if (activeCtxId) copyAppLink(activeCtxId);
@@ -3877,13 +3848,11 @@ function hideAllCtx() {
     }
 }
 
-
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.os-context-menu')) {
         hideAllCtx();
     }
 });
-
 
 document.addEventListener('keydown', function(e) {
     var layer = document.getElementById('boot-layer');
@@ -3898,7 +3867,6 @@ document.addEventListener('keydown', function(e) {
         setTimeout(function(){ enterCount = 0; }, 500);
     }
 });
-
 
 function positionContextMenu(menu, e) {
     if (!menu) return;
@@ -4236,7 +4204,6 @@ setInterval(function() {
     }
 }, 1000);
 
-
 function populateDrawer() {
     let g = document.getElementById('drawer-grid');
     g.innerHTML = '';
@@ -4415,12 +4382,12 @@ function openWindow(id) {
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Monaco:wght@900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
                     <style>
                         body { background: #000; color: #fff; font-family: 'Rajdhani', sans-serif; padding: 25px; margin: 0; }
                         * { outline: none; -webkit-tap-highlight-color: transparent; }
-                        h2 { border-bottom: 2px solid #333; padding-bottom: 10px; font-weight: 700; letter-spacing: 1px; font-family: 'Orbitron', sans-serif; }
+                        h2 { border-bottom: 2px solid #333; padding-bottom: 10px; font-weight: 700; letter-spacing: 1px; font-family: 'Monaco', sans-serif; }
                         .cat { color: #fff; font-weight: bold; margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; }
                         .card { background: #111; border: 1px solid #333; padding: 15px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
                         .card.clickable { cursor: pointer; }
@@ -4456,7 +4423,6 @@ function openWindow(id) {
                     <\/script>
                 
 
-
 </body>
                 </html>`;
                 f.srcdoc = html;
@@ -4471,14 +4437,14 @@ function openWindow(id) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Monaco:wght@700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\/script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
   body { background: #0a0a0a; color: #fff; font-family: 'Rajdhani', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
   .hdr { padding: 16px 20px; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; background: #111; flex-shrink: 0; }
-  .hdr h1 { font-family: 'Orbitron', sans-serif; font-size: 15px; letter-spacing: 2px; font-weight: 700; }
+  .hdr h1 { font-family: 'Monaco', sans-serif; font-size: 15px; letter-spacing: 2px; font-weight: 700; }
   .status { font-size: 12px; font-weight: 600; color: #888; display: flex; align-items: center; gap: 6px; }
   .status .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
   .status.live .dot { background: #28c840; box-shadow: 0 0 8px #28c840; }
@@ -4496,7 +4462,7 @@ function openWindow(id) {
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
   input[type=text] { width: 100%; padding: 12px 14px; background: #1a1a1a; border: 1px solid #333; border-radius: 10px; color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; letter-spacing: 2px; text-align: center; text-transform: uppercase; }
   input[type=text]:focus { border-color: #666; }
-  .room-code { font-family: 'Orbitron', sans-serif; font-size: 22px; letter-spacing: 4px; text-align: center; padding: 14px; background: #111; border: 1px dashed #333; border-radius: 10px; color: #fff; user-select: all; }
+  .room-code { font-family: 'Monaco', sans-serif; font-size: 22px; letter-spacing: 4px; text-align: center; padding: 14px; background: #111; border: 1px dashed #333; border-radius: 10px; color: #fff; user-select: all; }
   .hint { font-size: 12px; color: #666; line-height: 1.45; }
   .lan-row {
     display: flex;
@@ -4546,12 +4512,11 @@ function openWindow(id) {
       inset 0 0 0 1px rgba(255,255,255,0.06);
   }
   .viewport-wrap.has-stream {
-    /* sized by JS to match stream aspect */
   }
   #remoteVideo {
     width: 100%;
     height: 100%;
-    object-fit: contain; /* contain + content-rect mapping works for any host/viewer aspect */
+    object-fit: contain;
     background: #000;
     cursor: default;
     display: none;
@@ -5274,7 +5239,7 @@ function openWindow(id) {
           }
         } catch (e) {}
       }
-    } catch (err) { /* cross-origin or blocked */ }
+    } catch (err) { }
   }
 
   function fitViewportToStream() {
@@ -5408,7 +5373,6 @@ function openWindow(id) {
       } catch (e) {}
     }
   }
-
 
   document.getElementById('btnCopy').onclick = function() {
     const code = document.getElementById('roomCode').textContent;
@@ -5669,7 +5633,6 @@ function openWindow(id) {
   })();
 <\/script>
 
-<!-- ==================== SEAMLESS AUTH MODAL ==================== -->
 <dialog id="auth-modal" style="
   background: rgba(15,15,15,0.97);
   border: 1px solid #333;
@@ -5900,7 +5863,6 @@ function toggleMaximize(id) {
     activeWindowId = id;
     updateDockForFullscreen();
 }
-
 
 function toggleFullscreen(id) {
     toggleMaximize(id);
@@ -6398,7 +6360,6 @@ function openWallpaperMenu() {
     }
 }
 
-
 document.addEventListener('contextmenu', function(ev) {
     var card = ev.target && ev.target.closest ? ev.target.closest('.wp-card') : null;
     if (!card || !card.getAttribute('data-key')) return;
@@ -6416,7 +6377,6 @@ document.addEventListener('contextmenu', function(ev) {
         positionContextMenu(ctx, ev);
     }
 }, true);
-
 
 function refreshWallpaper(key) {
     let d = wallpaperRegistry[key];
@@ -6501,7 +6461,6 @@ function refreshWallpaper(key) {
         finish(false);
     }
 }
-
 
 (function setupWpContextMenu() {
     var btn = document.getElementById('ctx-wp-refresh');
@@ -6592,56 +6551,219 @@ var expectKey = false;
 var sStream = null;
 var cImgB64 = null;
 var cImgMime = null;
+var chatHistory = [];
 
 function checkApiKey() {
-    let st = document.getElementById('status-text');
-    let si = document.getElementById('status-icon');
-    if(!st) return;
-    if(localStorage.getItem('ciri_key')) {
-        st.textContent = "Secure"; st.className = "secure";
+    var st = document.getElementById('status-text');
+    var si = document.getElementById('status-icon');
+    if (!st) return;
+    if (localStorage.getItem('ciri_key')) {
+        st.textContent = "Secure";
+        st.className = "secure";
         si.innerHTML = '<svg class="secure-svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>';
     } else {
-        st.textContent = "Unstable"; st.className = "unstable";
+        st.textContent = "Unstable";
+        st.className = "unstable";
         si.innerHTML = '<svg class="unstable-svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
     }
 }
 checkApiKey();
 
-window.autoGrow = function(el) { el.style.height = "5px"; el.style.height = (el.scrollHeight) + "px"; };
+window.autoGrow = function(el) {
+    el.style.height = "5px";
+    el.style.height = (el.scrollHeight) + "px";
+};
+
+function cycleMode() {
+    cMode = (cMode + 1) % MODES.length;
+    var el = document.getElementById('mode-toggle');
+    if (el) {
+        el.textContent = MODES[cMode];
+        el.classList.toggle('live-active', MODES[cMode] === 'LIVE');
+    }
+}
+
+function clearImage() {
+    cImgB64 = null;
+    cImgMime = null;
+    var box = document.getElementById('img-preview-box');
+    var img = document.getElementById('img-preview');
+    if (box) box.style.display = 'none';
+    if (img) img.src = '';
+    var input = document.getElementById('file-upload');
+    if (input) input.value = '';
+}
+
+function handleFileUpload(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+        var dataUrl = ev.target.result;
+        var parts = dataUrl.split(',');
+        cImgMime = file.type;
+        cImgB64 = parts[1];
+        var img = document.getElementById('img-preview');
+        var box = document.getElementById('img-preview-box');
+        if (img) img.src = dataUrl;
+        if (box) box.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+}
+
+function appendMessage(role, text, isError) {
+    var history = document.getElementById('chat-history');
+    if (!history) return;
+    var div = document.createElement('div');
+    div.className = 'message ' + (role === 'user' ? 'user' : 'ciri');
+    if (isError) div.style.borderColor = '#ff6b6b';
+    if (window.marked) {
+        div.innerHTML = marked.parse(text || '');
+    } else {
+        div.textContent = text || '';
+    }
+    history.appendChild(div);
+    history.scrollTop = history.scrollHeight;
+    return div;
+}
+
+function setThinking(on) {
+    var btn = document.getElementById('send-btn');
+    if (btn) {
+        if (on) btn.classList.add('thinking');
+        else btn.classList.remove('thinking');
+    }
+}
+
+async function callGemini(prompt, imageB64, imageMime) {
+    var key = localStorage.getItem('ciri_key');
+    if (!key) {
+        throw new Error('No API key. Click the status pill or type /key to set your Gemini API key.');
+    }
+
+    var model = 'gemini-2.0-flash';
+    if (MODES[cMode] === 'THINKING') model = 'gemini-2.0-flash';
+    if (MODES[cMode] === 'LIVE') model = 'gemini-2.0-flash';
+
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key);
+
+    var parts = [];
+    if (imageB64 && imageMime) {
+        parts.push({
+            inline_data: {
+                mime_type: imageMime,
+                data: imageB64
+            }
+        });
+    }
+    parts.push({ text: prompt });
+
+    var body = {
+        contents: [{ role: 'user', parts: parts }],
+        generationConfig: {
+            temperature: MODES[cMode] === 'THINKING' ? 0.9 : 0.7,
+            maxOutputTokens: MODES[cMode] === 'THINKING' ? 4096 : 2048
+        }
+    };
+
+    var res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+        var errText = await res.text();
+        var msg = 'Request failed (' + res.status + ')';
+        try {
+            var j = JSON.parse(errText);
+            if (j.error && j.error.message) msg = j.error.message;
+        } catch (e) {}
+        throw new Error(msg);
+    }
+
+    var data = await res.json();
+    var text = '';
+    try {
+        text = data.candidates[0].content.parts[0].text || '';
+    } catch (e) {
+        text = 'No response received.';
+    }
+    return text;
+}
+
+async function handleSend() {
+    var input = document.getElementById('chat-input');
+    if (!input) return;
+    var text = (input.value || '').trim();
+    if (!text && !cImgB64) return;
+
+    if (text.toLowerCase() === '/key' || text.toLowerCase().startsWith('/key ')) {
+        var newKey = text.length > 4 ? text.slice(4).trim() : prompt('Enter your Gemini API key (from Google AI Studio):');
+        if (newKey && newKey.trim()) {
+            localStorage.setItem('ciri_key', newKey.trim());
+            checkApiKey();
+            appendMessage('ciri', 'API key saved. You can now chat with Seamless AI.');
+            if (typeof queueCloudSave === 'function') queueCloudSave();
+        }
+        input.value = '';
+        autoGrow(input);
+        return;
+    }
+
+    appendMessage('user', text || '[Image]');
+    input.value = '';
+    autoGrow(input);
+
+    var imgB64 = cImgB64;
+    var imgMime = cImgMime;
+    clearImage();
+
+    setThinking(true);
+    try {
+        var reply = await callGemini(text || 'Describe this image.', imgB64, imgMime);
+        appendMessage('ciri', reply);
+    } catch (err) {
+        appendMessage('ciri', (err && err.message) ? err.message : 'Something went wrong.', true);
+    }
+    setThinking(false);
+}
 
 window.addEventListener('keydown', function(e) {
-    if(e.altKey && (e.code === 'KeyS' || e.key.toLowerCase() === 's')) {
-        if(!holdTimer && !isCiriActive) {
+    if (e.altKey && (e.code === 'KeyS' || e.key.toLowerCase() === 's')) {
+        if (!holdTimer && !isCiriActive) {
             holdTimer = setTimeout(function() {
                 document.body.classList.add('ciri-active');
                 isCiriActive = true;
-                let cInp = document.getElementById('chat-input');
-                if(!hasBootCiri) {
-                    let bs = document.getElementById('ciri-boot-screen');
-                    if(bs) bs.style.display = 'flex';
-                    setTimeout(function(){ document.getElementById('boot-ciri-text').classList.add('typing'); }, 300);
-                    setTimeout(function(){ document.getElementById('boot-sub-text').classList.add('show'); }, 1100);
+                var cInp = document.getElementById('chat-input');
+                if (!hasBootCiri) {
+                    var bs = document.getElementById('ciri-boot-screen');
+                    if (bs) bs.style.display = 'flex';
+                    setTimeout(function() { document.getElementById('boot-ciri-text').classList.add('typing'); }, 300);
+                    setTimeout(function() { document.getElementById('boot-sub-text').classList.add('show'); }, 1100);
                     setTimeout(function() {
                         document.getElementById('boot-loader').style.opacity = '1';
                         setTimeout(function() {
                             document.getElementById('boot-status-text').textContent = "Connection Established.";
                             document.getElementById('boot-spinner').style.display = 'none';
                             setTimeout(function() {
-                                bs.style.filter = 'blur(10px)'; bs.style.opacity = '0';
+                                bs.style.filter = 'blur(10px)';
+                                bs.style.opacity = '0';
                                 setTimeout(function() {
                                     bs.style.display = 'none';
                                     hasBootCiri = true;
-                                    if(cInp) cInp.focus();
+                                    if (cInp) cInp.focus();
                                 }, 800);
                             }, 1800);
                         }, 1000);
                     }, 2200);
                 } else {
-                    setTimeout(function(){ if(cInp) cInp.focus(); }, 100);
+                    setTimeout(function() { if (cInp) cInp.focus(); }, 100);
                 }
             }, 2000);
         }
-    } else if(e.code === 'Escape' && isCiriActive) {
+    } else if (e.code === 'Escape' && isCiriActive) {
         closeCiri();
     } else if ((e.key === '`' || e.code === 'Backquote') && !e.altKey && !e.ctrlKey && !e.metaKey) {
         var t = e.target;
@@ -6664,10 +6786,22 @@ window.addEventListener('keydown', function(e) {
 });
 
 window.addEventListener('keyup', function(e) {
-    if(e.code === 'KeyS' || e.key.toLowerCase() === 's' || e.key === 'Alt') {
-        clearTimeout(holdTimer); holdTimer = null;
+    if (e.code === 'KeyS' || e.key.toLowerCase() === 's' || e.key === 'Alt') {
+        clearTimeout(holdTimer);
+        holdTimer = null;
     }
 });
+
+(function setupChatInputKeys() {
+    var input = document.getElementById('chat-input');
+    if (!input) return;
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    });
+})();
 
 window.closeCiri = function() {
     document.body.classList.remove('ciri-active');
@@ -6872,7 +7006,6 @@ function chkFps() {
 requestAnimationFrame(chkFps);
 </script>
 
-<!-- ==================== SEAMLESS AUTH MODAL ==================== -->
 <dialog id="auth-modal" style="
   background: rgba(15,15,15,0.97);
   border: 1px solid #333;
