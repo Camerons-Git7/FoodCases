@@ -959,15 +959,15 @@ iframe {
 body.ciri-active #ciri-backdrop { opacity: 1; pointer-events: all; }
 body.ciri-active #ciri-window { opacity: 1; pointer-events: all; transform: translate(-50%, 0) scale(1); }
 #ciri-boot-screen { position: absolute; inset: 0; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; transition: opacity 0.8s ease, filter 0.8s ease; border-radius: 32px; }
-.boot-ciri { font-size: 42px; font-weight: 800; color: #fff; font-family: monospace; border-right: 3px solid #fff; white-space: nowrap; overflow: hidden; width: 0; letter-spacing: -1px; }
-.boot-ciri.typing { animation: typeCiri 0.5s steps(5, end) forwards, blinkCiri 0.8s step-end infinite; }
+.boot-ciri { font-size: 42px; font-weight: 800; color: #fff; font-family: monospace; border-right: 3px solid #fff; white-space: nowrap; overflow: hidden; width: 0; letter-spacing: 2px; }
+.boot-ciri.typing { animation: typeCiri 0.7s steps(8, end) forwards, blinkCiri 0.8s step-end infinite; }
 .boot-sub { font-size: 12px; font-weight: 700; color: #888; letter-spacing: 3px; margin-top: 16px; opacity: 0; transform: translateY(20px) scale(0.95); transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .boot-sub.show { opacity: 1; transform: translateY(0) scale(1); }
 .boot-loader { margin-top: 40px; display: flex; flex-direction: column; align-items: center; opacity: 0; transition: opacity 0.6s ease; }
 .spinner { width: 24px; height: 24px; border: 3px solid #333; border-top-color: #fff; border-radius: 50%; animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-bottom: 16px; }
 .boot-status { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 8px; letter-spacing: 0.5px; }
 .boot-warning { font-size: 11px; color: #666; max-width: 280px; text-align: center; line-height: 1.5; font-weight: 500; }
-@keyframes typeCiri { from { width: 0; } to { width: 210px; } }
+@keyframes typeCiri { from { width: 0; } to { width: 280px; } }
 @keyframes blinkCiri { 50% { border-color: transparent; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -1260,7 +1260,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 <section id="boot-layer" aria-label="Seamless account and system boot">
   <div id="boot-content">
     <h1 class="boot-logo">SEAMLESS-OS</h1>
-    <p class="boot-sub">Seamless-Hub Softwares 
+    <p class="boot-sub">Seamless Softwares</p>
 
     <div class="boot-auth-card" id="boot-auth-card">
       <div id="boot-auth-form">
@@ -1438,7 +1438,7 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 <aside id="ciri-window" aria-label="Seamless AI Assistant">
   <div id="ciri-boot-screen">
     <div id="boot-ciri-text" class="boot-ciri">SEAMLESS</div>
-    <div id="boot-sub-text" class="boot-sub">Seamless-Hub SOFTWARES</div>
+    <div id="boot-sub-text" class="boot-sub">Seamless Softwares</div>
     <div id="boot-loader" class="boot-loader">
       <div id="boot-spinner" class="spinner"></div>
       <div id="boot-status-text" class="boot-status">Connecting to server...</div>
@@ -6963,7 +6963,7 @@ async function callGemini(prompt, imageB64, imageMime, fileAttachments) {
         throw new Error('No API key. Type /key then paste your Gemini API key from Google AI Studio.');
     }
 
-    var modelsToTry = ['gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    var modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash-preview-05-20', 'gemini-2.0-flash-001', 'gemini-flash-latest', 'gemini-2.5-pro', 'gemini-1.5-flash-latest'];
     var lastError = null;
 
     var fullPrompt = prompt || '';
@@ -6993,42 +6993,47 @@ async function callGemini(prompt, imageB64, imageMime, fileAttachments) {
         }
     };
 
+    var apiVersions = ['v1beta', 'v1'];
     for (var i = 0; i < modelsToTry.length; i++) {
         var model = modelsToTry[i];
-        var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key);
-        try {
-            var res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            if (!res.ok) {
-                var errText = await res.text();
-                var msg = 'Request failed (' + res.status + ')';
-                try {
-                    var j = JSON.parse(errText);
-                    if (j.error && j.error.message) msg = j.error.message;
-                } catch (e) {}
-                lastError = new Error(msg);
-                if (res.status === 404 || /no longer available|not found|not supported/i.test(msg)) {
+        for (var v = 0; v < apiVersions.length; v++) {
+            var url = 'https://generativelanguage.googleapis.com/' + apiVersions[v] + '/models/' + model + ':generateContent?key=' + encodeURIComponent(key);
+            try {
+                var res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) {
+                    var errText = await res.text();
+                    var msg = 'Request failed (' + res.status + ')';
+                    try {
+                        var j = JSON.parse(errText);
+                        if (j.error && j.error.message) msg = j.error.message;
+                    } catch (e) {}
+                    lastError = new Error(msg);
+                    if (res.status === 404 || /no longer available|not found|not supported/i.test(msg)) {
+                        continue;
+                    }
+                    if (res.status === 400 && /API key|invalid/i.test(msg)) {
+                        throw lastError;
+                    }
                     continue;
                 }
-                throw lastError;
+                var data = await res.json();
+                var text = '';
+                try {
+                    text = data.candidates[0].content.parts[0].text || '';
+                } catch (e) {
+                    text = 'No response received.';
+                }
+                return text;
+            } catch (err) {
+                lastError = err;
             }
-            var data = await res.json();
-            var text = '';
-            try {
-                text = data.candidates[0].content.parts[0].text || '';
-            } catch (e) {
-                text = 'No response received.';
-            }
-            return text;
-        } catch (err) {
-            lastError = err;
-            if (i === modelsToTry.length - 1) throw lastError;
         }
     }
-    throw lastError || new Error('All models failed');
+    throw lastError || new Error('All models failed. Check your API key or try again later.');
 }
 
 async function handleSend() {
