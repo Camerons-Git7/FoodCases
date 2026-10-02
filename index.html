@@ -48,6 +48,21 @@
     -webkit-tap-highlight-color: transparent !important;
 }
 
+#chat-history, #chat-history *, #chat-input {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    cursor: text;
+}
+
+#chat-history .message {
+    cursor: text;
+}
+
+#chat-history pre, #chat-history code {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+
 ::selection { background: #444; color: #fff; }
 ::-moz-selection { background: #444; color: #fff; }
 
@@ -1006,6 +1021,113 @@ details.thought-process summary::before { content: "🧠"; font-size: 15px; }
 #img-preview-box { position: absolute; bottom: 85px; left: 10px; background: #1a1a1a; padding: 6px; border-radius: 12px; display: none; align-items: center; gap: 10px; box-shadow: 0 8px 25px rgba(0,0,0,0.8); border: 1px solid #333; }
 #img-preview-box img { height: 44px; border-radius: 8px; }
 #img-preview-box span { color: #fff; font-size: 13px; cursor: pointer; padding-right: 10px; font-weight: 800; }
+
+.message-ctx-menu {
+    position: fixed;
+    display: none;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 6px;
+    min-width: 160px;
+    z-index: 999999;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.85);
+    font-family: var(--font-main);
+}
+.message-ctx-menu .ctx-item {
+    padding: 9px 14px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.message-ctx-menu .ctx-item:hover { background: #222; }
+.message-ctx-menu .ctx-item i { width: 16px; text-align: center; color: #888; }
+
+.message .code-block-wrap {
+    position: relative;
+    margin: 10px 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #222;
+    background: #0a0a0a;
+}
+.message .code-block-wrap pre {
+    margin: 0;
+    padding: 14px 14px 40px 14px;
+    overflow-x: auto;
+    font-size: 13px;
+}
+.message .code-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 6px;
+}
+.message .code-actions button {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #ccc;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-main);
+}
+.message .code-actions button:hover {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+}
+
+.file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin: 6px 0;
+    font-size: 13px;
+    color: #ddd;
+    max-width: 100%;
+}
+.file-chip i { color: #888; }
+.file-chip .file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 220px;
+}
+.file-chip .file-dl {
+    margin-left: auto;
+    background: #222;
+    border: 1px solid #444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.file-chip .file-dl:hover { background: #fff; color: #000; }
+
+#pending-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 4px 8px 4px;
+    max-width: 100%;
+}
+#pending-files:empty { display: none; }
+
 .hidden-media { display: none; }
 .hidden-input { display: none; }
 
@@ -4423,6 +4545,9 @@ function openWindow(id) {
                     <\/script>
                 
 
+
+
+
 </body>
                 </html>`;
                 f.srcdoc = html;
@@ -5702,6 +5827,9 @@ function openWindow(id) {
   <p id="auth-message" style="margin-top:18px; text-align:center; font-size:13px; min-height:18px;"></p>
 </dialog>
 
+
+
+
 </body>
 </html>`;
                 f.srcdoc = html;
@@ -6547,11 +6675,10 @@ var cMode = 0;
 var isCiriActive = false;
 var holdTimer = null;
 var hasBootCiri = false;
-var expectKey = false;
-var sStream = null;
 var cImgB64 = null;
 var cImgMime = null;
-var chatHistory = [];
+var pendingTextFiles = [];
+var LONG_PASTE_THRESHOLD = 2500;
 
 function checkApiKey() {
     var st = document.getElementById('status-text');
@@ -6571,7 +6698,7 @@ checkApiKey();
 
 window.autoGrow = function(el) {
     el.style.height = "5px";
-    el.style.height = (el.scrollHeight) + "px";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
 };
 
 function cycleMode() {
@@ -6612,21 +6739,215 @@ function handleFileUpload(e) {
     reader.readAsDataURL(file);
 }
 
+function ensurePendingFilesUI() {
+    var footer = document.getElementById('bottom-wrapper');
+    if (!footer) return null;
+    var el = document.getElementById('pending-files');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'pending-files';
+        footer.parentNode.insertBefore(el, footer);
+    }
+    return el;
+}
+
+function renderPendingFiles() {
+    var el = ensurePendingFilesUI();
+    if (!el) return;
+    el.innerHTML = '';
+    pendingTextFiles.forEach(function(f, idx) {
+        var chip = document.createElement('div');
+        chip.className = 'file-chip';
+        chip.innerHTML = '<i class="fas fa-file-alt"></i><span class="file-name">' + escapeHtml(f.name) + '</span><span style="color:#666;font-size:11px;">' + formatBytes(f.content.length) + '</span>';
+        var rm = document.createElement('span');
+        rm.className = 'file-dl';
+        rm.textContent = '✕';
+        rm.onclick = function() {
+            pendingTextFiles.splice(idx, 1);
+            renderPendingFiles();
+        };
+        chip.appendChild(rm);
+        el.appendChild(chip);
+    });
+}
+
+function formatBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function addTextAsFile(text, suggestedName) {
+    var name = suggestedName || ('paste-' + Date.now() + '.txt');
+    if (!/\.txt$/i.test(name)) name += '.txt';
+    pendingTextFiles.push({ name: name, content: text });
+    renderPendingFiles();
+}
+
+function enhanceCodeBlocks(container) {
+    if (!container) return;
+    var pres = container.querySelectorAll('pre');
+    pres.forEach(function(pre) {
+        if (pre.parentElement && pre.parentElement.classList.contains('code-block-wrap')) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'code-block-wrap';
+        pre.parentNode.insertBefore(wrap, pre);
+        wrap.appendChild(pre);
+
+        var actions = document.createElement('div');
+        actions.className = 'code-actions';
+
+        var copyBtn = document.createElement('button');
+        copyBtn.textContent = 'Copy';
+        copyBtn.onclick = function(e) {
+            e.stopPropagation();
+            var code = pre.innerText || pre.textContent || '';
+            navigator.clipboard.writeText(code).then(function() {
+                copyBtn.textContent = 'Copied';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1200);
+            }).catch(function() {});
+        };
+
+        var dlBtn = document.createElement('button');
+        dlBtn.textContent = 'Download';
+        dlBtn.onclick = function(e) {
+            e.stopPropagation();
+            var code = pre.innerText || pre.textContent || '';
+            var lang = '';
+            var codeEl = pre.querySelector('code');
+            if (codeEl && codeEl.className) {
+                var m = codeEl.className.match(/language-(\w+)/);
+                if (m) lang = m[1];
+            }
+            var ext = lang || 'txt';
+            if (ext === 'javascript') ext = 'js';
+            if (ext === 'typescript') ext = 'ts';
+            if (ext === 'python') ext = 'py';
+            if (ext === 'html') ext = 'html';
+            if (ext === 'css') ext = 'css';
+            downloadTextFile(code, 'seamless-' + Date.now() + '.' + ext);
+        };
+
+        actions.appendChild(copyBtn);
+        actions.appendChild(dlBtn);
+        wrap.appendChild(actions);
+    });
+}
+
+function downloadTextFile(text, filename) {
+    var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'file.txt';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
+}
+
 function appendMessage(role, text, isError) {
     var history = document.getElementById('chat-history');
-    if (!history) return;
+    if (!history) return null;
     var div = document.createElement('div');
     div.className = 'message ' + (role === 'user' ? 'user' : 'ciri');
     if (isError) div.style.borderColor = '#ff6b6b';
+    div.setAttribute('data-raw', text || '');
+
     if (window.marked) {
         div.innerHTML = marked.parse(text || '');
     } else {
         div.textContent = text || '';
     }
+
     history.appendChild(div);
+    enhanceCodeBlocks(div);
     history.scrollTop = history.scrollHeight;
+
+    div.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        showMessageContextMenu(e, div);
+    });
+
     return div;
 }
+
+function showMessageContextMenu(e, msgEl) {
+    var menu = document.getElementById('message-context-menu');
+    if (!menu) return;
+    hideMessageContextMenu();
+
+    var sel = window.getSelection();
+    var hasSelection = sel && sel.toString().trim().length > 0 && msgEl.contains(sel.anchorNode);
+
+    var copySel = document.getElementById('msg-ctx-copy-selection');
+    var dlBtn = document.getElementById('msg-ctx-download');
+    if (copySel) copySel.style.display = hasSelection ? '' : 'none';
+    if (dlBtn) dlBtn.style.display = '';
+
+    menu._targetMsg = msgEl;
+    menu.style.display = 'block';
+    menu.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
+    menu.style.top = Math.min(e.clientY, window.innerHeight - 120) + 'px';
+}
+
+function hideMessageContextMenu() {
+    var menu = document.getElementById('message-context-menu');
+    if (menu) {
+        menu.style.display = 'none';
+        menu._targetMsg = null;
+    }
+}
+
+document.addEventListener('click', function() { hideMessageContextMenu(); });
+document.addEventListener('contextmenu', function(e) {
+    if (!e.target.closest || !e.target.closest('#chat-history .message')) {
+        hideMessageContextMenu();
+    }
+});
+
+(function bindMsgCtx() {
+    var copyBtn = document.getElementById('msg-ctx-copy');
+    var copySelBtn = document.getElementById('msg-ctx-copy-selection');
+    var dlBtn = document.getElementById('msg-ctx-download');
+
+    if (copyBtn) copyBtn.onclick = function() {
+        var menu = document.getElementById('message-context-menu');
+        var msg = menu && menu._targetMsg;
+        if (!msg) return;
+        var text = msg.getAttribute('data-raw') || msg.innerText || '';
+        navigator.clipboard.writeText(text).then(function() {
+            if (typeof showNotification === 'function') showNotification('Copied', 'Message copied');
+        }).catch(function() {});
+        hideMessageContextMenu();
+    };
+
+    if (copySelBtn) copySelBtn.onclick = function() {
+        var sel = window.getSelection();
+        if (sel && sel.toString()) {
+            navigator.clipboard.writeText(sel.toString()).then(function() {
+                if (typeof showNotification === 'function') showNotification('Copied', 'Selection copied');
+            }).catch(function() {});
+        }
+        hideMessageContextMenu();
+    };
+
+    if (dlBtn) dlBtn.onclick = function() {
+        var menu = document.getElementById('message-context-menu');
+        var msg = menu && menu._targetMsg;
+        if (!msg) return;
+        var text = msg.getAttribute('data-raw') || msg.innerText || '';
+        downloadTextFile(text, 'seamless-message-' + Date.now() + '.txt');
+        hideMessageContextMenu();
+    };
+})();
 
 function setThinking(on) {
     var btn = document.getElementById('send-btn');
@@ -6636,17 +6957,22 @@ function setThinking(on) {
     }
 }
 
-async function callGemini(prompt, imageB64, imageMime) {
+async function callGemini(prompt, imageB64, imageMime, fileAttachments) {
     var key = localStorage.getItem('ciri_key');
     if (!key) {
-        throw new Error('No API key. Click the status pill or type /key to set your Gemini API key.');
+        throw new Error('No API key. Type /key then paste your Gemini API key from Google AI Studio.');
     }
 
-    var model = 'gemini-2.0-flash';
-    if (MODES[cMode] === 'THINKING') model = 'gemini-2.0-flash';
-    if (MODES[cMode] === 'LIVE') model = 'gemini-2.0-flash';
+    var modelsToTry = ['gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    var lastError = null;
 
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key);
+    var fullPrompt = prompt || '';
+    if (fileAttachments && fileAttachments.length) {
+        fullPrompt += '\n\n--- Attached files ---\n';
+        fileAttachments.forEach(function(f) {
+            fullPrompt += '\n### File: ' + f.name + '\n```\n' + f.content + '\n```\n';
+        });
+    }
 
     var parts = [];
     if (imageB64 && imageMime) {
@@ -6657,47 +6983,59 @@ async function callGemini(prompt, imageB64, imageMime) {
             }
         });
     }
-    parts.push({ text: prompt });
+    parts.push({ text: fullPrompt || 'Hello' });
 
     var body = {
         contents: [{ role: 'user', parts: parts }],
         generationConfig: {
-            temperature: MODES[cMode] === 'THINKING' ? 0.9 : 0.7,
-            maxOutputTokens: MODES[cMode] === 'THINKING' ? 4096 : 2048
+            temperature: MODES[cMode] === 'THINKING' ? 0.95 : 0.7,
+            maxOutputTokens: MODES[cMode] === 'THINKING' ? 8192 : 4096
         }
     };
 
-    var res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    });
-
-    if (!res.ok) {
-        var errText = await res.text();
-        var msg = 'Request failed (' + res.status + ')';
+    for (var i = 0; i < modelsToTry.length; i++) {
+        var model = modelsToTry[i];
+        var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key);
         try {
-            var j = JSON.parse(errText);
-            if (j.error && j.error.message) msg = j.error.message;
-        } catch (e) {}
-        throw new Error(msg);
+            var res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) {
+                var errText = await res.text();
+                var msg = 'Request failed (' + res.status + ')';
+                try {
+                    var j = JSON.parse(errText);
+                    if (j.error && j.error.message) msg = j.error.message;
+                } catch (e) {}
+                lastError = new Error(msg);
+                if (res.status === 404 || /no longer available|not found|not supported/i.test(msg)) {
+                    continue;
+                }
+                throw lastError;
+            }
+            var data = await res.json();
+            var text = '';
+            try {
+                text = data.candidates[0].content.parts[0].text || '';
+            } catch (e) {
+                text = 'No response received.';
+            }
+            return text;
+        } catch (err) {
+            lastError = err;
+            if (i === modelsToTry.length - 1) throw lastError;
+        }
     }
-
-    var data = await res.json();
-    var text = '';
-    try {
-        text = data.candidates[0].content.parts[0].text || '';
-    } catch (e) {
-        text = 'No response received.';
-    }
-    return text;
+    throw lastError || new Error('All models failed');
 }
 
 async function handleSend() {
     var input = document.getElementById('chat-input');
     if (!input) return;
     var text = (input.value || '').trim();
-    if (!text && !cImgB64) return;
+    if (!text && !cImgB64 && pendingTextFiles.length === 0) return;
 
     if (text.toLowerCase() === '/key' || text.toLowerCase().startsWith('/key ')) {
         var newKey = text.length > 4 ? text.slice(4).trim() : prompt('Enter your Gemini API key (from Google AI Studio):');
@@ -6712,17 +7050,28 @@ async function handleSend() {
         return;
     }
 
-    appendMessage('user', text || '[Image]');
+    var displayText = text || '';
+    if (pendingTextFiles.length) {
+        displayText += (displayText ? '\n\n' : '') + pendingTextFiles.map(function(f) {
+            return '📎 ' + f.name + ' (' + formatBytes(f.content.length) + ')';
+        }).join('\n');
+    }
+    if (!displayText && cImgB64) displayText = '[Image]';
+
+    appendMessage('user', displayText);
     input.value = '';
     autoGrow(input);
 
     var imgB64 = cImgB64;
     var imgMime = cImgMime;
+    var files = pendingTextFiles.slice();
     clearImage();
+    pendingTextFiles = [];
+    renderPendingFiles();
 
     setThinking(true);
     try {
-        var reply = await callGemini(text || 'Describe this image.', imgB64, imgMime);
+        var reply = await callGemini(text || (files.length ? 'Please review the attached file(s).' : 'Describe this image.'), imgB64, imgMime, files);
         appendMessage('ciri', reply);
     } catch (err) {
         appendMessage('ciri', (err && err.message) ? err.message : 'Something went wrong.', true);
@@ -6795,10 +7144,25 @@ window.addEventListener('keyup', function(e) {
 (function setupChatInputKeys() {
     var input = document.getElementById('chat-input');
     if (!input) return;
+
     input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
+        }
+    });
+
+    input.addEventListener('paste', function(e) {
+        var paste = (e.clipboardData || window.clipboardData);
+        if (!paste) return;
+        var text = paste.getData('text/plain') || '';
+        if (text.length >= LONG_PASTE_THRESHOLD) {
+            e.preventDefault();
+            var name = 'pasted-' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '.txt';
+            addTextAsFile(text, name);
+            if (typeof showNotification === 'function') {
+                showNotification('File attached', 'Long paste saved as ' + name);
+            }
         }
     });
 })();
@@ -7074,6 +7438,13 @@ requestAnimationFrame(chkFps);
 
   <p id="auth-message" style="margin-top:18px; text-align:center; font-size:13px; min-height:18px;"></p>
 </dialog>
+
+
+<menu id="message-context-menu" class="message-ctx-menu" role="menu">
+  <li class="ctx-item" id="msg-ctx-copy" role="menuitem"><i class="fas fa-copy"></i> Copy message</li>
+  <li class="ctx-item" id="msg-ctx-copy-selection" role="menuitem" style="display:none;"><i class="fas fa-i-cursor"></i> Copy selection</li>
+  <li class="ctx-item" id="msg-ctx-download" role="menuitem" style="display:none;"><i class="fas fa-download"></i> Download as .txt</li>
+</menu>
 
 </body>
 </html>
