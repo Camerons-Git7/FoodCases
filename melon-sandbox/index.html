@@ -37,16 +37,56 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   var gameInstance = null;
   window.gameInstance = null;
 
-  // Stub Yandex SDK so missing /sdk.js does not break anything
-  window.YaGames = window.YaGames || {
+  // Richer Yandex Games SDK stub (device info + LoadingAPI)
+  window.YaGames = {
     init: function () {
-      return Promise.resolve({
-        getPlayer: function () { return Promise.resolve({ getUniqueID: function () { return "guest"; }, getName: function () { return "Guest"; } }); },
-        adv: { showFullscreenAdv: function () {}, showRewardedVideo: function () {} },
-        features: { LoadingAPI: { ready: function () {} } }
-      });
+      var ysdk = {
+        environment: {
+          app: { id: "260481" },
+          browser: { language: navigator.language || "en" },
+          i18n: { lang: (navigator.language || "en").slice(0, 2), tld: "com" },
+          payload: null
+        },
+        deviceInfo: {
+          type: /Mobi|Android/i.test(navigator.userAgent) ? "mobile" : "desktop",
+          isMobile: function () { return /Mobi|Android/i.test(navigator.userAgent); },
+          isDesktop: function () { return !this.isMobile(); },
+          isTablet: function () { return false; },
+          isTV: function () { return false; }
+        },
+        getPlayer: function () {
+          return Promise.resolve({
+            getUniqueID: function () { return "guest-local"; },
+            getName: function () { return "Guest"; },
+            getMode: function () { return "lite"; },
+            isAuthorized: function () { return false; },
+            getPhoto: function () { return ""; }
+          });
+        },
+        getPayments: function () { return Promise.resolve({ getPurchases: function () { return Promise.resolve([]); }, getCatalog: function () { return Promise.resolve([]); } }); },
+        adv: {
+          showFullscreenAdv: function (opts) { if (opts && opts.callbacks && opts.callbacks.onClose) opts.callbacks.onClose(true); },
+          showRewardedVideo: function (opts) { if (opts && opts.callbacks) { if (opts.callbacks.onRewarded) opts.callbacks.onRewarded(); if (opts.callbacks.onClose) opts.callbacks.onClose(true); } }
+        },
+        features: {
+          LoadingAPI: {
+            ready: function () { console.log("[YaGames stub] LoadingAPI.ready()"); }
+          }
+        },
+        clipboard: { writeText: function (t) { return navigator.clipboard && navigator.clipboard.writeText(t); } },
+        isAvailableMethod: function () { return Promise.resolve(false); },
+        getFlags: function () { return Promise.resolve({}); },
+        on: function () {}, off: function () {}, dispatch: function () {}
+      };
+      window.ysdk = ysdk;
+      console.log("[YaGames stub] init OK — deviceInfo ready");
+      return Promise.resolve(ysdk);
     }
   };
+  // Auto-init so Unity does not wait forever
+  YaGames.init().then(function (ysdk) {
+    try { ysdk.features.LoadingAPI.ready(); } catch (e) {}
+  });
 
   function unityShowBanner(msg, type) {
     var div = document.createElement("div");
@@ -60,6 +100,34 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
       }, 5000);
     }
   }
+
+
+  // Redirect only Ambient.bank (>1MB) to GitHub raw
+  var AMBIENT_GH = "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/melon-sandbox/StreamingAssets/FMODBanks/Ambient.bank";
+  function rewriteAmbientUrl(url) {
+    try {
+      var s = (typeof url === "string") ? url : (url && url.url) ? url.url : String(url);
+      if (/Ambient\.bank(\?|$)/i.test(s) && s.indexOf("raw.githubusercontent.com") === -1) {
+        console.log("[BankProxy] Ambient.bank → GitHub raw");
+        return AMBIENT_GH;
+      }
+    } catch (e) {}
+    return url;
+  }
+  var _fetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    if (typeof input === "string") input = rewriteAmbientUrl(input);
+    else if (input && typeof Request !== "undefined" && input instanceof Request) {
+      var nu = rewriteAmbientUrl(input.url);
+      if (nu !== input.url) input = new Request(nu, input);
+    }
+    return _fetch(input, init);
+  };
+  var _open = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function (method, url) {
+    arguments[1] = rewriteAmbientUrl(url);
+    return _open.apply(this, arguments);
+  };
 
   // --- IndexedDB cache for large build files ---
   var IDB_NAME = "MelonYandexBuildCache";
