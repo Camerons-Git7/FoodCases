@@ -1,0 +1,60 @@
+name: Extract Yandex Melon into melon-sandbox
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+
+jobs:
+  extract-melon:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download and extract zip into melon-sandbox
+        run: |
+          set -euo pipefail
+
+          ZIP_URL="https://github.com/Camerons-Git7/FoodCases/releases/download/files/yandex-melon-sandbox.zip"
+          OUT_DIR="melon-sandbox"
+          TMP_ZIP="yandex-melon-sandbox.zip"
+          TMP_EXTRACT="_extract_tmp"
+
+          rm -rf "$OUT_DIR" "$TMP_EXTRACT"
+          mkdir -p "$TMP_EXTRACT"
+
+          curl -fsSL -o "$TMP_ZIP" "$ZIP_URL"
+          unzip -q "$TMP_ZIP" -d "$TMP_EXTRACT"
+
+          # Count top-level entries (files + dirs) inside the extract root
+          mapfile -t TOP < <(find "$TMP_EXTRACT" -mindepth 1 -maxdepth 1)
+
+          if [ "${#TOP[@]}" -eq 1 ] && [ -d "${TOP[0]}" ]; then
+            # Single folder in the zip → use its contents
+            SRC="${TOP[0]}"
+            echo "Flattening single root folder: $(basename "$SRC")"
+          else
+            # Multiple items (or a single file) → use extract root as-is
+            SRC="$TMP_EXTRACT"
+            echo "Using zip root as-is (${#TOP[@]} top-level entries)"
+          fi
+
+          mkdir -p "$OUT_DIR"
+          # Copy contents (including hidden files) into melon-sandbox/
+          shopt -s dotglob nullglob
+          cp -a "$SRC"/* "$OUT_DIR"/
+          shopt -u dotglob nullglob
+
+          rm -rf "$TMP_EXTRACT" "$TMP_ZIP"
+
+          echo "--- melon-sandbox layout ---"
+          find "$OUT_DIR" -maxdepth 2 -print | head -50
+
+      - name: Commit melon-sandbox (optional)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add melon-sandbox
+          git diff --staged --quiet || git commit -m "Update melon-sandbox from yandex-melon-sandbox.zip"
+          git push
