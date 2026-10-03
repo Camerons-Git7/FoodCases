@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+
+<html lang="en-us">
+<head><!-- CSP removed for self-host -->
+<meta charset="utf-8"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<link rel="shortcut icon" href="TemplateData/favicon.ico"/>
+<link rel="stylesheet" href="TemplateData/style.css"/>
+<!-- Yandex Games SDK -->
+<script>
+        function InitYandexSdk() {
+            console.log('InitYandexSdk Enter');
+            YaGames.init().then(ysdk => {
+                console.log('Yandex SDK initialized');
+                window.ysdk = ysdk;
+            });
+        }
+    </script>
+<script src="/sdk.js" onload="InitYandexSdk()"> </script>
+<script src="./Modules/WebView/unity-webview.js"></script>
+</head>
+<body>
+<div id="unity-container">
+<canvas id="unity-canvas"></canvas>
+<div id="unity-loading-bar">
+<div id="unity-progress-bar-empty">
+<div id="unity-progress-bar-full"></div>
+</div>
+</div>
+<div id="unity-warning"></div>
+</div>
+<script>
+        var container = document.querySelector("#unity-container");
+        var canvas = document.querySelector("#unity-canvas");
+        var loadingBar = document.querySelector("#unity-loading-bar");
+        var progressBarFull = document.querySelector("#unity-progress-bar-full");
+        var warningBanner = document.querySelector("#unity-warning");
+
+        var gameInstance = null;
+
+        function unityShowBanner(msg, type) {
+            function updateBannerVisibility() {
+                warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+            }
+            var div = document.createElement('div');
+            div.innerHTML = msg;
+            warningBanner.appendChild(div);
+            if (type == 'error') div.style = 'background: red; padding: 10px;';
+            else {
+                if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+                setTimeout(function () {
+                    warningBanner.removeChild(div);
+                    updateBannerVisibility();
+                }, 5000);
+            }
+            updateBannerVisibility();
+        }
+
+        
+        // --- IndexedDB build cache (faster 2nd+ loads) ---
+        var IDB_NAME = "MelonYandexBuildCache";
+        var IDB_STORE = "files";
+        var IDB_VER = 1;
+        function idbOpen() {
+          return new Promise(function (resolve, reject) {
+            var req = indexedDB.open(IDB_NAME, IDB_VER);
+            req.onupgradeneeded = function () {
+              var db = req.result;
+              if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+            };
+            req.onsuccess = function () { resolve(req.result); };
+            req.onerror = function () { reject(req.error); };
+          });
+        }
+        function idbGet(key) {
+          return idbOpen().then(function (db) {
+            return new Promise(function (resolve, reject) {
+              var tx = db.transaction(IDB_STORE, "readonly");
+              var req = tx.objectStore(IDB_STORE).get(key);
+              req.onsuccess = function () { resolve(req.result || null); };
+              req.onerror = function () { reject(req.error); };
+            });
+          });
+        }
+        function idbPut(key, blob) {
+          return idbOpen().then(function (db) {
+            return new Promise(function (resolve, reject) {
+              var tx = db.transaction(IDB_STORE, "readwrite");
+              tx.objectStore(IDB_STORE).put(blob, key);
+              tx.oncomplete = function () { resolve(); };
+              tx.onerror = function () { reject(tx.error); };
+            });
+          });
+        }
+        function cachedBuildUrl(url, key) {
+          return idbGet(key).then(function (cached) {
+            if (cached) {
+              console.log("[BuildCache] HIT", key);
+              return URL.createObjectURL(cached);
+            }
+            console.log("[BuildCache] MISS", key, "— downloading…");
+            return fetch(url).then(function (r) {
+              if (!r.ok) throw new Error("HTTP " + r.status + " for " + url);
+              return r.blob();
+            }).then(function (blob) {
+              return idbPut(key, blob).then(function () {
+                console.log("[BuildCache] SAVED", key, "(" + Math.round(blob.size / 1e6) + " MB)");
+                return URL.createObjectURL(blob);
+              });
+            }).catch(function (err) {
+              console.warn("[BuildCache] fallback to network URL for", key, err);
+              return url;
+            });
+          });
+        }
+
+        // Skip early WebGL probe (avoids using a context before Unity)
+        console.log("Skipping early WebGL probe (avoids context limit)");
+        var dataFile = "/137_release-web-37.1_melon_webgl_715ee47518743728602b12ee07f0e9f279aad00c_v37_1.data.unityweb";
+        var buildUrl = "Build";
+        var loaderUrl = buildUrl + "/137_release-web-37.1_melon_webgl_715ee47518743728602b12ee07f0e9f279aad00c_v37_1.loader.js";
+
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            var meta = document.createElement('meta');
+            meta.name = 'viewport';
+            meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+            document.getElementsByTagName('head')[0].appendChild(meta);
+            container.className = "unity-mobile";
+            canvas.className = "unity-mobile";
+        }
+
+        loadingBar.style.display = "block";
+
+        Promise.all([
+          cachedBuildUrl(buildUrl + dataFile, "data.unityweb"),
+          cachedBuildUrl(buildUrl + "/137_release-web-37.1_melon_webgl_715ee47518743728602b12ee07f0e9f279aad00c_v37_1.framework.js.unityweb", "framework.unityweb"),
+          cachedBuildUrl(buildUrl + "/137_release-web-37.1_melon_webgl_715ee47518743728602b12ee07f0e9f279aad00c_v37_1.wasm.unityweb", "wasm.unityweb")
+        ]).then(function (urls) {
+          var config = {
+            dataUrl: urls[0],
+            frameworkUrl: urls[1],
+            codeUrl: urls[2],
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "27 Studio",
+            productName: "Melon Sandbox",
+            productVersion: "37.1",
+            showBanner: unityShowBanner,
+            webglContextAttributes: { preserveDrawingBuffer: false, powerPreference: 2 }
+          };
+          if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            config.devicePixelRatio = 1.2;
+          }
+
+          var script = document.createElement("script");
+          script.src = loaderUrl;
+          script.onload = function () {
+            createUnityInstance(canvas, config, function (progress) {
+              progressBarFull.style.width = 100 * progress + "%";
+            }).then(function (unityInstance) {
+              console.log("UnityInstance Created!", unityInstance);
+              window.unityInstance = unityInstance;
+              gameInstance = unityInstance;
+              loadingBar.style.display = "none";
+            }).catch(function (message) {
+              alert(message);
+            });
+          };
+          document.body.appendChild(script);
+        }).catch(function (e) {
+          console.error(e);
+          alert("Build cache / load failed: " + e);
+        });
+
+    </script>
+<script type="module">
+        import { } from "./Modules/Firebase/firebase-app-compact-9.14.0.js";
+        import { } from "./Modules/Firebase/firebase-analytics-8.10.1.js";
+    </script>
+<script src="./Modules/Lame/lame.all.js"></script>
+<script>
+        window.lamejs = lamejs;
+    </script>
+<script type="module">
+        import { } from "./Modules/JQuery/jquery-3.1.0.min.js";
+    </script>
+<style>
+    #fb_popup_overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 9998;
+        display: none;
+    }
+    
+    #fb_popup_container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+    
+    .modal {
+        background-color: #333;
+        border: 4px solid white;
+        width: 360px;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        user-select: none;
+    }
+    
+    .modal-header {
+        color: white;
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        user-select: none;
+        pointer-events: none;
+    }
+    
+    .modal-content {
+        color: white;
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 20px;
+        user-select: none;
+        pointer-events: none;
+    }
+    
+    .modal-buttons {
+        display: flex;
+        justify-content: space-between;
+        user-select: none;
+    }
+    
+    .modal-button {
+        background-color: #333;
+        color: white;
+        border: 2px solid white;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        flex: 1;
+        margin: 0 5px;
+        transition: background-color 0.3s;
+        user-select: none;
+    }
+    
+    .modal-button:hover {
+        background-color: #444;
+    }
+    
+    .select-button {
+        margin-right: 20px;
+    }
+    
+    .close-button {
+        margin-left: 5px;
+    }
+    
+    .file-input {
+        display: none;
+    }
+    
+    .disable-selection {
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+    
+    .no-context-menu {
+        -webkit-touch-callout: none;
+    }
+</style>
+<div id="fb_popup_overlay" class="disable-selection no-context-menu"></div>
+<div id="fb_popup_container" class="disable-selection no-context-menu">
+<div class="modal">
+<!-- <div id="fb_popup_header_title" class="modal-header">Заголовок</div> -->
+<div id="fb_popup_description_title" class="modal-content">Описание</div>
+<div class="modal-buttons">
+<input type="file" id="fileInput" class="file-input" onchange="fbLoadFiles(event.target.files); return false;"/>
+<button id="fb_popup_select_button_title" class="modal-button select-button" onclick="document.getElementById('fileInput').click()">Select</button>
+<button id="fb_popup_close_button_title" class="modal-button close-button" onclick="requestCloseFileBrowserForOpen()">Close</button>
+</div>
+</div>
+</div>
+<script type="text/javascript">
+    // Инициализация при загрузке
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeFBLibrary();
+        
+        // Защита от контекстного меню
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Защита от выделения текста
+        document.addEventListener('selectstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+    });
+
+    function callFBFunctionByName(functionName, parameter) {
+        switch (functionName) {
+            case "initializeFBLibrary":
+                initializeFBLibrary();
+                break;
+            case "openFileBrowserForLoad":
+                openFileBrowserForLoad(parameter);
+                break;
+            case "cleanupFB":
+                cleanupFB();
+                break;
+            case "closeFileBrowserForOpen":
+                closeFileBrowserForOpen();
+                break;
+            case "saveFile":
+                saveFileFB(parameter);
+                break;
+            case "setLocalization":
+                setLocalizationFB(parameter);
+                break;
+        }
+    }
+    document.callFBFunctionByName = callFBFunctionByName;
+
+    function initializeFBLibrary() {
+        document.fbPopup = document.getElementById("fb_popup_container");
+        document.fbOverlay = document.getElementById("fb_popup_overlay");
+        document.fbOpenFilePopupInput = document.getElementById("fileInput");
+
+        document.fbStorage = {
+            initialized: true,
+            loadedFiles: {},
+            dataPointers: []
+        };
+    }
+
+    function openFileBrowserForLoad(parameters) {
+        if (!document.fbStorage || document.fbStorage.initialized !== true)
+            return;
+
+        var typesFilter = parameters[0];
+        var isMultipleSelection = parameters[1] === 1;
+        var isFolder = parameters[2] === 1;
+
+        // Сброс предыдущих атрибутов
+        document.fbOpenFilePopupInput.removeAttribute('multiple');
+        document.fbOpenFilePopupInput.removeAttribute('webkitdirectory');
+
+        if (isMultipleSelection && !isFolder) {
+            document.fbOpenFilePopupInput.setAttribute('multiple', '');
+        }
+
+        if (isFolder) {
+            document.fbOpenFilePopupInput.setAttribute('webkitdirectory', '');
+        }
+
+        document.fbOpenFilePopupInput.accept = typesFilter;
+        document.fbOverlay.style.display = "block";
+        document.fbPopup.style.display = "flex";
+    }
+
+    function closeFileBrowserForOpen() {
+        if (!document.fbStorage || document.fbStorage.initialized !== true)
+            return;
+        document.fbOverlay.style.display = "none";
+        document.fbPopup.style.display = "none";
+    }
+
+    function cleanupFB() {
+        if (!document.fbStorage || document.fbStorage.initialized !== true)
+            return;
+        document.fbStorage.loadedFiles = {};
+        document.fbStorage.dataPointers = [];
+    }
+
+    function saveFileFB(fileData){
+        if(document.fbStorage.initialized !== true)
+            return;
+
+        let fileInfo = {
+            status: true,
+            message: "",
+            name: fileData.name
+        };
+
+        try{
+            var contentType = 'application/octet-stream';
+            var a = document.createElement('a');
+            var blob = new Blob([fbBase64ToBytesArray(fileData.data)], {
+                'type': contentType
+            });
+            a.href = window.URL.createObjectURL(blob);
+            a.download = fileData.name;
+
+            if (document.createEvent) {
+                var event = document.createEvent('MouseEvents');
+                event.initEvent('click', true, true);
+                a.dispatchEvent(event);
+            } else {
+                a.click();
+            }
+
+            gameInstance.SendMessage(libraryHandlerObjectName, "HandleFileSaved", JSON.stringify(fileInfo));
+        }
+        catch(ex){
+            fileInfo.status = false;
+            fileInfo.message = ex.message;
+
+            gameInstance.SendMessage(libraryHandlerObjectName, "HandleFileSaved", JSON.stringify(fileInfo));
+        }
+    }
+
+    const libraryHandlerObjectName = "[FGFileBrowser]";
+
+    function fbLoadFiles(files) {
+        gameInstance.SendMessage(libraryHandlerObjectName, 'SetAmountOfFilesToBeLoaded', Array.from(files).filter(item => !item.name.endsWith(".DS_Store")).length);
+
+        for (var i = 0, f; f = files[i]; i++) {
+            // ignore Mac hidden file
+            if (f.name.endsWith(".DS_Store"))
+                continue;
+
+            var reader = new FileReader();
+            reader.onload = (function (file) {
+                return function (fileloadEvent) {
+                    let loadedFileInfo = fileloadEvent.target.result;
+            
+                    document.fbStorage.loadedFiles[file.name] = {
+                        info: loadedFileInfo
+                    };
+
+                    let extensionSplit = file.name.split('.');
+                    let extension = extensionSplit[extensionSplit.length - 1];
+                    let name = file.name.replace(extension, "");
+                    name = name.substring(0, name.length - 1);
+
+                    let loadedFile = {
+                        fullName: file.name,
+                        name: name,
+                        path: "unavailable-in-web",
+                        length: loadedFileInfo.byteLength,
+                        size: file.size,
+                        extension: extension
+                    };
+
+                    gameInstance.SendMessage(libraryHandlerObjectName, 'HandleLoadedFile', JSON.stringify(loadedFile));
+                }
+            })(f);
+            
+            reader.readAsArrayBuffer(f);
+        }
+        document.fbOpenFilePopupInput.value = "";
+    }
+
+    function requestCloseFileBrowserForOpen() {
+        gameInstance.SendMessage(libraryHandlerObjectName, "CloseFileBrowserForOpen");
+    }
+
+    function fbBase64ToBytesArray(base64) {
+        var binary_string = window.atob(base64);
+        var len = binary_string.length;
+        var bytes = new Uint8Array(len);
+        for (var i = 0; i < len; i++) {
+            bytes[i] = binary_string.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+
+    function setLocalizationFB(parameter){
+        switch(parameter.key){
+            case "HEADER_TITLE":
+                //document.getElementById("fb_popup_header_title").innerHTML = parameter.value;
+                break;
+            case "DESCRIPTION_TEXT":
+                document.getElementById("fb_popup_description_title").innerHTML = parameter.value;
+                break;
+            case "SELECT_BUTTON_CONTENT":
+                document.getElementById("fb_popup_select_button_title").innerHTML = parameter.value;
+                break;
+            case "CLOSE_BUTTON_CONTENT":
+                document.getElementById("fb_popup_close_button_title").innerHTML = parameter.value;
+                break;
+        }
+    }
+</script>
+</body>
+</html>
