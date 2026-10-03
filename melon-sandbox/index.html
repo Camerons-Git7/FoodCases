@@ -80,6 +80,17 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
       };
       window.ysdk = ysdk;
       console.log("[YaGames stub] init OK — deviceInfo ready");
+
+  // Globals some Yandex Unity plugins poll
+  window.yandexGamesDeviceInfo = {
+    type: /Mobi|Android/i.test(navigator.userAgent) ? "mobile" : "desktop",
+    isMobile: /Mobi|Android/i.test(navigator.userAgent),
+    isDesktop: !/Mobi|Android/i.test(navigator.userAgent),
+    isTablet: false,
+    isTV: false
+  };
+  window.__YANDEX_DEVICE_INFO__ = window.yandexGamesDeviceInfo;
+
       return Promise.resolve(ysdk);
     }
   };
@@ -102,32 +113,84 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
   }
 
 
-  // Redirect only Ambient.bank (>1MB) to GitHub raw
-  var AMBIENT_GH = "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/melon-sandbox/StreamingAssets/FMODBanks/Ambient.bank";
-  function rewriteAmbientUrl(url) {
+
+
+  // Proxy large assets: GitHub raw for >1MB host limit, Yandex CDN fallback for other aa/
+  var YANDEX_CDN = "https://app-260481.games.s3.yandex.net/260481/q56hhww8z952yjzeuv17arf157206b8s_brotli";
+  var GH_ROOT = "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/melon-sandbox";
+  // Bundles that exceed ~1MB — always use GitHub raw
+  var GH_BUNDLES = {
+    "endlesscity_assets_all_d472b5f4a680fb84ec4ee79ab13c91c0.bundle": 1,
+    "eventscommon_assets_all_da338952214864831d30a3662b504f11.bundle": 1,
+    "fishingevent_assets_all_c89eb5efcd35d9b2a2a41de3925f5544.bundle": 1,
+    "Ambient.bank": 1
+  };
+  function rewriteAssetUrl(url) {
     try {
-      var s = (typeof url === "string") ? url : (url && url.url) ? url.url : String(url);
-      if (/Ambient\.bank(\?|$)/i.test(s) && s.indexOf("raw.githubusercontent.com") === -1) {
-        console.log("[BankProxy] Ambient.bank → GitHub raw");
-        return AMBIENT_GH;
+      var s = (typeof url === "string") ? url : (url && url.url) ? String(url.url) : String(url);
+      if (!s || s.indexOf("blob:") === 0) return url;
+      if (s.indexOf("raw.githubusercontent.com") !== -1 || s.indexOf("yandex.net") !== -1) return url;
+
+      // Ambient.bank
+      if (/Ambient\.bank(\?|$)/i.test(s)) {
+        console.log("[AssetProxy] Ambient.bank → GitHub");
+        return GH_ROOT + "/StreamingAssets/FMODBanks/Ambient.bank";
       }
-    } catch (e) {}
+
+      // Known large bundles by filename
+      for (var name in GH_BUNDLES) {
+        if (s.indexOf(name) !== -1) {
+          if (name.indexOf(".bank") !== -1) continue; // handled above
+          console.log("[AssetProxy]", name, "→ GitHub");
+          return GH_ROOT + "/StreamingAssets/aa/WebGL/" + name;
+        }
+      }
+
+      // Any StreamingAssets/aa/ path
+      var m = s.match(/StreamingAssets\/aa\/.*/i);
+      if (m) {
+        var path = m[0].replace(/\\/g, "/");
+        if (/StreamingAssets\/aa\/[^/]+\.bundle/i.test(path) && path.indexOf("/WebGL/") === -1) {
+          path = path.replace(/StreamingAssets\/aa\//i, "StreamingAssets/aa/WebGL/");
+        }
+        // Large named bundles → GH
+        for (var n in GH_BUNDLES) {
+          if (path.indexOf(n) !== -1 && n.indexOf(".bundle") !== -1) {
+            console.log("[AssetProxy]", n, "→ GitHub");
+            return GH_ROOT + "/StreamingAssets/aa/WebGL/" + n;
+          }
+        }
+        console.log("[AssetProxy] → Yandex", path);
+        return YANDEX_CDN + "/" + path;
+      }
+
+      m = s.match(/([a-z0-9_]+_assets_all_[a-f0-9]+\.bundle|[a-z0-9_]+_scenes_all_[a-f0-9]+\.bundle)$/i);
+      if (m) {
+        if (GH_BUNDLES[m[1]]) {
+          console.log("[AssetProxy]", m[1], "→ GitHub");
+          return GH_ROOT + "/StreamingAssets/aa/WebGL/" + m[1];
+        }
+        console.log("[AssetProxy] bundle → Yandex", m[1]);
+        return YANDEX_CDN + "/StreamingAssets/aa/WebGL/" + m[1];
+      }
+    } catch (e) { console.warn("[AssetProxy]", e); }
     return url;
   }
   var _fetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
-    if (typeof input === "string") input = rewriteAmbientUrl(input);
+    if (typeof input === "string") input = rewriteAssetUrl(input);
     else if (input && typeof Request !== "undefined" && input instanceof Request) {
-      var nu = rewriteAmbientUrl(input.url);
+      var nu = rewriteAssetUrl(input.url);
       if (nu !== input.url) input = new Request(nu, input);
     }
     return _fetch(input, init);
   };
   var _open = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function (method, url) {
-    arguments[1] = rewriteAmbientUrl(url);
+    arguments[1] = rewriteAssetUrl(url);
     return _open.apply(this, arguments);
   };
+
 
   // --- IndexedDB cache for large build files ---
   var IDB_NAME = "MelonYandexBuildCache";
