@@ -1,188 +1,188 @@
 <!DOCTYPE html>
-
 <html lang="en-us">
-<head><!-- CSP removed for self-host -->
+<head>
 <meta charset="utf-8"/>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes"/>
 <link rel="shortcut icon" href="TemplateData/favicon.ico"/>
 <link rel="stylesheet" href="TemplateData/style.css"/>
-<!-- Yandex Games SDK -->
-<script>
-        function InitYandexSdk() {
-            console.log('InitYandexSdk Enter');
-            YaGames.init().then(ysdk => {
-                console.log('Yandex SDK initialized');
-                window.ysdk = ysdk;
-            });
-        }
-    </script>
-<script src="/sdk.js" onload="InitYandexSdk()"> </script>
+<style>
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #231F20; }
+#unity-container { position: fixed; inset: 0; width: 100vw; height: 100vh; }
+#unity-canvas { width: 100%; height: 100%; display: block; background: #231F20; }
+#unity-loading-bar { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+#unity-progress-bar-empty { width: 141px; height: 18px; margin-top: 10px; background: url('TemplateData/progress-bar-empty-dark.png') no-repeat center; }
+#unity-progress-bar-full { width: 0%; height: 18px; background: url('TemplateData/progress-bar-full-dark.png') no-repeat center; }
+#unity-warning { position: absolute; left: 50%; top: 5%; transform: translateX(-50%); }
+</style>
 <script src="./Modules/WebView/unity-webview.js"></script>
 </head>
 <body>
 <div id="unity-container">
-<canvas id="unity-canvas"></canvas>
-<div id="unity-loading-bar">
-<div id="unity-progress-bar-empty">
-<div id="unity-progress-bar-full"></div>
-</div>
-</div>
-<div id="unity-warning"></div>
+  <canvas id="unity-canvas" tabindex="-1"></canvas>
+  <div id="unity-loading-bar">
+    <div id="unity-progress-bar-empty">
+      <div id="unity-progress-bar-full"></div>
+    </div>
+  </div>
+  <div id="unity-warning"></div>
 </div>
 <script>
-        var container = document.querySelector("#unity-container");
-        var canvas = document.querySelector("#unity-canvas");
-        var loadingBar = document.querySelector("#unity-loading-bar");
-        var progressBarFull = document.querySelector("#unity-progress-bar-full");
-        var warningBanner = document.querySelector("#unity-warning");
+(function () {
+  var container = document.querySelector("#unity-container");
+  var canvas = document.querySelector("#unity-canvas");
+  var loadingBar = document.querySelector("#unity-loading-bar");
+  var progressBarFull = document.querySelector("#unity-progress-bar-full");
+  var warningBanner = document.querySelector("#unity-warning");
+  var gameInstance = null;
+  window.gameInstance = null;
 
-        var gameInstance = null;
+  // Stub Yandex SDK so missing /sdk.js does not break anything
+  window.YaGames = window.YaGames || {
+    init: function () {
+      return Promise.resolve({
+        getPlayer: function () { return Promise.resolve({ getUniqueID: function () { return "guest"; }, getName: function () { return "Guest"; } }); },
+        adv: { showFullscreenAdv: function () {}, showRewardedVideo: function () {} },
+        features: { LoadingAPI: { ready: function () {} } }
+      });
+    }
+  };
 
-        function unityShowBanner(msg, type) {
-            function updateBannerVisibility() {
-                warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-            }
-            var div = document.createElement('div');
-            div.innerHTML = msg;
-            warningBanner.appendChild(div);
-            if (type == 'error') div.style = 'background: red; padding: 10px;';
-            else {
-                if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-                setTimeout(function () {
-                    warningBanner.removeChild(div);
-                    updateBannerVisibility();
-                }, 5000);
-            }
-            updateBannerVisibility();
-        }
+  function unityShowBanner(msg, type) {
+    var div = document.createElement("div");
+    div.innerHTML = msg;
+    warningBanner.appendChild(div);
+    if (type === "error") div.style = "background:red;padding:10px;color:#fff;";
+    else {
+      if (type === "warning") div.style = "background:yellow;padding:10px;";
+      setTimeout(function () {
+        if (div.parentNode) warningBanner.removeChild(div);
+      }, 5000);
+    }
+  }
 
-        
-        // --- IndexedDB build cache (faster 2nd+ loads) ---
-        var IDB_NAME = "MelonYandexBuildCache";
-        var IDB_STORE = "files";
-        var IDB_VER = 1;
-        function idbOpen() {
-          return new Promise(function (resolve, reject) {
-            var req = indexedDB.open(IDB_NAME, IDB_VER);
-            req.onupgradeneeded = function () {
-              var db = req.result;
-              if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
-            };
-            req.onsuccess = function () { resolve(req.result); };
-            req.onerror = function () { reject(req.error); };
-          });
-        }
-        function idbGet(key) {
-          return idbOpen().then(function (db) {
-            return new Promise(function (resolve, reject) {
-              var tx = db.transaction(IDB_STORE, "readonly");
-              var req = tx.objectStore(IDB_STORE).get(key);
-              req.onsuccess = function () { resolve(req.result || null); };
-              req.onerror = function () { reject(req.error); };
-            });
-          });
-        }
-        function idbPut(key, blob) {
-          return idbOpen().then(function (db) {
-            return new Promise(function (resolve, reject) {
-              var tx = db.transaction(IDB_STORE, "readwrite");
-              tx.objectStore(IDB_STORE).put(blob, key);
-              tx.oncomplete = function () { resolve(); };
-              tx.onerror = function () { reject(tx.error); };
-            });
-          });
-        }
-        function cachedBuildUrl(url, key) {
-          return idbGet(key).then(function (cached) {
-            if (cached) {
-              console.log("[BuildCache] HIT", key);
-              return URL.createObjectURL(cached);
-            }
-            console.log("[BuildCache] MISS", key, "— downloading…");
-            return fetch(url).then(function (r) {
-              if (!r.ok) throw new Error("HTTP " + r.status + " for " + url);
-              return r.blob();
-            }).then(function (blob) {
-              return idbPut(key, blob).then(function () {
-                console.log("[BuildCache] SAVED", key, "(" + Math.round(blob.size / 1e6) + " MB)");
-                return URL.createObjectURL(blob);
-              });
-            }).catch(function (err) {
-              console.warn("[BuildCache] fallback to network URL for", key, err);
-              return url;
-            });
-          });
-        }
+  // --- IndexedDB cache for large build files ---
+  var IDB_NAME = "MelonYandexBuildCache";
+  var IDB_STORE = "files";
+  var IDB_VER = 2;
 
-        // Skip early WebGL probe (avoids using a context before Unity)
-        console.log("Skipping early WebGL probe (avoids context limit)");
-        var dataFile = "/137_release-web-37.1_melon_webgl_715ee47518743728602b12ee07f0e9f279aad00c_v37_1.data.unityweb";
-        var buildUrl = "Build";
-        var loaderUrl = buildUrl + "/137_release-web-37.1_melon_webgl_715ee47518743728602b12ee07f0e9f279aad00c_v37_1.loader.js";
-
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-            var meta = document.createElement('meta');
-            meta.name = 'viewport';
-            meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-            document.getElementsByTagName('head')[0].appendChild(meta);
-            container.className = "unity-mobile";
-            canvas.className = "unity-mobile";
-        }
-
-        loadingBar.style.display = "block";
-
-        Promise.all([
-          cachedBuildUrl(buildUrl + dataFile, "data.unityweb"),
-          cachedBuildUrl(buildUrl + "/137_release-web-37.1_melon_webgl_715ee47518743728602b12ee07f0e9f279aad00c_v37_1.framework.js.unityweb", "framework.unityweb"),
-          cachedBuildUrl(buildUrl + "/137_release-web-37.1_melon_webgl_715ee47518743728602b12ee07f0e9f279aad00c_v37_1.wasm.unityweb", "wasm.unityweb")
-        ]).then(function (urls) {
-          var config = {
-            dataUrl: urls[0],
-            frameworkUrl: urls[1],
-            codeUrl: urls[2],
-            streamingAssetsUrl: "StreamingAssets",
-            companyName: "27 Studio",
-            productName: "Melon Sandbox",
-            productVersion: "37.1",
-            showBanner: unityShowBanner,
-            webglContextAttributes: { preserveDrawingBuffer: false, powerPreference: 2 }
-          };
-          if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-            config.devicePixelRatio = 1.2;
-          }
-
-          var script = document.createElement("script");
-          script.src = loaderUrl;
-          script.onload = function () {
-            createUnityInstance(canvas, config, function (progress) {
-              progressBarFull.style.width = 100 * progress + "%";
-            }).then(function (unityInstance) {
-              console.log("UnityInstance Created!", unityInstance);
-              window.unityInstance = unityInstance;
-              gameInstance = unityInstance;
-              loadingBar.style.display = "none";
-            }).catch(function (message) {
-              alert(message);
-            });
-          };
-          document.body.appendChild(script);
-        }).catch(function (e) {
-          console.error(e);
-          alert("Build cache / load failed: " + e);
+  function idbOpen() {
+    return new Promise(function (resolve, reject) {
+      var req = indexedDB.open(IDB_NAME, IDB_VER);
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+      };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+    });
+  }
+  function idbGet(key) {
+    return idbOpen().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(IDB_STORE, "readonly");
+        var r = tx.objectStore(IDB_STORE).get(key);
+        r.onsuccess = function () { resolve(r.result || null); };
+        r.onerror = function () { reject(r.error); };
+      });
+    });
+  }
+  function idbPut(key, blob) {
+    return idbOpen().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(IDB_STORE, "readwrite");
+        tx.objectStore(IDB_STORE).put(blob, key);
+        tx.oncomplete = function () { resolve(); };
+        tx.onerror = function () { reject(tx.error); };
+      });
+    });
+  }
+  function cachedBuildUrl(url, key, minBytes) {
+    minBytes = minBytes || 1000;
+    return idbGet(key).then(function (cached) {
+      if (cached && cached.size >= minBytes) {
+        console.log("[BuildCache] HIT", key, "(" + Math.round(cached.size / 1e6 * 10) / 10 + " MB)");
+        return URL.createObjectURL(cached);
+      }
+      if (cached) console.warn("[BuildCache] drop bad cache", key, cached.size + " bytes");
+      console.log("[BuildCache] MISS", key, "— fetching", url);
+      return fetch(url).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status + " for " + url);
+        return r.blob();
+      }).then(function (blob) {
+        if (blob.size < minBytes) throw new Error("Too small (" + blob.size + " B) — not a real build file: " + url);
+        return idbPut(key, blob).then(function () {
+          console.log("[BuildCache] SAVED", key, "(" + Math.round(blob.size / 1e6 * 10) / 10 + " MB)");
+          return URL.createObjectURL(blob);
         });
+      });
+    });
+  }
 
-    </script>
-<script type="module">
-        import { } from "./Modules/Firebase/firebase-app-compact-9.14.0.js";
-        import { } from "./Modules/Firebase/firebase-analytics-8.10.1.js";
-    </script>
+  var PREFIX = "137_release-web-37.1_melon_webgl_715ee47518743728602b12ee07f0e9f279aad00c_v37_1";
+  var GH = "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/melon-sandbox/Build";
+  var loaderUrl = "Build/" + PREFIX + ".loader.js";
+
+  if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+    container.className = "unity-mobile";
+    canvas.className = "unity-mobile";
+  }
+
+  loadingBar.style.display = "block";
+  console.log("Skipping early WebGL probe (avoids context limit)");
+
+  // data + wasm from GitHub raw (>1MB); framework local
+  Promise.all([
+    cachedBuildUrl(GH + "/" + PREFIX + ".data.unityweb", "data.unityweb", 1e6),
+    cachedBuildUrl("Build/" + PREFIX + ".framework.js.unityweb", "framework.unityweb", 10000),
+    cachedBuildUrl(GH + "/" + PREFIX + ".wasm.unityweb", "wasm.unityweb", 1e6)
+  ]).then(function (urls) {
+    var config = {
+      dataUrl: urls[0],
+      frameworkUrl: urls[1],
+      codeUrl: urls[2],
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "27 Studio",
+      productName: "Melon Sandbox",
+      productVersion: "37.1",
+      showBanner: unityShowBanner,
+      webglContextAttributes: { preserveDrawingBuffer: false, powerPreference: 2 }
+    };
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      config.devicePixelRatio = 1.2;
+    }
+
+    var script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = function () {
+      createUnityInstance(canvas, config, function (progress) {
+        progressBarFull.style.width = 100 * progress + "%";
+      }).then(function (unityInstance) {
+        console.log("UnityInstance Created!", unityInstance);
+        window.unityInstance = unityInstance;
+        window.gameInstance = unityInstance;
+        gameInstance = unityInstance;
+        loadingBar.style.display = "none";
+      }).catch(function (message) {
+        console.error(message);
+        alert(message);
+      });
+    };
+    script.onerror = function () {
+      alert("Failed to load loader.js — make sure Build/" + PREFIX + ".loader.js is the decompressed JS fix, not gzip.");
+    };
+    document.body.appendChild(script);
+  }).catch(function (e) {
+    console.error(e);
+    alert("Build load failed: " + e + "\n\nClear IndexedDB MelonYandexBuildCache and check GitHub raw URLs.");
+  });
+})();
+</script>
 <script src="./Modules/Lame/lame.all.js"></script>
-<script>
-        window.lamejs = lamejs;
-    </script>
-<script type="module">
-        import { } from "./Modules/JQuery/jquery-3.1.0.min.js";
-    </script>
+<script>try { window.lamejs = lamejs; } catch (e) { console.warn("lamejs not available", e); }</script>
+<script src="./Modules/JQuery/jquery-3.1.0.min.js"></script>
+<script src="./Modules/Firebase/firebase-app-compact-9.14.0.js"></script>
+<script src="./Modules/Firebase/firebase-analytics-8.10.1.js"></script>
 <style>
     #fb_popup_overlay {
         position: fixed;
