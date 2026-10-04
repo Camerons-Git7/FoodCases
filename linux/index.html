@@ -31,21 +31,30 @@ allow="fullscreen"
 <script>
 const COMPUTE_HOST="https://camerons-laptop.taila7ae01.ts.net:8443";
 
-const cores=Math.max(1,navigator.hardwareConcurrency||1);
+const cores=Math.max(
+    1,
+    navigator.hardwareConcurrency||1
+);
 
 const targetWorkers=Math.max(
-1,
-Math.floor(cores*0.5)
+    1,
+    Math.floor(cores*0.5)
 );
 
 const workerCode=`
 self.onmessage=function(event){
 
-    if(event.data.type!=="compute") return;
+    if(event.data.type!=="compute"){
+        return;
+    }
 
     let value=0;
 
-    for(let i=0;i<event.data.iterations;i++){
+    for(
+        let i=0;
+        i<event.data.iterations;
+        i++
+    ){
         value+=Math.sqrt(i);
     }
 
@@ -59,17 +68,20 @@ function createWorker(){
 
     const blob=new Blob(
         [workerCode],
-        {type:"application/javascript"}
+        {
+            type:"application/javascript"
+        }
     );
 
-    return new Worker(
+    const worker=new Worker(
         URL.createObjectURL(blob)
     );
+
+    return worker;
 }
 
 let workers=[];
 let running=true;
-let retryDelay=1000;
 
 async function getJob(){
 
@@ -80,17 +92,25 @@ async function getJob(){
             "/job?time="+
             Date.now(),
             {
+                method:"GET",
                 cache:"no-store"
             }
         );
 
         if(!response.ok){
-            throw new Error("HTTP "+response.status);
+            throw new Error(
+                "HTTP "+response.status
+            );
         }
 
         return await response.json();
 
     }catch(error){
+
+        console.log(
+            "Compute connection error:",
+            error
+        );
 
         return null;
     }
@@ -100,21 +120,44 @@ async function sendResult(data){
 
     try{
 
-        await fetch(
-            COMPUTE_HOST+"/result",
+        const response=await fetch(
+            COMPUTE_HOST+
+            "/result?time="+
+            Date.now(),
             {
                 method:"POST",
                 headers:{
-                    "Content-Type":"application/json"
+                    "Content-Type":
+                        "application/json"
                 },
+                cache:"no-store",
                 body:JSON.stringify(data)
             }
         );
 
-    }catch(error){}
+        if(!response.ok){
+            throw new Error(
+                "Result HTTP "+
+                response.status
+            );
+        }
+
+    }catch(error){
+
+        console.log(
+            "Result upload error:",
+            error
+        );
+    }
 }
 
-async function workerLoop(worker){
+async function workerLoop(worker,index){
+
+    console.log(
+        "Compute worker",
+        index,
+        "started"
+    );
 
     while(running){
 
@@ -124,52 +167,106 @@ async function workerLoop(worker){
             break;
         }
 
-        if(!response || !response.job){
+        if(
+            !response ||
+            !response.job
+        ){
 
             await new Promise(
-                resolve=>setTimeout(
-                    resolve,
-                    retryDelay
-                )
+                resolve=>{
+                    setTimeout(
+                        resolve,
+                        1000
+                    );
+                }
             );
 
             continue;
         }
 
-        retryDelay=1000;
-
         const job=response.job;
+
+        console.log(
+            "Worker",
+            index,
+            "received job",
+            job.id
+        );
 
         const started=performance.now();
 
-        const result=await new Promise(resolve=>{
+        const result=await new Promise(
+            resolve=>{
 
-            worker.onmessage=function(event){
+                worker.onmessage=function(
+                    event
+                ){
 
-                resolve(event.data.value);
+                    resolve(
+                        event.data.value
+                    );
+                };
 
-            };
+                worker.onerror=function(
+                    error
+                ){
 
-            worker.postMessage({
-                type:"compute",
-                iterations:job.iterations
-            });
+                    console.error(
+                        "Worker error:",
+                        error
+                    );
 
-        });
+                    resolve(null);
+                };
+
+                worker.postMessage({
+                    type:"compute",
+                    iterations:
+                        job.iterations
+                });
+            }
+        );
 
         const milliseconds=
-            performance.now()-started;
+            performance.now()-
+            started;
+
+        if(result===null){
+            continue;
+        }
 
         await sendResult({
+
             id:job.id,
+
             result:result,
-            milliseconds:milliseconds,
-            viewerThreads:cores
+
+            milliseconds:
+                milliseconds,
+
+            viewerThreads:
+                cores
         });
+
+        console.log(
+            "Worker",
+            index,
+            "completed job in",
+            Math.round(milliseconds),
+            "ms"
+        );
     }
 }
 
 function startCompute(){
+
+    console.log(
+        "Starting browser compute:",
+        targetWorkers,
+        "workers on",
+        cores,
+        "CPU threads"
+    );
 
     for(
         let i=0;
@@ -181,35 +278,37 @@ function startCompute(){
 
         workers.push(worker);
 
-        workerLoop(worker);
+        workerLoop(
+            worker,
+            i+1
+        );
     }
 }
 
-window.addEventListener("load",()=>{
+startCompute();
 
-    const frame=
-        document.querySelector("iframe");
+document.documentElement
+    .requestFullscreen?.()
+    .catch(()=>{});
 
-    document.documentElement
-        .requestFullscreen?.()
-        .catch(()=>{});
+const frame=
+    document.querySelector("iframe");
 
-    frame.addEventListener(
-        "load",
-        ()=>{
-            frame.contentWindow?.focus();
-        }
-    );
-
-    startCompute();
-});
+frame.addEventListener(
+    "load",
+    ()=>{
+        frame.contentWindow?.focus();
+    }
+);
 
 window.addEventListener(
     "beforeunload",
     ()=>{
         running=false;
 
-        for(const worker of workers){
+        for(
+            const worker of workers
+        ){
             worker.terminate();
         }
 
