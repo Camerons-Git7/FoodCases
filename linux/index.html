@@ -5,520 +5,234 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Remote Desktop</title>
 <style>
-* {
-    box-sizing: border-box;
-}
-
-html,
-body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #000;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
-}
-
-#app {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    background: #000;
-}
-
-#setup {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background:
-        radial-gradient(circle at 50% 20%, rgba(255,255,255,.12), transparent 40%),
-        #0b0b0f;
-}
-
-.setup-card {
-    width: min(460px, 100%);
-    padding: 30px;
-    border-radius: 28px;
-    background: rgba(255,255,255,.08);
-    border: 1px solid rgba(255,255,255,.12);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-    color: white;
-    box-shadow: 0 25px 80px rgba(0,0,0,.45);
-}
-
-.setup-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255,255,255,.12);
-    font-size: 30px;
-    margin-bottom: 20px;
-}
-
-.setup-card h1 {
-    margin: 0 0 8px;
-    font-size: 28px;
-    font-weight: 700;
-}
-
-.setup-card p {
-    margin: 0 0 22px;
-    color: rgba(255,255,255,.65);
-    line-height: 1.5;
-}
-
-#endpoint {
-    width: 100%;
-    height: 50px;
-    border: 1px solid rgba(255,255,255,.15);
-    border-radius: 14px;
-    background: rgba(0,0,0,.3);
-    color: white;
-    outline: none;
-    padding: 0 15px;
-    font-size: 15px;
-}
-
-#endpoint:focus {
-    border-color: rgba(255,255,255,.4);
-}
-
-#connectButton {
-    width: 100%;
-    height: 50px;
-    margin-top: 12px;
-    border: 0;
-    border-radius: 14px;
-    background: white;
-    color: #111;
-    font-size: 15px;
-    font-weight: 650;
-    cursor: pointer;
-}
-
-#connectButton:hover {
-    background: #e9e9e9;
-}
-
-#status {
-    min-height: 20px;
-    margin-top: 14px;
-    text-align: center;
-    color: rgba(255,255,255,.55);
-    font-size: 13px;
-}
-
-#desktop {
-    position: absolute;
-    inset: 0;
-    display: none;
-    background: #000;
-}
-
-#screen {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #000;
-}
-
-#toolbar {
-    position: absolute;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 8px;
-    padding: 8px;
-    border-radius: 18px;
-    background: rgba(20,20,24,.75);
-    border: 1px solid rgba(255,255,255,.12);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    opacity: 0;
-    transition: opacity .2s ease;
-    z-index: 20;
-}
-
-#toolbar:hover,
-#desktop:focus-within #toolbar {
-    opacity: 1;
-}
-
-.tool-button {
-    height: 38px;
-    padding: 0 13px;
-    border: 0;
-    border-radius: 12px;
-    background: rgba(255,255,255,.1);
-    color: white;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-.tool-button:hover {
-    background: rgba(255,255,255,.18);
-}
-
-#connectionStatus {
-    position: absolute;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 8px 13px;
-    border-radius: 12px;
-    background: rgba(20,20,24,.78);
-    border: 1px solid rgba(255,255,255,.1);
-    color: rgba(255,255,255,.7);
-    font-size: 12px;
-    pointer-events: none;
-    z-index: 20;
-}
-
-#passwordOverlay {
-    position: absolute;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background: rgba(0,0,0,.65);
-    z-index: 50;
-}
-
-.password-card {
-    width: min(360px, 100%);
-    padding: 24px;
-    border-radius: 22px;
-    background: rgba(30,30,35,.95);
-    border: 1px solid rgba(255,255,255,.12);
-    color: white;
-}
-
-.password-card h2 {
-    margin: 0 0 8px;
-    font-size: 21px;
-}
-
-.password-card p {
-    margin: 0 0 16px;
-    color: rgba(255,255,255,.6);
-    font-size: 14px;
-}
-
-#password {
-    width: 100%;
-    height: 46px;
-    padding: 0 13px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,.14);
-    background: rgba(0,0,0,.3);
-    color: white;
-    outline: none;
-    font-size: 15px;
-}
-
-#passwordButton {
-    width: 100%;
-    height: 46px;
-    margin-top: 10px;
-    border: 0;
-    border-radius: 12px;
-    background: white;
-    color: #111;
-    font-weight: 650;
-    cursor: pointer;
-}
-
-@media (max-width: 600px) {
-    .setup-card {
-        padding: 24px;
-        border-radius: 24px;
-    }
-
-    .setup-card h1 {
-        font-size: 24px;
-    }
-
-    #toolbar {
-        max-width: calc(100% - 24px);
-        overflow-x: auto;
-    }
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}
+#app{width:100%;height:100%;position:relative;background:#000}
+#setup{width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at 50% 20%,rgba(255,255,255,.12),transparent 40%),#0b0b0f}
+.setup-card{width:min(460px,100%);padding:30px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);color:#fff;box-shadow:0 25px 80px rgba(0,0,0,.45)}
+.setup-icon{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.12);font-size:30px;margin-bottom:20px}
+.setup-card h1{margin:0 0 8px;font-size:28px;font-weight:700}
+.setup-card p{margin:0 0 22px;color:rgba(255,255,255,.65);line-height:1.5}
+#endpoint{width:100%;height:50px;border:1px solid rgba(255,255,255,.15);border-radius:14px;background:rgba(0,0,0,.3);color:#fff;outline:none;padding:0 15px;font-size:15px}
+#endpoint:focus{border-color:rgba(255,255,255,.4)}
+#connectButton{width:100%;height:50px;margin-top:12px;border:0;border-radius:14px;background:#fff;color:#111;font-size:15px;font-weight:650;cursor:pointer}
+#connectButton:hover{background:#e9e9e9}
+#status{min-height:20px;margin-top:14px;text-align:center;color:rgba(255,255,255,.55);font-size:13px}
+#desktop{position:absolute;inset:0;display:none;background:#000}
+#screen{width:100%;height:100%;overflow:hidden;background:#000}
+#toolbar{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;padding:8px;border-radius:18px;background:rgba(20,20,24,.75);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);opacity:0;transition:opacity .2s ease;z-index:20}
+#toolbar:hover{opacity:1}
+.tool-button{height:38px;padding:0 13px;border:0;border-radius:12px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;font-size:13px}
+.tool-button:hover{background:rgba(255,255,255,.18)}
+#connectionStatus{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);padding:8px 13px;border-radius:12px;background:rgba(20,20,24,.78);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);font-size:12px;pointer-events:none;z-index:20}
+#passwordOverlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.65);z-index:50}
+.password-card{width:min(360px,100%);padding:24px;border-radius:22px;background:rgba(30,30,35,.95);border:1px solid rgba(255,255,255,.12);color:#fff}
+.password-card h2{margin:0 0 8px;font-size:21px}
+.password-card p{margin:0 0 16px;color:rgba(255,255,255,.6);font-size:14px}
+#password{width:100%;height:46px;padding:0 13px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.3);color:#fff;outline:none;font-size:15px}
+#passwordButton{width:100%;height:46px;margin-top:10px;border:0;border-radius:12px;background:#fff;color:#111;font-weight:650;cursor:pointer}
+@media(max-width:600px){
+.setup-card{padding:24px;border-radius:24px}
+.setup-card h1{font-size:24px}
+#toolbar{max-width:calc(100% - 24px);overflow-x:auto}
 }
 </style>
 </head>
 <body>
 <div id="app">
+<section id="setup">
+<div class="setup-card">
+<div class="setup-icon">🖥️</div>
+<h1>Remote Desktop</h1>
+<p>Connect directly to your remote Linux desktop.</p>
+<input id="endpoint" type="url" placeholder="https://your-remote-server.example">
+<button id="connectButton">Connect</button>
+<div id="status"></div>
+</div>
+</section>
 
-    <section id="setup">
-        <div class="setup-card">
-            <div class="setup-icon">🖥️</div>
-            <h1>Remote Desktop</h1>
-            <p>Connect directly to your remote Linux desktop through a secure WebSocket VNC connection.</p>
-            <input id="endpoint" type="url" placeholder="https://your-remote-server.example">
-            <button id="connectButton">Connect</button>
-            <div id="status"></div>
-        </div>
-    </section>
+<section id="desktop" tabindex="0">
+<div id="toolbar">
+<button class="tool-button" id="disconnectButton">Disconnect</button>
+<button class="tool-button" id="ctrlAltDelButton">Ctrl + Alt + Del</button>
+<button class="tool-button" id="fullscreenButton">Fullscreen</button>
+<button class="tool-button" id="settingsButton">Settings</button>
+</div>
+<div id="screen"></div>
+<div id="connectionStatus">Connecting...</div>
+</section>
 
-    <section id="desktop" tabindex="0">
-        <div id="toolbar">
-            <button class="tool-button" id="disconnectButton">Disconnect</button>
-            <button class="tool-button" id="ctrlAltDelButton">Ctrl + Alt + Del</button>
-            <button class="tool-button" id="fullscreenButton">Fullscreen</button>
-            <button class="tool-button" id="settingsButton">Settings</button>
-        </div>
-
-        <div id="screen"></div>
-
-        <div id="connectionStatus">Connecting...</div>
-    </section>
-
-    <div id="passwordOverlay">
-        <div class="password-card">
-            <h2>VNC Password</h2>
-            <p>Enter the password for the remote desktop.</p>
-            <input id="password" type="password" autocomplete="off">
-            <button id="passwordButton">Connect</button>
-        </div>
-    </div>
-
+<div id="passwordOverlay">
+<div class="password-card">
+<h2>VNC Password</h2>
+<p>Enter the password for the remote desktop.</p>
+<input id="password" type="password" autocomplete="off">
+<button id="passwordButton">Connect</button>
+</div>
+</div>
 </div>
 
 <script type="module">
-import RFB from "https://cdn.jsdelivr.net/npm/@novnc/novnc@1.6.0/core/rfb.js";
+import RFB from "https://raw.githubusercontent.com/novnc/noVNC/v1.6.0/core/rfb.js";
 
-const setup = document.getElementById("setup");
-const desktop = document.getElementById("desktop");
-const screen = document.getElementById("screen");
-const endpoint = document.getElementById("endpoint");
-const connectButton = document.getElementById("connectButton");
-const disconnectButton = document.getElementById("disconnectButton");
-const ctrlAltDelButton = document.getElementById("ctrlAltDelButton");
-const fullscreenButton = document.getElementById("fullscreenButton");
-const settingsButton = document.getElementById("settingsButton");
-const connectionStatus = document.getElementById("connectionStatus");
-const status = document.getElementById("status");
-const passwordOverlay = document.getElementById("passwordOverlay");
-const password = document.getElementById("password");
-const passwordButton = document.getElementById("passwordButton");
+const setup=document.getElementById("setup");
+const desktop=document.getElementById("desktop");
+const screen=document.getElementById("screen");
+const endpoint=document.getElementById("endpoint");
+const connectButton=document.getElementById("connectButton");
+const disconnectButton=document.getElementById("disconnectButton");
+const ctrlAltDelButton=document.getElementById("ctrlAltDelButton");
+const fullscreenButton=document.getElementById("fullscreenButton");
+const settingsButton=document.getElementById("settingsButton");
+const connectionStatus=document.getElementById("connectionStatus");
+const status=document.getElementById("status");
+const passwordOverlay=document.getElementById("passwordOverlay");
+const password=document.getElementById("password");
+const passwordButton=document.getElementById("passwordButton");
 
-let rfb = null;
-let currentEndpoint = "";
+let rfb=null;
+let currentEndpoint="";
 
-function cleanEndpoint(value) {
-    let valueToUse = value.trim();
-
-    if (!valueToUse) {
-        throw new Error("Enter a remote server address.");
-    }
-
-    if (!/^https?:\/\//i.test(valueToUse)) {
-        valueToUse = "https://" + valueToUse;
-    }
-
-    const url = new URL(valueToUse);
-
-    if (url.protocol !== "https:" && url.protocol !== "http:") {
-        throw new Error("The address must use HTTP or HTTPS.");
-    }
-
-    return url.origin;
+function cleanEndpoint(value){
+let valueToUse=value.trim();
+if(!valueToUse)throw new Error("Enter a remote server address.");
+if(!/^https?:\/\//i.test(valueToUse))valueToUse="https://"+valueToUse;
+const url=new URL(valueToUse);
+if(url.protocol!=="https:"&&url.protocol!=="http:")throw new Error("The address must use HTTP or HTTPS.");
+return url.origin;
 }
 
-function websocketUrl(base) {
-    const url = new URL(base);
-
-    if (url.protocol === "https:") {
-        url.protocol = "wss:";
-    } else {
-        url.protocol = "ws:";
-    }
-
-    url.pathname = "/websockify";
-    url.search = "";
-    url.hash = "";
-
-    return url.toString();
+function websocketUrl(base){
+const url=new URL(base);
+url.protocol=url.protocol==="https:"?"wss:":"ws:";
+url.pathname="/websockify";
+url.search="";
+url.hash="";
+return url.toString();
 }
 
-function showStatus(message) {
-    status.textContent = message;
+function connect(){
+let base;
+try{
+base=cleanEndpoint(endpoint.value);
+}catch(error){
+status.textContent=error.message;
+return;
 }
 
-function setConnectionStatus(message) {
-    connectionStatus.textContent = message;
+currentEndpoint=base;
+status.textContent="";
+connectButton.disabled=true;
+connectButton.textContent="Connecting...";
+setup.style.display="none";
+desktop.style.display="block";
+connectionStatus.textContent="Connecting...";
+screen.innerHTML="";
+
+try{
+rfb=new RFB(screen,websocketUrl(base),{shared:true});
+rfb.scaleViewport=true;
+rfb.resizeSession=false;
+rfb.viewOnly=false;
+
+rfb.addEventListener("connect",()=>{
+connectionStatus.textContent="Connected";
+connectButton.disabled=false;
+connectButton.textContent="Connect";
+desktop.focus();
+});
+
+rfb.addEventListener("disconnect",event=>{
+connectionStatus.textContent=event.detail.clean?"Disconnected":"Connection lost";
+setTimeout(()=>{
+if(!rfb){
+desktop.style.display="none";
+setup.style.display="flex";
+}
+},1000);
+});
+
+rfb.addEventListener("credentialsrequired",()=>{
+password.value="";
+passwordOverlay.style.display="flex";
+password.focus();
+});
+
+rfb.addEventListener("desktopname",event=>{
+if(event.detail&&event.detail.name)connectionStatus.textContent=event.detail.name;
+});
+
+}catch(error){
+connectionStatus.textContent="Connection failed";
+desktop.style.display="none";
+setup.style.display="flex";
+connectButton.disabled=false;
+connectButton.textContent="Connect";
+status.textContent=error.message||"Unable to connect.";
+}
 }
 
-function connect() {
-    let base;
-
-    try {
-        base = cleanEndpoint(endpoint.value);
-    } catch (error) {
-        showStatus(error.message);
-        return;
-    }
-
-    currentEndpoint = base;
-    showStatus("");
-    connectButton.disabled = true;
-    connectButton.textContent = "Connecting...";
-
-    setup.style.display = "none";
-    desktop.style.display = "block";
-    setConnectionStatus("Connecting...");
-
-    screen.innerHTML = "";
-
-    try {
-        rfb = new RFB(screen, websocketUrl(base), {
-            shared: true
-        });
-
-        rfb.scaleViewport = true;
-        rfb.resizeSession = false;
-        rfb.viewOnly = false;
-        rfb.showDotCursor = true;
-
-        rfb.addEventListener("connect", () => {
-            setConnectionStatus("Connected");
-            connectButton.disabled = false;
-            connectButton.textContent = "Connect";
-            desktop.focus();
-        });
-
-        rfb.addEventListener("disconnect", event => {
-            const clean = event.detail && event.detail.clean;
-
-            setConnectionStatus(clean ? "Disconnected" : "Connection lost");
-
-            setTimeout(() => {
-                if (!rfb) {
-                    desktop.style.display = "none";
-                    setup.style.display = "flex";
-                }
-            }, 1200);
-        });
-
-        rfb.addEventListener("credentialsrequired", () => {
-            password.value = "";
-            passwordOverlay.style.display = "flex";
-            password.focus();
-        });
-
-        rfb.addEventListener("desktopname", event => {
-            if (event.detail && event.detail.name) {
-                setConnectionStatus(event.detail.name);
-            }
-        });
-
-    } catch (error) {
-        setConnectionStatus("Connection failed");
-        desktop.style.display = "none";
-        setup.style.display = "flex";
-        connectButton.disabled = false;
-        connectButton.textContent = "Connect";
-        showStatus(error.message || "Unable to connect.");
-    }
+function disconnect(){
+if(rfb){
+rfb.disconnect();
+rfb=null;
+}
+screen.innerHTML="";
+passwordOverlay.style.display="none";
+desktop.style.display="none";
+setup.style.display="flex";
+connectButton.disabled=false;
+connectButton.textContent="Connect";
 }
 
-function disconnect() {
-    if (rfb) {
-        rfb.disconnect();
-        rfb = null;
-    }
+connectButton.addEventListener("click",connect);
 
-    screen.innerHTML = "";
-    passwordOverlay.style.display = "none";
-    desktop.style.display = "none";
-    setup.style.display = "flex";
-    connectButton.disabled = false;
-    connectButton.textContent = "Connect";
-    setConnectionStatus("Disconnected");
+endpoint.addEventListener("keydown",event=>{
+if(event.key==="Enter")connect();
+});
+
+disconnectButton.addEventListener("click",disconnect);
+
+ctrlAltDelButton.addEventListener("click",()=>{
+if(rfb)rfb.sendCtrlAltDel();
+});
+
+fullscreenButton.addEventListener("click",async()=>{
+try{
+if(!document.fullscreenElement)await desktop.requestFullscreen();
+else await document.exitFullscreen();
+}catch{
+connectionStatus.textContent="Fullscreen unavailable";
 }
-
-connectButton.addEventListener("click", connect);
-
-endpoint.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-        connect();
-    }
 });
 
-disconnectButton.addEventListener("click", disconnect);
-
-ctrlAltDelButton.addEventListener("click", () => {
-    if (rfb) {
-        rfb.sendCtrlAltDel();
-    }
+settingsButton.addEventListener("click",()=>{
+if(rfb){
+rfb.disconnect();
+rfb=null;
+}
+endpoint.value=currentEndpoint;
+screen.innerHTML="";
+desktop.style.display="none";
+setup.style.display="flex";
+status.textContent="Change the server address and reconnect.";
 });
 
-fullscreenButton.addEventListener("click", async () => {
-    try {
-        if (!document.fullscreenElement) {
-            await desktop.requestFullscreen();
-        } else {
-            await document.exitFullscreen();
-        }
-    } catch {
-        setConnectionStatus("Fullscreen unavailable");
-    }
+passwordButton.addEventListener("click",()=>{
+if(!rfb)return;
+const value=password.value;
+if(!value)return;
+rfb.sendCredentials({password:value});
+password.value="";
+passwordOverlay.style.display="none";
 });
 
-settingsButton.addEventListener("click", () => {
-    if (!currentEndpoint) {
-        return;
-    }
-
-    if (rfb) {
-        rfb.disconnect();
-        rfb = null;
-    }
-
-    endpoint.value = currentEndpoint;
-    screen.innerHTML = "";
-    desktop.style.display = "none";
-    setup.style.display = "flex";
-    showStatus("Change the server address and reconnect.");
+password.addEventListener("keydown",event=>{
+if(event.key==="Enter")passwordButton.click();
 });
 
-passwordButton.addEventListener("click", () => {
-    if (!rfb) {
-        return;
-    }
-
-    const value = password.value;
-
-    if (!value) {
-        return;
-    }
-
-    rfb.sendCredentials({
-        password: value
-    });
-
-    password.value = "";
-    passwordOverlay.style.display = "none";
-});
-
-password.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-        passwordButton.click();
-    }
-});
-
-desktop.addEventListener("click", () => {
-    if (rfb) {
-        rfb.focus();
-    }
+desktop.addEventListener("click",()=>{
+if(rfb)rfb.focus();
 });
 </script>
 </body>
