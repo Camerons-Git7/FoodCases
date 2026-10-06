@@ -107,7 +107,7 @@ jobs:
       # ─── THIRD WEBSITE ─────────────────────────────
       - name: Restore original code for Site 3
         run: git checkout .
-      - name: Replace "menist.free.nf" with "seamless.page.gd" for Site 3 deploy
+      - name: Replace "menist.free.nf" with "seamless.infy.click" for Site 3 deploy
         run: |
           find . -type f \
             ! -path './.git/*' \
@@ -115,7 +115,7 @@ jobs:
             ! -name '.ftp-sync-state-1.json' \
             ! -name '.ftp-sync-state-2.json' \
             ! -name '.ftp-sync-state-3.json' \
-            -exec sed -i 's/menist\.free\.nf/seamless.page.gd/g' {} +
+            -exec sed -i 's/menist\.free\.nf/seamless.infy.click/g' {} +
       - name: Deploy to InfinityFree Site 3
         id: deploy3
         continue-on-error: true
