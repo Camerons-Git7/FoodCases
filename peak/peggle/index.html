@@ -63,7 +63,7 @@ BASE + "levels/tri.dat.zip", BASE + "levels/tri.jpg",
 BASE + "levels/wiggles.dat.zip", BASE + "levels/wiggles.jpg"
 ];
 
-const DB_NAME = "peggle-idb-v3";
+const DB_NAME = "peggle-idb-v4";
 const STORE = "files";
 const originalFetch = window.fetch.bind(window);
 
@@ -73,7 +73,7 @@ function mimeFor(url) {
   if (url.endsWith(".png")) return "image/png";
   if (url.endsWith(".wav")) return "audio/wav";
   if (url.endsWith(".xml") || url.endsWith(".cfg")) return "text/xml";
-  if (url.endsWith(".zip") || url.endsWith(".dat.zip")) return "application/zip";
+  if (url.includes(".zip")) return "application/zip";
   return "application/octet-stream";
 }
 
@@ -119,7 +119,7 @@ async function getBlob(url) {
 window.fetch = async function(input, init) {
   let url = typeof input === "string" ? input : (input && input.url) || "";
   try {
-    const abs = new URL(url, location.href).href;
+    const abs = new URL(url, location.href).href.split("?")[0];
     const blob = await idbGet(abs);
     if (blob) {
       return new Response(blob, {
@@ -137,112 +137,63 @@ window.fetch = async function(input, init) {
 
 (function() {
   const NativeXHR = window.XMLHttpRequest;
-  function ProxyXHR() {
-    const real = new NativeXHR();
-    let _url = "";
-    let _method = "GET";
-    let _async = true;
-    let _responseType = "";
-    const self = this;
+  window.XMLHttpRequest = function() {
+    const xhr = new NativeXHR();
+    let url = "";
+    let responseType = "";
 
-    this.open = function(method, url, async = true, ...rest) {
-      _method = method;
-      _url = url;
-      _async = async;
-      return real.open(method, url, async, ...rest);
+    const originalOpen = xhr.open;
+    xhr.open = function(method, u, ...rest) {
+      url = u;
+      return originalOpen.call(xhr, method, u, ...rest);
     };
 
-    this.setRequestHeader = function(...a) { return real.setRequestHeader(...a); };
-    this.abort = function() { return real.abort(); };
-    this.getAllResponseHeaders = function() { return real.getAllResponseHeaders(); };
-    this.getResponseHeader = function(n) { return real.getResponseHeader(n); };
-    this.overrideMimeType = function(m) { return real.overrideMimeType(m); };
-
-    Object.defineProperty(this, "responseType", {
-      get() { return _responseType; },
-      set(v) { _responseType = v; real.responseType = v; }
-    });
-    Object.defineProperty(this, "timeout", {
-      get() { return real.timeout; },
-      set(v) { real.timeout = v; }
-    });
-    Object.defineProperty(this, "withCredentials", {
-      get() { return real.withCredentials; },
-      set(v) { real.withCredentials = v; }
-    });
-    Object.defineProperty(this, "readyState", { get() { return real.readyState; } });
-    Object.defineProperty(this, "status", { get() { return real.status; } });
-    Object.defineProperty(this, "statusText", { get() { return real.statusText; } });
-    Object.defineProperty(this, "responseURL", { get() { return real.responseURL; } });
-    Object.defineProperty(this, "response", { get() { return real.response; } });
-    Object.defineProperty(this, "responseText", { get() { return real.responseText; } });
-    Object.defineProperty(this, "responseXML", { get() { return real.responseXML; } });
-
-    this.addEventListener = function(...a) { return real.addEventListener(...a); };
-    this.removeEventListener = function(...a) { return real.removeEventListener(...a); };
-    this.dispatchEvent = function(...a) { return real.dispatchEvent(...a); };
-
-    Object.defineProperty(this, "onreadystatechange", {
-      get() { return real.onreadystatechange; },
-      set(v) { real.onreadystatechange = v; }
-    });
-    Object.defineProperty(this, "onload", {
-      get() { return real.onload; },
-      set(v) { real.onload = v; }
-    });
-    Object.defineProperty(this, "onerror", {
-      get() { return real.onerror; },
-      set(v) { real.onerror = v; }
-    });
-    Object.defineProperty(this, "onloadend", {
-      get() { return real.onloadend; },
-      set(v) { real.onloadend = v; }
-    });
-    Object.defineProperty(this, "ontimeout", {
-      get() { return real.ontimeout; },
-      set(v) { real.ontimeout = v; }
-    });
-    Object.defineProperty(this, "onprogress", {
-      get() { return real.onprogress; },
-      set(v) { real.onprogress = v; }
-    });
-
-    this.send = function(body) {
-      if (_method.toUpperCase() !== "GET" || !_url) {
-        return real.send(body);
+    const originalSend = xhr.send;
+    xhr.send = function(body) {
+      if (!url || (arguments.length && body)) {
+        return originalSend.apply(xhr, arguments);
       }
-      const abs = new URL(_url, location.href).href;
+      const abs = new URL(url, location.href).href.split("?")[0];
       idbGet(abs).then(async blob => {
         if (!blob) {
-          return real.send(body);
+          return originalSend.apply(xhr, arguments);
         }
-        let responseValue;
-        if (_responseType === "arraybuffer") {
-          responseValue = await blob.arrayBuffer();
-        } else if (_responseType === "blob") {
-          responseValue = blob;
-        } else if (_responseType === "text" || _responseType === "") {
-          responseValue = await blob.text();
+
+        let data;
+        const rt = xhr.responseType || responseType;
+        if (rt === "arraybuffer") {
+          data = await blob.arrayBuffer();
+        } else if (rt === "blob") {
+          data = blob;
         } else {
-          responseValue = await blob.arrayBuffer();
+          data = await blob.text();
         }
 
-        Object.defineProperty(real, "status", { value: 200, configurable: true });
-        Object.defineProperty(real, "statusText", { value: "OK", configurable: true });
-        Object.defineProperty(real, "readyState", { value: 4, configurable: true });
-        Object.defineProperty(real, "responseURL", { value: abs, configurable: true });
-        Object.defineProperty(real, "response", { value: responseValue, configurable: true });
-        if (typeof responseValue === "string") {
-          Object.defineProperty(real, "responseText", { value: responseValue, configurable: true });
-        }
+        Object.defineProperties(xhr, {
+          status: { value: 200, configurable: true },
+          statusText: { value: "OK", configurable: true },
+          readyState: { value: 4, configurable: true },
+          response: { value: data, configurable: true },
+          responseText: { value: typeof data === "string" ? data : "", configurable: true },
+          responseURL: { value: abs, configurable: true }
+        });
 
-        real.dispatchEvent(new Event("readystatechange"));
-        real.dispatchEvent(new ProgressEvent("load"));
-        real.dispatchEvent(new ProgressEvent("loadend"));
-      }).catch(() => real.send(body));
+        xhr.dispatchEvent(new Event("readystatechange"));
+        xhr.dispatchEvent(new ProgressEvent("load"));
+        xhr.dispatchEvent(new ProgressEvent("loadend"));
+      }).catch(() => originalSend.apply(xhr, arguments));
     };
-  }
-  window.XMLHttpRequest = ProxyXHR;
+
+    Object.defineProperty(xhr, "responseType", {
+      get() { return responseType; },
+      set(v) {
+        responseType = v;
+        try { xhr.responseType = v; } catch (_) {}
+      }
+    });
+
+    return xhr;
+  };
 })();
 
 async function prefetchAll() {
@@ -253,7 +204,7 @@ async function prefetchAll() {
   status.textContent = `0 / ${total}`;
 
   const queue = [...ASSETS];
-  const workers = 6;
+  const workers = 8;
   async function worker() {
     while (queue.length) {
       const url = queue.shift();
@@ -276,14 +227,19 @@ window.addEventListener("DOMContentLoaded", async () => {
   } catch (e) {
     console.warn(e);
   }
+
   document.getElementById("loader").style.display = "none";
+
+  const swfBlob = await idbGet(SWF_URL);
+  const swfBuffer = await swfBlob.arrayBuffer();
 
   const ruffle = window.RufflePlayer.newest();
   const player = ruffle.createPlayer();
   document.getElementById("game").appendChild(player);
 
   player.ruffle().load({
-    url: SWF_URL,
+    data: new Uint8Array(swfBuffer),
+    base: BASE,
     autoplay: "on",
     letterbox: "fullscreen",
     backgroundColor: "#000000",
