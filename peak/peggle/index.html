@@ -1,432 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Peggle</title>
-
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no"
-    >
-
-    <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000;
-        }
-
-        #game {
-            position: fixed;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            background: #000;
-        }
-
-        ruffle-player {
-            display: block;
-
-            /* Keep Peggle's original 4:3 aspect ratio */
-            width: min(100vw, 133.333333vh);
-            height: min(100vh, 75vw);
-
-            flex: 0 0 auto;
-        }
-    </style>
-
-    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+<meta charset="utf-8">
+<title>Peggle</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no">
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:system-ui,sans-serif}
+#game{position:fixed;inset:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#000}
+ruffle-player{display:block;width:min(100vw,133.333333vh);height:min(100vh,75vw);flex:0 0 auto}
+#loader{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;color:#fff;z-index:10}
+#bar{width:min(80vw,420px);height:12px;background:#222;border-radius:6px;overflow:hidden;margin-top:18px}
+#fill{height:100%;width:0%;background:#4caf50;transition:width .15s}
+#status{margin-top:12px;font-size:14px;opacity:.8}
+</style>
+<script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
 </head>
-
 <body>
+<div id="loader">
+<div>Loading Peggle assets…</div>
+<div id="bar"><div id="fill"></div></div>
+<div id="status">0 / 0</div>
+</div>
+<div id="game"></div>
+<script>
+const BASE = "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/peak/peggle/";
+const SWF_URL = BASE + "peggle.swf";
 
-    <div id="game"></div>
+const ASSETS = [
+SWF_URL,
+BASE + "stages.cfg",
+BASE + "assets/peghit_low.wav",
+BASE + "assets/peghit_plus4b.wav",
+BASE + "assets/score_counter.wav",
+BASE + "interstitials/interstitials.xml",
+BASE + "lang/en.xml",
+BASE + "lang/languages.xml",
+BASE + "levels/_base.dat.zip",
+BASE + "levels/challenges.xml",
+BASE + "levels/backspiral.dat.zip", BASE + "levels/backspiral.jpg",
+BASE + "levels/beans.dat.zip", BASE + "levels/beans.jpg",
+BASE + "levels/bowl.dat.zip", BASE + "levels/bowl.jpg",
+BASE + "levels/bricks.dat.zip", BASE + "levels/bricks.jpg",
+BASE + "levels/doublebucket.dat.zip", BASE + "levels/doublebucket.jpg",
+BASE + "levels/funnel.dat.zip", BASE + "levels/funnel.jpg",
+BASE + "levels/level10web.dat.zip", BASE + "levels/level10web.jpg",
+BASE + "levels/level12web.dat.zip", BASE + "levels/level12web.jpg",
+BASE + "levels/level13web.dat.zip", BASE + "levels/level13web.jpg",
+BASE + "levels/level14web.dat.zip", BASE + "levels/level14web.jpg",
+BASE + "levels/level15web.dat.zip", BASE + "levels/level15web.jpg",
+BASE + "levels/level16web.dat.zip", BASE + "levels/level16web.jpg",
+BASE + "levels/level17web.dat.zip", BASE + "levels/level17web.jpg",
+BASE + "levels/level18web.dat.zip", BASE + "levels/level18web.jpg",
+BASE + "levels/level19aweb.dat.zip", BASE + "levels/level19aweb.jpg",
+BASE + "levels/pinwheels.dat.zip", BASE + "levels/pinwheels.jpg",
+BASE + "levels/scary.dat.zip", BASE + "levels/scary.jpg",
+BASE + "levels/slides.dat.zip", BASE + "levels/slides.jpg",
+BASE + "levels/sonofowl.dat.zip", BASE + "levels/sonofowl.jpg",
+BASE + "levels/spinners.dat.zip", BASE + "levels/spinners.jpg",
+BASE + "levels/tri.dat.zip", BASE + "levels/tri.jpg",
+BASE + "levels/wiggles.dat.zip", BASE + "levels/wiggles.jpg"
+];
 
-    <script>
-        /*
-         * ============================================
-         * Peggle persistent storage + asset caching
-         * ============================================
-         *
-         * Ruffle handles Peggle's actual Flash save data
-         * through SharedObject/local browser storage.
-         *
-         * Cache Storage is used separately for the large
-         * SWF and external stylesheet so they can load
-         * locally after the first successful download.
-         */
+const DB_NAME = "peggle-idb-v2";
+const STORE = "files";
+const originalFetch = window.fetch.bind(window);
 
-        const CACHE_NAME = "peggle-assets-v1";
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
 
-        const SWF_URL =
-            "https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/peak/peggle/peggle.swf";
+async function idbGet(key) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
 
-        const CSS_URL =
-            "https://cdn.jsdelivr.net/gh/AndreajnRcm4/b398dl2h74v@9a23fbb2373d743a564873251cbb57736ebc1f73/style.css";
+async function idbPut(key, blob) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(blob, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
 
+async function getBlob(url) {
+  let blob = await idbGet(url);
+  if (blob) return blob;
+  const res = await originalFetch(url);
+  if (!res.ok) throw new Error(url + " " + res.status);
+  blob = await res.blob();
+  await idbPut(url, blob);
+  return blob;
+}
 
-        /*
-         * Save the original fetch function before overriding it.
-         */
-        const originalFetch = window.fetch.bind(window);
+window.fetch = async function(input, init) {
+  let url = typeof input === "string" ? input : (input && input.url) || "";
+  try {
+    const abs = new URL(url, location.href).href;
+    const blob = await idbGet(abs);
+    if (blob) {
+      return new Response(blob, {
+        status: 200,
+        headers: { "Content-Type": blob.type || "application/octet-stream" }
+      });
+    }
+  } catch (_) {}
+  return originalFetch(input, init);
+};
 
-
-        /*
-         * ============================================
-         * Cache helpers
-         * ============================================
-         */
-
-        async function getCached(url) {
-            if (!("caches" in window)) {
-                return null;
-            }
-
-            try {
-                const cache = await caches.open(CACHE_NAME);
-                return await cache.match(url);
-            } catch (error) {
-                console.warn(
-                    "Peggle cache read failed:",
-                    error
-                );
-
-                return null;
-            }
+(function() {
+  const XHR = window.XMLHttpRequest;
+  function ProxyXHR() {
+    const xhr = new XHR();
+    let _url = "";
+    const open = xhr.open;
+    xhr.open = function(method, url, ...rest) {
+      _url = url;
+      return open.call(xhr, method, url, ...rest);
+    };
+    const send = xhr.send;
+    xhr.send = function(...args) {
+      const abs = new URL(_url, location.href).href;
+      idbGet(abs).then(blob => {
+        if (blob) {
+          Object.defineProperty(xhr, "response", { value: blob });
+          Object.defineProperty(xhr, "responseText", { value: "" });
+          Object.defineProperty(xhr, "status", { value: 200 });
+          Object.defineProperty(xhr, "readyState", { value: 4 });
+          xhr.dispatchEvent(new Event("readystatechange"));
+          xhr.dispatchEvent(new Event("load"));
+          xhr.dispatchEvent(new Event("loadend"));
+        } else {
+          send.apply(xhr, args);
         }
-
-
-        async function putCached(url, response) {
-            if (!("caches" in window)) {
-                return;
-            }
-
-            if (!response || !response.ok) {
-                return;
-            }
-
-            try {
-                const cache = await caches.open(CACHE_NAME);
-
-                await cache.put(
-                    url,
-                    response.clone()
-                );
-            } catch (error) {
-                console.warn(
-                    "Peggle cache write failed:",
-                    error
-                );
-            }
-        }
-
-
-        async function getAsset(url) {
-            /*
-             * Check Cache Storage first.
-             */
-            const cached = await getCached(url);
-
-            if (cached) {
-                return cached;
-            }
-
-
-            /*
-             * Nothing cached, so download it normally.
-             */
-            const response = await originalFetch(url);
-
-            if (response.ok) {
-                await putCached(
-                    url,
-                    response
-                );
-            }
-
-            return response;
-        }
-
-
-        /*
-         * ============================================
-         * Intercept SWF fetches
-         * ============================================
-         *
-         * Ruffle still receives the original SWF URL.
-         * If Ruffle requests that URL through fetch(),
-         * return the cached copy instead of downloading
-         * the SWF again.
-         */
-
-        window.fetch = async function (input, init) {
-            let url = "";
-
-            try {
-                url =
-                    typeof input === "string"
-                        ? input
-                        : input.url;
-            } catch (error) {
-                return originalFetch(
-                    input,
-                    init
-                );
-            }
-
-
-            if (
-                url === SWF_URL ||
-                url === CSS_URL
-            ) {
-                const cached = await getCached(url);
-
-                if (cached) {
-                    return cached;
-                }
-
-
-                const response =
-                    await originalFetch(
-                        input,
-                        init
-                    );
-
-
-                if (response.ok) {
-                    await putCached(
-                        url,
-                        response
-                    );
-                }
-
-
-                return response;
-            }
-
-
-            return originalFetch(
-                input,
-                init
-            );
-        };
-
-
-        /*
-         * ============================================
-         * Load cached stylesheet
-         * ============================================
-         *
-         * The original <link> was removed so the CSS
-         * can also be controlled by Cache Storage.
-         */
-
-        async function loadCachedStylesheet() {
-            try {
-                const response =
-                    await getAsset(CSS_URL);
-
-
-                if (
-                    !response ||
-                    !response.ok
-                ) {
-                    return;
-                }
-
-
-                const blob =
-                    await response.blob();
-
-
-                const blobURL =
-                    URL.createObjectURL(blob);
-
-
-                const link =
-                    document.createElement("link");
-
-
-                link.rel = "stylesheet";
-                link.type = "text/css";
-                link.href = blobURL;
-
-
-                document.head.appendChild(link);
-
-            } catch (error) {
-                console.warn(
-                    "Peggle stylesheet cache failed:",
-                    error
-                );
-
-
-                /*
-                 * Fallback to the original stylesheet
-                 * if Cache Storage is unavailable.
-                 */
-
-                if (
-                    !document.querySelector(
-                        'link[rel="stylesheet"]'
-                    )
-                ) {
-                    const link =
-                        document.createElement("link");
-
-                    link.rel = "stylesheet";
-                    link.type = "text/css";
-                    link.href = CSS_URL;
-
-                    document.head.appendChild(link);
-                }
-            }
-        }
-
-
-        /*
-         * ============================================
-         * Page-level localStorage
-         * ============================================
-         *
-         * This is only small HTML-side state.
-         *
-         * Peggle's actual progress is handled by Ruffle's
-         * Flash SharedObject implementation.
-         */
-
-        function savePageState() {
-            try {
-                localStorage.setItem(
-                    "peggle_storage_version",
-                    "1"
-                );
-
-                localStorage.setItem(
-                    "peggle_last_played",
-                    String(Date.now())
-                );
-
-            } catch (error) {
-                console.warn(
-                    "Peggle localStorage is unavailable:",
-                    error
-                );
-            }
-        }
-
-
-        /*
-         * ============================================
-         * Start Peggle
-         * ============================================
-         */
-
-        window.addEventListener(
-            "DOMContentLoaded",
-            async function () {
-
-                savePageState();
-
-
-                /*
-                 * Cache the SWF and stylesheet in parallel.
-                 *
-                 * First visit:
-                 *     download -> cache -> play
-                 *
-                 * Later visits:
-                 *     cache -> play
-                 */
-
-                try {
-                    await Promise.all([
-                        getAsset(SWF_URL),
-                        loadCachedStylesheet()
-                    ]);
-
-                } catch (error) {
-                    console.warn(
-                        "Peggle asset caching failed:",
-                        error
-                    );
-
-
-                    /*
-                     * Make sure the stylesheet still loads
-                     * if caching encounters an error.
-                     */
-
-                    if (
-                        !document.querySelector(
-                            'link[rel="stylesheet"]'
-                        )
-                    ) {
-                        const link =
-                            document.createElement("link");
-
-                        link.rel = "stylesheet";
-                        link.type = "text/css";
-                        link.href = CSS_URL;
-
-                        document.head.appendChild(link);
-                    }
-                }
-
-
-                /*
-                 * Create Ruffle.
-                 */
-
-                const ruffle =
-                    window.RufflePlayer.newest();
-
-
-                const player =
-                    ruffle.createPlayer();
-
-
-                document
-                    .getElementById("game")
-                    .appendChild(player);
-
-
-                /*
-                 * Load Peggle.
-                 *
-                 * IMPORTANT:
-                 * Keep the real SWF URL instead of changing it
-                 * to a blob URL. This preserves the normal URL
-                 * identity used by Ruffle's SharedObject storage.
-                 */
-
-                player.ruffle().load({
-                    url: SWF_URL,
-
-                    autoplay: "on",
-
-                    letterbox: "fullscreen",
-
-                    backgroundColor: "#000000",
-
-                    compatibilityRules: true,
-
-                    allowNetworking: "all"
-                });
-            }
-        );
-    </script>
-
+      }).catch(() => send.apply(xhr, args));
+    };
+    return xhr;
+  }
+  window.XMLHttpRequest = ProxyXHR;
+})();
+
+async function prefetchAll() {
+  const fill = document.getElementById("fill");
+  const status = document.getElementById("status");
+  let done = 0;
+  const total = ASSETS.length;
+  status.textContent = `0 / ${total}`;
+
+  const queue = [...ASSETS];
+  const workers = 6;
+  async function worker() {
+    while (queue.length) {
+      const url = queue.shift();
+      try {
+        await getBlob(url);
+      } catch (e) {
+        console.warn("prefetch failed", url, e);
+      }
+      done++;
+      fill.style.width = ((done / total) * 100) + "%";
+      status.textContent = `${done} / ${total}`;
+    }
+  }
+  await Promise.all(Array.from({ length: workers }, worker));
+}
+
+window.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await prefetchAll();
+  } catch (e) {
+    console.warn(e);
+  }
+  document.getElementById("loader").style.display = "none";
+
+  const ruffle = window.RufflePlayer.newest();
+  const player = ruffle.createPlayer();
+  document.getElementById("game").appendChild(player);
+
+  player.ruffle().load({
+    url: SWF_URL,
+    autoplay: "on",
+    letterbox: "fullscreen",
+    backgroundColor: "#000000",
+    quality: "medium",
+    scale: "showAll",
+    allowNetworking: "all",
+    splashScreen: false
+  });
+});
+</script>
 </body>
 </html>
