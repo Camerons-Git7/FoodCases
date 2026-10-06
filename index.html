@@ -1585,9 +1585,32 @@ const supabaseClient = (typeof window.supabase !== 'undefined')
       }
     })
   : null;
-
 let currentUser = null;
 let isGuest = true;
+async function recoverSession() {
+  if (!supabaseClient) return;
+  try {
+    var result = await supabaseClient.auth.getSession();
+    if (result && result.data && result.data.session && result.data.session.user) {
+      currentUser = result.data.session.user;
+      isGuest = false;
+      updateAuthUI();
+    }
+  } catch (e) {}
+}
+if (supabaseClient) {
+  supabaseClient.auth.onAuthStateChange(function(event, session) {
+    if (session && session.user) {
+      currentUser = session.user;
+      isGuest = false;
+    } else {
+      currentUser = null;
+      isGuest = true;
+    }
+    updateAuthUI();
+  });
+}
+recoverSession();
 
 function showAuthMessage(text, isError) {
   var el = document.getElementById('boot-auth-message');
