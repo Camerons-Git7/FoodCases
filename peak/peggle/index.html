@@ -63,9 +63,19 @@ BASE + "levels/tri.dat.zip", BASE + "levels/tri.jpg",
 BASE + "levels/wiggles.dat.zip", BASE + "levels/wiggles.jpg"
 ];
 
-const DB_NAME = "peggle-idb-v2";
+const DB_NAME = "peggle-idb-v3";
 const STORE = "files";
 const originalFetch = window.fetch.bind(window);
+
+function mimeFor(url) {
+  if (url.endsWith(".swf")) return "application/x-shockwave-flash";
+  if (url.endsWith(".jpg") || url.endsWith(".jpeg")) return "image/jpeg";
+  if (url.endsWith(".png")) return "image/png";
+  if (url.endsWith(".wav")) return "audio/wav";
+  if (url.endsWith(".xml") || url.endsWith(".cfg")) return "text/xml";
+  if (url.endsWith(".zip") || url.endsWith(".dat.zip")) return "application/zip";
+  return "application/octet-stream";
+}
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -114,7 +124,11 @@ window.fetch = async function(input, init) {
     if (blob) {
       return new Response(blob, {
         status: 200,
-        headers: { "Content-Type": blob.type || "application/octet-stream" }
+        statusText: "OK",
+        headers: {
+          "Content-Type": mimeFor(abs),
+          "Content-Length": String(blob.size)
+        }
       });
     }
   } catch (_) {}
@@ -122,33 +136,111 @@ window.fetch = async function(input, init) {
 };
 
 (function() {
-  const XHR = window.XMLHttpRequest;
+  const NativeXHR = window.XMLHttpRequest;
   function ProxyXHR() {
-    const xhr = new XHR();
+    const real = new NativeXHR();
     let _url = "";
-    const open = xhr.open;
-    xhr.open = function(method, url, ...rest) {
+    let _method = "GET";
+    let _async = true;
+    let _responseType = "";
+    const self = this;
+
+    this.open = function(method, url, async = true, ...rest) {
+      _method = method;
       _url = url;
-      return open.call(xhr, method, url, ...rest);
+      _async = async;
+      return real.open(method, url, async, ...rest);
     };
-    const send = xhr.send;
-    xhr.send = function(...args) {
+
+    this.setRequestHeader = function(...a) { return real.setRequestHeader(...a); };
+    this.abort = function() { return real.abort(); };
+    this.getAllResponseHeaders = function() { return real.getAllResponseHeaders(); };
+    this.getResponseHeader = function(n) { return real.getResponseHeader(n); };
+    this.overrideMimeType = function(m) { return real.overrideMimeType(m); };
+
+    Object.defineProperty(this, "responseType", {
+      get() { return _responseType; },
+      set(v) { _responseType = v; real.responseType = v; }
+    });
+    Object.defineProperty(this, "timeout", {
+      get() { return real.timeout; },
+      set(v) { real.timeout = v; }
+    });
+    Object.defineProperty(this, "withCredentials", {
+      get() { return real.withCredentials; },
+      set(v) { real.withCredentials = v; }
+    });
+    Object.defineProperty(this, "readyState", { get() { return real.readyState; } });
+    Object.defineProperty(this, "status", { get() { return real.status; } });
+    Object.defineProperty(this, "statusText", { get() { return real.statusText; } });
+    Object.defineProperty(this, "responseURL", { get() { return real.responseURL; } });
+    Object.defineProperty(this, "response", { get() { return real.response; } });
+    Object.defineProperty(this, "responseText", { get() { return real.responseText; } });
+    Object.defineProperty(this, "responseXML", { get() { return real.responseXML; } });
+
+    this.addEventListener = function(...a) { return real.addEventListener(...a); };
+    this.removeEventListener = function(...a) { return real.removeEventListener(...a); };
+    this.dispatchEvent = function(...a) { return real.dispatchEvent(...a); };
+
+    Object.defineProperty(this, "onreadystatechange", {
+      get() { return real.onreadystatechange; },
+      set(v) { real.onreadystatechange = v; }
+    });
+    Object.defineProperty(this, "onload", {
+      get() { return real.onload; },
+      set(v) { real.onload = v; }
+    });
+    Object.defineProperty(this, "onerror", {
+      get() { return real.onerror; },
+      set(v) { real.onerror = v; }
+    });
+    Object.defineProperty(this, "onloadend", {
+      get() { return real.onloadend; },
+      set(v) { real.onloadend = v; }
+    });
+    Object.defineProperty(this, "ontimeout", {
+      get() { return real.ontimeout; },
+      set(v) { real.ontimeout = v; }
+    });
+    Object.defineProperty(this, "onprogress", {
+      get() { return real.onprogress; },
+      set(v) { real.onprogress = v; }
+    });
+
+    this.send = function(body) {
+      if (_method.toUpperCase() !== "GET" || !_url) {
+        return real.send(body);
+      }
       const abs = new URL(_url, location.href).href;
-      idbGet(abs).then(blob => {
-        if (blob) {
-          Object.defineProperty(xhr, "response", { value: blob });
-          Object.defineProperty(xhr, "responseText", { value: "" });
-          Object.defineProperty(xhr, "status", { value: 200 });
-          Object.defineProperty(xhr, "readyState", { value: 4 });
-          xhr.dispatchEvent(new Event("readystatechange"));
-          xhr.dispatchEvent(new Event("load"));
-          xhr.dispatchEvent(new Event("loadend"));
-        } else {
-          send.apply(xhr, args);
+      idbGet(abs).then(async blob => {
+        if (!blob) {
+          return real.send(body);
         }
-      }).catch(() => send.apply(xhr, args));
+        let responseValue;
+        if (_responseType === "arraybuffer") {
+          responseValue = await blob.arrayBuffer();
+        } else if (_responseType === "blob") {
+          responseValue = blob;
+        } else if (_responseType === "text" || _responseType === "") {
+          responseValue = await blob.text();
+        } else {
+          responseValue = await blob.arrayBuffer();
+        }
+
+        Object.defineProperty(real, "status", { value: 200, configurable: true });
+        Object.defineProperty(real, "statusText", { value: "OK", configurable: true });
+        Object.defineProperty(real, "readyState", { value: 4, configurable: true });
+        Object.defineProperty(real, "responseURL", { value: abs, configurable: true });
+        Object.defineProperty(real, "response", { value: responseValue, configurable: true });
+        if (typeof responseValue === "string") {
+          Object.defineProperty(real, "responseText", { value: responseValue, configurable: true });
+        }
+
+        real.dispatchEvent(new Event("readystatechange"));
+        real.dispatchEvent(new ProgressEvent("load"));
+        real.dispatchEvent(new ProgressEvent("loadend"));
+      }).catch(() => real.send(body));
     };
-    return xhr;
   }
   window.XMLHttpRequest = ProxyXHR;
 })();
