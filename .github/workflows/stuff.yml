@@ -1,0 +1,78 @@
+name: Apply fixed Ruffle loaders
+
+on:
+  workflow_dispatch:  # run manually from Actions tab
+  # push:              # uncomment if you want it on every push
+  #   branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  replace-loaders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download fixed loaders zip
+        run: |
+          curl -fsSL -o fixed_ruffle_game_loaders.zip \
+            "https://github.com/Camerons-Git7/FoodCases/releases/download/files/fixed_ruffle_game_loaders.zip"
+
+      - name: Extract and replace matching folders
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/fixed_loaders
+          unzip -q fixed_ruffle_game_loaders.zip -d /tmp/fixed_loaders
+
+          # Zip layout is fixed_ruffle_loaders/<game>/index.html
+          SRC_ROOT="/tmp/fixed_loaders/fixed_ruffle_loaders"
+          if [ ! -d "$SRC_ROOT" ]; then
+            # fallback if zip root differs
+            SRC_ROOT=$(find /tmp/fixed_loaders -mindepth 1 -maxdepth 1 -type d | head -1)
+          fi
+
+          echo "Source root: $SRC_ROOT"
+          replaced=0
+          skipped=0
+
+          for game_dir in "$SRC_ROOT"/*/; do
+            [ -d "$game_dir" ] || continue
+            name=$(basename "$game_dir")
+
+            # Prefer core/<name>, else any exact folder-name match in the repo
+            if [ -d "core/$name" ]; then
+              dest="core/$name"
+            else
+              dest=$(find . -type d -name "$name" \
+                -not -path './.git/*' \
+                -not -path './.github/*' \
+                | head -1 || true)
+            fi
+
+            if [ -z "${dest:-}" ] || [ ! -d "$dest" ]; then
+              echo "SKIP (no matching folder): $name"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            echo "REPLACE: $name -> $dest"
+            # Copy all files from the zip folder into the matching repo folder
+            cp -a "$game_dir"/. "$dest"/
+            replaced=$((replaced + 1))
+          done
+
+          echo "Replaced: $replaced | Skipped: $skipped"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Apply fixed Ruffle game loaders from release zip"
+            git push
+          fi
