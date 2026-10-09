@@ -1,9 +1,7 @@
 name: Apply fixed Ruffle loaders
 
 on:
-  workflow_dispatch:  # run manually from Actions tab
-  # push:              # uncomment if you want it on every push
-  #   branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -17,53 +15,56 @@ jobs:
 
       - name: Download fixed loaders zip
         run: |
-          curl -fsSL -o fixed_ruffle_game_loaders.zip \
+          curl -fsSL -o /tmp/fixed_ruffle_game_loaders.zip \
             "https://github.com/Camerons-Git7/FoodCases/releases/download/files/fixed_ruffle_game_loaders.zip"
 
-      - name: Extract and replace matching folders
+      - name: Extract and replace matching folders under core/
         run: |
           set -euo pipefail
-          mkdir -p /tmp/fixed_loaders
-          unzip -q fixed_ruffle_game_loaders.zip -d /tmp/fixed_loaders
 
-          # Zip layout is fixed_ruffle_loaders/<game>/index.html
-          SRC_ROOT="/tmp/fixed_loaders/fixed_ruffle_loaders"
-          if [ ! -d "$SRC_ROOT" ]; then
-            # fallback if zip root differs
-            SRC_ROOT=$(find /tmp/fixed_loaders -mindepth 1 -maxdepth 1 -type d | head -1)
+          rm -rf /tmp/fixed_extract
+          mkdir -p /tmp/fixed_extract
+          unzip -q /tmp/fixed_ruffle_game_loaders.zip -d /tmp/fixed_extract
+
+          # Handle nested zip layout:
+          # fixed_ruffle_game_loaders/fixed_ruffle_loaders/<game>/index.html
+          SRC_ROOT=$(find /tmp/fixed_extract -type d -name 'fixed_ruffle_loaders' | head -1)
+          if [ -z "${SRC_ROOT:-}" ]; then
+            echo "ERROR: could not find fixed_ruffle_loaders folder inside zip"
+            find /tmp/fixed_extract -maxdepth 4 -type d
+            exit 1
           fi
-
           echo "Source root: $SRC_ROOT"
+
           replaced=0
           skipped=0
 
           for game_dir in "$SRC_ROOT"/*/; do
             [ -d "$game_dir" ] || continue
             name=$(basename "$game_dir")
+            dest="core/$name"
 
-            # Prefer core/<name>, else any exact folder-name match in the repo
-            if [ -d "core/$name" ]; then
-              dest="core/$name"
-            else
-              dest=$(find . -type d -name "$name" \
-                -not -path './.git/*' \
-                -not -path './.github/*' \
-                | head -1 || true)
-            fi
-
-            if [ -z "${dest:-}" ] || [ ! -d "$dest" ]; then
-              echo "SKIP (no matching folder): $name"
+            if [ ! -d "$dest" ]; then
+              echo "SKIP (no core/$name): $name"
               skipped=$((skipped + 1))
               continue
             fi
 
             echo "REPLACE: $name -> $dest"
-            # Copy all files from the zip folder into the matching repo folder
             cp -a "$game_dir"/. "$dest"/
             replaced=$((replaced + 1))
           done
 
           echo "Replaced: $replaced | Skipped: $skipped"
+          if [ "$replaced" -eq 0 ]; then
+            echo "ERROR: nothing was replaced"
+            exit 1
+          fi
+
+      - name: Remove stray zip from repo if present
+        run: |
+          rm -f fixed_ruffle_game_loaders.zip
+          rm -f /tmp/fixed_ruffle_game_loaders.zip
 
       - name: Commit and push
         run: |
@@ -73,6 +74,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Apply fixed Ruffle game loaders from release zip"
+            git commit -m "Apply fixed Ruffle game loaders (remove sandbox, accurate progress)"
             git push
           fi
