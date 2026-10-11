@@ -1766,7 +1766,7 @@ async function handleBootSignUp() {
       await withTimeout(saveUserDataToCloud(), 5000);
       await withTimeout(loadUserDataFromCloud(), 5000);
       if (typeof initWallpapers === 'function') initWallpapers();
-      try { await waitForWallpapersReady(35000); } catch (e) {}
+      try { await waitForWallpapersReady(); } catch (e) {}
       startBootSequence();
       return;
     }
@@ -1861,7 +1861,7 @@ async function handleContinueAsGuest() {
   updateAuthUI();
   showAuthMessage('');
   if (typeof initWallpapers === 'function') initWallpapers();
-  try { await waitForWallpapersReady(35000); } catch (e) {}
+  try { await waitForWallpapersReady(); } catch (e) {}
   startBootSequence();
 }
 
@@ -3761,22 +3761,27 @@ function isWallpaperElementReady(vidEl, imgEl) {
 }
 
 function waitForWallpapersReady(timeoutMs) {
-    var maxMs = timeoutMs || 30000;
     return new Promise(function(resolve) {
-        var deadline = Date.now() + maxMs;
+        var settled = false;
         var lV = document.getElementById('lock-video');
         var lI = document.getElementById('lock-img');
         var bV = document.getElementById('bg-video');
         var bI = document.getElementById('bg-img');
+
+        function finish(ok) {
+            if (settled) return;
+            settled = true;
+            clearInterval(iv);
+            resolve(!!ok);
+        }
 
         function attachOnce(el, ev, fn) {
             if (!el) return;
             el.addEventListener(ev, fn, { once: true });
         }
         function onMaybeReady() {
-            
             if (isWallpaperElementReady(lV, lI) || isWallpaperElementReady(bV, bI)) {
-                resolve(true);
+                finish(true);
                 return true;
             }
             return false;
@@ -3785,22 +3790,17 @@ function waitForWallpapersReady(timeoutMs) {
 
         attachOnce(lV, 'loadeddata', onMaybeReady);
         attachOnce(lV, 'canplay', onMaybeReady);
-        attachOnce(lV, 'error', function() {  });
+        attachOnce(lV, 'error', function() { finish(false); });
         attachOnce(lI, 'load', onMaybeReady);
-        attachOnce(lI, 'error', function() {});
+        attachOnce(lI, 'error', function() { finish(false); });
         attachOnce(bV, 'loadeddata', onMaybeReady);
         attachOnce(bV, 'canplay', onMaybeReady);
+        attachOnce(bV, 'error', function() { finish(false); });
         attachOnce(bI, 'load', onMaybeReady);
+        attachOnce(bI, 'error', function() { finish(false); });
 
         var iv = setInterval(function() {
-            if (onMaybeReady()) {
-                clearInterval(iv);
-                return;
-            }
-            if (Date.now() >= deadline) {
-                clearInterval(iv);
-                resolve(false);
-            }
+            onMaybeReady();
         }, 120);
     });
 }
@@ -3907,7 +3907,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     
     try {
-        await withTimeout(warmSelectedWallpapersCache(), 30000);
+        await warmSelectedWallpapersCache();
     } catch (e) {}
 
     try { renderUI(); } catch (e) {}
@@ -3919,7 +3919,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     
     try {
-        await waitForWallpapersReady(35000);
+        await waitForWallpapersReady();
     } catch (e) {}
 
     var elapsed = Date.now() - startedAt;
@@ -4251,7 +4251,7 @@ async function enterSeamlessFromSession() {
       try { await withTimeout(loadUserDataFromCloud(), 5000); } catch (e) {}
     }
     if (typeof initWallpapers === 'function') initWallpapers();
-    try { await waitForWallpapersReady(35000); } catch (e) {}
+    try { await waitForWallpapersReady(); } catch (e) {}
     startBootSequence();
 }
 
