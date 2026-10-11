@@ -2768,7 +2768,7 @@ var WpMediaCache = (function() {
     if (!want) return blob;
     if (blob.type && blob.type !== 'application/octet-stream' && blob.type !== '') return blob;
     try {
-      return new Blob([blob], { type: want });
+      return blob.slice(0, blob.size, want);
     } catch (e) {
       return blob;
     }
@@ -4429,16 +4429,39 @@ function applyMediaToElements(url, vidEl, imgEl, isBg) {
         } else {
             imgEl.style.display = 'none';
             vidEl.style.display = 'block';
-            if (!force && sameMedia(vidEl) && vidEl.readyState >= 2) {
+            if (!force && sameMedia(vidEl) && vidEl.readyState >= 2 && !vidEl.error) {
+                try {
+                    vidEl.muted = true;
+                    vidEl.playsInline = true;
+                    var p0 = vidEl.play();
+                    if (p0 && p0.catch) p0.catch(function(){});
+                } catch (e) {}
                 playIfNeeded();
                 return;
             }
             try { vidEl.pause(); } catch (e) {}
             revokeOldBlob(vidEl);
             markSource(vidEl, loadUrl, fromBlob);
+            vidEl.muted = true;
+            vidEl.playsInline = true;
             vidEl.preload = 'auto';
+            function onBlobFail() {
+                if (!fromBlob) return;
+                if (vidEl.dataset && vidEl.dataset.wpSrc === basePath && (vidEl.currentSrc || vidEl.src || '').indexOf('blob:') === 0) {
+                    try { vidEl.removeEventListener('error', onBlobFail); } catch (e) {}
+                    applyToDom(networkUrl, false);
+                }
+            }
+            try { vidEl.removeEventListener('error', onBlobFail); } catch (e) {}
+            if (fromBlob) {
+                try { vidEl.addEventListener('error', onBlobFail, { once: true }); } catch (e) {}
+            }
             vidEl.src = loadUrl;
             try { vidEl.load(); } catch (e) {}
+            try {
+                var p1 = vidEl.play();
+                if (p1 && p1.catch) p1.catch(function(){});
+            } catch (e) {}
             playIfNeeded();
         }
     }
