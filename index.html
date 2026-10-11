@@ -2673,6 +2673,139 @@ var _devBuildVer = "3.0.1";
   window._wpSetVersion = _wpSetVersion;
 })();
 
+var WpMediaCache = (function() {
+  var DB_NAME = 'seamless-wp-media';
+  var DB_VER = 1;
+  var STORE = 'blobs';
+  var dbPromise = null;
+  var mem = Object.create(null);
+  var inflight = Object.create(null);
+
+  function openDb() {
+    if (dbPromise) return dbPromise;
+    if (!window.indexedDB) {
+      dbPromise = Promise.resolve(null);
+      return dbPromise;
+    }
+    dbPromise = new Promise(function(resolve) {
+      try {
+        var req = indexedDB.open(DB_NAME, DB_VER);
+        req.onupgradeneeded = function(e) {
+          var db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE)) {
+            db.createObjectStore(STORE, { keyPath: 'url' });
+          }
+        };
+        req.onsuccess = function(e) { resolve(e.target.result); };
+        req.onerror = function() { resolve(null); };
+      } catch (err) {
+        resolve(null);
+      }
+    });
+    return dbPromise;
+  }
+
+  function idbGet(url) {
+    return openDb().then(function(db) {
+      if (!db) return null;
+      return new Promise(function(resolve) {
+        try {
+          var tx = db.transaction(STORE, 'readonly');
+          var req = tx.objectStore(STORE).get(url);
+          req.onsuccess = function() {
+            var row = req.result;
+            resolve(row && row.blob ? row.blob : null);
+          };
+          req.onerror = function() { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+    });
+  }
+
+  function idbPut(url, blob) {
+    return openDb().then(function(db) {
+      if (!db || !blob) return false;
+      return new Promise(function(resolve) {
+        try {
+          var tx = db.transaction(STORE, 'readwrite');
+          tx.objectStore(STORE).put({
+            url: url,
+            blob: blob,
+            ts: Date.now()
+          });
+          tx.oncomplete = function() { resolve(true); };
+          tx.onerror = function() { resolve(false); };
+        } catch (e) { resolve(false); }
+      });
+    });
+  }
+
+  function isCrossOrigin(url) {
+    try {
+      var u = new URL(url, location.href);
+      return u.origin !== location.origin;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function getBlobUrl(url) {
+    if (!url) return Promise.resolve(null);
+    if (mem[url]) return Promise.resolve(mem[url]);
+    return idbGet(url).then(function(blob) {
+      if (!blob || blob.size < 32) return null;
+      var u = URL.createObjectURL(blob);
+      mem[url] = u;
+      return u;
+    });
+  }
+
+  function ensure(url) {
+    if (!url) return Promise.resolve(null);
+    if (mem[url]) return Promise.resolve(mem[url]);
+    if (inflight[url]) return inflight[url];
+
+    var job = idbGet(url).then(function(existing) {
+      if (existing && existing.size > 32) {
+        var u = URL.createObjectURL(existing);
+        mem[url] = u;
+        return u;
+      }
+      return fetch(url, { mode: 'cors', credentials: 'omit', cache: 'force-cache' })
+        .then(function(res) {
+          if (!res || !res.ok) throw new Error('fetch failed');
+          return res.blob();
+        })
+        .then(function(blob) {
+          if (!blob || blob.size < 32) return null;
+          return idbPut(url, blob).then(function() {
+            var u = URL.createObjectURL(blob);
+            mem[url] = u;
+            return u;
+          });
+        })
+        .catch(function() {
+          return null;
+        });
+    }).then(function(result) {
+      delete inflight[url];
+      return result;
+    }, function() {
+      delete inflight[url];
+      return null;
+    });
+
+    inflight[url] = job;
+    return job;
+  }
+
+  return {
+    ensure: ensure,
+    getBlobUrl: getBlobUrl,
+    isCrossOrigin: isCrossOrigin
+  };
+})();
+
 var WpPreviewCache = (function() {
   var DB_NAME = 'seamless-wp-previews';
   var DB_VER = 1;
@@ -3673,7 +3806,6 @@ function waitForWallpapersReady(timeoutMs) {
 }
 
 function warmSelectedWallpapersCache() {
-    if (typeof window.seamlessCacheAdd !== 'function') return Promise.resolve();
     try {
         var urls = [];
         if (typeof wallpaperRegistry !== 'undefined' && typeof sysConfig !== 'undefined') {
@@ -3689,8 +3821,18 @@ function warmSelectedWallpapersCache() {
         for (var i = 0; i < urls.length; i++) {
             if (!urls[i] || seen[urls[i]]) continue;
             seen[urls[i]] = 1;
-            jobs.push(Promise.resolve(window.seamlessCacheAdd(urls[i])).catch(function() {}));
+            if (typeof window.seamlessCacheAdd === 'function') {
+                jobs.push(Promise.resolve(window.seamlessCacheAdd(urls[i])).catch(function() {}));
+            }
+            if (typeof WpMediaCache !== 'undefined' && WpMediaCache.ensure) {
+                var cross = false;
+                try { cross = WpMediaCache.isCrossOrigin(urls[i]); } catch (e) {}
+                if (cross) {
+                    jobs.push(WpMediaCache.ensure(urls[i]).catch(function() {}));
+                }
+            }
         }
+        if (!jobs.length) return Promise.resolve();
         return Promise.all(jobs);
     } catch (e) {
         return Promise.resolve();
@@ -4265,20 +4407,69 @@ function applyMediaToElements(url, vidEl, imgEl, isBg) {
     }
 
     
+    function fallbackNetworkAndWarm() {
+        applyToDom(networkUrl, false);
+        if (typeof WpMediaCache !== 'undefined' && WpMediaCache.ensure) {
+            var cross = false;
+            try { cross = WpMediaCache.isCrossOrigin(url); } catch (e) {}
+            if (cross) WpMediaCache.ensure(url);
+        }
+    }
+
     if (!force && typeof window.seamlessCacheGetBlobUrl === 'function') {
         window.seamlessCacheGetBlobUrl(url).then(function(blobUrl) {
             if (blobUrl) {
                 applyToDom(blobUrl, true);
                 return;
             }
-            applyToDom(networkUrl, false);
+            if (typeof WpMediaCache !== 'undefined' && WpMediaCache.getBlobUrl) {
+                return WpMediaCache.getBlobUrl(url).then(function(idbUrl) {
+                    if (idbUrl) {
+                        applyToDom(idbUrl, true);
+                        return;
+                    }
+                    if (typeof WpMediaCache.ensure === 'function' && WpMediaCache.isCrossOrigin(url)) {
+                        return WpMediaCache.ensure(url).then(function(ensured) {
+                            if (ensured) {
+                                applyToDom(ensured, true);
+                                return;
+                            }
+                            fallbackNetworkAndWarm();
+                        });
+                    }
+                    fallbackNetworkAndWarm();
+                });
+            }
+            fallbackNetworkAndWarm();
         }).catch(function() {
-            applyToDom(networkUrl, false);
+            fallbackNetworkAndWarm();
         });
         return;
     }
 
-    applyToDom(networkUrl, false);
+    if (!force && typeof WpMediaCache !== 'undefined' && WpMediaCache.getBlobUrl) {
+        WpMediaCache.getBlobUrl(url).then(function(idbUrl) {
+            if (idbUrl) {
+                applyToDom(idbUrl, true);
+                return;
+            }
+            if (WpMediaCache.isCrossOrigin(url)) {
+                return WpMediaCache.ensure(url).then(function(ensured) {
+                    if (ensured) {
+                        applyToDom(ensured, true);
+                        return;
+                    }
+                    fallbackNetworkAndWarm();
+                });
+            }
+            fallbackNetworkAndWarm();
+        }).catch(function() {
+            fallbackNetworkAndWarm();
+        });
+        return;
+    }
+
+    fallbackNetworkAndWarm();
 }
 
 function initWallpapers() {
