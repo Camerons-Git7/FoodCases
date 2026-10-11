@@ -2448,13 +2448,10 @@ var _devBuildVer = "3.0.1";
   const swUrl = URL.createObjectURL(blob);
 
   navigator.serviceWorker.register(swUrl, { scope: './' })
-    .then(reg => {
-      console.log('[Seamless Cache] Service Worker registered, scope:', reg.scope);
-      reg.update();
+    .then(function(reg) {
+      try { reg.update(); } catch (e) {}
     })
-    .catch(err => {
-      console.warn('[Seamless Cache] SW registration failed (normal on file://):', err);
-    });
+    .catch(function() {});
 
   
   
@@ -3230,8 +3227,24 @@ var IconCache = (function() {
     });
   }
 
+  function isSameOriginUrl(url) {
+    try {
+      var u = new URL(url, location.href);
+      return u.origin === location.origin;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function isDataOrBlob(url) {
+    return /^data:|^blob:/i.test(String(url || ''));
+  }
+
   function fetchAsDataUrl(url) {
-    return fetch(url, { mode: 'cors', credentials: 'omit', cache: 'force-cache' })
+    if (!url || isDataOrBlob(url)) return Promise.resolve(url || null);
+    if (!isSameOriginUrl(url)) return Promise.resolve(null);
+
+    return fetch(url, { mode: 'same-origin', credentials: 'same-origin', cache: 'force-cache' })
       .then(function(res) {
         if (!res || !res.ok) throw new Error('fetch failed');
         return res.blob();
@@ -3240,41 +3253,15 @@ var IconCache = (function() {
         return toDataUrl(blob);
       })
       .catch(function() {
-        return new Promise(function(resolve) {
-          var img = new Image();
-          img.crossOrigin = 'anonymous';
-          var done = false;
-          function finish(v) {
-            if (done) return;
-            done = true;
-            resolve(v || null);
-          }
-          img.onload = function() {
-            try {
-              var w = img.naturalWidth || 64;
-              var h = img.naturalHeight || 64;
-              var max = 128;
-              var scale = Math.min(1, max / Math.max(w, h));
-              var c = document.createElement('canvas');
-              c.width = Math.max(1, Math.round(w * scale));
-              c.height = Math.max(1, Math.round(h * scale));
-              var ctx = c.getContext('2d');
-              ctx.drawImage(img, 0, 0, c.width, c.height);
-              finish(c.toDataURL('image/png'));
-            } catch (e) {
-              finish(null);
-            }
-          };
-          img.onerror = function() { finish(null); };
-          img.src = url;
-          setTimeout(function() { if (!done) finish(null); }, 12000);
-        });
+        return null;
       });
   }
 
   function ensure(url) {
     if (!url) return Promise.resolve(null);
+    if (isDataOrBlob(url)) return Promise.resolve(url);
     if (mem[url]) return Promise.resolve(mem[url]);
+    if (!isSameOriginUrl(url)) return Promise.resolve(null);
     if (pending[url]) return pending[url];
 
     var job = idbGet(url).then(function(existing) {
@@ -3303,18 +3290,21 @@ var IconCache = (function() {
 
   function resolve(url) {
     if (!url) return PLACEHOLDER;
+    if (isDataOrBlob(url)) return url;
     var cached = getSync(url);
     if (cached) return cached;
-    ensure(url).then(function(dataUrl) {
-      if (!dataUrl) return;
-      try {
-        var imgs = document.querySelectorAll('img');
-        for (var i = 0; i < imgs.length; i++) {
-          var attr = imgs[i].getAttribute('src');
-          if (attr === url) imgs[i].src = dataUrl;
-        }
-      } catch (e) {}
-    });
+    if (isSameOriginUrl(url)) {
+      ensure(url).then(function(dataUrl) {
+        if (!dataUrl) return;
+        try {
+          var imgs = document.querySelectorAll('img');
+          for (var i = 0; i < imgs.length; i++) {
+            var attr = imgs[i].getAttribute('src');
+            if (attr === url) imgs[i].src = dataUrl;
+          }
+        } catch (e) {}
+      });
+    }
     return url;
   }
 
@@ -3389,13 +3379,7 @@ function iconSrc(url) {
 window.__iconErr = function(img) {
   if (!img) return;
   img.onerror = null;
-  var orig = img.getAttribute('data-orig') || img.getAttribute('src');
-  if (typeof IconCache !== 'undefined' && IconCache.ensure && orig && orig.indexOf('data:') !== 0) {
-    IconCache.ensure(orig).then(function(dataUrl) {
-      if (dataUrl) img.src = dataUrl;
-      else img.src = IconCache.PLACEHOLDER;
-    });
-  } else if (typeof IconCache !== 'undefined') {
+  if (typeof IconCache !== 'undefined' && IconCache.PLACEHOLDER) {
     img.src = IconCache.PLACEHOLDER;
   }
 };
