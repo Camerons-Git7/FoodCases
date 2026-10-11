@@ -1765,7 +1765,7 @@ async function handleBootSignUp() {
       _suppressCloudSave = false;
       await withTimeout(saveUserDataToCloud(), 5000);
       await withTimeout(loadUserDataFromCloud(), 5000);
-      if (typeof initWallpapers === 'function') initWallpapers();
+      if (typeof initWallpapers === 'function') await initWallpapers();
       try { await waitForWallpapersReady(); } catch (e) {}
       startBootSequence();
       return;
@@ -1860,7 +1860,7 @@ async function handleContinueAsGuest() {
   isGuest = true;
   updateAuthUI();
   showAuthMessage('');
-  if (typeof initWallpapers === 'function') initWallpapers();
+  if (typeof initWallpapers === 'function') await initWallpapers();
   try { await waitForWallpapersReady(); } catch (e) {}
   startBootSequence();
 }
@@ -3789,8 +3789,7 @@ function isWallpaperElementReady(vidEl, imgEl) {
     }
     if (vidEl && vidEl.style.display !== 'none') {
         var vsrc = vidEl.currentSrc || vidEl.src || '';
-        
-        if (vsrc && vidEl.readyState >= 2) return true;
+        if (vsrc && !vidEl.error && vidEl.readyState >= 2 && vidEl.videoWidth > 0) return true;
     }
     return false;
 }
@@ -3944,7 +3943,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     } catch (e) {}
 
     try {
-        if (typeof initWallpapers === 'function') initWallpapers();
+        if (typeof initWallpapers === 'function') await initWallpapers();
     } catch (e) {}
 
     try { renderUI(); } catch (e) {}
@@ -4287,7 +4286,7 @@ async function enterSeamlessFromSession() {
     if (currentUser && !isGuest && typeof loadUserDataFromCloud === 'function') {
       try { await withTimeout(loadUserDataFromCloud(), 5000); } catch (e) {}
     }
-    if (typeof initWallpapers === 'function') initWallpapers();
+    if (typeof initWallpapers === 'function') await initWallpapers();
     try { await waitForWallpapersReady(); } catch (e) {}
     startBootSequence();
 }
@@ -4367,10 +4366,8 @@ window.unlockSystem = function() {
 };
 
 function applyMediaToElements(url, vidEl, imgEl, isBg) {
-    if (!url || !vidEl || !imgEl) return;
+    if (!url || !vidEl || !imgEl) return Promise.resolve(false);
 
-    
-    
     var force = (typeof window._wpGetForce === 'function') ? window._wpGetForce(url) : null;
     var networkUrl = url;
     if (force) {
@@ -4383,17 +4380,16 @@ function applyMediaToElements(url, vidEl, imgEl, isBg) {
     }
 
     var basePath = String(url).split('?')[0].split('#')[0];
-    function pathOf(s) {
-        try { return new URL(s, location.href).pathname; } catch (e) { return String(s).split('?')[0]; }
+    function pathOf(x) {
+        try { return new URL(x, location.href).pathname; } catch (e) { return String(x).split('?')[0]; }
     }
     function sameMedia(el) {
         if (!el) return false;
-        var s = el.currentSrc || el.src || '';
-        if (!s || s.indexOf('blob:') === 0) {
-            
+        var sc = el.currentSrc || el.src || '';
+        if (!sc || sc.indexOf('blob:') === 0) {
             return el.dataset && el.dataset.wpSrc === basePath;
         }
-        return pathOf(s) === pathOf(basePath);
+        return pathOf(sc) === pathOf(basePath);
     }
     function revokeOldBlob(el) {
         if (!el) return;
@@ -4409,71 +4405,118 @@ function applyMediaToElements(url, vidEl, imgEl, isBg) {
         if (isBlob) el.dataset.wpBlob = loadUrl;
         else delete el.dataset.wpBlob;
     }
-    function playIfNeeded() {
-        if (isBg && isDesktopActive && !sysConfig.optBg) vidEl.play().catch(function(){});
-        var lock = document.getElementById('lock-screen');
-        if (!isBg && lock && lock.classList.contains('active')) vidEl.play().catch(function(){});
-    }
 
     var isImg = /\.(png|jpe?g|gif|webp)$/i.test(url);
+
+    function waitElementReady() {
+        return new Promise(function(resolve) {
+            var done = false;
+            function finish(ok) {
+                if (done) return;
+                done = true;
+                clearInterval(tick);
+                resolve(!!ok);
+            }
+            function check() {
+                if (isImg) {
+                    if (imgEl.complete && imgEl.naturalWidth > 0) {
+                        finish(true);
+                        return true;
+                    }
+                    if (imgEl.error) {
+                        finish(false);
+                        return true;
+                    }
+                } else {
+                    if (vidEl.error) {
+                        finish(false);
+                        return true;
+                    }
+                    if (vidEl.readyState >= 2 && vidEl.videoWidth > 0) {
+                        try {
+                            vidEl.muted = true;
+                            vidEl.playsInline = true;
+                            var p = vidEl.play();
+                            if (p && p.catch) p.catch(function(){});
+                        } catch (e) {}
+                        finish(true);
+                        return true;
+                    }
+                }
+                return false;
+            }
+            if (check()) return;
+            if (isImg) {
+                imgEl.addEventListener('load', function() { check(); }, { once: true });
+                imgEl.addEventListener('error', function() { finish(false); }, { once: true });
+            } else {
+                vidEl.addEventListener('loadeddata', function() { check(); }, { once: true });
+                vidEl.addEventListener('canplay', function() { check(); }, { once: true });
+                vidEl.addEventListener('error', function() { finish(false); }, { once: true });
+            }
+            var tick = setInterval(function() { check(); }, 100);
+        });
+    }
 
     function applyToDom(loadUrl, fromBlob) {
         if (isImg) {
             vidEl.style.display = 'none';
             try { vidEl.pause(); } catch (e) {}
             imgEl.style.display = 'block';
-            if (!force && sameMedia(imgEl) && imgEl.complete && imgEl.naturalWidth > 0) return;
+            if (!force && sameMedia(imgEl) && imgEl.complete && imgEl.naturalWidth > 0) {
+                return Promise.resolve(true);
+            }
             revokeOldBlob(imgEl);
             markSource(imgEl, loadUrl, fromBlob);
             imgEl.src = loadUrl;
-        } else {
-            imgEl.style.display = 'none';
-            vidEl.style.display = 'block';
-            if (!force && sameMedia(vidEl) && vidEl.readyState >= 2 && !vidEl.error) {
-                try {
-                    vidEl.muted = true;
-                    vidEl.playsInline = true;
-                    var p0 = vidEl.play();
-                    if (p0 && p0.catch) p0.catch(function(){});
-                } catch (e) {}
-                playIfNeeded();
-                return;
-            }
-            try { vidEl.pause(); } catch (e) {}
-            revokeOldBlob(vidEl);
-            markSource(vidEl, loadUrl, fromBlob);
-            vidEl.muted = true;
-            vidEl.playsInline = true;
-            vidEl.preload = 'auto';
-            function onBlobFail() {
-                if (!fromBlob) return;
-                if (vidEl.dataset && vidEl.dataset.wpSrc === basePath && (vidEl.currentSrc || vidEl.src || '').indexOf('blob:') === 0) {
-                    try { vidEl.removeEventListener('error', onBlobFail); } catch (e) {}
-                    applyToDom(networkUrl, false);
-                }
-            }
-            try { vidEl.removeEventListener('error', onBlobFail); } catch (e) {}
-            if (fromBlob) {
-                try { vidEl.addEventListener('error', onBlobFail, { once: true }); } catch (e) {}
-            }
-            vidEl.src = loadUrl;
-            try { vidEl.load(); } catch (e) {}
-            try {
-                var p1 = vidEl.play();
-                if (p1 && p1.catch) p1.catch(function(){});
-            } catch (e) {}
-            playIfNeeded();
+            return waitElementReady();
         }
+
+        imgEl.style.display = 'none';
+        vidEl.style.display = 'block';
+        if (!force && sameMedia(vidEl) && vidEl.readyState >= 2 && vidEl.videoWidth > 0 && !vidEl.error) {
+            try {
+                vidEl.muted = true;
+                vidEl.playsInline = true;
+                var p0 = vidEl.play();
+                if (p0 && p0.catch) p0.catch(function(){});
+            } catch (e) {}
+            return Promise.resolve(true);
+        }
+        try { vidEl.pause(); } catch (e) {}
+        revokeOldBlob(vidEl);
+        markSource(vidEl, loadUrl, fromBlob);
+        vidEl.muted = true;
+        vidEl.playsInline = true;
+        vidEl.preload = 'auto';
+        function onBlobFail() {
+            if (!fromBlob) return;
+            if (vidEl.dataset && vidEl.dataset.wpSrc === basePath && (vidEl.currentSrc || vidEl.src || '').indexOf('blob:') === 0) {
+                try { vidEl.removeEventListener('error', onBlobFail); } catch (e) {}
+                applyToDom(networkUrl, false);
+            }
+        }
+        try { vidEl.removeEventListener('error', onBlobFail); } catch (e) {}
+        if (fromBlob) {
+            try { vidEl.addEventListener('error', onBlobFail, { once: true }); } catch (e) {}
+        }
+        vidEl.src = loadUrl;
+        try { vidEl.load(); } catch (e) {}
+        try {
+            var p1 = vidEl.play();
+            if (p1 && p1.catch) p1.catch(function(){});
+        } catch (e) {}
+        return waitElementReady();
     }
 
-    
     function fallbackNetworkAndWarm() {
-        applyToDom(networkUrl, false);
+        var p = applyToDom(networkUrl, false);
         if (typeof WpMediaCache !== 'undefined' && WpMediaCache.ensure) {
             var cross = false;
             try { cross = WpMediaCache.isCrossOrigin(url); } catch (e) {}
             if (cross) WpMediaCache.ensure(url);
         }
+        return p;
     }
 
     var crossOrigin = false;
@@ -4484,68 +4527,54 @@ function applyMediaToElements(url, vidEl, imgEl, isBg) {
     } catch (e) {}
 
     if (!force && crossOrigin && typeof WpMediaCache !== 'undefined' && WpMediaCache.getBlobUrl) {
-        WpMediaCache.getBlobUrl(url).then(function(idbUrl) {
-            if (idbUrl) {
-                applyToDom(idbUrl, true);
-                return;
-            }
+        return WpMediaCache.getBlobUrl(url).then(function(idbUrl) {
+            if (idbUrl) return applyToDom(idbUrl, true);
             return WpMediaCache.ensure(url).then(function(ensured) {
-                if (ensured) {
-                    applyToDom(ensured, true);
-                    return;
-                }
-                fallbackNetworkAndWarm();
+                if (ensured) return applyToDom(ensured, true);
+                return fallbackNetworkAndWarm();
             });
         }).catch(function() {
-            fallbackNetworkAndWarm();
+            return fallbackNetworkAndWarm();
         });
-        return;
     }
 
     if (!force && typeof window.seamlessCacheGetBlobUrl === 'function') {
-        window.seamlessCacheGetBlobUrl(url).then(function(blobUrl) {
-            if (blobUrl) {
-                applyToDom(blobUrl, true);
-                return;
-            }
-            fallbackNetworkAndWarm();
+        return window.seamlessCacheGetBlobUrl(url).then(function(blobUrl) {
+            if (blobUrl) return applyToDom(blobUrl, true);
+            return fallbackNetworkAndWarm();
         }).catch(function() {
-            fallbackNetworkAndWarm();
+            return fallbackNetworkAndWarm();
         });
-        return;
     }
 
-    fallbackNetworkAndWarm();
+    return fallbackNetworkAndWarm();
 }
 
 function initWallpapers() {
-    let bV = document.getElementById('bg-video');
-    let bI = document.getElementById('bg-img');
-    let lV = document.getElementById('lock-video');
-    let lI = document.getElementById('lock-img');
-    
-    if(wallpaperRegistry[sysConfig.homeWallpaper]) {
-        applyMediaToElements(wallpaperRegistry[sysConfig.homeWallpaper].url, bV, bI, true);
+    var bV = document.getElementById('bg-video');
+    var bI = document.getElementById('bg-img');
+    var lV = document.getElementById('lock-video');
+    var lI = document.getElementById('lock-img');
+    var jobs = [];
+
+    if (wallpaperRegistry[sysConfig.homeWallpaper]) {
+        jobs.push(applyMediaToElements(wallpaperRegistry[sysConfig.homeWallpaper].url, bV, bI, true));
     }
-    if(wallpaperRegistry[sysConfig.lockWallpaper]) {
-        applyMediaToElements(wallpaperRegistry[sysConfig.lockWallpaper].url, lV, lI, false);
+    if (wallpaperRegistry[sysConfig.lockWallpaper]) {
+        jobs.push(applyMediaToElements(wallpaperRegistry[sysConfig.lockWallpaper].url, lV, lI, false));
     } else {
-        applyMediaToElements("cine-os/Videos/green.mp4", lV, lI, false);
+        jobs.push(applyMediaToElements("cine-os/Videos/green.mp4", lV, lI, false));
     }
-    
+
     updateWallpaperLoop();
-    let wChk = document.getElementById('wp-loop-chk');
-    if(wChk) wChk.checked = sysConfig.wpLoop;
+    var wChk = document.getElementById('wp-loop-chk');
+    if (wChk) wChk.checked = sysConfig.wpLoop;
 
-    
-    
-    
-
-    
-    
     if (typeof WpPreviewCache !== 'undefined' && WpPreviewCache.warmAll) {
-        WpPreviewCache.warmAll(wallpaperRegistry);
+        try { WpPreviewCache.warmAll(wallpaperRegistry); } catch (e) {}
     }
+
+    return Promise.all(jobs);
 }
 
 function updateWallpaperLoop() {
