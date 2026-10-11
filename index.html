@@ -3821,15 +3821,18 @@ function warmSelectedWallpapersCache() {
         for (var i = 0; i < urls.length; i++) {
             if (!urls[i] || seen[urls[i]]) continue;
             seen[urls[i]] = 1;
-            if (typeof window.seamlessCacheAdd === 'function') {
-                jobs.push(Promise.resolve(window.seamlessCacheAdd(urls[i])).catch(function() {}));
-            }
-            if (typeof WpMediaCache !== 'undefined' && WpMediaCache.ensure) {
-                var cross = false;
-                try { cross = WpMediaCache.isCrossOrigin(urls[i]); } catch (e) {}
-                if (cross) {
+            var cross = false;
+            try {
+                if (typeof WpMediaCache !== 'undefined' && WpMediaCache.isCrossOrigin) {
+                    cross = WpMediaCache.isCrossOrigin(urls[i]);
+                }
+            } catch (e) {}
+            if (cross) {
+                if (typeof WpMediaCache !== 'undefined' && WpMediaCache.ensure) {
                     jobs.push(WpMediaCache.ensure(urls[i]).catch(function() {}));
                 }
+            } else if (typeof window.seamlessCacheAdd === 'function') {
+                jobs.push(Promise.resolve(window.seamlessCacheAdd(urls[i])).catch(function() {}));
             }
         }
         if (!jobs.length) return Promise.resolve();
@@ -3902,12 +3905,11 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     
     try {
-        if (typeof initWallpapers === 'function') initWallpapers();
+        await warmSelectedWallpapersCache();
     } catch (e) {}
 
-    
     try {
-        await warmSelectedWallpapersCache();
+        if (typeof initWallpapers === 'function') initWallpapers();
     } catch (e) {}
 
     try { renderUI(); } catch (e) {}
@@ -4416,51 +4418,37 @@ function applyMediaToElements(url, vidEl, imgEl, isBg) {
         }
     }
 
-    if (!force && typeof window.seamlessCacheGetBlobUrl === 'function') {
-        window.seamlessCacheGetBlobUrl(url).then(function(blobUrl) {
-            if (blobUrl) {
-                applyToDom(blobUrl, true);
+    var crossOrigin = false;
+    try {
+        if (typeof WpMediaCache !== 'undefined' && WpMediaCache.isCrossOrigin) {
+            crossOrigin = WpMediaCache.isCrossOrigin(url);
+        }
+    } catch (e) {}
+
+    if (!force && crossOrigin && typeof WpMediaCache !== 'undefined' && WpMediaCache.getBlobUrl) {
+        WpMediaCache.getBlobUrl(url).then(function(idbUrl) {
+            if (idbUrl) {
+                applyToDom(idbUrl, true);
                 return;
             }
-            if (typeof WpMediaCache !== 'undefined' && WpMediaCache.getBlobUrl) {
-                return WpMediaCache.getBlobUrl(url).then(function(idbUrl) {
-                    if (idbUrl) {
-                        applyToDom(idbUrl, true);
-                        return;
-                    }
-                    if (typeof WpMediaCache.ensure === 'function' && WpMediaCache.isCrossOrigin(url)) {
-                        return WpMediaCache.ensure(url).then(function(ensured) {
-                            if (ensured) {
-                                applyToDom(ensured, true);
-                                return;
-                            }
-                            fallbackNetworkAndWarm();
-                        });
-                    }
-                    fallbackNetworkAndWarm();
-                });
-            }
-            fallbackNetworkAndWarm();
+            return WpMediaCache.ensure(url).then(function(ensured) {
+                if (ensured) {
+                    applyToDom(ensured, true);
+                    return;
+                }
+                fallbackNetworkAndWarm();
+            });
         }).catch(function() {
             fallbackNetworkAndWarm();
         });
         return;
     }
 
-    if (!force && typeof WpMediaCache !== 'undefined' && WpMediaCache.getBlobUrl) {
-        WpMediaCache.getBlobUrl(url).then(function(idbUrl) {
-            if (idbUrl) {
-                applyToDom(idbUrl, true);
+    if (!force && typeof window.seamlessCacheGetBlobUrl === 'function') {
+        window.seamlessCacheGetBlobUrl(url).then(function(blobUrl) {
+            if (blobUrl) {
+                applyToDom(blobUrl, true);
                 return;
-            }
-            if (WpMediaCache.isCrossOrigin(url)) {
-                return WpMediaCache.ensure(url).then(function(ensured) {
-                    if (ensured) {
-                        applyToDom(ensured, true);
-                        return;
-                    }
-                    fallbackNetworkAndWarm();
-                });
             }
             fallbackNetworkAndWarm();
         }).catch(function() {
