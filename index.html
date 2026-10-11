@@ -2749,12 +2749,44 @@ var WpMediaCache = (function() {
     }
   }
 
+  function mimeForUrl(url) {
+    var path = String(url || '').split('?')[0].split('#')[0].toLowerCase();
+    if (/\.mp4$/i.test(path)) return 'video/mp4';
+    if (/\.webm$/i.test(path)) return 'video/webm';
+    if (/\.mov$/i.test(path)) return 'video/quicktime';
+    if (/\.m4v$/i.test(path)) return 'video/mp4';
+    if (/\.png$/i.test(path)) return 'image/png';
+    if (/\.jpe?g$/i.test(path)) return 'image/jpeg';
+    if (/\.gif$/i.test(path)) return 'image/gif';
+    if (/\.webp$/i.test(path)) return 'image/webp';
+    return '';
+  }
+
+  function typedBlob(blob, url) {
+    if (!blob) return null;
+    var want = mimeForUrl(url);
+    if (!want) return blob;
+    if (blob.type && blob.type !== 'application/octet-stream' && blob.type !== '') return blob;
+    try {
+      return new Blob([blob], { type: want });
+    } catch (e) {
+      return blob;
+    }
+  }
+
+  function blobToUrl(blob, url) {
+    var b = typedBlob(blob, url);
+    if (!b) return null;
+    return URL.createObjectURL(b);
+  }
+
   function getBlobUrl(url) {
     if (!url) return Promise.resolve(null);
     if (mem[url]) return Promise.resolve(mem[url]);
     return idbGet(url).then(function(blob) {
       if (!blob || blob.size < 32) return null;
-      var u = URL.createObjectURL(blob);
+      var u = blobToUrl(blob, url);
+      if (!u) return null;
       mem[url] = u;
       return u;
     });
@@ -2767,7 +2799,8 @@ var WpMediaCache = (function() {
 
     var job = idbGet(url).then(function(existing) {
       if (existing && existing.size > 32) {
-        var u = URL.createObjectURL(existing);
+        var u = blobToUrl(existing, url);
+        if (!u) return null;
         mem[url] = u;
         return u;
       }
@@ -2778,8 +2811,10 @@ var WpMediaCache = (function() {
         })
         .then(function(blob) {
           if (!blob || blob.size < 32) return null;
-          return idbPut(url, blob).then(function() {
-            var u = URL.createObjectURL(blob);
+          var storeBlob = typedBlob(blob, url) || blob;
+          return idbPut(url, storeBlob).then(function() {
+            var u = blobToUrl(storeBlob, url);
+            if (!u) return null;
             mem[url] = u;
             return u;
           });
