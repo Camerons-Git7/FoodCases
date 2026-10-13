@@ -4158,13 +4158,15 @@ document.getElementById('ctx-open-newtab-dock').onclick = function() {
 function copyAppLink(id) {
     const app = APPS[id];
     if (!app) return;
-
-    navigator.clipboard.writeText(app.path).then(() => {
-        
+    let url = app.newTabPath || app.path;
+    if (!url) return;
+    try {
+        url = new URL(url, window.location.href).href;
+    } catch (e) {}
+    navigator.clipboard.writeText(url).then(() => {
     }).catch(() => {
-        
         const textarea = document.createElement('textarea');
-        textarea.value = app.path;
+        textarea.value = url;
         document.body.appendChild(textarea);
         textarea.select();
         document.execCommand('copy');
