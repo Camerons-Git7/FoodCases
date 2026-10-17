@@ -1,13 +1,59 @@
 <!doctype html>
 <html>
 <head>
+<script>
+(function(){
+const started=performance.now();
+const pending=new Map();
+const counts={fetch:0,xhr:0,worker:0,image:0,errors:0,longTasks:0};
+const fmt=n=>typeof n==='number'?Math.round(n*10)/10:n;
+const elapsed=()=>fmt(performance.now()-started)+'ms';
+const short=u=>{try{const x=new URL(u,location.href);return x.origin===location.origin?x.pathname+x.search:x.href}catch(e){return String(u)}};
+const log=(...a)=>console.log('%c[FIVEPLAY DIAG '+elapsed()+']','color:#5bd6ff;font-weight:bold',...a);
+window.__fiveplayDiag={started,pending,counts,log,report(){
+ const entries=performance.getEntriesByType('resource');
+ const rows=entries.map(e=>({name:short(e.name),type:e.initiatorType,start:fmt(e.startTime),duration:fmt(e.duration),ttfb:fmt(e.responseStart-e.requestStart),transferKB:fmt(e.transferSize/1024),encodedKB:fmt(e.encodedBodySize/1024),decodedKB:fmt(e.decodedBodySize/1024)}));
+ console.group('[FIVEPLAY DIAG] REPORT');
+ console.log('Page',location.href,'visibility',document.visibilityState,'readyState',document.readyState,'elapsed',elapsed());
+ console.log('Device', {hardwareConcurrency:navigator.hardwareConcurrency,deviceMemory:navigator.deviceMemory,online:navigator.onLine,connection:navigator.connection&&{effectiveType:navigator.connection.effectiveType,rtt:navigator.connection.rtt,downlink:navigator.connection.downlink,saveData:navigator.connection.saveData},userAgent:navigator.userAgent});
+ console.log('Counts',counts,'pending instrumented requests',Array.from(pending.values()));
+ console.log('Performance navigation',performance.getEntriesByType('navigation').map(e=>({type:e.type,redirect:fmt(e.redirectEnd-e.redirectStart),dns:fmt(e.domainLookupEnd-e.domainLookupStart),connect:fmt(e.connectEnd-e.connectStart),tls:fmt(e.secureConnectionStart?e.connectEnd-e.secureConnectionStart:0),requestToResponse:fmt(e.responseStart-e.requestStart),response:fmt(e.responseEnd-e.responseStart),domInteractive:fmt(e.domInteractive),domContentLoaded:fmt(e.domContentLoadedEventEnd),load:fmt(e.loadEventEnd)})));
+ console.log('Resources by start time',rows.sort((a,b)=>a.start-b.start));
+ console.log('Largest resources',rows.slice().sort((a,b)=>b.decodedKB-a.decodedKB).slice(0,30));
+ console.groupEnd();
+ }};
+log('Diagnostics active before page scripts', {url:location.href,protocol:location.protocol,baseURI:document.baseURI});
+addEventListener('error',e=>{counts.errors++;log('WINDOW ERROR',{message:e.message,source:e.filename,line:e.lineno,column:e.colno,error:e.error});});
+addEventListener('unhandledrejection',e=>{counts.errors++;log('UNHANDLED REJECTION',e.reason);});
+addEventListener('online',()=>log('NETWORK ONLINE'));addEventListener('offline',()=>log('NETWORK OFFLINE'));
+document.addEventListener('DOMContentLoaded',()=>log('DOMContentLoaded', {scripts:document.scripts.length,images:document.images.length}));
+addEventListener('load',()=>{log('WINDOW LOAD');setTimeout(()=>window.__fiveplayDiag.report(),1000);});
+if('PerformanceObserver'in window){try{new PerformanceObserver(list=>{for(const e of list.getEntries()){counts.longTasks++;log('LONG TASK',{start:fmt(e.startTime),duration:fmt(e.duration),at:elapsed()});}}).observe({type:'longtask',buffered:true});}catch(e){log('Long-task observer unavailable',String(e));}
+try{new PerformanceObserver(list=>{for(const e of list.getEntries()){if(e.initiatorType==='fetch'||e.initiatorType==='xmlhttprequest'||/\.m?js(?:\?|$)|\.wasm(?:\?|$)|worker/i.test(e.name))log('RESOURCE TIMING',{url:short(e.name),initiator:e.initiatorType,start:fmt(e.startTime),duration:fmt(e.duration),requestToResponse:fmt(e.responseStart-e.requestStart),transferKB:fmt(e.transferSize/1024),decodedKB:fmt(e.decodedBodySize/1024)});}}).observe({type:'resource',buffered:true});}catch(e){log('Resource observer unavailable',String(e));}}
+const oldFetch=window.fetch;
+if(oldFetch)window.fetch=function(input,init){const url=typeof input==='string'?input:input&&input.url||String(input);const id='fetch-'+(++counts.fetch);const rec={id,type:'fetch',url:short(url),started:performance.now(),method:init&&init.method||'GET'};pending.set(id,rec);log('FETCH START',rec);let p;try{p=oldFetch.apply(this,arguments)}catch(e){pending.delete(id);log('FETCH THROW',rec,String(e));throw e;}return p.then(r=>{pending.delete(id);log('FETCH RESPONSE',{...rec,elapsed:fmt(performance.now()-rec.started),status:r.status,ok:r.ok,type:r.type});return r;},e=>{pending.delete(id);log('FETCH FAILED',{...rec,elapsed:fmt(performance.now()-rec.started),error:String(e)});throw e;});};
+const XHR=window.XMLHttpRequest;
+if(XHR){const op=XHR.prototype.open,send=XHR.prototype.send;XHR.prototype.open=function(method,url){this.__fpdiag={method,url:short(url)};return op.apply(this,arguments)};XHR.prototype.send=function(){const x=this,rec={id:'xhr-'+(++counts.xhr),type:'xhr',...x.__fpdiag,started:performance.now()};pending.set(rec.id,rec);log('XHR START',rec);x.addEventListener('loadend',function(){pending.delete(rec.id);log('XHR END',{...rec,elapsed:fmt(performance.now()-rec.started),status:x.status});},{once:true});return send.apply(this,arguments)}}
+const OriginalWorker=window.Worker;
+if(OriginalWorker){window.Worker=new Proxy(OriginalWorker,{construct(Target,args){counts.worker++;const url=short(args[0]);log('WORKER CREATE',{url,options:args[1]||null});try{const w=Reflect.construct(Target,args);w.addEventListener('error',e=>{counts.errors++;log('WORKER ERROR',{url,message:e.message,filename:e.filename,lineno:e.lineno});});w.addEventListener('messageerror',e=>log('WORKER MESSAGE ERROR',{url,event:e}));return w}catch(e){log('WORKER CREATE FAILED',{url,error:String(e)});throw e;}}})}
+const imageSrc=Object.getOwnPropertyDescriptor(HTMLImageElement.prototype,'src');
+if(imageSrc&&imageSrc.set){Object.defineProperty(HTMLImageElement.prototype,'src',{...imageSrc,set(value){counts.image++;const url=short(value);const t=performance.now();log('IMAGE SRC SET',{url,number:counts.image});this.addEventListener('load',()=>log('IMAGE LOADED',{url,elapsed:fmt(performance.now()-t),width:this.naturalWidth,height:this.naturalHeight}),{once:true});this.addEventListener('error',()=>log('IMAGE FAILED',{url,elapsed:fmt(performance.now()-t)}),{once:true});return imageSrc.set.call(this,value)},get:imageSrc.get,enumerable:imageSrc.enumerable,configurable:imageSrc.configurable});}
+setInterval(()=>{const pct=document.querySelector('#pct')?.textContent;const label=document.querySelector('#label')?.textContent;const resources=performance.getEntriesByType('resource');const last=resources.slice(-5).map(e=>({name:short(e.name),start:fmt(e.startTime),duration:fmt(e.duration)}));log('HEARTBEAT',{readyState:document.readyState,progress:pct,label,resources:resources.length,workers:counts.worker,pending:Array.from(pending.values()).map(x=>({type:x.type,url:x.url,age:fmt(performance.now()-x.started)})),recentCompletedResources:last});},5000);
+window.addEventListener('keydown',e=>{if(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='d')window.__fiveplayDiag.report()});
+})();
+</script>
+
+<meta name="monetag" content="dbfcd3613774dd84077b14c8419d46df">
+<script src="https://quge5.com/88/tag.min.js" data-zone="293219" async data-cfasync="false"></script>
+<script src="https://alwingulla.com/88/tag.min.js" data-zone="11993930" async data-cfasync="false"></script>
+<script>(function(s,u,z,p){s.src=u,s.setAttribute("data-zone",z),p.appendChild(s);})(document.createElement("script"),"https://alwingulla.com/tag.min.js",11993930,document.head||document.documentElement);</script>
 <meta charset="utf-8">
 <title>game</title>
 <style>
 	html, body { margin: 0; height: 100%; background: #000; color: #ccc; font: 12px monospace; overflow: hidden; }
 	#canvas { display: block; position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; background: #000; }
 	/* title screen: the game's loading screen (LOADINGSCREEN_STARTUP) on its 1280x720 stage, scaled to the window; see the script below */
-	@font-face { font-family: 'Chalet'; src: url('https://fiveplay.lol/b/8b0b5899ed/title/chalet.woff') format('woff'); }
+	@font-face { font-family: 'Chalet'; src: url('/b/8b0b5899ed/title/chalet.woff') format('woff'); }
 	#loading { position: fixed; inset: 0; background: #000; overflow: hidden; transition: opacity .8s; z-index: 5; }
 	#loading.done { opacity: 0; pointer-events: none; }
 	#ls-stage { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; transform-origin: 0 0; overflow: hidden; font: 12px Chalet, sans-serif; color: #fff; }
@@ -27,7 +73,7 @@
 	#modes.ask button:not(:disabled) .ls-key { animation: ls-ask 1.2s ease-in-out infinite; }
 	@keyframes ls-ask { 50% { opacity: .35; } }
 	.ls-key { margin-left: 4px; min-width: 12px; height: 15px; padding: 0 4px; line-height: 16px; border-radius: 2px; background: #fff; color: #000; font-size: 10px; text-transform: uppercase; }
-	.ls-spin { flex: none; width: 22px; height: 22px; margin-left: 2px; background: url('https://fiveplay.lol/b/8b0b5899ed/title/spinner.png') center / 24px 24px no-repeat; animation: ls-spin 2s steps(60) infinite; }
+	.ls-spin { flex: none; width: 22px; height: 22px; margin-left: 2px; background: url('/b/8b0b5899ed/title/spinner.png') center / 24px 24px no-repeat; animation: ls-spin 2s steps(60) infinite; }
 	@keyframes ls-spin { from { transform: rotate(0deg) scaleX(-1); } to { transform: rotate(-360deg) scaleX(-1); } }
 	#label { text-shadow: .85px .85px 1px rgba(0, 0, 0, .45); }
 	#pct { margin-left: 15px; font-variant-numeric: tabular-nums; }
@@ -44,7 +90,7 @@
 <body>
 <canvas id="canvas" width="800" height="600" tabindex="-1"></canvas>
 <div id="hud"></div>
-<div id="loading"><div id="ls-stage"><div id="ls-screens"></div><img id="ls-logo" src="https://fiveplay.lol/b/8b0b5899ed/title/logo.png" alt=""><div id="ls-bars"><div id="modes" class="ls-bar"><button data-act="back"></button><button data-act="map5"></button><button data-act="map6"></button><button data-act="sandbox"></button><button data-act="story"></button></div><div class="ls-bar"><span id="label">Starting...</span><span id="pct">0%</span><i class="ls-spin"></i></div></div></div><div id="ls-log"><div id="data"></div><div id="console"></div></div><div id="bar"><div id="fill"></div></div></div>
+<div id="loading"><div id="ls-stage"><div id="ls-screens"></div><img id="ls-logo" src="/b/8b0b5899ed/title/logo.png" alt=""><div id="ls-bars"><div id="modes" class="ls-bar"><button data-act="back"></button><button data-act="map5"></button><button data-act="map6"></button><button data-act="sandbox"></button><button data-act="story"></button></div><div class="ls-bar"><span id="label">Starting...</span><span id="pct">0%</span><i class="ls-spin"></i></div></div></div><div id="ls-log"><div id="data"></div><div id="console"></div></div><div id="bar"><div id="fill"></div></div></div>
 <div id="fps"></div>
 <script type="module">
 // Page of the browser build. The engine runs in a dedicated worker (loader.js: its "main thread", where the static constructors and
@@ -53,11 +99,11 @@
 const q = new URLSearchParams(location.search);
 // URL prefix of everything this page loads (loader, workers, engine, shaders, title art): empty on the dev server; on the PHP host (phase3/host/index.php) it puts the page's own
 // text `/b/8b0b5899ed` through str_replace to `/b/<build id>`, so those files are cached for ever under URLs that change when the build does.
-const BASE = 'https://fiveplay.lol/b/8b0b5899ed';
+const BASE = '/b/8b0b5899ed'.charAt(0) === '_' ? '' : '/b/8b0b5899ed';
 // ?log=1: the page, the engine threads and the workers send their log lines to the dev server (browser.log, browser_<ip>.log); off by default: the player's upload
 // bandwidth and this thread's time. The loading screen's own log line and the browser console do not depend on it.
 const remoteLog = q.get('log') === '1';
-const postLog = (text) => { if (remoteLog) fetch('https://fiveplay.lol/log', { method: 'POST', body: text }).catch(() => {}); };
+const postLog = (text) => { if (remoteLog) fetch('/log', { method: 'POST', body: text }).catch(() => {}); };
 // Crash reports from the engine threads (prejs.js __crash, loader.js onAbort/onExit): shown in the bottom-left line with a hint when it looks like memory, and posted to the host's log
 // only with ?log=1 (at most 3 per page, ~10 KB each; they were always posted until 2026-10-06, when 10,000 visitors a day made 5,500 posts and a log file per visitor). A normal exit does not report.
 {
@@ -66,7 +112,7 @@ const postLog = (text) => { if (remoteLog) fetch('https://fiveplay.lol/log', { m
 		const m = ev.data;
 		const memory = /memory|OOM|Aborted\(|RangeError|grow/i.test(m.text);
 		const dev = ' deviceMemory ' + (navigator.deviceMemory || '?') + ' GB, cores ' + navigator.hardwareConcurrency;
-		if (remoteLog && posted++ < 3) fetch('https://fiveplay.lol/log', { method: 'POST', body: '[page] CRASH (' + m.kind + ', ' + m.thread + ' thread, wasm heap ' + m.heap + ' MB,' + dev + ', ' + location.search + '): ' + m.text + '\n' + m.tail.join('\n') + '\n' }).catch(() => {});
+		if (remoteLog && posted++ < 3) fetch('/log', { method: 'POST', body: '[page] CRASH (' + m.kind + ', ' + m.thread + ' thread, wasm heap ' + m.heap + ' MB,' + dev + ', ' + location.search + '): ' + m.text + '\n' + m.tail.join('\n') + '\n' }).catch(() => {});
 		const el = document.getElementById('hud');
 		if (el) { el.textContent = 'The game stopped (' + m.kind + '): ' + m.text.split('\n')[0].slice(0, 200) + (memory ? ' - this looks like a lack of memory: close other tabs and reload.' : ' - reload the page.'); el.style.color = '#f96'; }
 	};
@@ -125,7 +171,7 @@ let stopTitle = () => {};
 	const place = (l, x, yr, xr) => { l.el.style.transform = 'translate3d(' + x + 'px,' + l.y + 'px,0) rotateY(' + -yr + 'deg) rotateX(' + -xr + 'deg)'; };
 	// a screen's images, decoded before it may show (the movie waits for its texture dictionary the same way)
 	const prepare = (i) => {
-		const layers = SCREENS[order[i]].map((d) => ({ ...d, img: Object.assign(new Image(), { src: 'https://fiveplay.lol/b/8b0b5899ed/title/art/' + d.tex + '.webp' }) }));
+		const layers = SCREENS[order[i]].map((d) => ({ ...d, img: Object.assign(new Image(), { src: '/b/8b0b5899ed/title/art/' + d.tex + '.webp' }) }));
 		return Promise.all(layers.map((l) => l.img.decode().catch(() => {}))).then(() => layers);
 	};
 	let active = null, leaving = null, index = 0, alt = -1, timer = 0, raf = 0, stopped = false;
@@ -336,7 +382,7 @@ if (remoteLog) {
 		if (sending || !queue.length) return;
 		sending = true;
 		const body = queue.splice(0).join('\n');
-		try { await fetch('https://fiveplay.lol/log', { method: 'POST', body, keepalive: body.length < 60000 }); } catch (e) { /* server gone */ }
+		try { await fetch('/log', { method: 'POST', body, keepalive: body.length < 60000 }); } catch (e) { /* server gone */ }
 		sending = false;
 		pump();
 	};
@@ -601,5 +647,6 @@ function installInput(memory, block) {
 	}, { passive: false });
 }
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"10e26e5be9e74c99b77d206e68b3f373","r":1,"spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
