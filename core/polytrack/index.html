@@ -53,46 +53,37 @@
   <div>Loading Game...</div>
   <div style="margin-top:12px; opacity:0.7; font-size:0.9rem;">Please Wait — Loading May Take Up To 1 Minute</div>
 </div>
-<iframe id="gameframe" allow="fullscreen; gamepad; autoplay" allowfullscreen></iframe>
+<iframe id="gameframe" allow="fullscreen; gamepad; autoplay; clipboard-write" allowfullscreen></iframe>
 <div id="error"></div>
 <script>
 const GAME_URL = "https://raw.githubusercontent.com/CoolDude2349/Offline-HTML-Games-Pack/master/offline/polytrack.html";
-// (Camerons-Git7 fork also works, but the original is more stable)
-
 async function start() {
   const loading = document.getElementById('loading');
   const frame = document.getElementById('gameframe');
   const errDiv = document.getElementById('error');
-
   try {
     const resp = await fetch(GAME_URL);
     if (!resp.ok) {
       throw new Error(`GitHub responded ${resp.status} — maybe rate limit or file moved`);
     }
-    const text = await resp.text();
-
-    // Critical fix: write directly into the iframe instead of using a blob: URL
-    // blob: origins break WebGL / workers / some APIs in many single-file games
+    let text = await resp.text();
+    // Safest possible inject — put the config as the absolute first thing
+    text = `<script>window.polytrackModConfiguration={unblocked:true};<\/script>` + text;
     const doc = frame.contentWindow.document;
     doc.open();
     doc.write(text);
     doc.close();
-
-    // Give the game a moment to start rendering, then show the iframe
     frame.onload = () => {
       loading.style.display = 'none';
       frame.style.display = 'block';
       try { frame.contentWindow.focus(); } catch (_) {}
     };
-
-    // Fallback in case onload already fired
     setTimeout(() => {
       if (loading.style.display !== 'none') {
         loading.style.display = 'none';
         frame.style.display = 'block';
       }
     }, 800);
-
   } catch (err) {
     loading.style.display = 'none';
     errDiv.style.display = 'flex';
@@ -107,7 +98,6 @@ async function start() {
     console.error(err);
   }
 }
-
 start();
 </script>
 </body>
