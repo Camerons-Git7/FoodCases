@@ -21,13 +21,27 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Clear sync state (Force Full Sync)
         if: github.event.inputs.force_full_sync == 'true'
         run: |
           echo "Force full sync requested - will delete local sync state if it exists"
           rm -f .ftp-sync-state-1.json .ftp-sync-state-2.json .ftp-sync-state-3.json
           echo "Sync state cleared. All files will be re-uploaded."
+
       # ─── FIRST WEBSITE ─────────────────────────────
+      - name: Replace "menist.free.nf" with "luminous.gt.tc" for Site 1 deploy
+        run: |
+          find . -type f \
+            ! -path './.git/*' \
+            ! -path './.github/*' \
+            ! -name '.ftp-sync-state-1.json' \
+            ! -name '.ftp-sync-state-2.json' \
+            ! -name '.ftp-sync-state-3.json' \
+            -exec sed -i \
+              -e 's/menist\.free\.nf/luminous.gt.tc/g' \
+              {} +
+
       - name: Replace .ico with .png in desktop/index.html for Site 1 deploy
         run: |
           if [ -f "desktop/index.html" ]; then
@@ -36,6 +50,7 @@ jobs:
           else
             echo "desktop/index.html not found, skipping replacement"
           fi
+
       - name: Deploy to InfinityFree Site 1
         id: deploy1
         continue-on-error: true
@@ -59,10 +74,12 @@ jobs:
             .ftp-sync-state-2.json
             .ftp-sync-state-3.json
           log-level: standard
+
       # ─── SECOND WEBSITE ────────────────────────────
       - name: Restore original code for Site 2
         run: git checkout .
-      - name: Replace "luminous.gt.tc" with "seamfull.free.je" for Site 2 deploy
+
+      - name: Replace "menist.free.nf" with "seamfull.free.je" for Site 2 deploy
         run: |
           find . -type f \
             ! -path './.git/*' \
@@ -71,8 +88,9 @@ jobs:
             ! -name '.ftp-sync-state-2.json' \
             ! -name '.ftp-sync-state-3.json' \
             -exec sed -i \
-              -e 's/luminous\.gt\.tc/seamfull.free.je/g' \
+              -e 's/menist\.free\.nf/seamfull.free.je/g' \
               {} +
+
       - name: Replace .ico with .png in desktop/index.html for Site 2 deploy
         run: |
           if [ -f "desktop/index.html" ]; then
@@ -81,6 +99,7 @@ jobs:
           else
             echo "desktop/index.html not found, skipping replacement"
           fi
+
       - name: Deploy to InfinityFree Site 2
         id: deploy2
         continue-on-error: true
@@ -104,10 +123,12 @@ jobs:
             .ftp-sync-state-2.json
             .ftp-sync-state-3.json
           log-level: standard
+
       # ─── THIRD WEBSITE ─────────────────────────────
       - name: Restore original code for Site 3
         run: git checkout .
-      - name: Replace "luminous.gt.tc" with "ridgeless.xo.je" for Site 3 deploy
+
+      - name: Replace "menist.free.nf" with "ridgeless.xo.je" for Site 3 deploy
         run: |
           find . -type f \
             ! -path './.git/*' \
@@ -115,7 +136,10 @@ jobs:
             ! -name '.ftp-sync-state-1.json' \
             ! -name '.ftp-sync-state-2.json' \
             ! -name '.ftp-sync-state-3.json' \
-            -exec sed -i 's/luminous\.gt\.tc/ridgeless.xo.je/g' {} +
+            -exec sed -i \
+              -e 's/menist\.free\.nf/ridgeless.xo.je/g' \
+              {} +
+
       - name: Deploy to InfinityFree Site 3
         id: deploy3
         continue-on-error: true
@@ -139,6 +163,7 @@ jobs:
             .ftp-sync-state-2.json
             .ftp-sync-state-3.json
           log-level: standard
+
       # ─── FINAL CHECK ───────────────────────────────
       - name: Check deploy results
         run: |
