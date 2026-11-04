@@ -149,6 +149,20 @@ body {
     0%   { transform: translateX(-120%); }
     100% { transform: translateX(320%); }
 }
+.boot-auth-loadbar {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    margin-top: 12px;
+    width: 100%;
+}
+.boot-auth-loadbar.show {
+    display: flex;
+}
+.boot-auth-loadbar .sp-bar-track {
+    width: min(220px, 72%);
+    height: 3px;
+}
 
 #boot-layer {
     position: fixed; inset: 0; background: #000; z-index: var(--z-boot);
@@ -1326,6 +1340,9 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
         </button>
 
         <p id="boot-auth-message" aria-live="polite"></p>
+        <div id="boot-auth-loadbar" class="boot-auth-loadbar" aria-hidden="true">
+          <div class="sp-bar-track"><div class="sp-bar-fill"></div></div>
+        </div>
       </div>
 
       <div id="boot-session-box" class="boot-session-box" style="display:none;">
@@ -1622,11 +1639,20 @@ function bindAuthStateListener() {
 bindAuthStateListener();
 recoverSession();
 
+function hideBootAuthLoadbar() {
+  var bar = document.getElementById('boot-auth-loadbar');
+  if (!bar) return;
+  bar.classList.remove('show');
+  bar.style.display = 'none';
+  bar.setAttribute('aria-hidden', 'true');
+}
+
 function showAuthMessage(text, isError) {
   var el = document.getElementById('boot-auth-message');
   if (!el) return;
   el.textContent = text || '';
   el.style.color = isError ? '#ff6b6b' : '#7dffb3';
+  if (isError || !text) hideBootAuthLoadbar();
 }
 
 function formatUsername(raw, live) {
@@ -1712,6 +1738,23 @@ function bindUsernameFormatting() {
   el.addEventListener('blur', function() {
     el.value = formatUsername(el.value, false);
   });
+  el.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    var pass = document.getElementById('boot-auth-password');
+    if (pass) pass.focus();
+  });
+  var passEl = document.getElementById('boot-auth-password');
+  if (passEl && !passEl._enterBound) {
+    passEl._enterBound = true;
+    passEl.addEventListener('keydown', function(e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      var creds = getBootCredentials();
+      if (!creds.username || !creds.password) return;
+      handleBootSignIn();
+    });
+  }
 }
 
 async function handleBootSignUp() {
@@ -1823,7 +1866,14 @@ async function handleBootSignIn() {
     currentUser = res.data.user;
     isGuest = false;
     updateAuthUI();
-    showAuthMessage('Signed in…');
+    showAuthMessage('Signing in…');
+    var loadBarTimer = setTimeout(function() {
+      var bar = document.getElementById('boot-auth-loadbar');
+      if (!bar) return;
+      bar.style.display = 'flex';
+      bar.classList.add('show');
+      bar.setAttribute('aria-hidden', 'false');
+    }, 1000);
     try {
       sessionStorage.setItem('seamless_post_signin', '1');
     } catch (e) {}
@@ -1841,6 +1891,8 @@ async function handleBootSignIn() {
     try { if (typeof loadDesktop === 'function') loadDesktop(); } catch (e) {}
     if (typeof initWallpapers === 'function') await initWallpapers();
     try { await waitForWallpapersReady(); } catch (e) {}
+    clearTimeout(loadBarTimer);
+    hideBootAuthLoadbar();
     showAuthMessage('');
     startBootSequence();
     return;
