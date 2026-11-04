@@ -1587,6 +1587,7 @@ const supabaseClient = (typeof window.supabase !== 'undefined')
   : null;
 let currentUser = null;
 let isGuest = true;
+var _authListenerBound = false;
 async function recoverSession() {
   if (!supabaseClient) return;
   try {
@@ -1598,18 +1599,27 @@ async function recoverSession() {
     }
   } catch (e) {}
 }
-if (supabaseClient) {
+function bindAuthStateListener() {
+  if (!supabaseClient || _authListenerBound) return;
+  _authListenerBound = true;
   supabaseClient.auth.onAuthStateChange(function(event, session) {
     if (session && session.user) {
       currentUser = session.user;
       isGuest = false;
-    } else {
+      updateAuthUI();
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && typeof loadUserDataFromCloud === 'function') {
+        try { loadUserDataFromCloud(); } catch (e) {}
+      }
+      return;
+    }
+    if (event === 'SIGNED_OUT') {
       currentUser = null;
       isGuest = true;
+      updateAuthUI();
     }
-    updateAuthUI();
   });
 }
+bindAuthStateListener();
 recoverSession();
 
 function showAuthMessage(text, isError) {
@@ -1819,11 +1829,20 @@ async function handleBootSignIn() {
     } catch (e) {}
     _suppressCloudSave = true;
     _pendingCloudSync = false;
+    _cloudSaveInFlight = false;
     if (_saveCloudTimer) {
       clearTimeout(_saveCloudTimer);
       _saveCloudTimer = null;
     }
-    location.reload();
+    try { clearLocalSyncedData(); } catch (e) {}
+    try { await withTimeout(loadUserDataFromCloud(), 5000); } catch (e) {}
+    _suppressCloudSave = false;
+    try { if (typeof renderUI === 'function') renderUI(); } catch (e) {}
+    try { if (typeof loadDesktop === 'function') loadDesktop(); } catch (e) {}
+    if (typeof initWallpapers === 'function') await initWallpapers();
+    try { await waitForWallpapersReady(); } catch (e) {}
+    showAuthMessage('');
+    startBootSequence();
     return;
   } catch (err) {
     showAuthMessage(err && err.message ? err.message : 'Could not sign in', true);
@@ -2284,42 +2303,21 @@ window.addEventListener('beforeunload', function() {
 });
 
 if (supabaseClient) {
+  bindAuthStateListener();
   supabaseClient.auth.getSession().then(function(result) {
-    var session = result.data && result.data.session;
-
+    var session = result && result.data && result.data.session;
     if (session && session.user) {
       currentUser = session.user;
       isGuest = false;
       updateAuthUI();
-      
       setTimeout(function() {
-        loadUserDataFromCloud();
+        if (typeof loadUserDataFromCloud === 'function') loadUserDataFromCloud();
       }, 50);
     } else {
-      currentUser = null;
-      isGuest = true;
       updateAuthUI();
     }
-  }).catch(function(err) {
+  }).catch(function() {
     updateAuthUI();
-  });
-
-  supabaseClient.auth.onAuthStateChange(function(event, session) {
-    var prevUser = currentUser;
-    currentUser = (session && session.user) ? session.user : null;
-    isGuest = !currentUser;
-    updateAuthUI();
-
-    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && currentUser) {
-      if (typeof loadUserDataFromCloud === 'function') {
-        loadUserDataFromCloud();
-      }
-    }
-    if (event === 'SIGNED_OUT') {
-      currentUser = null;
-      isGuest = true;
-      updateAuthUI();
-    }
   });
 
   window.addEventListener('pageshow', function(e) {
@@ -2329,11 +2327,8 @@ if (supabaseClient) {
       if (session && session.user) {
         currentUser = session.user;
         isGuest = false;
-      } else if (result && result.data && !result.data.session) {
-        currentUser = null;
-        isGuest = true;
+        if (typeof updateAuthUI === 'function') updateAuthUI();
       }
-      if (typeof updateAuthUI === 'function') updateAuthUI();
     }).catch(function() {});
   });
 }
