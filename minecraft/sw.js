@@ -5,7 +5,7 @@ self.addEventListener("fetch", (event) => {
   if (req.cache === "only-if-cached" && req.mode !== "same-origin") return;
   event.respondWith(
     fetch(req).then((res) => {
-      if (res.status === 0) return res;
+      if (!res || res.status === 0) return res;
       const headers = new Headers(res.headers);
       headers.set("Cross-Origin-Opener-Policy", "same-origin");
       headers.set("Cross-Origin-Embedder-Policy", "require-corp");
@@ -15,6 +15,6 @@ self.addEventListener("fetch", (event) => {
         statusText: res.statusText,
         headers
       });
-    }).catch(() => fetch(req))
+    }).catch(() => Response.error())
   );
 });
