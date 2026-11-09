@@ -21,6 +21,32 @@ canvas{display:block;width:100%;height:100%}
   const STORE = "files";
   const DB_VERSION = 1;
 
+  const SILENCE = [
+    /powerPreference option is currently ignored/i,
+    /cdn\.tailwindcss\.com should not be used/i,
+    /Permissions-Policy header: Unrecognized feature/i,
+    /attribution-reporting|private-aggregation|join-ad-interest-group|run-ad-auction|browsing-topics/i,
+    /symphonia_format_ogg/i,
+    /selected vorbis mapper for stream/i,
+    /starting new physical stream/i,
+    /Failed to load resource: net::ERR_BLOCKED_BY_CLIENT/i,
+    /cdn-cgi\/rum/i
+  ];
+  function isNoise(args) {
+    const msg = args.map((a) => {
+      try { return typeof a === "string" ? a : (a && a.message) || String(a); }
+      catch { return ""; }
+    }).join(" ");
+    return SILENCE.some((re) => re.test(msg));
+  }
+  ["log", "info", "warn", "debug"].forEach((level) => {
+    const orig = console[level].bind(console);
+    console[level] = function () {
+      if (isNoise(arguments)) return;
+      return orig.apply(console, arguments);
+    };
+  });
+
   const statusEl = document.getElementById("status");
   function hideStatusIfEmpty() {
     if (!statusEl) return;
