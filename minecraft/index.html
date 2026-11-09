@@ -19,6 +19,30 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
   const STORE = "files";
   const DB_VERSION = 1;
 
+  const workerSrc =
+    'import init, { horizon_worker_entry } from "' + ROOT + 'pkg/horizon-client.js";\n' +
+    "self.onmessage = async (event) => {\n" +
+    "  const data = event.data;\n" +
+    "  if (!data || data.module == null) return;\n" +
+    "  try {\n" +
+    "    await init({ module_or_path: data.module, memory: data.memory });\n" +
+    "    horizon_worker_entry(data.ptr);\n" +
+    "  } catch (e) {\n" +
+    '    console.error("Horizon worker failed:", data.name, e);\n' +
+    "  }\n" +
+    "};\n";
+  const workerBlobUrl = URL.createObjectURL(new Blob([workerSrc], { type: "text/javascript" }));
+
+  const OrigWorker = window.Worker;
+  window.Worker = function (scriptURL, options) {
+    let url = scriptURL;
+    try {
+      if (/worker\.js(\?|#|$)/i.test(String(scriptURL))) url = workerBlobUrl;
+    } catch {}
+    return new OrigWorker(url, options);
+  };
+  window.Worker.prototype = OrigWorker.prototype;
+
   function openDB() {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -123,7 +147,9 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
     if (!("serviceWorker" in navigator)) return false;
     try {
       const swUrl = new URL("sw.js", location.href).href;
-      await navigator.serviceWorker.register(swUrl, { scope: new URL(".", location.href).pathname });
+      await navigator.serviceWorker.register(swUrl, {
+        scope: new URL(".", location.href).pathname
+      });
       if (!navigator.serviceWorker.controller) {
         await Promise.race([
           new Promise((r) => navigator.serviceWorker.addEventListener("controllerchange", r, { once: true })),
