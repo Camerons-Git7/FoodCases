@@ -24,9 +24,7 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
       const req = indexedDB.open(DB_NAME, DB_VERSION);
       req.onupgradeneeded = () => {
         const db = req.result;
-        if (!db.objectStoreNames.contains(STORE)) {
-          db.createObjectStore(STORE);
-        }
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
@@ -73,14 +71,11 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
   function shouldCache(url) {
     if (!url || typeof url !== "string") return false;
     if (url.indexOf(ROOT) !== 0) return false;
-    if (/\/sw\.js(\?|$)/i.test(url)) return false;
     return /\.(wasm|tar\.gz|tgz|gz|bin|pak|pack|dat|obb)(\?|$)/i.test(url) ||
-           /\/(boot|worldgen|resources|assets)[^/]*\.(tar\.gz|gz|bin)(\?|$)/i.test(url) ||
            /horizon-client_bg\.wasm(\?|$)/i.test(url);
   }
 
   const _fetch = window.fetch.bind(window);
-
   window.fetch = async function (input, init) {
     let url = typeof input === "string" ? input : (input && input.url) || "";
     const rewritten = toRaw(url);
@@ -92,9 +87,7 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
         return new Response(cached.buffer.slice(0), {
           status: cached.status || 200,
           statusText: cached.statusText || "OK",
-          headers: cached.contentType
-            ? { "Content-Type": cached.contentType }
-            : undefined
+          headers: cached.contentType ? { "Content-Type": cached.contentType } : undefined
         });
       }
     }
@@ -109,16 +102,14 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
       try {
         const clone = response.clone();
         const buffer = await clone.arrayBuffer();
-        const contentType = response.headers.get("Content-Type") || "";
         idbPut(finalUrl, {
           buffer,
           status: response.status,
           statusText: response.statusText,
-          contentType
+          contentType: response.headers.get("Content-Type") || ""
         });
       } catch {}
     }
-
     return response;
   };
 
@@ -131,7 +122,8 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
     if (window.crossOriginIsolated) return true;
     if (!("serviceWorker" in navigator)) return false;
     try {
-      await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      const swUrl = new URL("sw.js", location.href).href;
+      await navigator.serviceWorker.register(swUrl, { scope: new URL(".", location.href).pathname });
       if (!navigator.serviceWorker.controller) {
         await Promise.race([
           new Promise((r) => navigator.serviceWorker.addEventListener("controllerchange", r, { once: true })),
@@ -152,7 +144,6 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
 
   async function boot() {
     await ensureIsolation();
-
     const script = document.createElement("script");
     script.type = "module";
     script.src = ROOT + "main.js";
