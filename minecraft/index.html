@@ -6,8 +6,10 @@
 <title>Minecraft</title>
 <link rel="icon" type="image/x-icon" href="/favicon.ico"/>
 <style>
-html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
+html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
 #status{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b0f14;color:#e8eef6;font:14px system-ui;z-index:9;white-space:pre-wrap;text-align:center;padding:24px}
+#status[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -18,6 +20,17 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
   const DB_NAME = "horizon-asset-cache";
   const STORE = "files";
   const DB_VERSION = 1;
+
+  const statusEl = document.getElementById("status");
+  function hideStatusIfEmpty() {
+    if (!statusEl) return;
+    if (!statusEl.textContent.trim()) statusEl.hidden = true;
+    else statusEl.hidden = false;
+  }
+  new MutationObserver(hideStatusIfEmpty).observe(statusEl, {
+    childList: true, characterData: true, subtree: true
+  });
+  setInterval(hideStatusIfEmpty, 500);
 
   const workerSrc = [
     "const ROOT = " + JSON.stringify(ROOT) + ";",
@@ -57,7 +70,6 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
   ].join("\n");
 
   const workerBlobUrl = URL.createObjectURL(new Blob([workerSrc], { type: "text/javascript" }));
-
   const OrigWorker = window.Worker;
   window.Worker = function (scriptURL, options) {
     let url = scriptURL;
@@ -79,7 +91,6 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
       req.onerror = () => reject(req.error);
     });
   }
-
   async function idbGet(key) {
     try {
       const db = await openDB();
@@ -89,11 +100,8 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
         req.onsuccess = () => resolve(req.result || null);
         req.onerror = () => reject(req.error);
       });
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   }
-
   async function idbPut(key, value) {
     try {
       const db = await openDB();
@@ -130,7 +138,6 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
     let url = typeof input === "string" ? input : (input && input.url) || "";
     const rewritten = toRaw(url);
     const finalUrl = rewritten !== url ? rewritten : url;
-
     if (shouldCache(finalUrl)) {
       const cached = await idbGet(finalUrl);
       if (cached && cached.buffer) {
@@ -141,13 +148,9 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
         });
       }
     }
-
     const response = rewritten !== url
-      ? (typeof input === "string"
-          ? await _fetch(rewritten, init)
-          : await _fetch(new Request(rewritten, input), init))
+      ? (typeof input === "string" ? await _fetch(rewritten, init) : await _fetch(new Request(rewritten, input), init))
       : await _fetch(input, init);
-
     if (shouldCache(finalUrl) && response.ok) {
       try {
         const clone = response.clone();
@@ -200,15 +203,19 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
     script.type = "module";
     script.src = ROOT + "main.js";
     script.onerror = () => {
-      const s = document.getElementById("status");
-      if (s) s.textContent = "Failed to load main.js from GitHub.";
+      if (statusEl) {
+        statusEl.hidden = false;
+        statusEl.textContent = "Failed to load main.js from GitHub.";
+      }
     };
     document.body.appendChild(script);
   }
 
   boot().catch((e) => {
-    const s = document.getElementById("status");
-    if (s) s.textContent = String(e && e.stack ? e.stack : e);
+    if (statusEl) {
+      statusEl.hidden = false;
+      statusEl.textContent = String(e && e.stack ? e.stack : e);
+    }
   });
 })();
 </script>
