@@ -19,18 +19,43 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
   const STORE = "files";
   const DB_VERSION = 1;
 
-  const workerSrc =
-    'import init, { horizon_worker_entry } from "' + ROOT + 'pkg/horizon-client.js";\n' +
-    "self.onmessage = async (event) => {\n" +
-    "  const data = event.data;\n" +
-    "  if (!data || data.module == null) return;\n" +
-    "  try {\n" +
-    "    await init({ module_or_path: data.module, memory: data.memory });\n" +
-    "    horizon_worker_entry(data.ptr);\n" +
-    "  } catch (e) {\n" +
-    '    console.error("Horizon worker failed:", data.name, e);\n' +
-    "  }\n" +
-    "};\n";
+  const workerSrc = [
+    "const ROOT = " + JSON.stringify(ROOT) + ";",
+    "function toRaw(url) {",
+    "  if (url == null) return url;",
+    "  url = String(url);",
+    "  if (/^(https?:|data:)/i.test(url)) return url;",
+    "  if (/^blob:/i.test(url)) return url;",
+    "  if (/cdn-cgi|\\.well-known|favicon\\.ico/i.test(url)) return url;",
+    "  let path = url.replace(/^\\.\\//, '').replace(/^\\//, '');",
+    "  path = path.split('?')[0].split('#')[0];",
+    "  if (path.startsWith('rust-minecraft/')) path = path.slice('rust-minecraft/'.length);",
+    "  while (path.startsWith('../')) path = path.slice(3);",
+    "  return ROOT + path;",
+    "}",
+    "const XO = XMLHttpRequest.prototype.open;",
+    "XMLHttpRequest.prototype.open = function (method, url) {",
+    "  return XO.call(this, method, toRaw(url), ...Array.prototype.slice.call(arguments, 2));",
+    "};",
+    "const _fetch = self.fetch.bind(self);",
+    "self.fetch = function (input, init) {",
+    "  if (typeof input === 'string') return _fetch(toRaw(input), init);",
+    "  if (input && input.url) return _fetch(new Request(toRaw(input.url), input), init);",
+    "  return _fetch(input, init);",
+    "};",
+    "import init, { horizon_worker_entry } from " + JSON.stringify(ROOT + "pkg/horizon-client.js") + ";",
+    "self.onmessage = async (event) => {",
+    "  const data = event.data;",
+    "  if (!data || data.module == null) return;",
+    "  try {",
+    "    await init({ module_or_path: data.module, memory: data.memory });",
+    "    horizon_worker_entry(data.ptr);",
+    "  } catch (e) {",
+    "    console.error('Horizon worker failed:', data.name, e);",
+    "  }",
+    "};"
+  ].join("\n");
+
   const workerBlobUrl = URL.createObjectURL(new Blob([workerSrc], { type: "text/javascript" }));
 
   const OrigWorker = window.Worker;
@@ -89,6 +114,7 @@ html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
     let path = url.replace(/^\.\//, "").replace(/^\//, "");
     path = path.split("?")[0].split("#")[0];
     if (path.startsWith("rust-minecraft/")) path = path.slice("rust-minecraft/".length);
+    while (path.startsWith("../")) path = path.slice(3);
     return ROOT + path;
   }
 
