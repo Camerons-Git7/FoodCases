@@ -7,7 +7,7 @@
 <link rel="icon" type="image/x-icon" href="/favicon.ico"/>
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;height:100dvh;background:#0b0f14;color:#e8eef6;overflow:hidden;position:fixed;inset:0;touch-action:none}
-canvas{display:block;position:fixed!important;left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;max-width:none!important;max-height:none!important}
+canvas{display:block!important;position:fixed!important;left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;max-width:none!important;max-height:none!important;border:0!important;outline:0!important;box-shadow:none!important}
 #status{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b0f14;color:#e8eef6;font:14px system-ui;z-index:9;white-space:pre-wrap;text-align:center;padding:24px}
 #status[hidden]{display:none!important}
 </style>
@@ -71,8 +71,8 @@ canvas{display:block;position:fixed!important;left:50%!important;top:50%!importa
   setInterval(hideStatusIfEmpty, 500);
 
   function fitCanvas() {
-    const w = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
 
     document.documentElement.style.width = w + "px";
     document.documentElement.style.height = h + "px";
@@ -80,35 +80,82 @@ canvas{display:block;position:fixed!important;left:50%!important;top:50%!importa
     document.body.style.height = h + "px";
 
     document.querySelectorAll("canvas").forEach(function (c) {
-      c.style.position = "fixed";
-      c.style.left = "50%";
-      c.style.top = "50%";
-      c.style.right = "auto";
-      c.style.bottom = "auto";
-      c.style.transform = "translate(-50%, -50%)";
-      c.style.maxWidth = "none";
-      c.style.maxHeight = "none";
-    });
+      const gameWidth = c.width;
+      const gameHeight = c.height;
 
-    window.dispatchEvent(new Event("resize"));
+      if (!gameWidth || !gameHeight || !w || !h) return;
+
+      const scale = Math.min(w / gameWidth, h / gameHeight);
+
+      c.style.setProperty("position", "fixed", "important");
+      c.style.setProperty("left", "50%", "important");
+      c.style.setProperty("top", "50%", "important");
+      c.style.setProperty("right", "auto", "important");
+      c.style.setProperty("bottom", "auto", "important");
+      c.style.setProperty("transform", "translate(-50%,-50%)", "important");
+      c.style.setProperty("width", gameWidth * scale + "px", "important");
+      c.style.setProperty("height", gameHeight * scale + "px", "important");
+      c.style.setProperty("max-width", "none", "important");
+      c.style.setProperty("max-height", "none", "important");
+      c.style.setProperty("border", "0", "important");
+      c.style.setProperty("outline", "0", "important");
+      c.style.setProperty("box-shadow", "none", "important");
+    });
+  }
+
+  let fitScheduled = false;
+
+  function scheduleFit() {
+    if (fitScheduled) return;
+    fitScheduled = true;
+
+    requestAnimationFrame(function () {
+      fitScheduled = false;
+      fitCanvas();
+    });
   }
 
   fitCanvas();
-  window.addEventListener("resize", fitCanvas);
-  window.addEventListener("orientationchange", fitCanvas);
 
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", fitCanvas);
-    window.visualViewport.addEventListener("scroll", fitCanvas);
-  }
+  window.addEventListener("resize", scheduleFit);
+  window.addEventListener("orientationchange", scheduleFit);
+  window.addEventListener("pageshow", scheduleFit);
 
-  setInterval(fitCanvas, 1000);
+  window.addEventListener("fullscreenchange", function () {
+    scheduleFit();
+    setTimeout(scheduleFit, 100);
+    setTimeout(scheduleFit, 500);
+    setTimeout(scheduleFit, 1000);
+  });
+
+  document.addEventListener("fullscreenchange", scheduleFit);
+  document.addEventListener("webkitfullscreenchange", scheduleFit);
+
+  setInterval(scheduleFit, 500);
+
+  const canvasObserver = new MutationObserver(scheduleFit);
+
+  canvasObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
 
   document.addEventListener("click", function once() {
     const el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen().catch(function () {});
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-    fitCanvas();
+
+    if (el.requestFullscreen) {
+      el.requestFullscreen().then(function () {
+        scheduleFit();
+        setTimeout(scheduleFit, 100);
+        setTimeout(scheduleFit, 500);
+        setTimeout(scheduleFit, 1000);
+      }).catch(function () {});
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+      scheduleFit();
+      setTimeout(scheduleFit, 500);
+    }
+
     document.removeEventListener("click", once);
   }, { once: true });
 
