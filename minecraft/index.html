@@ -7,7 +7,7 @@
 <link rel="icon" type="image/x-icon" href="/favicon.ico"/>
 <style>
 html,body{margin:0;padding:0;width:100%;height:100%;height:100dvh;background:#0b0f14;color:#e8eef6;overflow:hidden;position:fixed;inset:0;touch-action:none}
-canvas{display:block!important;position:fixed!important;left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;max-width:none!important;max-height:none!important;border:0!important;outline:0!important;box-shadow:none!important}
+canvas{display:block;position:fixed!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:cover}
 #status{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b0f14;color:#e8eef6;font:14px system-ui;z-index:9;white-space:pre-wrap;text-align:center;padding:24px}
 #status[hidden]{display:none!important}
 </style>
@@ -32,7 +32,6 @@ canvas{display:block!important;position:fixed!important;left:50%!important;top:5
     /Failed to load resource: net::ERR_BLOCKED_BY_CLIENT/i,
     /cdn-cgi\/rum/i
   ];
-
   function isNoise(args) {
     const msg = Array.prototype.map.call(args, function (a) {
       try {
@@ -45,7 +44,6 @@ canvas{display:block!important;position:fixed!important;left:50%!important;top:5
     }).join(" ");
     return SILENCE.some(function (re) { return re.test(msg); });
   }
-
   ["log", "info", "warn", "debug"].forEach(function (level) {
     const orig = console[level].bind(console);
     console[level] = function () {
@@ -55,107 +53,49 @@ canvas{display:block!important;position:fixed!important;left:50%!important;top:5
   });
 
   const statusEl = document.getElementById("status");
-
   function hideStatusIfEmpty() {
     if (!statusEl) return;
     if (!statusEl.textContent.trim()) statusEl.hidden = true;
     else statusEl.hidden = false;
   }
-
   new MutationObserver(hideStatusIfEmpty).observe(statusEl, {
     childList: true,
     characterData: true,
     subtree: true
   });
-
   setInterval(hideStatusIfEmpty, 500);
 
   function fitCanvas() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-
+    const w = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+    const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     document.documentElement.style.width = w + "px";
     document.documentElement.style.height = h + "px";
     document.body.style.width = w + "px";
     document.body.style.height = h + "px";
-
     document.querySelectorAll("canvas").forEach(function (c) {
-      const gameWidth = c.width;
-      const gameHeight = c.height;
-
-      if (!gameWidth || !gameHeight || !w || !h) return;
-
-      const scale = Math.min(w / gameWidth, h / gameHeight);
-
-      c.style.setProperty("position", "fixed", "important");
-      c.style.setProperty("left", "50%", "important");
-      c.style.setProperty("top", "50%", "important");
-      c.style.setProperty("right", "auto", "important");
-      c.style.setProperty("bottom", "auto", "important");
-      c.style.setProperty("transform", "translate(-50%,-50%)", "important");
-      c.style.setProperty("width", gameWidth * scale + "px", "important");
-      c.style.setProperty("height", gameHeight * scale + "px", "important");
-      c.style.setProperty("max-width", "none", "important");
-      c.style.setProperty("max-height", "none", "important");
-      c.style.setProperty("border", "0", "important");
-      c.style.setProperty("outline", "0", "important");
-      c.style.setProperty("box-shadow", "none", "important");
+      c.style.position = "fixed";
+      c.style.left = "0";
+      c.style.top = "0";
+      c.style.width = w + "px";
+      c.style.height = h + "px";
+      c.style.maxWidth = "none";
+      c.style.maxHeight = "none";
     });
+    window.dispatchEvent(new Event("resize"));
   }
-
-  let fitScheduled = false;
-
-  function scheduleFit() {
-    if (fitScheduled) return;
-    fitScheduled = true;
-
-    requestAnimationFrame(function () {
-      fitScheduled = false;
-      fitCanvas();
-    });
-  }
-
   fitCanvas();
-
-  window.addEventListener("resize", scheduleFit);
-  window.addEventListener("orientationchange", scheduleFit);
-  window.addEventListener("pageshow", scheduleFit);
-
-  window.addEventListener("fullscreenchange", function () {
-    scheduleFit();
-    setTimeout(scheduleFit, 100);
-    setTimeout(scheduleFit, 500);
-    setTimeout(scheduleFit, 1000);
-  });
-
-  document.addEventListener("fullscreenchange", scheduleFit);
-  document.addEventListener("webkitfullscreenchange", scheduleFit);
-
-  setInterval(scheduleFit, 500);
-
-  const canvasObserver = new MutationObserver(scheduleFit);
-
-  canvasObserver.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-
+  window.addEventListener("resize", fitCanvas);
+  window.addEventListener("orientationchange", fitCanvas);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", fitCanvas);
+    window.visualViewport.addEventListener("scroll", fitCanvas);
+  }
+  setInterval(fitCanvas, 1000);
   document.addEventListener("click", function once() {
     const el = document.documentElement;
-
-    if (el.requestFullscreen) {
-      el.requestFullscreen().then(function () {
-        scheduleFit();
-        setTimeout(scheduleFit, 100);
-        setTimeout(scheduleFit, 500);
-        setTimeout(scheduleFit, 1000);
-      }).catch(function () {});
-    } else if (el.webkitRequestFullscreen) {
-      el.webkitRequestFullscreen();
-      scheduleFit();
-      setTimeout(scheduleFit, 500);
-    }
-
+    if (el.requestFullscreen) el.requestFullscreen().catch(function () {});
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    fitCanvas();
     document.removeEventListener("click", once);
   }, { once: true });
 
@@ -198,7 +138,6 @@ canvas{display:block!important;position:fixed!important;left:50%!important;top:5
 
   const workerBlobUrl = URL.createObjectURL(new Blob([workerSrc], { type: "text/javascript" }));
   const OrigWorker = window.Worker;
-
   window.Worker = function (scriptURL, options) {
     let url = scriptURL;
     try {
@@ -206,7 +145,6 @@ canvas{display:block!important;position:fixed!important;left:50%!important;top:5
     } catch (e) {}
     return new OrigWorker(url, options);
   };
-
   window.Worker.prototype = OrigWorker.prototype;
 
   function openDB() {
@@ -267,12 +205,10 @@ canvas{display:block!important;position:fixed!important;left:50%!important;top:5
   }
 
   const _fetch = window.fetch.bind(window);
-
   window.fetch = async function (input, init) {
     let url = typeof input === "string" ? input : (input && input.url) || "";
     const rewritten = toRaw(url);
     const finalUrl = rewritten !== url ? rewritten : url;
-
     if (shouldCache(finalUrl)) {
       const cached = await idbGet(finalUrl);
       if (cached && cached.buffer) {
@@ -283,11 +219,9 @@ canvas{display:block!important;position:fixed!important;left:50%!important;top:5
         });
       }
     }
-
     const response = rewritten !== url
       ? (typeof input === "string" ? await _fetch(rewritten, init) : await _fetch(new Request(rewritten, input), init))
       : await _fetch(input, init);
-
     if (shouldCache(finalUrl) && response.ok) {
       try {
         const clone = response.clone();
@@ -300,12 +234,10 @@ canvas{display:block!important;position:fixed!important;left:50%!important;top:5
         });
       } catch (e) {}
     }
-
     return response;
   };
 
   const XO = XMLHttpRequest.prototype.open;
-
   XMLHttpRequest.prototype.open = function (method, url) {
     return XO.call(this, method, toRaw(url), ...Array.prototype.slice.call(arguments, 2));
   };
@@ -313,14 +245,11 @@ canvas{display:block!important;position:fixed!important;left:50%!important;top:5
   async function ensureIsolation() {
     if (window.crossOriginIsolated) return true;
     if (!("serviceWorker" in navigator)) return false;
-
     try {
       const swUrl = new URL("sw.js", location.href).href;
-
       await navigator.serviceWorker.register(swUrl, {
         scope: new URL(".", location.href).pathname
       });
-
       if (!navigator.serviceWorker.controller) {
         await Promise.race([
           new Promise(function (r) {
@@ -329,13 +258,11 @@ canvas{display:block!important;position:fixed!important;left:50%!important;top:5
           new Promise(function (r) { setTimeout(r, 4000); })
         ]);
       }
-
       if (!window.crossOriginIsolated && !sessionStorage.getItem("horizon-isolating")) {
         sessionStorage.setItem("horizon-isolating", "1");
         location.reload();
         return false;
       }
-
       sessionStorage.removeItem("horizon-isolating");
       return window.crossOriginIsolated;
     } catch (e) {
@@ -345,18 +272,15 @@ canvas{display:block!important;position:fixed!important;left:50%!important;top:5
 
   async function boot() {
     await ensureIsolation();
-
     const script = document.createElement("script");
     script.type = "module";
     script.src = ROOT + "main.js";
-
     script.onerror = function () {
       if (statusEl) {
         statusEl.hidden = false;
         statusEl.textContent = "Failed to load main.js from GitHub.";
       }
     };
-
     document.body.appendChild(script);
   }
 
