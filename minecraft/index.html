@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minecraft</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico"/>
+<style>
+html,body{margin:0;height:100%;background:#0b0f14;color:#e8eef6}
+#status{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b0f14;color:#e8eef6;font:14px system-ui;z-index:9;white-space:pre-wrap;text-align:center;padding:24px}
+</style>
+</head>
+<body>
+<div id="status">Loading Horizon…</div>
+<script>
+(function () {
+  const ROOT = "https://raw.githack.com/Camerons-Git7/Minecraft-Rust/main/rust-minecraft/";
+  const DB_NAME = "horizon-asset-cache";
+  const STORE = "files";
+  const DB_VERSION = 1;
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          db.createObjectStore(STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbGet(key) {
+    try {
+      const db = await openDB();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readonly");
+        const req = tx.objectStore(STORE).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  async function idbPut(key, value) {
+    try {
+      const db = await openDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        tx.objectStore(STORE).put(value, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch {}
+  }
+
+  function toRaw(url) {
+    if (url == null) return url;
+    url = String(url);
+    if (/^(https?:|blob:|data:|chrome-extension:)/i.test(url)) return url;
+    if (/cdn-cgi|\.well-known|favicon\.ico/i.test(url)) return url;
+    let path = url.replace(/^\.\//, "").replace(/^\//, "");
+    path = path.split("?")[0].split("#")[0];
+    if (path.startsWith("rust-minecraft/")) path = path.slice("rust-minecraft/".length);
+    return ROOT + path;
+  }
+
+  function shouldCache(url) {
+    if (!url || typeof url !== "string") return false;
+    if (url.indexOf(ROOT) !== 0) return false;
+    if (/\/sw\.js(\?|$)/i.test(url)) return false;
+    return /\.(wasm|tar\.gz|tgz|gz|bin|pak|pack|dat|obb)(\?|$)/i.test(url) ||
+           /\/(boot|worldgen|resources|assets)[^/]*\.(tar\.gz|gz|bin)(\?|$)/i.test(url) ||
+           /horizon-client_bg\.wasm(\?|$)/i.test(url);
+  }
+
+  const _fetch = window.fetch.bind(window);
+
+  window.fetch = async function (input, init) {
+    let url = typeof input === "string" ? input : (input && input.url) || "";
+    const rewritten = toRaw(url);
+    const finalUrl = rewritten !== url ? rewritten : url;
+
+    if (shouldCache(finalUrl)) {
+      const cached = await idbGet(finalUrl);
+      if (cached && cached.buffer) {
+        return new Response(cached.buffer.slice(0), {
+          status: cached.status || 200,
+          statusText: cached.statusText || "OK",
+          headers: cached.contentType
+            ? { "Content-Type": cached.contentType }
+            : undefined
+        });
+      }
+    }
+
+    const response = rewritten !== url
+      ? (typeof input === "string"
+          ? await _fetch(rewritten, init)
+          : await _fetch(new Request(rewritten, input), init))
+      : await _fetch(input, init);
+
+    if (shouldCache(finalUrl) && response.ok) {
+      try {
+        const clone = response.clone();
+        const buffer = await clone.arrayBuffer();
+        const contentType = response.headers.get("Content-Type") || "";
+        idbPut(finalUrl, {
+          buffer,
+          status: response.status,
+          statusText: response.statusText,
+          contentType
+        });
+      } catch {}
+    }
+
+    return response;
+  };
+
+  const XO = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function (method, url) {
+    return XO.call(this, method, toRaw(url), ...Array.prototype.slice.call(arguments, 2));
+  };
+
+  async function ensureIsolation() {
+    if (window.crossOriginIsolated) return true;
+    if (!("serviceWorker" in navigator)) return false;
+    try {
+      await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      if (!navigator.serviceWorker.controller) {
+        await Promise.race([
+          new Promise((r) => navigator.serviceWorker.addEventListener("controllerchange", r, { once: true })),
+          new Promise((r) => setTimeout(r, 4000))
+        ]);
+      }
+      if (!window.crossOriginIsolated && !sessionStorage.getItem("horizon-isolating")) {
+        sessionStorage.setItem("horizon-isolating", "1");
+        location.reload();
+        return false;
+      }
+      sessionStorage.removeItem("horizon-isolating");
+      return window.crossOriginIsolated;
+    } catch {
+      return false;
+    }
+  }
+
+  async function boot() {
+    await ensureIsolation();
+
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src = ROOT + "main.js";
+    script.onerror = () => {
+      const s = document.getElementById("status");
+      if (s) s.textContent = "Failed to load main.js from GitHub.";
+    };
+    document.body.appendChild(script);
+  }
+
+  boot().catch((e) => {
+    const s = document.getElementById("status");
+    if (s) s.textContent = String(e && e.stack ? e.stack : e);
+  });
+})();
+</script>
+</body>
+</html>
