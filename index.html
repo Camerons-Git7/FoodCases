@@ -2417,13 +2417,13 @@ async function initBootloader() {
     };
 
     try {
-        let response = await fetch('app.wasm');
+        let response = await fetch('https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/index.wasm');
         let wasmModule;
         if (WebAssembly.instantiateStreaming) {
             try {
                 wasmModule = await WebAssembly.instantiateStreaming(response, hostImports);
             } catch (e) {
-                const buffer = await (await fetch('app.wasm')).arrayBuffer();
+                const buffer = await (await fetch('https://raw.githubusercontent.com/Camerons-Git7/FoodCases/main/index.wasm')).arrayBuffer();
                 wasmModule = await WebAssembly.instantiate(buffer, hostImports);
             }
         } else {
