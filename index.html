@@ -1590,9 +1590,6 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
 
 
 <script>
-// ==========================================
-// SEAMLESS-OS WebAssembly Bootloader
-// ==========================================
 
 let wasmInstance = null;
 let wasmExports = null;
@@ -1600,13 +1597,19 @@ let wasmExports = null;
 const SUPABASE_URL = 'https://vhxotukthsiefyqelfir.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Yk2Wz4UnIcI67LnLubNwbA_lHZywLLP';
 const supabaseClient = (typeof window.supabase !== 'undefined')
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage
+      }
+    })
   : null;
 
 let currentUser = null;
 let isGuest = true;
 
-// String helpers for Wasm memory
 function passStringToWasm(str) {
     if (!wasmExports) return { ptr: 0, len: 0 };
     const encoder = new TextEncoder();
@@ -1623,7 +1626,6 @@ function readStringFromWasm(ptr, len) {
     return new TextDecoder().decode(mem);
 }
 
-// Notification System
 function showNotification(title, msg) {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -1639,7 +1641,6 @@ function showNotification(title, msg) {
 }
 window.showNotification = showNotification;
 
-// Media & Background setter
 function applyMediaToDom(url, isVideo) {
     const bgVid = document.getElementById('bg-video');
     const bgImg = document.getElementById('bg-img');
@@ -1681,7 +1682,6 @@ function applyMediaToDom(url, isVideo) {
     }
 }
 
-// Canvas snow drawing helper
 function drawSnowCanvas(flakesPtr, count) {
     const cvs = document.getElementById('snow-fx');
     if (!cvs) return;
@@ -1706,7 +1706,6 @@ function drawSnowCanvas(flakesPtr, count) {
     }
 }
 
-// Canvas audio visualizer drawing helper
 function drawVisualizerCanvas(barsPtr, count) {
     const cv = document.getElementById('visualizer');
     if (!cv || !cv.parentElement) return;
@@ -1731,7 +1730,6 @@ function drawVisualizerCanvas(barsPtr, count) {
     }
 }
 
-// Audio player state
 let aMedia = null;
 function setupAudio() {
     aMedia = document.createElement('audio');
@@ -1771,7 +1769,6 @@ function setupAudio() {
     }
 }
 
-// Global Wasm event bridges
 window.wasm_toggle_app = (id) => {
     const s = passStringToWasm(id);
     wasmExports.wasm_toggle_app(s.ptr, s.len);
@@ -1892,7 +1889,6 @@ window.autoGrow = function(el) {
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 };
 
-// Drag & Drop System
 const DragSystem = {
     dragging: false,
     sourceType: null,
@@ -1991,7 +1987,6 @@ const DragSystem = {
 window.wasm_drag_start = (e, type, id) => DragSystem.start(e, type, id);
 window.wasm_drag_win_start = (e, id) => DragSystem.startWinDrag(e, id);
 
-// Context Menu Management
 let activeCtxId = null;
 function hideAllCtx() {
     const menus = document.querySelectorAll('menu');
@@ -2056,7 +2051,6 @@ document.addEventListener('contextmenu', (e) => {
     }
 });
 
-// Bind context menu click items
 document.getElementById('ctx-unpin-app')?.addEventListener('click', () => {
     if (activeCtxId) wasm_pin_app(activeCtxId, 0);
     hideAllCtx();
@@ -2078,14 +2072,12 @@ document.getElementById('ctx-dock-open-close')?.addEventListener('click', () => 
     hideAllCtx();
 });
 
-// Idle reset listeners
 ['mousemove', 'mousedown', 'keydown', 'touchstart'].forEach(ev => {
     document.addEventListener(ev, () => {
         if (wasmExports) wasmExports.wasm_reset_idle();
     }, { passive: true });
 });
 
-// Authentication System
 function usernameToEmail(u) {
     const raw = (u || '').trim().toLowerCase();
     return raw.includes('@') ? raw : `${raw}@cine.os`;
@@ -2109,7 +2101,12 @@ async function handleBootSignIn() {
         isGuest = false;
         wasm_set_user_session(currentUser.email);
         wasm_start_boot_sequence();
-        loadUserDataFromCloud();
+        if (data.session) {
+            await saveUserDataToCloud();
+            await loadUserDataFromCloud();
+        }
+        try { sessionStorage.setItem('seamless_post_signin', '1'); } catch (e) {}
+        await loadUserDataFromCloud();
     }
 }
 window.handleBootSignIn = handleBootSignIn;
@@ -2178,48 +2175,348 @@ async function recoverSession() {
     } catch (e) {}
 }
 
-// Cloud save / load
-async function saveUserDataToCloud() {
-    if (!currentUser || isGuest || !supabaseClient) return;
+var _CLOUD_STRUCTURED_KEYS = {
+    cine_sys_config: 1,
+    c_pins_v2: 1,
+    cine_desktop_v2: 1,
+    cine_unlocked_wp: 1,
+    cine_wp_versions: 1
+};
+
+var _CLOUD_BLOCKED_KEYS = {
+    'cod-assets-cached': 1,
+    'buildnow_assets_cached': 1,
+    cine_wp_versions: 1
+};
+
+var _CLOUD_MAX_VALUE_LEN = 100000;
+var _cloudSaveInFlight = false;
+var _pendingCloudSync = false;
+var _suppressCloudSave = false;
+var _saveCloudTimer = null;
+var _lastCloudSaveAt = 0;
+var _lastCloudLoadAt = 0;
+window._pendingIframeSaves = window._pendingIframeSaves || {};
+
+function isBlockedProgressKey(key) {
+    if (!key || _CLOUD_STRUCTURED_KEYS[key] || _CLOUD_BLOCKED_KEYS[key]) return true;
+    var lower = key.toLowerCase();
+    return lower.indexOf('assets-cached') !== -1 ||
+        lower.indexOf('assetscache') !== -1 ||
+        lower.indexOf('unitycache') !== -1 ||
+        lower.indexOf('cache-v') !== -1 ||
+        lower.indexOf('sw-cache') !== -1 ||
+        lower.indexOf('data:image') !== -1 ||
+        lower.indexOf('supabase') !== -1 ||
+        lower.indexOf('sb-') === 0 ||
+        lower.indexOf('-auth-token') !== -1 ||
+        lower === 'seamless_post_signin';
+}
+
+function collectMainProgress() {
+    var out = {};
     try {
-        const payload = {
-            pins: localStorage.getItem('c_pins_v2'),
-            desktop: localStorage.getItem('cine_desktop_v2'),
-            wallpaper: localStorage.getItem('cine_wallpaper'),
-            unlocked_wp: localStorage.getItem('cine_unlocked_wp'),
-            config: localStorage.getItem('cine_sys_config')
-        };
-        await supabaseClient.from('user_progress').upsert({
-            user_id: currentUser.id,
-            progress_data: payload,
-            updated_at: new Date().toISOString()
-        });
+        for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i);
+            if (isBlockedProgressKey(key)) continue;
+            var value = localStorage.getItem(key);
+            if (value == null) continue;
+            var isMinecraft = key.toLowerCase().indexOf('minecraft') !== -1 || key.toLowerCase().indexOf('eagler') !== -1;
+            if (!isMinecraft && value.length > _CLOUD_MAX_VALUE_LEN) continue;
+            if (value.indexOf('data:image') === 0 || value.indexOf('data:application') === 0) continue;
+            out[key] = value;
+        }
     } catch (e) {}
+    out.cherri_unlocked = localStorage.getItem('cherri_unlocked') === 'true' ? 'true' : 'false';
+    return out;
+}
+
+function collectIframeProgress() {
+    var byApp = {};
+    try {
+        var frames = document.querySelectorAll('iframe');
+        for (var i = 0; i < frames.length; i++) {
+            var frame = frames[i];
+            var appId = (frame.id || '').replace(/^frame-/, '') || ('iframe_' + i);
+            var isMinecraft = appId === 'minecraft';
+            try {
+                var storage = frame.contentWindow && frame.contentWindow.localStorage;
+                if (!storage) continue;
+                var bag = {};
+                for (var j = 0; j < storage.length; j++) {
+                    var key = storage.key(j);
+                    if (isBlockedProgressKey(key)) continue;
+                    var value = storage.getItem(key);
+                    if (value == null) continue;
+                    if (!isMinecraft && value.length > _CLOUD_MAX_VALUE_LEN) continue;
+                    if (value.indexOf('data:image') === 0 || value.indexOf('data:application') === 0) continue;
+                    bag[key] = value;
+                }
+                if (Object.keys(bag).length) byApp[appId] = bag;
+            } catch (e) {}
+        }
+    } catch (e) {}
+    return byApp;
+}
+
+function applyIframeProgressToFrame(frame, appId) {
+    var bag = window._pendingIframeSaves && window._pendingIframeSaves[appId];
+    if (!bag || !frame) return;
+    try {
+        var storage = frame.contentWindow && frame.contentWindow.localStorage;
+        if (!storage) return;
+        for (var key in bag) {
+            if (Object.prototype.hasOwnProperty.call(bag, key)) {
+                try { storage.setItem(key, bag[key]); } catch (e) {}
+            }
+        }
+    } catch (e) {}
+}
+
+document.addEventListener('load', function(event) {
+    var frame = event.target;
+    if (frame && frame.tagName === 'IFRAME') {
+        var appId = (frame.id || '').replace(/^frame-/, '');
+        if (appId) applyIframeProgressToFrame(frame, appId);
+    }
+}, true);
+
+function markPendingCloudSync() {
+    _pendingCloudSync = true;
+}
+
+function queueCloudSave() {
+    if (_suppressCloudSave || !supabaseClient || !currentUser || isGuest) return;
+    markPendingCloudSync();
+    if (_saveCloudTimer) clearTimeout(_saveCloudTimer);
+    _saveCloudTimer = setTimeout(function() {
+        _saveCloudTimer = null;
+        saveUserDataToCloud();
+    }, 2000);
+}
+window.queueCloudSave = queueCloudSave;
+
+(function watchLocalProgressChanges() {
+    try {
+        var originalSetItem = Storage.prototype.setItem;
+        Storage.prototype.setItem = function(key, value) {
+            var result = originalSetItem.call(this, key, value);
+            if (key && currentUser && !isGuest && !isBlockedProgressKey(key)) queueCloudSave();
+            return result;
+        };
+        var originalRemoveItem = Storage.prototype.removeItem;
+        Storage.prototype.removeItem = function(key) {
+            var result = originalRemoveItem.call(this, key);
+            if (key && currentUser && !isGuest && !isBlockedProgressKey(key)) queueCloudSave();
+            return result;
+        };
+    } catch (e) {}
+})();
+
+function clearLocalSyncedData() {
+    try {
+        var toRemove = [];
+        for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i);
+            if (!key) continue;
+            var lower = key.toLowerCase();
+            if (lower.indexOf('supabase') !== -1 || lower.indexOf('sb-') === 0 || lower.indexOf('-auth-token') !== -1 || lower === 'seamless_post_signin') continue;
+            if (_CLOUD_STRUCTURED_KEYS[key]) {
+                toRemove.push(key);
+                continue;
+            }
+            if (!_CLOUD_BLOCKED_KEYS[key] && !isBlockedProgressKey(key)) toRemove.push(key);
+        }
+        toRemove.push('cherri_unlocked', 'ciri_key');
+        for (var j = 0; j < toRemove.length; j++) {
+            try { localStorage.removeItem(toRemove[j]); } catch (e) {}
+        }
+    } catch (e) {}
+    window._pendingIframeSaves = {};
+    _pendingCloudSync = false;
+    if (_saveCloudTimer) {
+        clearTimeout(_saveCloudTimer);
+        _saveCloudTimer = null;
+    }
+}
+
+async function saveUserDataToCloud() {
+    if (_suppressCloudSave || !supabaseClient || !currentUser || isGuest) return;
+    if (_cloudSaveInFlight) {
+        _pendingCloudSync = true;
+        return;
+    }
+
+    _cloudSaveInFlight = true;
+    _pendingCloudSync = false;
+    var mainProgress = collectMainProgress();
+    var iframeProgress = collectIframeProgress();
+
+    if (window._pendingIframeSaves) {
+        for (var appId in window._pendingIframeSaves) {
+            if (!iframeProgress[appId]) iframeProgress[appId] = window._pendingIframeSaves[appId];
+            else {
+                for (var key in window._pendingIframeSaves[appId]) {
+                    if (iframeProgress[appId][key] === undefined) iframeProgress[appId][key] = window._pendingIframeSaves[appId][key];
+                }
+            }
+        }
+    }
+    window._pendingIframeSaves = iframeProgress;
+
+    var sysConfig = {};
+    var pins = {};
+    var desktop = [];
+    var unlockedWallpapers = ['default'];
+    try { sysConfig = JSON.parse(localStorage.getItem('cine_sys_config') || '{}') || {}; } catch (e) {}
+    try { pins = JSON.parse(localStorage.getItem('c_pins_v2') || '{}') || {}; } catch (e) {}
+    try { desktop = JSON.parse(localStorage.getItem('cine_desktop_v2') || '[]') || []; } catch (e) {}
+    try { unlockedWallpapers = JSON.parse(localStorage.getItem('cine_unlocked_wp') || '["default"]') || ['default']; } catch (e) {}
+
+    var payload = {
+        id: currentUser.id,
+        sys_config: sysConfig,
+        pins: pins,
+        desktop: desktop,
+        unlocked_wp: unlockedWallpapers,
+        game_progress: { _main: mainProgress, _iframes: iframeProgress },
+        updated_at: new Date().toISOString()
+    };
+
+    var saveFailed = false;
+    try {
+        var result = await supabaseClient.from('user_data').upsert(payload, { onConflict: 'id' });
+        if (result.error) {
+            console.error('Seamless cloud save failed:', result.error);
+            _pendingCloudSync = true;
+            saveFailed = true;
+        } else {
+            _lastCloudSaveAt = Date.now();
+        }
+    } catch (error) {
+        console.error('Seamless cloud save failed:', error);
+        _pendingCloudSync = true;
+        saveFailed = true;
+    } finally {
+        _cloudSaveInFlight = false;
+        if (_pendingCloudSync && !_suppressCloudSave && !saveFailed) queueCloudSave();
+    }
 }
 window.saveUserDataToCloud = saveUserDataToCloud;
 
 async function loadUserDataFromCloud() {
-    if (!currentUser || isGuest || !supabaseClient) return;
+    if (!supabaseClient || !currentUser || isGuest) return;
+
+    var postSignIn = false;
     try {
-        const { data, error } = await supabaseClient
-            .from('user_progress')
-            .select('progress_data')
-            .eq('user_id', currentUser.id)
-            .maybeSingle();
-        if (data && data.progress_data) {
-            const p = data.progress_data;
-            if (p.pins) localStorage.setItem('c_pins_v2', p.pins);
-            if (p.desktop) localStorage.setItem('cine_desktop_v2', p.desktop);
-            if (p.wallpaper) localStorage.setItem('cine_wallpaper', p.wallpaper);
-            if (p.unlocked_wp) localStorage.setItem('cine_unlocked_wp', p.unlocked_wp);
-            if (p.config) localStorage.setItem('cine_sys_config', p.config);
-            wasmExports.wasm_init();
-        }
+        postSignIn = sessionStorage.getItem('seamless_post_signin') === '1';
+        if (postSignIn) sessionStorage.removeItem('seamless_post_signin');
     } catch (e) {}
+
+    if (postSignIn) {
+        _suppressCloudSave = true;
+        clearLocalSyncedData();
+        _pendingCloudSync = false;
+        _cloudSaveInFlight = false;
+    }
+
+    if (!postSignIn && (_cloudSaveInFlight || _pendingCloudSync)) return;
+
+    try {
+        var result = await supabaseClient.from('user_data').select('*').eq('id', currentUser.id).maybeSingle();
+        if (result.error) {
+            console.error('Seamless cloud load failed:', result.error);
+            if (postSignIn) _suppressCloudSave = false;
+            return;
+        }
+
+        var data = result.data;
+        if (!data) {
+            _suppressCloudSave = false;
+            await saveUserDataToCloud();
+            return;
+        }
+
+        if (data.sys_config && typeof data.sys_config === 'object') {
+            localStorage.setItem('cine_sys_config', JSON.stringify(data.sys_config));
+        }
+        if (data.pins && typeof data.pins === 'object') {
+            localStorage.setItem('c_pins_v2', JSON.stringify(data.pins));
+        }
+        if (data.desktop) {
+            localStorage.setItem('cine_desktop_v2', JSON.stringify(data.desktop));
+        }
+        if (data.unlocked_wp) {
+            localStorage.setItem('cine_unlocked_wp', JSON.stringify(data.unlocked_wp));
+        }
+
+        if (data.game_progress && typeof data.game_progress === 'object') {
+            var progress = data.game_progress;
+            if (progress._main && typeof progress._main === 'object') {
+                var keepMain = progress._main;
+                var removeKeys = [];
+                for (var i = 0; i < localStorage.length; i++) {
+                    var localKey = localStorage.key(i);
+                    if (!localKey || isBlockedProgressKey(localKey) || _CLOUD_STRUCTURED_KEYS[localKey]) continue;
+                    if (!Object.prototype.hasOwnProperty.call(keepMain, localKey)) removeKeys.push(localKey);
+                }
+                for (var j = 0; j < removeKeys.length; j++) {
+                    try { localStorage.removeItem(removeKeys[j]); } catch (e) {}
+                }
+                for (var key in keepMain) {
+                    if (!Object.prototype.hasOwnProperty.call(keepMain, key) || _CLOUD_STRUCTURED_KEYS[key]) continue;
+                    try { localStorage.setItem(key, keepMain[key]); } catch (e) {}
+                }
+            } else if (postSignIn) {
+                var legacyRemove = [];
+                for (var li = 0; li < localStorage.length; li++) {
+                    var legacyKey = localStorage.key(li);
+                    if (legacyKey && !isBlockedProgressKey(legacyKey) && !_CLOUD_STRUCTURED_KEYS[legacyKey]) legacyRemove.push(legacyKey);
+                }
+                for (var lr = 0; lr < legacyRemove.length; lr++) {
+                    try { localStorage.removeItem(legacyRemove[lr]); } catch (e) {}
+                }
+                if (typeof progress._cherri === 'boolean') localStorage.setItem('cherri_unlocked', progress._cherri ? 'true' : 'false');
+                if (progress._ciri_key) localStorage.setItem('ciri_key', progress._ciri_key);
+                for (var legacy in progress) {
+                    if (legacy.charAt(0) === '_') continue;
+                    var legacyValue = progress[legacy];
+                    try { localStorage.setItem(legacy, typeof legacyValue === 'string' ? legacyValue : JSON.stringify(legacyValue)); } catch (e) {}
+                }
+            }
+            if (progress._iframes && typeof progress._iframes === 'object') {
+                window._pendingIframeSaves = progress._iframes;
+                var existingFrames = document.querySelectorAll('iframe');
+                for (var fi = 0; fi < existingFrames.length; fi++) {
+                    var existingAppId = (existingFrames[fi].id || '').replace(/^frame-/, '');
+                    if (existingAppId) applyIframeProgressToFrame(existingFrames[fi], existingAppId);
+                }
+            } else {
+                window._pendingIframeSaves = {};
+            }
+        } else if (postSignIn) {
+            window._pendingIframeSaves = {};
+        }
+
+        if (wasmExports && typeof wasmExports.wasm_init === 'function') wasmExports.wasm_init();
+        _lastCloudLoadAt = Date.now();
+        _pendingCloudSync = false;
+    } catch (error) {
+        console.error('Seamless cloud load failed:', error);
+    } finally {
+        if (postSignIn) _suppressCloudSave = false;
+    }
 }
 window.loadUserDataFromCloud = loadUserDataFromCloud;
 
-// Ciri Chat System (Gemini API)
+setInterval(function() {
+    if (currentUser && !isGuest) saveUserDataToCloud();
+}, 30000);
+
+window.addEventListener('beforeunload', function() {
+    if (currentUser && !isGuest) saveUserDataToCloud();
+});
+
 let cImgB64 = null;
 let cImgMime = null;
 
@@ -2262,13 +2559,11 @@ async function handleSend() {
     inp.value = '';
     inp.style.height = 'auto';
 
-    // User message
     const uMsg = document.createElement('div');
     uMsg.className = 'message user-message';
     uMsg.textContent = text;
     history.appendChild(uMsg);
 
-    // Assistant message placeholder
     const aMsg = document.createElement('div');
     aMsg.className = 'message model-message';
     aMsg.innerHTML = '<span class="thinking-dots">Thinking...</span>';
@@ -2322,12 +2617,10 @@ document.getElementById('chat-input')?.addEventListener('keydown', (e) => {
 });
 document.getElementById('send-btn')?.addEventListener('click', handleSend);
 
-// Start Menu search input
 document.getElementById('start-search-input')?.addEventListener('input', (e) => {
     filterDrawer(e.target.value);
 });
 
-// Bootloader Initialization
 async function initBootloader() {
     DragSystem.init();
     setupAudio();
@@ -2435,10 +2728,8 @@ async function initBootloader() {
         wasmExports = wasmInstance.exports;
         window.wasmExports = wasmExports;
 
-        // Start Rust Wasm application
         wasmExports.wasm_init();
 
-        // Animation frame loop for physics, FPS and clock
         function tick(now) {
             wasmExports.wasm_tick(now);
             requestAnimationFrame(tick);
