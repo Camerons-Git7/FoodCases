@@ -123,7 +123,7 @@
 
   try {
   setStatus('Fetching peggle.wasm...', 0);
-  const resp = await fetch('peggle.wasm');
+  const resp = await fetch('https://raw.githubusercontent.com/Camerons-Git7/Offline-HTML-Games-Pack/master/offline/peggle.wasm');
   if (!resp.ok) throw new Error('HTTP ' + resp.status + ': ' + resp.statusText);
 
   let wasmBytes;
