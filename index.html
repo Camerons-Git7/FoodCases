@@ -1995,7 +1995,7 @@ function collectIframeProgress() {
     for (var i = 0; i < frames.length; i++) {
       var frame = frames[i];
       var appId = (frame.id || '').replace(/^frame-/, '') || ('iframe_' + i);
-      var isMcApp = appId === 'minecraft';
+      var isMcApp = appId === 'minecraft' || appId === 'eaglercraft' || (appId && (appId.toLowerCase().indexOf('minecraft') !== -1 || appId.toLowerCase().indexOf('eagler') !== -1));
       try {
         var ls = frame.contentWindow && frame.contentWindow.localStorage;
         if (!ls) continue;
@@ -6232,7 +6232,7 @@ function closeWindow(id) {
             var ls = frame.contentWindow && frame.contentWindow.localStorage;
             if (ls) {
               var bag = {};
-              var isMc = id === 'minecraft';
+              var isMc = id === 'minecraft' || id === 'eaglercraft' || (id && (String(id).toLowerCase().indexOf('minecraft') !== -1 || String(id).toLowerCase().indexOf('eagler') !== -1));
               for (var j = 0; j < ls.length; j++) {
                 var k = ls.key(j);
                 var v = ls.getItem(k);
