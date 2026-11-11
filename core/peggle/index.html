@@ -1,205 +1,386 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>peggle</title>
-  <link rel="icon" type="image/x-icon" href="/favicon.ico"/>
-  <style>
-    * { margin:0; padding:0; border:0; }
-    html, body {
-      height: 100%;
-      width: 100%;
-      overflow: hidden;
-      background: #000;
-      color: #eee;
-      font-family: system-ui, sans-serif;
-    }
-    #loading {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: #111;
-      z-index: 999;
-    }
-    #progress {
-      width: 300px;
-      height: 4px;
-      background: #333;
-      margin-top: 20px;
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    #progress-bar {
-      width: 0%;
-      height: 100%;
-      background: #4CAF50;
-      transition: width 0.3s;
-    }
-    #status {
-      margin-top: 15px;
-      font-size: 0.9rem;
-      opacity: 0.7;
-    }
-    #error {
-      position: fixed;
-      inset: 0;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: #111;
-      padding: 20px;
-      text-align: center;
-      z-index: 1000;
-    }
-    #game-container {
-      width: 100%;
-      height: 100%;
-      display: none;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Peggle</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: #000;
+    color: #eee;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  #loading, #error {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #111;
+    text-align: center;
+    z-index: 1000;
+  }
+  #loading { gap: 0; }
+  #loading-title {
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: .01em;
+  }
+  #progress {
+    width: min(300px, 75vw);
+    height: 4px;
+    margin-top: 20px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #333;
+  }
+  #progress-bar {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: #4caf50;
+    transition: width .25s ease, opacity .25s ease;
+  }
+  #status {
+    max-width: min(440px, 90vw);
+    margin-top: 15px;
+    color: #aaa;
+    font-size: .9rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  #error {
+    display: none;
+    z-index: 1100;
+  }
+  #error strong {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  #error-msg {
+    max-width: min(560px, 90vw);
+    margin-top: 15px;
+    color: #bbb;
+    font-size: .9rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  #game {
+    display: none;
+    width: 100%;
+    height: 100%;
+    background: #000;
+  }
+  ruffle-player {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+</style>
 </head>
 <body>
-
 <div id="loading">
-  <div>Loading Game...</div>
+  <div id="loading-title">Loading Game...</div>
   <div id="progress"><div id="progress-bar"></div></div>
   <div id="status">Initializing...</div>
 </div>
-
 <div id="error">
   <strong>Failed to load game</strong>
-  <div style="margin-top:15px; opacity:0.8;" id="error-msg"></div>
+  <div id="error-msg"></div>
 </div>
-
-<div id="game-container"></div>
-
+<div id="game"></div>
 <script>
-const GAME_URL = "https://raw.githubusercontent.com/Camerons-Git7/Offline-HTML-Games-Pack/master/offline/peggle.html";
-const loading = document.getElementById('loading');
-const progressBar = document.getElementById('progress-bar');
-const status = document.getElementById('status');
-const errorDiv = document.getElementById('error');
-const errorMsg = document.getElementById('error-msg');
-const container = document.getElementById('game-container');
+(async function() {
+  const game = document.getElementById('game');
+  const loading = document.getElementById('loading');
+  const progressBar = document.getElementById('progress-bar');
+  const status = document.getElementById('status');
+  const errorScreen = document.getElementById('error');
+  const errorMessage = document.getElementById('error-msg');
 
-function showError(msg) {
-  loading.style.display = 'none';
-  errorDiv.style.display = 'flex';
-  errorMsg.textContent = msg;
-}
-
-async function loadGame() {
-  try {
-    status.textContent = 'Fetching game file...';
-    
-    // Fetch with progress tracking
-    const response = await fetch(GAME_URL);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  function setStatus(message, percent) {
+    status.textContent = message;
+    if (typeof percent === 'number') {
+      progressBar.style.opacity = '1';
+      progressBar.style.width = Math.max(0, Math.min(100, percent)) + '%';
     }
-    
-    const contentLength = +(response.headers.get('Content-Length') || 0);
-    const reader = response.body.getReader();
+  }
+
+  function showError(message) {
+    loading.style.display = 'none';
+    game.style.display = 'none';
+    errorMessage.textContent = message;
+    errorScreen.style.display = 'flex';
+  }
+
+  try {
+  setStatus('Fetching peggle.wasm...', 0);
+  const resp = await fetch('peggle.wasm');
+  if (!resp.ok) throw new Error('HTTP ' + resp.status + ': ' + resp.statusText);
+
+  let wasmBytes;
+  const contentLength = Number(resp.headers.get('Content-Length') || 0);
+  if (resp.body && resp.body.getReader) {
+    const reader = resp.body.getReader();
+    const chunks = [];
     let received = 0;
-    let chunks = [];
-    
-    const formatMB = (bytes) => (bytes / 1024 / 1024).toFixed(1);
-    
     while (true) {
-      const {done, value} = await reader.read();
-      if (done) break;
-      
-      chunks.push(value);
-      received += value.length;
-      
+      const part = await reader.read();
+      if (part.done) break;
+      chunks.push(part.value);
+      received += part.value.byteLength;
       if (contentLength > 0) {
-        const percent = Math.min(100, (received / contentLength) * 100);
-        progressBar.style.width = percent + '%';
-        status.textContent = `Downloading... ${formatMB(received)} / ${formatMB(contentLength)} MB (${Math.round(percent)}%)`;
+        const percent = received / contentLength * 100;
+        setStatus('Downloading peggle.wasm... ' +
+          (received / 1048576).toFixed(1) + ' / ' +
+          (contentLength / 1048576).toFixed(1) + ' MB (' +
+          Math.round(percent) + '%)', percent);
       } else {
-        // No Content-Length header — still show how much has been fetched
+        setStatus('Downloading peggle.wasm... ' +
+          (received / 1048576).toFixed(1) + ' MB');
         progressBar.style.width = '100%';
-        progressBar.style.opacity = '0.5';
-        status.textContent = `Downloading... ${formatMB(received)} MB`;
+        progressBar.style.opacity = '.5';
       }
     }
-    
-    if (contentLength > 0) {
-      progressBar.style.width = '100%';
-    }
-    progressBar.style.opacity = '1';
-    
-    // Combine chunks
-    const allChunks = new Uint8Array(received);
-    let position = 0;
+    wasmBytes = new Uint8Array(received);
+    let offset = 0;
     for (const chunk of chunks) {
-      allChunks.set(chunk, position);
-      position += chunk.length;
+      wasmBytes.set(chunk, offset);
+      offset += chunk.byteLength;
     }
-    
-    const htmlText = new TextDecoder().decode(allChunks);
-    
-    status.textContent = 'Starting game...';
-    
-    // Inject Ruffle config early so SharedObjects persist under a stable origin.
-    // The game HTML already embeds Ruffle; this ensures config is set before it runs.
-    const ruffleScript = `
-      <script>
-        window.RufflePlayer = window.RufflePlayer || {};
-        window.RufflePlayer.config = Object.assign({}, window.RufflePlayer.config || {}, {
-          autoplay: "on",
-          unmuteOverlay: "hidden",
-          warnOnUnsupportedContent: false,
-          // Keep letterbox / quality sensible
-          letterbox: "on",
-          scale: "showAll"
-        });
-      <\/script>
-      <script src="https://unpkg.com/@ruffle-rs/ruffle"><\/script>
-    `;
-    
-    // Inject Ruffle before </head> or at start
-    let modifiedHtml = htmlText;
-    if (modifiedHtml.includes('</head>')) {
-      modifiedHtml = modifiedHtml.replace('</head>', ruffleScript + '</head>');
-    } else {
-      modifiedHtml = ruffleScript + modifiedHtml;
-    }
-    
-    // Same-origin iframe WITHOUT sandbox so IndexedDB/localStorage
-    // (used by Ruffle SharedObjects) persist correctly across reloads.
-    // Blob/sandbox origins break save data.
-    const iframe = document.createElement('iframe');
-    iframe.style.width = '100%';
-    iframe.style.height = '100%';
-    iframe.style.border = 'none';
-    iframe.allow = 'autoplay; fullscreen; gamepad; clipboard-write';
-    // Do NOT set sandbox — it interferes with persistent storage for Flash saves
-    
-    container.appendChild(iframe);
-    
-    // Write content directly to iframe (same-origin → saves work)
-    iframe.contentDocument.open();
-    iframe.contentDocument.write(modifiedHtml);
-    iframe.contentDocument.close();
-    
-    loading.style.display = 'none';
-    container.style.display = 'block';
-    
-  } catch (err) {
-    showError(err.message + ' — GitHub may be rate limiting or blocking large file requests.');
-    console.error(err);
+  } else {
+    wasmBytes = new Uint8Array(await resp.arrayBuffer());
   }
-}
+  setStatus('Compiling game...', 100);
+  const mod = await WebAssembly.compile(wasmBytes);
+  const wasmInstance = await WebAssembly.instantiate(mod, { env: {} });
 
-loadGame();
+  const exports = wasmInstance.exports;
+  const memory = exports.memory;
+
+  function readStr(ptr, len) {
+    return new TextDecoder().decode(new Uint8Array(memory.buffer, ptr, len));
+  }
+
+  setStatus('Initializing assets...', 100);
+  exports.peggle_init();
+  const assetCount = exports.peggle_get_asset_count();
+  console.log('Total assets in wasm:', assetCount);
+
+  const INFO_BUF_PTR = exports.peggle_alloc(6 * 4);
+  const assetTable = {};
+  const blobCache = {};
+
+  for (let i = 0; i < assetCount; i++) {
+    const ok = exports.peggle_get_asset_info(i, INFO_BUF_PTR);
+    if (!ok) continue;
+    const view = new Uint32Array(memory.buffer, INFO_BUF_PTR, 6);
+    const path = readStr(view[0], view[1]);
+    const mime = readStr(view[2], view[3]);
+    const dataPtr = view[4];
+    const dataLen = view[5];
+    assetTable[path] = { mime, dataPtr, dataLen, id: i };
+  }
+
+  console.log('Asset table loaded, keys:', Object.keys(assetTable).length);
+
+  function getBlob(path) {
+    if (blobCache[path]) return blobCache[path];
+    const entry = assetTable[path];
+    if (!entry) return null;
+    const bytes = new Uint8Array(memory.buffer, entry.dataPtr, entry.dataLen).slice();
+    const blob = new Blob([bytes], { type: entry.mime });
+    blobCache[path] = blob;
+    return blob;
+  }
+
+  const RUFFLE_CHUNKS = {
+    'core.ruffle.16d61072ac7fdc4d5013.js': true,
+    'core.ruffle.994eeef0a471a88cd0e3.js': true,
+    '172de42e6619eac8f371.wasm': true,
+    '878d548199cddef07035.wasm': true,
+    'ruffle.js': true,
+  };
+
+  function normalizePath(url) {
+    try {
+      let u = typeof url === 'string' ? url : (url && url.url) || String(url || '');
+      u = u.split('?')[0].split('#')[0];
+
+      for (const rk of Object.keys(RUFFLE_CHUNKS)) {
+        if (u.endsWith(rk) || u.endsWith('/' + rk)) {
+          if (assetTable[rk]) return rk;
+        }
+      }
+
+      const encoder = new TextEncoder();
+      const urlBytes = encoder.encode(u);
+      const urlPtr = exports.peggle_alloc(urlBytes.length);
+      new Uint8Array(memory.buffer, urlPtr, urlBytes.length).set(urlBytes);
+      const result = exports.peggle_resolve_path(urlPtr, urlBytes.length);
+      exports.peggle_dealloc(urlPtr, urlBytes.length);
+
+      if (result >= 0) {
+        const ok = exports.peggle_get_asset_info(result, INFO_BUF_PTR);
+        if (ok) {
+          const view = new Uint32Array(memory.buffer, INFO_BUF_PTR, 6);
+          return readStr(view[0], view[1]);
+        }
+      }
+
+      const markers = ['/peggle/', '/peak/peggle/', 'peggle/', 'localhost/peggle/'];
+      for (const m of markers) {
+        const idx = u.indexOf(m);
+        if (idx !== -1) {
+          u = u.slice(idx + m.length);
+          break;
+        }
+      }
+      u = u.replace(/^\.\//, '').replace(/^\/+/, '');
+      if (assetTable[u]) return u;
+      const base = u.split('/').pop();
+      if (assetTable[base]) return base;
+      for (const prefix of ['', 'assets/', 'levels/', 'lang/', 'interstitials/']) {
+        if (assetTable[prefix + u]) return prefix + u;
+        if (assetTable[prefix + base]) return prefix + base;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  const originalFetch = window.fetch;
+  window.fetch = async function(input, init) {
+    const path = normalizePath(input);
+    if (path && assetTable[path]) {
+      const blob = getBlob(path);
+      return new Response(blob, {
+        status: 200,
+        headers: { 'Content-Type': assetTable[path].mime, 'Content-Length': String(blob.size) }
+      });
+    }
+    return originalFetch.apply(this, arguments);
+  };
+
+  const originalOpen = XMLHttpRequest.prototype.open;
+  const originalSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+    this._offlinePath = normalizePath(url);
+    return originalOpen.call(this, method, url, ...rest);
+  };
+  XMLHttpRequest.prototype.send = function(...args) {
+    if (this._offlinePath && assetTable[this._offlinePath]) {
+      const blob = getBlob(this._offlinePath);
+      const reader = new FileReader();
+      reader.onload = () => {
+        Object.defineProperty(this, 'response', { value: reader.result });
+        Object.defineProperty(this, 'responseText', { value: typeof reader.result === 'string' ? reader.result : '' });
+        Object.defineProperty(this, 'status', { value: 200 });
+        Object.defineProperty(this, 'readyState', { value: 4 });
+        this.dispatchEvent(new Event('readystatechange'));
+        this.dispatchEvent(new Event('load'));
+        this.dispatchEvent(new Event('loadend'));
+      };
+      if (this.responseType === 'arraybuffer') {
+        reader.readAsArrayBuffer(blob);
+      } else if (this.responseType === 'blob') {
+        Object.defineProperty(this, 'response', { value: blob });
+        Object.defineProperty(this, 'status', { value: 200 });
+        Object.defineProperty(this, 'readyState', { value: 4 });
+        this.dispatchEvent(new Event('readystatechange'));
+        this.dispatchEvent(new Event('load'));
+        this.dispatchEvent(new Event('loadend'));
+      } else {
+        reader.readAsText(blob);
+      }
+      return;
+    }
+    return originalSend.apply(this, args);
+  };
+
+  setStatus('Preparing game assets...', 100);
+  for (const k of Object.keys(assetTable)) {
+    getBlob(k);
+  }
+
+  setStatus('Loading Ruffle...', 100);
+
+  const origAppendChild = Node.prototype.appendChild;
+  Node.prototype.appendChild = function(child) {
+    if (child instanceof HTMLScriptElement && child.src) {
+      const path = normalizePath(child.src);
+      if (path && assetTable[path]) {
+        const blob = getBlob(path);
+        const url = URL.createObjectURL(blob);
+        child.src = url;
+      }
+    }
+    return origAppendChild.call(this, child);
+  };
+
+  const ruffleBlob = getBlob('ruffle.js');
+  if (!ruffleBlob) {
+    throw new Error('ruffle.js was not found in the embedded WASM assets.');
+  }
+  const ruffleUrl = URL.createObjectURL(ruffleBlob);
+  const ruffleScript = document.createElement('script');
+  ruffleScript.src = ruffleUrl;
+  document.head.appendChild(ruffleScript);
+
+  setStatus('Initializing Ruffle...', 100);
+  let tries = 0;
+  while (!window.RufflePlayer && tries < 150) {
+    await new Promise(r => setTimeout(r, 40));
+    tries++;
+  }
+  if (!window.RufflePlayer) {
+    throw new Error('Ruffle did not initialize in time.');
+  }
+
+  setStatus('Starting Peggle...', 100);
+  const ruffle = window.RufflePlayer.newest();
+  const player = ruffle.createPlayer();
+  player.style.width = '100%';
+  player.style.height = '100%';
+  game.innerHTML = '';
+  game.appendChild(player);
+
+  const swfBlob = getBlob('peggle.swf');
+  const swfBytes = await swfBlob.arrayBuffer();
+
+  try {
+    await player.load({
+      data: swfBytes,
+      swfFileName: 'peggle.swf',
+      allowScriptAccess: true,
+      autoplay: 'on',
+      letterbox: 'on',
+      scale: 'showAll',
+      base: 'https://localhost/peggle/',
+      quality: 'low'
+    });
+  } catch (err) {
+    throw new Error('Error loading SWF: ' + err.message);
+  }
+
+  progressBar.style.width = '100%';
+  setStatus('Game ready', 100);
+  loading.style.display = 'none';
+  game.style.display = 'block';
+  } catch (err) {
+    console.error(err);
+    showError(err && err.message ? err.message : String(err));
+  }
+})();
 </script>
-
 </body>
 </html>
