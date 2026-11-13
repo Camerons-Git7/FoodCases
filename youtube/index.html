@@ -327,8 +327,20 @@
       transition: background 0.12s;
       font-weight: 500;
     }
-    .bm-bar-item:hover {
+    .bm-bar-item:hover,
+    .bm-bar-item:focus,
+    .bm-bar-item:focus-visible {
       background: #3c4043;
+      outline: 3px solid #8ab4f8;
+      outline-offset: -3px;
+      box-shadow: 0 0 0 2px #202124;
+    }
+    .bm-bar-item {
+      flex-shrink: 0;
+      min-height: 32px;
+    }
+    .bm-bar-item:focus-visible {
+      color: #fff;
     }
     .bm-bar-item .bm-favicon {
       width: 14px;
@@ -945,14 +957,25 @@
         const item = document.createElement("div");
         item.className = "bm-bar-item";
         item.dataset.dynamic = "true";
+        item.tabIndex = 0;
+        item.setAttribute("role", "button");
+        item.setAttribute("aria-label", "Open bookmark: " + bm.name);
         item.innerHTML = `
           <div class="bm-favicon">${PLAY_SVG}</div>
           <span>${escapeHtml(bm.name)}</span>
           ${bm.deletable !== false ? `<button class="bm-del" onclick="event.stopPropagation(); deleteBookmark('${bm.id}')">${CLOSE_SVG}</button>` : ""}
         `;
-        item.onclick = () => {
+        const activateBookmark = () => {
           if (bm.type === "video") { playVideo(bm.videoId); }
           else if (bm.type === "collection") { openBrowse(null, bm.channels, bm.name); }
+        };
+        item.onclick = activateBookmark;
+        item.onkeydown = e => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            activateBookmark();
+          }
         };
         bar.appendChild(item);
       });
