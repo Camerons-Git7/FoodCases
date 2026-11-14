@@ -1,0 +1,5 @@
+# SPA fallback for Netlify / Cloudflare Pages.
+# The whole app is client-rendered, so every path must return index.html.
+/assets/*  /assets/:splat  200
+/_app/*    /_app/:splat    200
+/*         /index.html     200

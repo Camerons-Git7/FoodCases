@@ -1,0 +1,1 @@
+import{ht as e}from"./BpaIgoJf.js";var t=e({routes:[]});function n(e){t.routes.push(e),t.routes.length>50&&t.routes.shift()}function r(e){let{routes:n}=t;for(let t=n.length-1;t>=0;--t){let r=n[t];if(!r.path.startsWith(`/media`)&&e!==r.path&&!r.path.startsWith(`/s/`)&&!r.path.startsWith(`/onboarding`))return r.path}return`/`}export{n,r as t};

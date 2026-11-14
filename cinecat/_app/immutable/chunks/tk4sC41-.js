@@ -1,0 +1,1 @@
+import{Ft as e,Nt as t,V as n,a as r,b as i,dt as a,k as o,ot as s,z as c}from"./BpaIgoJf.js";import"./xihTtKlq.js";var l=n(`<div><!></div>`);function u(n,u){let d=r(u,`class`,3,``),f=r(u,`paddingClass`,3,`px-8 py-6`);var p=l(),m=a(p);o(m,()=>u.children??e),t(p),s(()=>i(p,1,`glass-card w-full rounded-2xl bg-black/30 ${f()??``} ${d()??``}`)),c(n,p)}export{u as t};

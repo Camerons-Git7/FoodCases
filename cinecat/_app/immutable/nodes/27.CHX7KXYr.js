@@ -1,0 +1,1 @@
+import{Dt as e,Et as t}from"../chunks/BpaIgoJf.js";import"../chunks/xihTtKlq.js";import{t as n}from"../chunks/BToMZ_Ag.js";import{t as r}from"../chunks/DFaGb3By.js";function i(i,a){e(a,!0),r(i,{get category(){return n.params.category}}),t()}export{i as component};

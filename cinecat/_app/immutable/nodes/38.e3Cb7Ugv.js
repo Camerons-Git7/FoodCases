@@ -1,0 +1,1 @@
+import{Dt as e,Et as t,lt as n,rt as r,w as i}from"../chunks/BpaIgoJf.js";import"../chunks/xihTtKlq.js";import{t as a}from"../chunks/CN8lLJ-F.js";import{t as o}from"../chunks/CTLFdVOQ.js";function s(s,c){e(c,!0),i(`sy61q4`,e=>{r(e=>{n.title=e??``},[()=>a.t(`global.pages.pagetitle`,{title:a.t(`global.pages.settings`)})])}),o(s,{variant:`page`}),t()}export{s as component};

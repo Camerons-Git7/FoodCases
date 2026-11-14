@@ -1,0 +1,1 @@
+.poster-grid.svelte-q59nua{--poster-min:6.25rem}@media (width>=640px){.poster-grid.svelte-q59nua{--poster-min:var(--poster-min-sm,9.5rem)}}@media (width>=1536px){.poster-grid.svelte-q59nua{--poster-min:calc(var(--poster-min-sm,9.5rem) + 1.5rem)}}@media (width>=1900px){.poster-grid.svelte-q59nua{--poster-min:calc(var(--poster-min-sm,9.5rem) + 2.5rem)}}

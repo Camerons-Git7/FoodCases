@@ -1,0 +1,1 @@
+function e(e,n,r,i=78){let a=t(e,n);return`https://wsrv.nl/?${new URLSearchParams({url:a,w:String(r),output:`webp`,q:String(i),we:`1`,default:`1`})}`}function t(e,t){return`https://image.tmdb.org/t/p/${t}${e.startsWith(`/`)?e:`/${e}`}`}function n(t){return t?e(t,`w342`,300,74):`/placeholder.png`}export{n,e as r,t};

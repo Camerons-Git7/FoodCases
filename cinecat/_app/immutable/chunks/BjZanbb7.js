@@ -1,0 +1,1 @@
+import{Dt as e,Et as t,St as n,Z as r,a as i,lt as a,rt as o,w as s}from"./BpaIgoJf.js";import"./xihTtKlq.js";import{t as c}from"./CN8lLJ-F.js";function l(l,u){e(u,!0);let d=i(u,`subpage`,3,!1),f=n(()=>c.t(u.k)),p=n(()=>c.t(`global.pages.pagetitle`,{title:r(f)}));s(`11qxa41`,e=>{o(()=>{a.title=(d()?r(p):r(f))??``})}),t()}export{l as t};

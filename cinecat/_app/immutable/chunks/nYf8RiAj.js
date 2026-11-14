@@ -1,0 +1,1 @@
+function e(e){if(e)return e.replace(`/t/p/w342/`,`/t/p/w185/`)}export{e as t};

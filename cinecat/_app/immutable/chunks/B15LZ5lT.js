@@ -1,0 +1,1 @@
+import{t as e}from"./oqlwWhLB.js";function t(e){return{authorization:`Bearer ${e}`}}async function n(n,r){return e(`/auth/status`,{method:`GET`,baseURL:n,headers:t(r)})}export{n,t};

@@ -1,0 +1,1 @@
+.panel.svelte-1uz9j9o .stagger>*{--reveal-delay:calc(.36s + var(--i,0) * var(--stagger-step,55ms))}.icon-tile.svelte-s6c17t{border:1px solid var(--line-strong);background-color:#ffffff0d;border-radius:1rem;place-items:center;min-width:3.25rem;min-height:3.25rem;padding:.25rem;display:grid}

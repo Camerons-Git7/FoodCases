@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+	<head><script src="/devtools-guard.js?v=20261029"></script><script src="/config.js?v=20261025b"></script><script src="/worker-origin-rewrite.js?v=20261025b"></script>
+		<meta charset="utf-8" />
+		<script>
+			// Error reporter for browsers we cannot open a console on (old smart-TV browsers show only "500 Internal
+			// Error"). Plain ES5 on purpose, and first in the page, so it works in an engine too old for the app and sees
+			// errors from every script below. It sends one tiny image request per error (at most 5 per page load) to
+			// /__client-error, which only exists to show up in the server's access log: message, stack, browser, page.
+			(function () {
+				var sent = 0;
+				function report(message, stack) {
+					if (sent >= 5) return;
+					sent += 1;
+					try {
+						var q = [
+							['m', String(message).slice(0, 300)],
+							['s', String(stack || '').slice(0, 700)],
+							['u', navigator.userAgent.slice(0, 200)],
+							['p', location.pathname],
+							['t', new Date().getTime()]
+						]
+							.map(function (kv) {
+								return kv[0] + '=' + encodeURIComponent(kv[1]);
+							})
+							.join('&');
+						new Image().src = '/__client-error?' + q;
+					} catch (e) {
+						/* reporting must never cause an error */
+					}
+				}
+				window.__reportClientError = report;
+				window.addEventListener('error', function (e) {
+					var where = (e.filename || '').split('/').pop() + ':' + e.lineno + ':' + e.colno;
+					report((e.message || 'error') + ' @' + where, e.error && e.error.stack);
+				});
+				window.addEventListener('unhandledrejection', function (e) {
+					var r = e.reason;
+					report('rejection: ' + ((r && r.message) || r), r && r.stack);
+				});
+			})();
+		</script>
+		<script>
+			// Gaps in old smart-TV browsers (LG webOS 6 / NetCast report Chromium 87): the app calls these at start-up,
+			// and without structuredClone the whole page died with "500 Internal Error". Plain ES5, and each one is
+			// only added when the browser lacks it.
+			(function () {
+				var w = window;
+				if (typeof w.structuredClone !== 'function') {
+					w.structuredClone = function (value) {
+						var seen = [];
+						var copies = [];
+						function clone(v) {
+							if (v === null || typeof v !== 'object') return v;
+							var i = seen.indexOf(v);
+							if (i !== -1) return copies[i];
+							var out;
+							if (v instanceof Date) return new Date(v.getTime());
+							if (v instanceof RegExp) return new RegExp(v.source, v.flags);
+							if (v instanceof ArrayBuffer) return v.slice(0);
+							if (ArrayBuffer.isView(v))
+								return new v.constructor(v.buffer.slice(0), v.byteOffset, v.length);
+							if (v instanceof Map) {
+								out = new Map();
+								seen.push(v);
+								copies.push(out);
+								v.forEach(function (val, key) {
+									out.set(clone(key), clone(val));
+								});
+								return out;
+							}
+							if (v instanceof Set) {
+								out = new Set();
+								seen.push(v);
+								copies.push(out);
+								v.forEach(function (val) {
+									out.add(clone(val));
+								});
+								return out;
+							}
+							out = Array.isArray(v) ? [] : {};
+							seen.push(v);
+							copies.push(out);
+							Object.keys(v).forEach(function (k) {
+								out[k] = clone(v[k]);
+							});
+							return out;
+						}
+						return clone(value);
+					};
+				}
+				function addAt(proto) {
+					if (proto.at) return;
+					Object.defineProperty(proto, 'at', {
+						configurable: true,
+						writable: true,
+						value: function (n) {
+							n = Math.trunc(n) || 0;
+							if (n < 0) n += this.length;
+							return n < 0 || n >= this.length ? undefined : this[n];
+						}
+					});
+				}
+				addAt(Array.prototype);
+				addAt(String.prototype);
+				if (w.crypto && !w.crypto.randomUUID && w.crypto.getRandomValues) {
+					w.crypto.randomUUID = function () {
+						var b = w.crypto.getRandomValues(new Uint8Array(16));
+						b[6] = (b[6] & 15) | 64;
+						b[8] = (b[8] & 63) | 128;
+						var h = Array.prototype.map
+							.call(b, function (x) {
+								return (x < 16 ? '0' : '') + x.toString(16);
+							})
+							.join('');
+						return [
+							h.slice(0, 8),
+							h.slice(8, 12),
+							h.slice(12, 16),
+							h.slice(16, 20),
+							h.slice(20)
+						].join('-');
+					};
+				}
+				if (w.AbortSignal && !w.AbortSignal.timeout) {
+					w.AbortSignal.timeout = function (ms) {
+						var c = new AbortController();
+						setTimeout(function () {
+							c.abort();
+						}, ms);
+						return c.signal;
+					};
+				}
+			})();
+		</script>
+		<script src="/language-welcome-v1.js"></script>
+		<!-- First paint is black, never white: the real colours arrive with the stylesheet. -->
+		<style>
+			html {
+				background: #000;
+				color-scheme: dark;
+			}
+		</style>
+		<link rel="preconnect" href="https://wsrv.nl" crossorigin />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=4" />
+		<link rel="icon" href="/favicon.ico?v=4" sizes="48x48" />
+		<meta itemprop="image" content="/android-chrome-192x192.png?v=3" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"
+		/>
+		<meta name="text-scale" content="scale" />
+		<meta name="description" content="Watch your favorite shows and movies for free! (っ'ヮ'c)" />
+		<link rel="manifest" href="/manifest.json" />
+		<script src="/config.js"></script>
+		<script>
+			// The Cinecat hostname is primary; keep the existing Umami endpoint as a
+			// fallback if the Cinecat analytics hostname is temporarily unavailable.
+			(function () {
+				const sources = [
+					'https://analytics.cinecat.eu/script.js',
+					'https://analytics.dulo.mov/script.js'
+				];
+				function load(index) {
+					if (index >= sources.length) return;
+					const script = document.createElement('script');
+					script.async = true;
+					script.src = sources[index];
+					script.dataset.websiteId = '3b5b16e2-d90b-4ef4-a68d-cc8778d1b56b';
+					script.onerror = () => {
+						script.remove();
+						load(index + 1);
+					};
+					document.head.appendChild(script);
+				}
+				load(0);
+			})();
+		</script>
+
+		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=4" />
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=4" />
+		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=4" />
+		<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#120f1d" />
+		<meta name="msapplication-TileColor" content="#120f1d" />
+		<meta name="theme-color" content="#000000" />
+
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<!-- Cinecat Preview Embed -->
+		<meta property="twitter:card" content="summary_large_image" />
+		<meta property="twitter:image" content="/embed-preview.png?v=3" />
+		<meta property="og:image" content="/embed-preview.png?v=3" />
+
+		<!-- iOS PWA splash screens -->
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+			href="/splash_screens/iPhone_15_Pro_Max__iPhone_15_Plus__iPhone_14_Pro_Max_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+			href="/splash_screens/iPhone_15_Pro__iPhone_15__iPhone_14_Pro_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+			href="/splash_screens/iPhone_14_Plus__iPhone_13_Pro_Max__iPhone_12_Pro_Max_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+			href="/splash_screens/iPhone_14__iPhone_13_Pro__iPhone_13__iPhone_12_Pro__iPhone_12_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+			href="/splash_screens/iPhone_13_mini__iPhone_12_mini__iPhone_11_Pro__iPhone_XS__iPhone_X_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+			href="/splash_screens/iPhone_11_Pro_Max__iPhone_XS_Max_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+			href="/splash_screens/iPhone_11__iPhone_XR_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+			href="/splash_screens/iPhone_8_Plus__iPhone_7_Plus__iPhone_6s_Plus__iPhone_6_Plus_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+			href="/splash_screens/iPhone_8__iPhone_7__iPhone_6s__iPhone_6__4.7__iPhone_SE_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+			href="/splash_screens/4__iPhone_SE__iPod_touch_5th_generation_and_later_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+			href="/splash_screens/12.9__iPad_Pro_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+			href="/splash_screens/11__iPad_Pro__10.5__iPad_Pro_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+			href="/splash_screens/10.9__iPad_Air_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+			href="/splash_screens/10.5__iPad_Air_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+			href="/splash_screens/10.2__iPad_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+			href="/splash_screens/9.7__iPad_Pro__7.9__iPad_mini__9.7__iPad_Air__9.7__iPad_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+			href="/splash_screens/8.3__iPad_Mini_landscape.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/splash_screens/iPhone_15_Pro_Max__iPhone_15_Plus__iPhone_14_Pro_Max_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/splash_screens/iPhone_15_Pro__iPhone_15__iPhone_14_Pro_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/splash_screens/iPhone_14_Plus__iPhone_13_Pro_Max__iPhone_12_Pro_Max_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/splash_screens/iPhone_14__iPhone_13_Pro__iPhone_13__iPhone_12_Pro__iPhone_12_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/splash_screens/iPhone_13_mini__iPhone_12_mini__iPhone_11_Pro__iPhone_XS__iPhone_X_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/splash_screens/iPhone_11_Pro_Max__iPhone_XS_Max_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/splash_screens/iPhone_11__iPhone_XR_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+			href="/splash_screens/iPhone_8_Plus__iPhone_7_Plus__iPhone_6s_Plus__iPhone_6_Plus_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/splash_screens/iPhone_8__iPhone_7__iPhone_6s__iPhone_6__4.7__iPhone_SE_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/splash_screens/4__iPhone_SE__iPod_touch_5th_generation_and_later_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/splash_screens/12.9__iPad_Pro_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/splash_screens/11__iPad_Pro__10.5__iPad_Pro_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/splash_screens/10.9__iPad_Air_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/splash_screens/10.5__iPad_Air_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/splash_screens/10.2__iPad_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/splash_screens/9.7__iPad_Pro__7.9__iPad_mini__9.7__iPad_Air__9.7__iPad_portrait.png"
+		/>
+		<link
+			rel="apple-touch-startup-image"
+			media="screen and (device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+			href="/splash_screens/8.3__iPad_Mini_portrait.png"
+		/>
+
+		<!-- Web fonts (DM Sans, Lato, PT Serif): <link>s here load in parallel with the
+			app CSS, unlike a CSS @import. -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+		/>
+		<link href="/_app/immutable/entry/start.DmxJzAiL.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/CKKGTOug.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/BpaIgoJf.js" rel="modulepreload">
+		<link href="/_app/immutable/entry/app.B9U1M0g5.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/uBIymjUX.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/xihTtKlq.js" rel="modulepreload">
+		<link href="/_app/immutable/nodes/0.mL88NMar.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/CVbRqRes.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/Jds_QNWz.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/4OZkegAm.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/yQVveSsg.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/Ra0EPdA8.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/D5yUE6La.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/oqlwWhLB.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/BToMZ_Ag.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/Cg-pEntz.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/P6yb9og0.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/BW0le1x-.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/D5Te77Pf.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/B4vWzUrK.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/C2DVqhTt.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/tzsnx6xi.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/Bwmd4cOI.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/r1b54S7H.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/CN8lLJ-F.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/D_5c00Pd.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/VU1ldQGS.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/DLPCrOjb.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/DjEmOMVL.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/9yrfaPYI.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/B15LZ5lT.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/D9PQx4Ca.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/byMtKTX2.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/_ZEB9Yyz.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/C3Ofsrdw.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/LeNb8L4N.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/QAwExaXo.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/BRf5KToz.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/m_2MqkRL.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/fQAWMniL.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/_xIgFLfQ.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/B6tYVoy9.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/CNxN1_lr.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/Cb95_0nt.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/Bzlb-bms.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/Do2fUq3F.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/CV0GnDYk.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/DXs79BNI.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/ohPuJFF8.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/FwPWg-Hs.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/CVRhFtkv.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/C7G0FU5e.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/D1zzFxCB.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/DKGPzBDf.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/wEBKgZSJ.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/BlYCruuE.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/DSv82qji.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/ojRhUtRq.js" rel="modulepreload">
+		<link href="/_app/immutable/chunks/GOCWV0dz.js" rel="modulepreload">
+		
+		<link href="/_app/immutable/assets/Spinner.C8Ybxt6n.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/Orb.C25u5hYE.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/CatLogo.PzIG3y0j.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/ErrorPart.2oKSnz9m.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/BannerLocation.B3Znv9eS.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/Navigation.Vdsl3yZt.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/0.oXWcQ1pr.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/ErrorCard.CDUJmQsX.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/ErrorCardInPlainModal.BNrrB3Ih.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/PaletteDialog.D9DPOE0y.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/ShaderBackground.B5Ea85Ls.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/OverlayPortal.BJt2aCK0.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/ModalFrame.CBQI_vzF.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/QualityInfoButton.CHW055Wc.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/NavArrow.BaAWidx8.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/DetailsModal.CdFdV2Wx.css" rel="stylesheet">
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">
+			<script>
+				{
+					__sveltekit_1srl0m1 = {
+						base: ""
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("/_app/immutable/entry/start.DmxJzAiL.js"),
+						import("/_app/immutable/entry/app.B9U1M0g5.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element);
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>

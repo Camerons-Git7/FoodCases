@@ -1,0 +1,1 @@
+.cam-dialog.svelte-1iwhnz2{transition:opacity .26s var(--ease-out-expo), translate .42s var(--ease-spring), scale .42s var(--ease-spring)}@starting-style{.cam-dialog[open].svelte-1iwhnz2{opacity:0;translate:0 14px;scale:.96}}@media (prefers-reduced-motion:reduce){.cam-dialog.svelte-1iwhnz2{transition:none}}html[data-motion=reduced] .cam-dialog.svelte-1iwhnz2{transition:none}

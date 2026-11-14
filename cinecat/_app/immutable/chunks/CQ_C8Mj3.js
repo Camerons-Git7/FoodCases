@@ -1,0 +1,1 @@
+import"./BpaIgoJf.js";import{r as e}from"./CKKGTOug.js";import"./Jds_QNWz.js";import{t}from"./BToMZ_Ag.js";import{n}from"./DFXlBj68.js";function r(e){return t.url.searchParams.get(e)}function i(r,i){let a=new n(t.url);i?a.searchParams.set(r,i):a.searchParams.delete(r),e(a,{replaceState:!1,noScroll:!0,keepFocus:!0})}export{i as n,r as t};

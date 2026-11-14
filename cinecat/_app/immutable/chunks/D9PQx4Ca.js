@@ -1,0 +1,1 @@
+import{r as e}from"./oqlwWhLB.js";import{t}from"./P6yb9og0.js";function n(){let n=t();return e.backendUrl??n.BACKEND_URL??(n.BACKEND_URLS.length>0?n.BACKEND_URLS[0]:null)}export{n as t};

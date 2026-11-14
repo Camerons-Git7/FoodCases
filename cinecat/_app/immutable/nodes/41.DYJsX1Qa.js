@@ -1,0 +1,1 @@
+import{Dt as e,Et as t}from"../chunks/BpaIgoJf.js";import"../chunks/xihTtKlq.js";import{t as n}from"../chunks/BIs8mJlm.js";import{t as r}from"../chunks/d5ZRHOoq.js";function i(i,a){e(a,!0),n(i,{children:(e,t)=>{r(e,{get media(){return a.params.media}})},$$slots:{default:!0}}),t()}export{i as component};

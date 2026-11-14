@@ -1,0 +1,1306 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+	<head>
+		<meta charset="utf-8" />
+		<style>html,body{background:#0b0d12;color:#e8e8ea}</style>
+		<script>
+			// Error reporter for browsers we cannot open a console on (old smart-TV browsers show only "500 Internal
+			// Error"). Plain ES5 on purpose, and first in the page, so it works in an engine too old for the app and sees
+			// errors from every script below. It sends one tiny image request per error (at most 5 per page load) to
+			// /__client-error, which only exists to show up in the server's access log: message, stack, browser, page.
+			(function () {
+				var sent = 0;
+				function report(message, stack) {
+					if (sent >= 5) return;
+					sent += 1;
+					try {
+						var q = [
+							['m', String(message).slice(0, 300)],
+							['s', String(stack || '').slice(0, 700)],
+							['u', navigator.userAgent.slice(0, 200)],
+							['p', location.pathname],
+							['t', new Date().getTime()]
+						]
+							.map(function (kv) {
+								return kv[0] + '=' + encodeURIComponent(kv[1]);
+							})
+							.join('&');
+						new Image().src = '/__client-error?' + q;
+					} catch (e) {
+						/* reporting must never cause an error */
+					}
+				}
+				window.__reportClientError = report;
+				window.addEventListener('error', function (e) {
+					var where = (e.filename || '').split('/').pop() + ':' + e.lineno + ':' + e.colno;
+					report((e.message || 'error') + ' @' + where, e.error && e.error.stack);
+				});
+				window.addEventListener('unhandledrejection', function (e) {
+					var r = e.reason;
+					report('rejection: ' + ((r && r.message) || r), r && r.stack);
+				});
+			})();
+		</script>
+		<script>
+			// Gaps in old smart-TV browsers (LG webOS 6 / NetCast report Chromium 87): the app calls these at start-up,
+			// and without structuredClone the whole page died with "500 Internal Error". Plain ES5, and each one is
+			// only added when the browser lacks it.
+			(function () {
+				var w = window;
+				if (typeof w.structuredClone !== 'function') {
+					w.structuredClone = function (value) {
+						var seen = [];
+						var copies = [];
+						function clone(v) {
+							if (v === null || typeof v !== 'object') return v;
+							var i = seen.indexOf(v);
+							if (i !== -1) return copies[i];
+							var out;
+							if (v instanceof Date) return new Date(v.getTime());
+							if (v instanceof RegExp) return new RegExp(v.source, v.flags);
+							if (v instanceof ArrayBuffer) return v.slice(0);
+							if (ArrayBuffer.isView(v))
+								return new v.constructor(v.buffer.slice(0), v.byteOffset, v.length);
+							if (v instanceof Map) {
+								out = new Map();
+								seen.push(v);
+								copies.push(out);
+								v.forEach(function (val, key) {
+									out.set(clone(key), clone(val));
+								});
+								return out;
+							}
+							if (v instanceof Set) {
+								out = new Set();
+								seen.push(v);
+								copies.push(out);
+								v.forEach(function (val) {
+									out.add(clone(val));
+								});
+								return out;
+							}
+							out = Array.isArray(v) ? [] : {};
+							seen.push(v);
+							copies.push(out);
+							Object.keys(v).forEach(function (k) {
+								out[k] = clone(v[k]);
+							});
+							return out;
+						}
+						return clone(value);
+					};
+				}
+				function addAt(proto) {
+					if (proto.at) return;
+					Object.defineProperty(proto, 'at', {
+						configurable: true,
+						writable: true,
+						value: function (n) {
+							n = Math.trunc(n) || 0;
+							if (n < 0) n += this.length;
+							return n < 0 || n >= this.length ? undefined : this[n];
+						}
+					});
+				}
+				addAt(Array.prototype);
+				addAt(String.prototype);
+				if (w.crypto && !w.crypto.randomUUID && w.crypto.getRandomValues) {
+					w.crypto.randomUUID = function () {
+						var b = w.crypto.getRandomValues(new Uint8Array(16));
+						b[6] = (b[6] & 15) | 64;
+						b[8] = (b[8] & 63) | 128;
+						var h = Array.prototype.map
+							.call(b, function (x) {
+								return (x < 16 ? '0' : '') + x.toString(16);
+							})
+							.join('');
+						return [
+							h.slice(0, 8),
+							h.slice(8, 12),
+							h.slice(12, 16),
+							h.slice(16, 20),
+							h.slice(20)
+						].join('-');
+					};
+				}
+				if (w.AbortSignal && !w.AbortSignal.timeout) {
+					w.AbortSignal.timeout = function (ms) {
+						var c = new AbortController();
+						setTimeout(function () {
+							c.abort();
+						}, ms);
+						return c.signal;
+					};
+				}
+			})();
+		</script>
+		
+		<!-- First paint is black, never white: the real colours arrive with the stylesheet. -->
+		<style>
+			html {
+				background: #000;
+				color-scheme: dark;
+			}
+		</style>
+		<link rel="preconnect" href="https://wsrv.nl" crossorigin />
+		
+		
+		<meta itemprop="image" content="/android-chrome-192x192.png?v=3" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"
+		/>
+		<meta name="text-scale" content="scale" />
+		<meta name="description" content="Watch your favorite shows and movies for free! (っ'ヮ'c)" />
+		
+		
+		<script>
+			// The Cinecat hostname is primary; keep the existing Umami endpoint as a
+			// fallback if the Cinecat analytics hostname is temporarily unavailable.
+			(function () {
+				const sources = [
+					'https://analytics.cinecat.eu/script.js',
+					'https://analytics.dulo.mov/script.js'
+				];
+				function load(index) {
+					if (index >= sources.length) return;
+					const script = document.createElement('script');
+					script.async = true;
+					script.src = sources[index];
+					script.dataset.websiteId = '3b5b16e2-d90b-4ef4-a68d-cc8778d1b56b';
+					script.onerror = () => {
+						script.remove();
+						load(index + 1);
+					};
+					document.head.appendChild(script);
+				}
+				load(0);
+			})();
+		</script>
+
+		
+		
+		
+		
+		<meta name="msapplication-TileColor" content="#120f1d" />
+		<meta name="theme-color" content="#000000" />
+
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<!-- Cinecat Preview Embed -->
+		<meta property="twitter:card" content="summary_large_image" />
+		<meta property="twitter:image" content="/embed-preview.png?v=3" />
+		<meta property="og:image" content="/embed-preview.png?v=3" />
+
+		<!-- iOS PWA splash screens -->
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+
+		<!-- Web fonts (DM Sans, Lato, PT Serif): <link>s here load in parallel with the
+			app CSS, unlike a CSS @import. -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+		/>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	
+		<script>
+			/*
+			 * Base-independent bootstrap.
+			 * The app is a client-rendered SvelteKit bundle, so the same index.html is
+			 * served for every route and the install folder is unknown until runtime.
+			 * Probe for the folder that actually contains the app (longest match
+			 * wins), then load the head assets and start SvelteKit with that base.
+			 */
+			(function () {
+				var APP = "/_app/immutable/entry/app.B9U1M0g5.js";
+				var START = "/_app/immutable/entry/start.DmxJzAiL.js";
+				var HEAD = [
+				  {
+				    "tag": "script",
+				    "attrs": {},
+				    "path": "/devtools-guard.js?v=20261029"
+				  },
+				  {
+				    "tag": "script",
+				    "attrs": {},
+				    "path": "/config.js?v=20261025b"
+				  },
+				  {
+				    "tag": "script",
+				    "attrs": {},
+				    "path": "/worker-origin-rewrite.js?v=20261025b"
+				  },
+				  {
+				    "tag": "script",
+				    "attrs": {},
+				    "path": "/language-welcome-v1.js"
+				  },
+				  {
+				    "tag": "script",
+				    "attrs": {},
+				    "path": "/config.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "icon",
+				      "type": "image/svg+xml"
+				    },
+				    "path": "/favicon.svg?v=4"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "icon",
+				      "sizes": "48x48"
+				    },
+				    "path": "/favicon.ico?v=4"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "manifest"
+				    },
+				    "path": "/manifest.json"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-icon",
+				      "sizes": "180x180"
+				    },
+				    "path": "/apple-touch-icon.png?v=4"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "icon",
+				      "type": "image/png",
+				      "sizes": "32x32"
+				    },
+				    "path": "/favicon-32x32.png?v=4"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "icon",
+				      "type": "image/png",
+				      "sizes": "16x16"
+				    },
+				    "path": "/favicon-16x16.png?v=4"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "mask-icon",
+				      "color": "#120f1d"
+				    },
+				    "path": "/safari-pinned-tab.svg"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/iPhone_15_Pro_Max__iPhone_15_Plus__iPhone_14_Pro_Max_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/iPhone_15_Pro__iPhone_15__iPhone_14_Pro_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/iPhone_14_Plus__iPhone_13_Pro_Max__iPhone_12_Pro_Max_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/iPhone_14__iPhone_13_Pro__iPhone_13__iPhone_12_Pro__iPhone_12_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/iPhone_13_mini__iPhone_12_mini__iPhone_11_Pro__iPhone_XS__iPhone_X_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/iPhone_11_Pro_Max__iPhone_XS_Max_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/iPhone_11__iPhone_XR_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/iPhone_8_Plus__iPhone_7_Plus__iPhone_6s_Plus__iPhone_6_Plus_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/iPhone_8__iPhone_7__iPhone_6s__iPhone_6__4.7__iPhone_SE_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/4__iPhone_SE__iPod_touch_5th_generation_and_later_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/12.9__iPad_Pro_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/11__iPad_Pro__10.5__iPad_Pro_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/10.9__iPad_Air_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/10.5__iPad_Air_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/10.2__iPad_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/9.7__iPad_Pro__7.9__iPad_mini__9.7__iPad_Air__9.7__iPad_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)"
+				    },
+				    "path": "/splash_screens/8.3__iPad_Mini_landscape.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/iPhone_15_Pro_Max__iPhone_15_Plus__iPhone_14_Pro_Max_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/iPhone_15_Pro__iPhone_15__iPhone_14_Pro_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/iPhone_14_Plus__iPhone_13_Pro_Max__iPhone_12_Pro_Max_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/iPhone_14__iPhone_13_Pro__iPhone_13__iPhone_12_Pro__iPhone_12_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/iPhone_13_mini__iPhone_12_mini__iPhone_11_Pro__iPhone_XS__iPhone_X_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/iPhone_11_Pro_Max__iPhone_XS_Max_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/iPhone_11__iPhone_XR_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/iPhone_8_Plus__iPhone_7_Plus__iPhone_6s_Plus__iPhone_6_Plus_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/iPhone_8__iPhone_7__iPhone_6s__iPhone_6__4.7__iPhone_SE_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/4__iPhone_SE__iPod_touch_5th_generation_and_later_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/12.9__iPad_Pro_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/11__iPad_Pro__10.5__iPad_Pro_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/10.9__iPad_Air_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/10.5__iPad_Air_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/10.2__iPad_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/9.7__iPad_Pro__7.9__iPad_mini__9.7__iPad_Air__9.7__iPad_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "apple-touch-startup-image",
+				      "media": "screen and (device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+				    },
+				    "path": "/splash_screens/8.3__iPad_Mini_portrait.png"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/entry/start.DmxJzAiL.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/CKKGTOug.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/BpaIgoJf.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/entry/app.B9U1M0g5.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/uBIymjUX.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/xihTtKlq.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/nodes/0.mL88NMar.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/CVbRqRes.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/Jds_QNWz.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/4OZkegAm.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/yQVveSsg.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/Ra0EPdA8.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/D5yUE6La.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/oqlwWhLB.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/BToMZ_Ag.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/Cg-pEntz.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/P6yb9og0.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/BW0le1x-.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/D5Te77Pf.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/B4vWzUrK.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/C2DVqhTt.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/tzsnx6xi.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/Bwmd4cOI.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/r1b54S7H.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/CN8lLJ-F.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/D_5c00Pd.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/VU1ldQGS.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/DLPCrOjb.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/DjEmOMVL.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/9yrfaPYI.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/B15LZ5lT.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/D9PQx4Ca.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/byMtKTX2.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/_ZEB9Yyz.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/C3Ofsrdw.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/LeNb8L4N.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/QAwExaXo.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/BRf5KToz.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/m_2MqkRL.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/fQAWMniL.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/_xIgFLfQ.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/B6tYVoy9.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/CNxN1_lr.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/Cb95_0nt.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/Bzlb-bms.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/Do2fUq3F.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/CV0GnDYk.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/DXs79BNI.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/ohPuJFF8.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/FwPWg-Hs.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/CVRhFtkv.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/C7G0FU5e.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/D1zzFxCB.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/DKGPzBDf.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/wEBKgZSJ.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/BlYCruuE.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/DSv82qji.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/ojRhUtRq.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "modulepreload"
+				    },
+				    "path": "/_app/immutable/chunks/GOCWV0dz.js"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/Spinner.C8Ybxt6n.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/Orb.C25u5hYE.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/CatLogo.PzIG3y0j.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/ErrorPart.2oKSnz9m.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/BannerLocation.B3Znv9eS.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/Navigation.Vdsl3yZt.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/0.oXWcQ1pr.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/ErrorCard.CDUJmQsX.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/ErrorCardInPlainModal.BNrrB3Ih.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/PaletteDialog.D9DPOE0y.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/ShaderBackground.B5Ea85Ls.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/OverlayPortal.BJt2aCK0.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/ModalFrame.CBQI_vzF.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/QualityInfoButton.CHW055Wc.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/NavArrow.BaAWidx8.css"
+				  },
+				  {
+				    "tag": "link",
+				    "attrs": {
+				      "rel": "stylesheet"
+				    },
+				    "path": "/_app/immutable/assets/DetailsModal.CdFdV2Wx.css"
+				  }
+				];
+
+				var segments = location.pathname.split("/").filter(Boolean);
+				var candidates = [""];
+				for (var i = 1; i <= segments.length; i++) candidates.push("/" + segments.slice(0, i).join("/"));
+				candidates.reverse();
+
+				var index = 0;
+				function probe() {
+					if (index >= candidates.length) return finish("");
+					var base = candidates[index++];
+					fetch(base + APP, { method: "HEAD", cache: "no-store" })
+						.then(function (response) {
+							if (!response.ok) return probe();
+							var type = (response.headers.get("content-type") || "").toLowerCase();
+							if (type === "" || type.indexOf("javascript") !== -1 || type.indexOf("ecmascript") !== -1) return finish(base);
+							probe();
+						})
+						.catch(probe);
+				}
+
+				function finish(base) {
+					window.__ZS_BASE__ = base;
+					var tag = document.createElement("base");
+					tag.href = base === "" ? "/" : base + "/";
+					document.head.appendChild(tag);
+
+					var css = [];
+					var scripts = [];
+					HEAD.forEach(function (item) {
+						if (item.tag === "script") { scripts.push(item); return; }
+						var node = document.createElement("link");
+						Object.keys(item.attrs).forEach(function (key) { node.setAttribute(key, item.attrs[key]); });
+					node.setAttribute("href", base + item.path);
+					document.head.appendChild(node);
+						if (item.attrs.rel === "stylesheet") css.push(node);
+					});
+
+					var pending = scripts.slice();
+					(function next() {
+						var item = pending.shift();
+						if (!item) return start(base);
+						var script = document.createElement("script");
+						Object.keys(item.attrs).forEach(function (key) { script.setAttribute(key, item.attrs[key]); });
+						script.src = base + item.path;
+						script.onload = next;
+						script.onerror = next;
+						document.head.appendChild(script);
+					})();
+				}
+
+				function applyBase() {
+					var BASE = window.__ZS_BASE__;
+					if (!BASE) return;
+					var prefix = function (url) {
+						if (typeof url !== "string" || url.charAt(0) !== "/" || url.charAt(1) === "/") return url;
+						if (url === BASE || url.indexOf(BASE + "/") === 0) return url;
+						return BASE + url;
+					};
+					var fixLink = function (node) {
+						if (!node || node.nodeType !== 1) return;
+						var links = node.tagName === "A" ? [node] : (node.querySelectorAll ? node.querySelectorAll('a[href^="/"]') : []);
+						for (var i = 0; i < links.length; i++) {
+							var href = links[i].getAttribute("href");
+							var next = prefix(href);
+							if (next !== href) links[i].setAttribute("href", next);
+						}
+					};
+					fixLink(document.body);
+					new MutationObserver(function (records) {
+						records.forEach(function (record) {
+							if (record.type === "attributes") fixLink(record.target);
+							else for (var i = 0; i < record.addedNodes.length; i++) fixLink(record.addedNodes[i]);
+						});
+					}).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["href"] });
+					var push = history.pushState.bind(history);
+					var replace = history.replaceState.bind(history);
+					history.pushState = function (state, title, url) { return push(state, title, prefix(url)); };
+					history.replaceState = function (state, title, url) { return replace(state, title, prefix(url)); };
+				}
+
+				function start(base) {
+					applyBase();
+					window.__sveltekit_1srl0m1 = { base: base };
+					Promise.all([import(base + START), import(base + APP)]).then(function (mods) {
+						mods[0].start(mods[1], document.body.firstElementChild);
+					});
+				}
+
+				probe();
+			})();
+		</script>
+</head>
+<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">
+			
+		</div>
+	</body>
+</html>

@@ -1,0 +1,1 @@
+import{r as e}from"./CKKGTOug.js";import"./Jds_QNWz.js";import{t}from"./BToMZ_Ag.js";import{n}from"./GOCWV0dz.js";import{t as r}from"./CQ_C8Mj3.js";function i(n){let r=`${n}${t.url.search}`;e(r)}function a(){let t=r(`redirect`);e(t??`/`)}function o(){n(!0),a()}export{i as n,o as t};

@@ -1,0 +1,1 @@
+import{Z as e,_t as t,ht as n,yt as r}from"./BpaIgoJf.js";import{n as i,t as a}from"./CVbRqRes.js";function o(){let o=r(n(i.language??`en`));return i.on(`languageChanged`,e=>{t(o,e,!0)}),{get language(){return e(o)},t(t,n){return e(o),i.t(t,n)},changeLanguage(e){return a(e)}}}var s=o();export{s as t};

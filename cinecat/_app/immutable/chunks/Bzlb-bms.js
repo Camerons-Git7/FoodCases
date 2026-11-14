@@ -1,0 +1,1 @@
+function e(e){return--e*e*(2.70158*e+1.70158)+1}function t(e){return e*e*e}function n(e){let t=e-1;return t*t*t+1}function r(e){return e===1?e:1-2**(-10*e)}export{r as i,t as n,n as r,e as t};

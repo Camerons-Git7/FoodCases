@@ -1,0 +1,1 @@
+import"./BpaIgoJf.js";import{t as e}from"./Ra0EPdA8.js";var t=e(`__MW::uiVariant.v2`,{variant:`new`});function n(e){t.variant=e}export{t as n,n as t};

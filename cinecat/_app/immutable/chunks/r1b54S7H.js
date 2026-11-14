@@ -1,0 +1,1 @@
+import{V as e,a as t,b as n,ot as r,z as i}from"./BpaIgoJf.js";import"./xihTtKlq.js";var a=e(`<div></div>`);function o(e,o){let s=t(o,`class`,3,``);var c=a();r(()=>n(c,1,`spinner ${s()??``}`,`svelte-2m2o27`)),i(e,c)}export{o as t};

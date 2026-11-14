@@ -1,0 +1,1 @@
+import{V as e,a as t,b as n,ot as r,y as i,z as a}from"./BpaIgoJf.js";import"./xihTtKlq.js";var o=e(`<div aria-hidden="true"></div>`);function s(e,s){let c=t(s,`class`,3,``),l=t(s,`delay`,3,0);var u=o();r(()=>{n(u,1,`skeleton ${c()??``}`,`svelte-4iqjyj`),i(u,`animation-delay: ${l()??``}ms`)}),a(e,u)}export{s as t};

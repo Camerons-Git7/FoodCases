@@ -1,0 +1,1 @@
+import{t as e}from"./4OZkegAm.js";import{r as t}from"./Bzlb-bms.js";function n(n,{y:r=-6,scale:i=.95,duration:a=200,origin:o=`top left`}={}){return e()?{duration:0}:{duration:a,easing:t,css:e=>`opacity: ${e}; transform-origin: ${o}; transform: translateY(${(1-e)*r}px) scale(${i+(1-i)*e});`}}export{n as t};

@@ -1,0 +1,1 @@
+import{V as e,a as t,b as n,ot as r,z as i}from"./BpaIgoJf.js";import"./xihTtKlq.js";var a=e(`<hr/>`);function o(e,o){let s=t(o,`marginClass`,3,`my-8`);var c=a();r(()=>n(c,1,`h-px w-full border-0 bg-white/8 ${s()??``}`)),i(e,c)}export{o as t};
