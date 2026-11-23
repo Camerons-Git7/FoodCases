@@ -1975,11 +1975,15 @@ function collectMainProgress() {
   try {
     for (var i = 0; i < localStorage.length; i++) {
       var key = localStorage.key(i);
-      if (isBlockedProgressKey(key)) continue;
       var val = localStorage.getItem(key);
       if (val == null) continue;
       var isMc = key && (key.toLowerCase().indexOf('minecraft') !== -1 || key.toLowerCase().indexOf('eagler') !== -1);
-      if (!isMc && val.length > _CLOUD_MAX_VALUE_LEN) continue;
+      if (isMc) {
+        out[key] = val;
+        continue;
+      }
+      if (isBlockedProgressKey(key)) continue;
+      if (val.length > _CLOUD_MAX_VALUE_LEN) continue;
       if (val.indexOf('data:image') === 0 || val.indexOf('data:application') === 0) continue;
       out[key] = val;
     }
@@ -1997,17 +2001,41 @@ function collectIframeProgress() {
       var appId = (frame.id || '').replace(/^frame-/, '') || ('iframe_' + i);
       var isMcApp = appId === 'minecraft' || appId === 'eaglercraft' || (appId && (appId.toLowerCase().indexOf('minecraft') !== -1 || appId.toLowerCase().indexOf('eagler') !== -1));
       try {
-        var ls = frame.contentWindow && frame.contentWindow.localStorage;
+        var win = frame.contentWindow;
+        if (!win) continue;
+        var ls = win.localStorage;
         if (!ls) continue;
         var bag = {};
         for (var j = 0; j < ls.length; j++) {
           var k = ls.key(j);
-          if (isBlockedProgressKey(k)) continue;
           var v = ls.getItem(k);
           if (v == null) continue;
-          if (!isMcApp && v.length > _CLOUD_MAX_VALUE_LEN) continue;
+          if (isMcApp) {
+            bag[k] = v;
+            continue;
+          }
+          if (isBlockedProgressKey(k)) continue;
+          if (v.length > _CLOUD_MAX_VALUE_LEN) continue;
           if (v.indexOf('data:image') === 0 || v.indexOf('data:application') === 0) continue;
           bag[k] = v;
+        }
+        if (isMcApp) {
+          try {
+            var ss = win.sessionStorage;
+            if (ss) {
+              var ssBag = {};
+              for (var s = 0; s < ss.length; s++) {
+                var sk = ss.key(s);
+                var sv = ss.getItem(sk);
+                if (sk != null && sv != null) ssBag[sk] = sv;
+              }
+              if (Object.keys(ssBag).length) bag['__seamless_sessionStorage__'] = JSON.stringify(ssBag);
+            }
+          } catch (e) {}
+          try {
+            var ck = win.document && win.document.cookie;
+            if (ck) bag['__seamless_cookies__'] = ck;
+          } catch (e) {}
         }
         if (Object.keys(bag).length) byApp[appId] = bag;
       } catch (crossOrigin) {
@@ -2022,12 +2050,41 @@ window._pendingIframeSaves = window._pendingIframeSaves || {};
 function applyIframeProgressToFrame(frame, appId) {
   var bag = window._pendingIframeSaves && window._pendingIframeSaves[appId];
   if (!bag || !frame) return;
+  var isMcApp = appId === 'minecraft' || appId === 'eaglercraft' || (appId && (String(appId).toLowerCase().indexOf('minecraft') !== -1 || String(appId).toLowerCase().indexOf('eagler') !== -1));
   try {
-    var ls = frame.contentWindow && frame.contentWindow.localStorage;
+    var win = frame.contentWindow;
+    if (!win) return;
+    var ls = win.localStorage;
     if (!ls) return;
     for (var k in bag) {
-      if (Object.prototype.hasOwnProperty.call(bag, k)) {
-        try { ls.setItem(k, bag[k]); } catch (e) {}
+      if (!Object.prototype.hasOwnProperty.call(bag, k)) continue;
+      if (k === '__seamless_cookies__' || k === '__seamless_sessionStorage__') continue;
+      try { ls.setItem(k, bag[k]); } catch (e) {}
+    }
+    if (isMcApp) {
+      if (bag['__seamless_sessionStorage__']) {
+        try {
+          var ssData = JSON.parse(bag['__seamless_sessionStorage__']);
+          var ss = win.sessionStorage;
+          if (ss && ssData) {
+            for (var sk in ssData) {
+              if (Object.prototype.hasOwnProperty.call(ssData, sk)) {
+                try { ss.setItem(sk, ssData[sk]); } catch (e) {}
+              }
+            }
+          }
+        } catch (e) {}
+      }
+      if (bag['__seamless_cookies__']) {
+        try {
+          var cookieStr = bag['__seamless_cookies__'];
+          var parts = cookieStr.split(';');
+          for (var c = 0; c < parts.length; c++) {
+            var part = parts[c].trim();
+            if (!part) continue;
+            try { win.document.cookie = part + '; path=/'; } catch (e) {}
+          }
+        } catch (e) {}
       }
     }
   } catch (e) {  }
@@ -6227,9 +6284,10 @@ function closeWindow(id) {
     if (currentUser && !isGuest && typeof saveUserDataToCloud === 'function') {
       try {
         var frame = document.getElementById('frame-' + id);
-        if (frame && typeof applyIframeProgressToFrame === 'function') {
+        if (frame) {
           try {
-            var ls = frame.contentWindow && frame.contentWindow.localStorage;
+            var win = frame.contentWindow;
+            var ls = win && win.localStorage;
             if (ls) {
               var bag = {};
               var isMc = id === 'minecraft' || id === 'eaglercraft' || (id && (String(id).toLowerCase().indexOf('minecraft') !== -1 || String(id).toLowerCase().indexOf('eagler') !== -1));
@@ -6237,6 +6295,24 @@ function closeWindow(id) {
                 var k = ls.key(j);
                 var v = ls.getItem(k);
                 if (k && v != null && (isMc || v.length <= 200000)) bag[k] = v;
+              }
+              if (isMc) {
+                try {
+                  var ss = win.sessionStorage;
+                  if (ss) {
+                    var ssBag = {};
+                    for (var s = 0; s < ss.length; s++) {
+                      var sk = ss.key(s);
+                      var sv = ss.getItem(sk);
+                      if (sk != null && sv != null) ssBag[sk] = sv;
+                    }
+                    if (Object.keys(ssBag).length) bag['__seamless_sessionStorage__'] = JSON.stringify(ssBag);
+                  }
+                } catch (e) {}
+                try {
+                  var ck = win.document && win.document.cookie;
+                  if (ck) bag['__seamless_cookies__'] = ck;
+                } catch (e) {}
               }
               if (!window._pendingIframeSaves) window._pendingIframeSaves = {};
               if (Object.keys(bag).length) window._pendingIframeSaves[id] = bag;
