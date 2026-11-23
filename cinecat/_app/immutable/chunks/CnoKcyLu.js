@@ -1,1 +1,0 @@
-import{c as e,n as t}from"./SifIfHy5.js";async function n(){let n=await t();return n?n.success?n.allowed?n.hasPermission?e(n.version)?`success`:`outdated`:`noperms`:`disallowed`:`failed`:`unknown`}export{n as t};

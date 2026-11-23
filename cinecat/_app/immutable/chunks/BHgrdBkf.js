@@ -1,1 +1,0 @@
-var e={};function t(t){if(e[t])return e[t];let n=new Date;return e[t]=new Date(t)<n,e[t]}export{t};

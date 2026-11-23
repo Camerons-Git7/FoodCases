@@ -1,1 +1,0 @@
-function e(e,t){let n=RegExp(`^([\\s\\S]*)<${t}>([\\s\\S]*)</${t}>([\\s\\S]*)$`).exec(e);return n?{before:n[1],inner:n[2],after:n[3]}:{before:e,inner:``,after:``}}export{e as t};

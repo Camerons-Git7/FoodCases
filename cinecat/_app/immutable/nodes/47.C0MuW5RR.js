@@ -1,1 +1,0 @@
-import{Dt as e,Et as t}from"../chunks/BpaIgoJf.js";import"../chunks/xihTtKlq.js";import{t as n}from"../chunks/d5ZRHOoq.js";function r(r,i){e(i,!0),n(r,{tvMode:!0,get media(){return i.params.media},get season(){return i.params.season},get episode(){return i.params.episode}}),t()}export{r as component};

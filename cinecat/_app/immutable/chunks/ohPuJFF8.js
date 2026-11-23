@@ -1,1 +1,0 @@
-import{t as e}from"./oqlwWhLB.js";async function t(t){let n=await e(`/meta`,{baseURL:t});return{...n,name:n.name.replace(/\\'/g,`'`),description:n.description?.replace(/\\'/g,`'`)}}export{t};

@@ -1,1 +1,0 @@
-import"./BpaIgoJf.js";import{a as e,c as t,i as n}from"./CNxN1_lr.js";function r(r){return{id:r,get isShown(){return e(r)},show(){t(r)},hide(){n(r)}}}export{r as t};

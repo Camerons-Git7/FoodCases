@@ -1,1 +1,0 @@
-var e={name:`پی-اسٹریم`,pages:{about:`About and FAQ`,legal:`Legal / DMCA`,discover:`Discover`,support:`Support`,login:`Login`,onboarding:`Setup`,pagetitle:`{{title}} - Cinecat`,register:`Register`,settings:`Settings`,migration:`Migrate Account`,jip:`Jip`}},t={global:e};export{t as default,e as global};
