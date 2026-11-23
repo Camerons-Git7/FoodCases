@@ -128,7 +128,7 @@ jobs:
       - name: Restore original code for Site 3
         run: git checkout .
 
-      - name: Replace "menist.free.nf" with "ridgeless.xo.je" for Site 3 deploy
+      - name: Replace "menist.free.nf" with "external.nfy.fyi" for Site 3 deploy
         run: |
           find . -type f \
             ! -path './.git/*' \
@@ -137,7 +137,7 @@ jobs:
             ! -name '.ftp-sync-state-2.json' \
             ! -name '.ftp-sync-state-3.json' \
             -exec sed -i \
-              -e 's/menist\.free\.nf/ridgeless.xo.je/g' \
+              -e 's/menist\.free\.nf/external.nfy.fyi/g' \
               {} +
 
       - name: Deploy to InfinityFree Site 3
